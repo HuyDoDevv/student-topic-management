@@ -1,6 +1,6 @@
 > Cập nhật theo yêu cầu người dùng tạo DB toàn hệ thống và đơn giản hóa chạy local:
 > SQL hiện tại là `database/V1__full_system.sql` (20 bảng MySQL), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh.
+> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
 > Quyết định công nghệ ngày 2026-09-09: MySQL 8.4 LTS thay PostgreSQL cho code,
 > kiểm thử DB và hướng dẫn DBeaver. Dùng `database/V1__full_system.sql` bản MySQL.
 > Nội dung bên dưới lưu lại kế hoạch/báo cáo feature 001 trước thay đổi này;

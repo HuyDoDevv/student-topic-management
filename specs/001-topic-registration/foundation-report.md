@@ -1,6 +1,6 @@
 > Cập nhật hiện trạng ngày 2026-09-09: database dùng MySQL 8.4 LTS.
 > SQL hiện tại là `database/V1__full_system.sql` (20 bảng trong database đang chọn), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh.
+> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
 > Nội dung bên dưới là bằng chứng lịch sử của nền tảng PostgreSQL trước khi chuyển đổi;
 > không dùng các lệnh Flyway/scripts cũ để chạy phiên bản hiện tại. Xem README.md gốc.
 

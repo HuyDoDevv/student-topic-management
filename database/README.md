@@ -39,15 +39,15 @@ chạy V1 lần hai trên database đã import thành công.
 Đổi `.env` sang profile `local` và điền đúng thông tin DBeaver đang dùng:
 
 ```dotenv
-JAVA_HOME='/opt/homebrew/opt/openjdk@21'
-SPRING_PROFILES_ACTIVE='local'
+SPRING_PROFILES_ACTIVE=local
 SERVER_PORT=8080
-SPRING_DATASOURCE_URL='jdbc:mysql://127.0.0.1:3306/topic_registration_local?useUnicode=true&characterEncoding=UTF-8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&useSSL=false&allowPublicKeyRetrieval=true'
-SPRING_DATASOURCE_USERNAME='topic_local'
-SPRING_DATASOURCE_PASSWORD='THAY_BANG_MAT_KHAU_THAT'
+SPRING_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/topic_registration_local?useUnicode=true&characterEncoding=UTF-8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&useSSL=false&allowPublicKeyRetrieval=true
+SPRING_DATASOURCE_USERNAME=topic_local
+SPRING_DATASOURCE_PASSWORD=THAY_BANG_MAT_KHAU_THAT
 ```
 
-Sau đó chạy `./run.sh`. Profile `preview` vẫn chạy giao diện mà không kết nối database.
+Sau đó chạy `./run.sh` trên macOS hoặc `run.cmd` trên Windows. Profile `preview` vẫn
+chạy giao diện mà không kết nối database.
 
 ## 20 bảng
 

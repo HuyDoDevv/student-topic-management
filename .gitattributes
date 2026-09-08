@@ -1,0 +1,15 @@
+* text=auto
+
+# Shell scripts must keep LF; Windows command scripts must keep CRLF.
+*.sh text eol=lf
+mvnw text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Preserve binary documents exactly.
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.woff2 binary

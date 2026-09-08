@@ -1,6 +1,6 @@
 > Cập nhật theo yêu cầu người dùng tạo DB toàn hệ thống và đơn giản hóa chạy local:
 > SQL hiện tại là `database/V1__full_system.sql` (20 bảng MySQL), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh.
+> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
 > Database hiện hành là MySQL 8.4 LTS, cổng mặc định 3306. Import
 > `database/V1__full_system.sql` bằng DBeaver trước khi chạy profile local.
 > Nội dung bên dưới lưu lại kế hoạch/báo cáo feature 001 trước thay đổi này;
