@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<header class="navbar navbar-expand-lg app-header d-print-none" th:fragment="header">
+  <div class="container-xl">
+    <span class="header-breadcrumb">
+      <span th:text="${pageSection ?: 'Không gian làm việc'}">Không gian làm việc</span>
+      <span aria-hidden="true">/</span>
+      <strong>Hệ thống đề tài</strong>
+    </span>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <span class="badge bg-teal-lt d-none d-sm-inline-flex">Cổng học vụ</span>
+      <div class="dropdown">
+        <button class="btn btn-icon btn-ghost-secondary" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false" aria-label="Xem thông báo">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M10 5a2 2 0 0 1 4 0 6 6 0 0 1 4 6v4l2 2H4l2-2v-4a6 6 0 0 1 4-6M9 21h6"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end notification-menu p-3">
+          <h2 class="h4 mb-2">Thông báo</h2>
+          <p class="text-secondary mb-0">Chưa có thông báo để hiển thị.</p>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="btn btn-ghost-secondary d-flex align-items-center gap-2" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mở menu tài khoản">
+          <span class="avatar avatar-sm bg-blue-lt" th:text="${currentUserInitials ?: 'ND'}">ND</span>
+          <span class="d-none d-md-block text-start">
+            <strong class="d-block" th:text="${currentUserName ?: 'Người dùng'}">Người dùng</strong>
+            <small class="text-secondary" th:text="${currentRoleLabel ?: 'Chưa đăng nhập'}">Chưa đăng nhập</small>
+          </span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end">
+          <a class="dropdown-item" th:href="@{/dashboard}">Trang tổng quan</a>
+          <div class="dropdown-divider"></div>
+          <form th:action="@{/logout}" method="post"><button class="dropdown-item" type="submit">Đăng xuất</button></form>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+</body>
+</html>

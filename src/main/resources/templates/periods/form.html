@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page(${editing ? 'Sửa đợt đăng ký' : 'Tạo đợt đăng ký'}, ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div><div class="page-pretitle">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${editing} ? 'Sửa lịch đợt đăng ký' : 'Tạo đợt đăng ký'">Tạo đợt đăng ký</h1><p class="text-secondary mt-2 mb-0">Bốn mốc thời gian quyết định khi giảng viên và sinh viên được thao tác.</p></div>
+  </div>
+  <form class="card" method="post" data-prevent-double-submit
+        th:action="${editing} ? @{/periods/{id}/schedule(id=${period.id})} : @{/periods}">
+    <div class="card-body">
+      <div th:if="${formError}" th:replace="~{fragments/feedback :: error(${formError})}"></div>
+      <div class="row g-3">
+        <div class="col-md-8"><label class="form-label required" for="period-name">Tên đợt</label><input class="form-control" id="period-name" name="name" required th:value="${period?.name}" placeholder="Ví dụ: Đồ án chuyên ngành HK1 2026–2027"></div>
+        <div class="col-md-4"><label class="form-label required" for="topic-type">Loại đề tài</label><select class="form-select" id="topic-type" name="type" required><option value="">Chọn loại</option><option value="COURSE">Đồ án môn học</option><option value="SPECIALIZED">Đồ án chuyên ngành</option><option value="GRADUATION">Khóa luận tốt nghiệp</option><option value="RESEARCH">Nghiên cứu khoa học</option></select></div>
+      </div>
+      <hr class="my-4">
+      <h2 class="h3">Thời gian giảng viên đề xuất đề tài</h2>
+      <div class="row g-3 mb-4"><div class="col-md-6"><label class="form-label required" for="lecturer-start">Bắt đầu</label><input class="form-control" id="lecturer-start" name="lecturerStart" type="datetime-local" required></div><div class="col-md-6"><label class="form-label required" for="lecturer-end">Kết thúc</label><input class="form-control" id="lecturer-end" name="lecturerEnd" type="datetime-local" required></div></div>
+      <h2 class="h3">Thời gian sinh viên đăng ký</h2>
+      <div class="row g-3"><div class="col-md-6"><label class="form-label required" for="student-start">Bắt đầu</label><input class="form-control" id="student-start" name="studentStart" type="datetime-local" required></div><div class="col-md-6"><label class="form-label required" for="student-end">Kết thúc</label><input class="form-control" id="student-end" name="studentEnd" type="datetime-local" required></div></div>
+      <input th:if="${editing}" type="hidden" name="version" value="0">
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-ghost-secondary" th:href="@{/periods}">Hủy</a><button class="btn btn-primary" type="submit" th:text="${editing} ? 'Lưu lịch' : 'Tạo đợt'">Tạo đợt</button></div>
+  </form>
+</section>
+</body>
+</html>

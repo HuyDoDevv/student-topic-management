@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Đề tài">
+  <rect width="64" height="64" rx="14" fill="#0f3d5e"/>
+  <path d="M18 17h18c7 0 12 5 12 12v18H30c-7 0-12-5-12-12V17Z" fill="#fff" opacity=".96"/>
+  <path d="M27 27h13M27 34h13M27 41h8" stroke="#0f3d5e" stroke-width="3" stroke-linecap="round"/>
+</svg>

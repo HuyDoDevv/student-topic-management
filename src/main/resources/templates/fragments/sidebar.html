@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside class="navbar navbar-vertical navbar-expand-lg app-sidebar" th:fragment="sidebar" aria-label="Thanh điều hướng">
+  <div class="container-fluid">
+    <a class="navbar-brand app-brand" th:href="@{/dashboard}">
+      <span class="brand-mark">ĐT</span>
+      <span>Quản lý đề tài<small>KHOA CÔNG NGHỆ THÔNG TIN</small></span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu"
+            aria-controls="sidebar-menu" aria-expanded="false" aria-label="Mở menu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="sidebar-menu">
+      <div class="nav-section">KHÔNG GIAN LÀM VIỆC</div>
+      <ul class="navbar-nav">
+        <li class="nav-item" th:classappend="${activeNav == 'dashboard'} ? ' active'">
+          <a class="nav-link" th:href="@{/dashboard}"><span class="nav-symbol" aria-hidden="true">▦</span><span class="nav-link-title">Tổng quan</span></a>
+        </li>
+      </ul>
+      <div class="nav-section mt-4">QUẢN LÝ HỌC VỤ</div>
+      <ul class="navbar-nav">
+        <li class="nav-item" th:classappend="${activeNav == 'periods'} ? ' active'">
+          <a class="nav-link" th:href="@{/periods}"><span class="nav-symbol" aria-hidden="true">▣</span><span class="nav-link-title">Đợt đăng ký</span></a>
+        </li>
+        <li class="nav-item" th:classappend="${activeNav == 'topics'} ? ' active'">
+          <a class="nav-link" th:href="@{/periods/1/topics}"><span class="nav-symbol" aria-hidden="true">▤</span><span class="nav-link-title">Đề tài</span></a>
+        </li>
+        <li class="nav-item" th:classappend="${activeNav == 'reviews'} ? ' active'">
+          <a class="nav-link" th:href="@{/periods/1/topics/review}"><span class="nav-symbol" aria-hidden="true">✓</span><span class="nav-link-title">Duyệt đề tài</span></a>
+        </li>
+        <li class="nav-item" th:classappend="${activeNav == 'groups'} ? ' active'">
+          <a class="nav-link" th:href="@{/groups/1}"><span class="nav-symbol" aria-hidden="true">♧</span><span class="nav-link-title">Nhóm sinh viên</span></a>
+        </li>
+        <li class="nav-item" th:classappend="${activeNav == 'registrations'} ? ' active'">
+          <a class="nav-link" th:href="@{/registrations/1}"><span class="nav-symbol" aria-hidden="true">↗</span><span class="nav-link-title">Đăng ký đề tài</span></a>
+        </li>
+        <li class="nav-item" th:classappend="${activeNav == 'decisions'} ? ' active'">
+          <a class="nav-link" th:href="@{/registrations/1/decision}"><span class="nav-symbol" aria-hidden="true">◆</span><span class="nav-link-title">Xét duyệt đăng ký</span></a>
+        </li>
+      </ul>
+      <div class="sidebar-note">
+        <span class="status-dot bg-teal me-2"></span>Cổng đề tài sinh viên
+        <p>Một nơi theo dõi hành trình học tập và nghiên cứu.</p>
+      </div>
+    </div>
+  </div>
+</aside>
+</body>
+</html>

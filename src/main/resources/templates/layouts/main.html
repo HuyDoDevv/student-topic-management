@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:fragment="page(title, content)">
+<head th:replace="~{fragments/head :: head(${title})}"></head>
+<body>
+<a class="skip-link" href="#main-content">Đến nội dung chính</a>
+<div class="page">
+  <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
+  <header th:replace="~{fragments/header :: header}"></header>
+  <div class="page-wrapper">
+    <main class="page-body" id="main-content" tabindex="-1">
+      <div class="container-xl" th:insert="${content}"></div>
+    </main>
+    <footer th:replace="~{fragments/footer :: footer}"></footer>
+  </div>
+</div>
+<th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+</html>

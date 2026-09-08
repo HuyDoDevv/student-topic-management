@@ -1,0 +1,14 @@
+# Maven build output
+/target/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# VS Code settings on this machine
+/.vscode/
+
+# Logs and macOS metadata
+*.log
+.DS_Store

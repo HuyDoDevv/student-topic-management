@@ -1,0 +1,209 @@
+classDiagram
+direction LR
+class faculties {
+  +bigint id PK
+  +text name
+}
+class roles {
+  +text code PK
+  +text name
+}
+class departments {
+  +bigint id PK
+  +text name
+  +bigint faculty_id FK
+}
+class user_accounts {
+  +bigint id PK
+  +text full_name nullable
+  +boolean enabled
+  +text username
+  +text password_hash
+  +bigint department_id FK_nullable
+}
+class user_roles {
+  +bigint user_id PK_FK
+  +text role_code PK_FK
+}
+class registration_periods {
+  +bigint id PK
+  +bigint faculty_id FK
+  +text name
+  +text topic_type
+  +timestamp(6) lecturer_start
+  +timestamp(6) lecturer_end
+  +timestamp(6) student_start
+  +timestamp(6) student_end
+  +date reviewer_score_deadline nullable
+  +date council_report_date nullable
+  +bigint version
+}
+class topics {
+  +bigint id PK
+  +bigint period_id FK
+  +bigint department_id FK
+  +bigint author_id FK
+  +text title nullable
+  +text description nullable
+  +text objectives nullable
+  +text student_requirements nullable
+  +text expected_results nullable
+  +text status
+  +bigint version
+}
+class topic_supervisors {
+  +bigint topic_id PK_FK
+  +bigint lecturer_id PK_FK
+  +smallint slot
+}
+class student_groups {
+  +bigint id PK_FK
+  +bigint period_id FK
+  +bigint leader_student_id FK
+  +bigint version
+}
+class group_memberships {
+  +bigint group_id PK_FK
+  +bigint period_id FK
+  +bigint student_id PK_FK
+  +smallint slot
+}
+class registrations {
+  +bigint id PK
+  +bigint period_id FK
+  +bigint group_id FK
+  +bigint topic_id FK
+  +text status
+  +timestamp(6) submitted_at
+  +timestamp(6) decided_at nullable
+  +timestamp(6) withdrawn_at nullable
+  +bigint decision_actor_id FK_nullable
+  +text rejection_kind nullable
+  +text rejection_reason nullable
+  +bigint version
+  +bigint active_group_guard generated_nullable
+  +bigint accepted_topic_guard generated_nullable
+}
+class reviewer_assignments {
+  +bigint registration_id PK_FK
+  +text registration_status FK
+  +bigint lecturer_id PK_FK
+}
+class project_reports {
+  +bigint id PK
+  +bigint registration_id FK
+  +text registration_status FK
+  +bigint submitted_by FK
+  +timestamp(6) submitted_at
+  +text file_name
+  +text storage_key
+  +text content_type nullable
+  +bigint size_bytes nullable
+}
+class councils {
+  +bigint id PK_FK
+  +bigint period_id FK
+  +text name
+  +bigint chair_id FK
+  +bigint secretary_id FK
+}
+class council_members {
+  +bigint council_id PK_FK
+  +bigint lecturer_id PK_FK
+  +smallint slot
+}
+class council_topics {
+  +bigint council_id PK_FK
+  +bigint registration_id PK_FK
+  +bigint period_id FK
+  +text registration_status FK
+  +timestamp(6) scheduled_at nullable
+  +text location nullable
+}
+class score_components {
+  +bigint id PK
+  +bigint period_id FK
+  +text name
+  +decimal(12,4) minimum_score nullable
+  +decimal(12,4) maximum_score nullable
+}
+class evaluations {
+  +bigint id PK
+  +bigint registration_id FK
+  +bigint period_id FK
+  +text registration_status FK
+  +bigint evaluator_id FK
+  +bigint component_id FK
+  +bigint council_id FK_nullable
+  +decimal(12,4) score
+  +text feedback nullable
+  +timestamp(6) evaluated_at
+}
+class final_results {
+  +bigint registration_id PK_FK
+  +text registration_status FK
+  +bigint council_id FK_nullable
+  +bigint consolidated_by FK_nullable
+  +timestamp(6) consolidated_at nullable
+  +text evaluation_summary nullable
+  +decimal(12,4) final_score nullable
+  +timestamp(6) review_completed_at nullable
+  +timestamp(6) grading_completed_at nullable
+  +bigint published_by FK_nullable
+  +timestamp(6) published_at nullable
+}
+class announcements {
+  +bigint id PK
+  +text title
+  +text body
+  +text source_name
+  +bigint faculty_id FK_nullable
+  +bigint published_by FK_nullable
+  +timestamp(6) published_at nullable
+}
+faculties "1" <-- "0..*" departments : faculty_id
+departments "0..1" <-- "0..*" user_accounts : department_id
+user_accounts "1" <-- "0..*" user_roles : user_id
+roles "1" <-- "0..*" user_roles : role_code
+faculties "1" <-- "0..*" registration_periods : faculty_id
+registration_periods "1" <-- "0..*" topics : period_id
+departments "1" <-- "0..*" topics : department_id
+user_accounts "1" <-- "0..*" topics : author_id
+topics "1" <-- "0..*" topic_supervisors : topic_id
+user_accounts "1" <-- "0..*" topic_supervisors : lecturer_id
+registration_periods "1" <-- "0..*" student_groups : period_id
+user_accounts "1" <-- "0..*" student_groups : leader_student_id
+user_accounts "1" <-- "0..*" group_memberships : student_id
+student_groups "1" <-- "0..*" group_memberships : group_id, period_id
+registration_periods "1" <-- "0..*" registrations : period_id
+user_accounts "0..1" <-- "0..*" registrations : decision_actor_id
+student_groups "1" <-- "0..*" registrations : group_id, period_id
+topics "1" <-- "0..*" registrations : topic_id, period_id
+user_accounts "1" <-- "0..*" reviewer_assignments : lecturer_id
+registrations "1" <-- "0..*" reviewer_assignments : registration_id, registration_status
+user_accounts "1" <-- "0..*" project_reports : submitted_by
+registrations "1" <-- "0..*" project_reports : registration_id, registration_status
+registration_periods "1" <-- "0..*" councils : period_id
+user_accounts "1" <-- "0..*" councils : chair_id
+user_accounts "1" <-- "0..*" councils : secretary_id
+councils "1" <-- "0..*" council_members : council_id
+user_accounts "1" <-- "0..*" council_members : lecturer_id
+councils "1" <-- "0..*" council_topics : council_id, period_id
+registrations "1" <-- "0..*" council_topics : registration_id, period_id
+registrations "1" <-- "0..*" council_topics : registration_id, registration_status
+registration_periods "1" <-- "0..*" score_components : period_id
+user_accounts "1" <-- "0..*" evaluations : evaluator_id
+registrations "1" <-- "0..*" evaluations : registration_id, period_id
+registrations "1" <-- "0..*" evaluations : registration_id, registration_status
+score_components "1" <-- "0..*" evaluations : component_id, period_id
+council_topics "0..1" <-- "0..*" evaluations : council_id, registration_id
+council_members "0..1" <-- "0..*" evaluations : council_id, evaluator_id
+user_accounts "0..1" <-- "0..*" final_results : consolidated_by
+user_accounts "0..1" <-- "0..*" final_results : published_by
+registrations "1" <-- "0..1" final_results : registration_id, registration_status
+council_topics "0..1" <-- "0..1" final_results : council_id, registration_id
+faculties "0..1" <-- "0..*" announcements : faculty_id
+user_accounts "0..1" <-- "0..*" announcements : published_by
+group_memberships "1" <-- "0..1" student_groups : id, leader_student_id
+council_members "1" <-- "0..1" councils : id, chair_id
+council_members "1" <-- "0..1" councils : id, secretary_id

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="error(message)" class="alert alert-danger" role="alert" tabindex="-1" data-error-summary>
+  <strong>Chưa thể lưu thông tin.</strong>
+  <span th:text="${message}">Vui lòng kiểm tra các trường được đánh dấu.</span>
+</div>
+<div th:fragment="empty(title, description)" class="empty py-5">
+  <div class="empty-icon" aria-hidden="true">◇</div>
+  <p class="empty-title" th:text="${title}">Chưa có dữ liệu</p>
+  <p class="empty-subtitle text-secondary" th:text="${description}">Dữ liệu sẽ xuất hiện tại đây.</p>
+</div>
+</body>
+</html>

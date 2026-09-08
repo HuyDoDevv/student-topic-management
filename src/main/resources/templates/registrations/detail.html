@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Chi tiết đăng ký', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions"><div><div class="page-pretitle">ĐĂNG KÝ #<span th:text="${registrationId}">1</span></div><h1 class="page-title" th:text="${topic.title}">Tên đề tài</h1><div class="mt-2"><span class="badge bg-yellow-lt" th:text="${registrationStatus}">PENDING</span></div></div><form th:action="@{/registrations/{id}/withdraw(id=${registrationId})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-outline-danger" type="submit">Rút đăng ký</button></form></div>
+  <div class="row row-cards">
+    <div class="col-lg-8"><article class="card"><div class="card-header"><h2 class="card-title">Thông tin đăng ký</h2></div><div class="card-body"><dl class="detail-list detail-list-grid"><dt>Nhóm</dt><dd th:text="${groupCode}">N01</dd><dt>Trạng thái</dt><dd th:text="${registrationStatus}">PENDING</dd><dt>Đề tài</dt><dd th:text="${topic.title}">Tên đề tài</dd><dt>Giảng viên hướng dẫn</dt><dd th:text="${topic.supervisors}">Giảng viên</dd></dl><div class="timeline-note mt-4"><span class="timeline-dot"></span><div><strong>Đã gửi đăng ký</strong><p class="text-secondary mb-0">Đang chờ trưởng khoa xét duyệt.</p></div></div></div></article></div>
+    <div class="col-lg-4"><aside class="card"><div class="card-header"><h2 class="card-title">Thành viên nhóm</h2></div><div class="list-group list-group-flush"><div class="list-group-item" th:each="member : ${members}"><strong th:text="${member.name}">Sinh viên</strong><div class="text-secondary" th:text="|${member.code} · ${member.role}|">Mã số · Vai trò</div></div></div></aside></div>
+  </div>
+</section>
+</body>
+</html>

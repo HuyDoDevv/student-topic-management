@@ -1,0 +1,4 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:fragment="page(code, title, description)">
+<head th:replace="~{fragments/head :: head(${title})}"></head>
+<body><main class="page page-center"><div class="container-tight py-5 text-center"><a class="brand-mark mx-auto mb-4" th:href="@{/}" aria-label="Về dashboard">ĐT</a><div class="error-code" th:text="${code}">404</div><h1 class="h2 mb-3" th:text="${title}">Không tìm thấy trang</h1><p class="text-secondary mb-4" th:text="${description}">Vui lòng thử lại.</p><a class="btn btn-primary" th:href="@{/dashboard}">Về trang tổng quan</a></div></main></body></html>

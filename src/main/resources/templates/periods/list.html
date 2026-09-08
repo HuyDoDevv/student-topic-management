@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Đợt đăng ký', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div><div class="page-pretitle">QUẢN LÝ HỌC VỤ</div><h1 class="page-title">Đợt đăng ký</h1><p class="text-secondary mt-2 mb-0">Quản lý lịch giảng viên đề xuất và sinh viên đăng ký đề tài.</p></div>
+    <a class="btn btn-primary" th:href="@{/periods/new}"><span aria-hidden="true">＋</span> Tạo đợt</a>
+  </div>
+  <div class="card" th:if="${periods != null and !periods.isEmpty()}">
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead><tr><th>Tên đợt</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+        <tbody>
+        <tr th:each="item : ${periods}">
+          <td><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đồ án chuyên ngành</a></td>
+          <td th:text="${item.type}">Đồ án</td>
+          <td class="text-secondary" th:text="${item.lecturerWindow}">01/09 – 15/09</td>
+          <td class="text-secondary" th:text="${item.studentWindow}">20/09 – 30/09</td>
+          <td><span class="badge bg-blue-lt" th:text="${item.status}">Đang mở</span></td>
+          <td class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/periods/{id}(id=${item.id})}">Xem</a></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" th:if="${periods == null or periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Tạo đợt đầu tiên để bắt đầu quy trình đề tài.')}" ></div>
+</section>
+</body>
+</html>

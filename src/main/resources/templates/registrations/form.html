@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Đăng ký đề tài', ~{::section})}">
+<body>
+<section>
+  <div class="page-header"><div><div class="page-pretitle">NHÓM <span th:text="${groupCode}">N01</span></div><h1 class="page-title">Đăng ký đề tài</h1><p class="text-secondary mt-2 mb-0" th:text="${period.name}">Đợt đăng ký</p></div></div>
+  <form class="card" th:action="@{/groups/1/registrations}" method="post" data-prevent-double-submit>
+    <div class="card-body"><div class="alert alert-info" role="status">Chỉ trưởng nhóm được gửi đăng ký. Khi đăng ký đang chờ duyệt, danh sách thành viên và trưởng nhóm sẽ được khóa.</div><fieldset><legend class="h3">Chọn đề tài đã công bố</legend><label class="topic-option" th:each="topic : ${topics}"><input class="form-check-input" type="radio" name="topicId" th:value="${topic.id}" required><span><strong th:text="${topic.title}">Tên đề tài</strong><small><span th:text="${topic.supervisors}">Giảng viên hướng dẫn</span> · <span th:text="${topic.department}">Bộ môn</span></small></span></label></fieldset><input type="hidden" name="version" value="0"></div>
+    <div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-ghost-secondary" th:href="@{/groups/1}">Hủy</a><button class="btn btn-primary" type="submit">Gửi đăng ký</button></div>
+  </form>
+</section>
+</body>
+</html>
