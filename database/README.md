@@ -22,6 +22,16 @@ CREATE USER 'topic_local'@'localhost' IDENTIFIED BY 'THAY_BANG_MAT_KHAU_THAT';
 GRANT ALL PRIVILEGES ON topic_registration_local.* TO 'topic_local'@'localhost';
 ```
 
+V1 có trigger để giữ các quan hệ nhóm và hội đồng. Nếu MySQL local bật binary log,
+tài khoản quản trị cần cho phép tài khoản ứng dụng tạo trigger một lần:
+
+```sql
+SET PERSIST log_bin_trust_function_creators = 1;
+```
+
+Nếu thiếu bước này, Flyway báo MySQL error `1419` khi chạy tới trigger đầu tiên.
+Chỉ chạy câu lệnh cấu hình server trên MySQL local do nhóm quản lý.
+
 Nếu ứng dụng kết nối bằng `127.0.0.1` và MySQL phân biệt host của user, tạo hoặc cấp
 quyền tương ứng cho `'topic_local'@'127.0.0.1'`.
 

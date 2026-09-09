@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(${title})}"></head>
+<body>
+<main class="page page-center">
+  <div class="container-tight py-5 text-center">
+    <a class="brand-mark mx-auto mb-4" th:href="@{/}" aria-label="Về trang tổng quan">ĐT</a>
+    <div class="error-code" th:text="${status}">422</div>
+    <h1 class="h2 mb-3" th:text="${title}">Dữ liệu chưa hợp lệ</h1>
+    <p class="text-secondary mb-2" th:text="${description}">Vui lòng kiểm tra và thử lại.</p>
+    <p class="small text-secondary mb-4" th:if="${errorCode}" th:text="${errorCode}">VALIDATION_FAILED</p>
+    <ul class="alert alert-danger text-start" th:if="${fieldErrors != null and !fieldErrors.isEmpty()}">
+      <li th:each="fieldError : ${fieldErrors}"
+          th:text="${fieldError.field + ': ' + fieldError.message}">field: error</li>
+    </ul>
+    <a class="btn btn-primary" th:href="@{/}">Về trang tổng quan</a>
+  </div>
+</main>
+</body>
+</html>
