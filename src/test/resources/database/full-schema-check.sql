@@ -1,5 +1,5 @@
 -- MySQL 8.4 verification fixture.
--- Run after database/V1__full_system.sql on a disposable test database.
+-- Run after Flyway has migrated a disposable test database.
 -- Business fixture rows are rolled back. The helper procedure is removed at the end.
 
 DROP PROCEDURE IF EXISTS expect_failure;
@@ -34,7 +34,7 @@ INSERT INTO user_accounts(id, username, password_hash, department_id) VALUES
     (-7, 'schema-check-7', 'NOT_A_LOGIN_HASH', -1),
     (-8, 'schema-check-8', 'NOT_A_LOGIN_HASH', -1);
 INSERT INTO user_roles(user_id, role_code) VALUES
-    (-1, 'LECTURER'), (-2, 'LECTURER'), (-3, 'STUDENT');
+    (-1, 'LECTURER'), (-1, 'ADMIN'), (-2, 'LECTURER'), (-3, 'STUDENT');
 
 INSERT INTO registration_periods(
     id, faculty_id, name, topic_type,

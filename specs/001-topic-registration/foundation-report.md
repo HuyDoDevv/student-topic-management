@@ -1,13 +1,26 @@
-> Cập nhật hiện trạng ngày 2026-09-09: database dùng MySQL 8.4 LTS.
-> SQL hiện tại là `database/V1__full_system.sql` (20 bảng trong database đang chọn), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
+> Cập nhật hiện trạng ngày 2026-09-09: database dùng MySQL 8.4 LTS; Flyway tự áp dụng
+> `src/main/resources/db/migration/V1__full_system.sql` để tạo 20 bảng. Chạy bằng
+> `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows.
 > Nội dung bên dưới là bằng chứng lịch sử của nền tảng PostgreSQL trước khi chuyển đổi;
-> không dùng các lệnh Flyway/scripts cũ để chạy phiên bản hiện tại. Xem README.md gốc.
+> không dùng các lệnh/scripts PostgreSQL cũ để chạy phiên bản hiện tại.
 
 # Báo cáo triển khai nền tảng
 
 Ngày: 2026-09-08. Phạm vi được người dùng yêu cầu: làm nền tảng trước, tiếp tục sau lần ngắt.
-Không xác nhận thay khách hàng các gate Q-18, ngày/nhóm/đăng ký hoặc tiêu chí nghiệm thu.
+Q-18 và tiêu chí nghiệm thu/Q-20 đã được người dùng xác nhận ngày 2026-09-09. Các gate
+ngày/đề tài/nhóm/đăng ký còn lại chưa được xác nhận thay khách hàng.
+
+## Kiểm chứng MySQL hiện tại — 2026-09-09
+
+- Java 21.0.12.1 và Spring Boot 4.1.1: `./mvnw clean test` đạt 3/3 test với profile preview.
+- MySQL 8.4.11: ứng dụng profile local kết nối thành công trên instance kiểm thử riêng.
+- Flyway V1: migrate từ database rỗng thành công; tạo 20 bảng nghiệp vụ, 6 trigger và
+  một bản ghi thành công trong `flyway_schema_history`.
+- Chạy lại trên cùng database: schema ở phiên bản 1 và không có migration cần chạy lại.
+- Fixture `src/test/resources/database/full-schema-check.sql`: PASS toàn bộ kiểm tra
+  khóa ngoại, unique key, check constraint và trigger.
+- HTTP sau migration: trang gốc phản hồi 200. Instance/database kiểm thử tạm đã được tắt
+  và xóa sau khi kiểm chứng; MariaDB cổng 3306 không bị thay đổi.
 
 ## Đã làm ở phiên bản nền tảng cũ
 
@@ -54,7 +67,7 @@ Hạ tầng smoke/check ở đây là bổ sung kiểm chứng setup, không đ�
 T060–T064 là hoàn thành. Không có fixture/seeder/tài khoản nghiệp vụ và không có feature US1–5.
 
 Checklist yêu cầu vẫn 12/16; không sửa markers. User cho phép làm setup độc lập sau
-analyze, không miễn trừ constitution I/X. T006/Q-18 và những gate tiếp theo vẫn cần
+analyze, không miễn trừ constitution I/X. T006/Q-18 và T007/Q-20 đã hoàn tất; những gate tiếp theo vẫn cần
 câu trả lời trước phần triển khai phụ thuộc. Không tuyên bố feature hoàn thành.
 
 Không có extension hooks before_implement/after_implement trong workspace.

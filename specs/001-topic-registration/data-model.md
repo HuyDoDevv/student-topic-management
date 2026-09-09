@@ -1,22 +1,19 @@
-> Cập nhật theo yêu cầu người dùng tạo DB toàn hệ thống và đơn giản hóa chạy local:
-> SQL hiện tại là `database/V1__full_system.sql` (20 bảng MySQL), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
-> Database hiện hành là MySQL 8.4 LTS; schema 20 bảng ở `database/V1__full_system.sql`.
-> Nội dung bên dưới lưu lại kế hoạch/báo cáo feature 001 trước thay đổi này;
-> các lệnh Flyway/scripts cũ không còn là hướng dẫn chạy hiện tại. Xem README.md gốc.
+> Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
+> `src/main/resources/db/migration/V1__full_system.sql` và được Flyway áp dụng.
 
 # Data Model — Thiết kế có điều kiện
 
 Áp dụng [spec](spec.md) FR-01–15. MySQL 8.4 LTS; tên/kiểu dưới đây là thiết kế kỹ thuật,
-không thêm nghiệp vụ. Q có ảnh hưởng schema được ghi rõ; chưa tạo migration.
+không thêm nghiệp vụ. Q có ảnh hưởng schema được ghi rõ; thay đổi sau khi chốt phải được
+thực hiện bằng migration mới.
 
 ## Entities
 
 | Entity / bảng dự kiến | Trường chính | Quan hệ và ghi chú |
 |---|---|---|
-| Department / departments | id bigint PK, name text | Bộ môn đã nêu; tổ chức khoa/scope cuối cùng chờ Q-18 |
-| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK | Mật khẩu không lưu plaintext; quy tắc chuẩn hóa username/tổ hợp role cần ghi khi chốt provisioning |
-| UserRole / user_roles | user_id FK, role_code | PK hai trường; STUDENT/LECTURER/DEAN. Bảng hỗ trợ lưu role, không mặc định tổ hợp role nào được phép |
+| Department / departments | id bigint PK, name text | Bộ môn thuộc khoa; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
+| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
+| UserRole / user_roles | user_id FK, role_code | PK hai trường; ADMIN/STUDENT/LECTURER/DEAN. LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
 | RegistrationPeriod / registration_periods | id, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký timestamptz; ngày giai đoạn sau kiểu date dự kiến, độ chính xác/bắt buộc còn Q-02 |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Bản đề tài thuộc một đợt cho luồng hiện tại. Nếu Q-05 cho tái sử dụng, tách catalog và offering bằng migration trước triển khai phần đó |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc GVHD |
@@ -27,6 +24,11 @@ không thêm nghiệp vụ. Q có ảnh hưởng schema được ghi rõ; chưa 
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
 Không suy ra department bắt buộc cho trưởng khoa hay quyền sinh viên từ FK bộ môn.
 Chưa chốt schema phạm vi khoa: không bỏ trống scope rồi hiểu là toàn quyền.
+
+Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nội dung cần cờ/trạng thái
+ẩn và metadata `hidden_by`, `hidden_at`, `hidden_reason`; mọi thay đổi schema tương ứng phải
+được tạo bằng migration trước khi cài quyền này. Đây là luồng sự cố riêng, không làm thay
+đổi trạng thái duyệt học vụ của đề tài và không cho ADMIN sửa nội dung.
 
 Dữ liệu nhập form dùng giờ Asia/Ho_Chi_Minh, chuyển sang instant lưu timestamptz.
 Hiển thị lại bằng cùng zone; không dùng múi giờ trình duyệt để quyết định hạn.
@@ -81,7 +83,7 @@ tự từ chối pending. Sửa loại/bốn mốc chỉ trước lecturer_start
 |---|---|---|
 | DRAFT → DRAFT | GV tác giả | Chỉ sửa nháp của mình; không suy diễn thêm deadline sửa nháp |
 | DRAFT → PENDING_APPROVAL | GV tác giả | Trong hạn GV, đủ 5 nội dung, 1–2 GVHD cùng bộ môn |
-| PENDING_APPROVAL → APPROVED | Trưởng khoa | Quyền theo scope chờ Q-18 |
+| PENDING_APPROVAL → APPROVED | Trưởng khoa | Chỉ đề tài thuộc khoa của trưởng khoa |
 | PENDING_APPROVAL → DRAFT | Trưởng khoa | Từ chối; gửi lại vẫn phải trong hạn GV |
 | APPROVED → PUBLISHED | Trưởng khoa | Công bố; không nhảy qua duyệt |
 
@@ -147,9 +149,9 @@ trong khi test không đại diện một luồng quản trị đã chốt.
 
 ## Migration and sample data
 
-Dự kiến V1 identity/department; V2 periods/topics/supervisors; V3 groups/membership;
-V4 registrations/partial indexes. Đây là cách chia dự kiến, chỉ viết migration sau khi
-các Q ảnh hưởng schema được xác nhận. Không gán số V đã tồn tại hoặc sửa migration đã chạy.
+V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. Các quyết
+định nghiệp vụ còn mở làm thay đổi schema phải được đưa vào V2 trở đi sau khi xác nhận.
+Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra
 thất bại có kiểm soát. Backup trước thay đổi local có dữ liệu cần giữ; ưu tiên migration

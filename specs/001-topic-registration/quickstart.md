@@ -1,10 +1,6 @@
-> Cập nhật theo yêu cầu người dùng tạo DB toàn hệ thống và đơn giản hóa chạy local:
-> SQL hiện tại là `database/V1__full_system.sql` (20 bảng MySQL), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
-> Database hiện hành là MySQL 8.4 LTS, cổng mặc định 3306. Import
-> `database/V1__full_system.sql` bằng DBeaver trước khi chạy profile local.
-> Nội dung bên dưới lưu lại kế hoạch/báo cáo feature 001 trước thay đổi này;
-> các lệnh Flyway/scripts cũ không còn là hướng dẫn chạy hiện tại. Xem README.md gốc.
+> Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS, cổng mặc định 3306.
+> Flyway tự áp dụng `src/main/resources/db/migration/V1__full_system.sql` khi chạy
+> profile local. DBeaver dùng để tạo database/tài khoản và kiểm tra schema.
 
 # Quickstart — Kế hoạch chạy và kiểm chứng local
 
@@ -36,9 +32,9 @@ Thực hiện provisioning database/user bằng UI/SQL quản trị; đây khôn
 migration cho bảng ứng dụng. Không ghi password thật vào SQL file trong repository.
 
 Tạo connection thứ hai bằng tài khoản ứng dụng, database topic_registration_local.
-Dùng DBeaver chạy `database/V1__full_system.sql`, rồi Refresh database → Tables/Indexes/Constraints để kiểm tra.
-DBeaver dùng cùng host/port/database/user/password như cấu hình ứng dụng, không tự đọc
-các biến môi trường trong terminal.
+Chạy ứng dụng bằng profile local để Flyway tạo schema, rồi Refresh database trong
+DBeaver để kiểm tra Tables/Indexes/Constraints. DBeaver dùng cùng
+host/port/database/user/password như cấu hình ứng dụng và không tự đọc `.env`.
 
 Nguồn: [DBeaver Create Connection](https://dbeaver.com/docs/dbeaver/Create-Connection/).
 
@@ -74,8 +70,8 @@ Không có secret mặc định. Thiếu kết nối/secret phải báo lỗi c�
 DB in-memory. File .env nếu người dùng tự dùng phải được ignore; Spring Boot không mặc
 định tự nạp .env, cần export biến vào process. Ví dụ cấu hình commit chỉ chứa placeholder.
 
-Cấu hình cố định: ddl-auto=validate; sql.init.mode=never; open-in-view=false.
-Schema được import chủ động bằng DBeaver; ứng dụng không tự tạo hay tự đổi bảng.
+Cấu hình cố định: ddl-auto=validate; sql.init.mode=never; open-in-view=false. Flyway là
+cơ chế duy nhất tạo và thay đổi bảng ứng dụng.
 
 ## 3. Migration, build và seed
 
@@ -96,7 +92,8 @@ thay đổi tiếp theo phải tạo V2, V3… và sao lưu trước khi chạy.
 Seeder chạy sau migration, chỉ profile local, lặp lại không nhân đôi/reset dữ liệu.
 Tạo dữ liệu tổng hợp được mô tả trong data-model; không lấy dữ liệu SV thật.
 Cấp mật khẩu ngoài repository, không ghi password/hash sử dụng được vào fixture commit.
-Tắt seed sau lần tạo. Nguồn tài khoản thực tế vẫn Q-18; seeder không xác nhận nghiệp vụ đó.
+Tắt seed sau lần tạo. Tài khoản local được seed/import theo Q-18; seeder chỉ phục vụ
+local và không thay thế kiểm tra role/scope ở backend.
 
 Các mốc demo được ghi rõ khi seed, không tự dịch giờ ở lần restart.
 Để đi xuyên hai giai đoạn không chồng lấn, chuẩn bị một đợt mới có cửa sổ GV ngắn

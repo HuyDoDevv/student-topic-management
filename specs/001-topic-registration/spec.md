@@ -57,6 +57,14 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 
 - Q: Trưởng khoa được thay đổi loại đợt và thời gian đăng ký sau khi đợt đã bắt đầu không? → A: A — Chỉ sửa loại và các mốc đăng ký trước giờ bắt đầu GV; từ giờ đó trở đi khóa các trường này. Xác nhận U, phiên 3; làm rõ phần sửa loại/lịch trong Q-02, liên quan REQ-03–05, REQ-31. Không suy rộng quyết định này sang tên đợt, hạn điểm GVPB hoặc ngày báo cáo hội đồng.
 
+### Session 2026-09-09
+
+- Q: Trong phiên bản đầu tiên, hệ thống sẽ cấp tài khoản, kết hợp vai trò và giới hạn phạm vi dữ liệu theo phương án nào? → A: Phương án A và bổ sung ADMIN — Tài khoản được seed/import local; tài khoản nhân sự có thể đồng thời giữ LECTURER và DEAN, STUDENT không kết hợp với vai trò nhân sự. Trưởng khoa quản lý trong khoa mình, giảng viên thao tác đề tài trong bộ môn mình, sinh viên xem đề tài đã công bố trong khoa và chỉ thay đổi nhóm/đăng ký mình có quyền. Thêm role ADMIN để xử lý sự cố website; phạm vi cụ thể được chốt ở các câu tiếp theo trong phiên này. Xác nhận U, làm rõ một phần Q-18; liên quan REQ-28, REQ-31–32.
+- Q: ADMIN có được phép can thiệp trực tiếp vào các nghiệp vụ học vụ như tạo đợt, duyệt đề tài và xét đăng ký không? → A: ADMIN chỉ xử lý sự cố khẩn cấp như nội dung do kẻ gian đăng; không quản lý nghiệp vụ học tập, đăng ký, role, khoa/bộ môn hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên chưa có trong phiên bản đầu và nếu bổ sung sau sẽ thuộc trưởng khoa. Xác nhận U, thay thế phạm vi ADMIN đề xuất trước đó và làm rõ một phần Q-18; liên quan REQ-28, REQ-31–32.
+- Q: Khi trưởng khoa chuyển một giảng viên đang có đề tài hoặc phân công GVHD sang bộ môn/khoa khác, các trách nhiệm đang hoạt động phải được xử lý thế nào? → A: Bỏ qua trong phiên bản đầu vì là chức năng mở rộng, mức độ không quan trọng. Phiên bản đầu không cung cấp thao tác chuyển giảng viên và giả định thông tin bộ môn/khoa ổn định trong các luồng đang hoạt động; nếu có thời gian sẽ đặc tả và triển khai sau. Xác nhận U, đóng phần chuyển bộ môn của Q-18 bằng quyết định ngoài phạm vi hiện tại.
+- Q: Khi có kẻ gian đăng nội dung, ADMIN nên “xóa” theo cách nào? → A: A — ADMIN ẩn nội dung khỏi website nhưng giữ dữ liệu để kiểm tra hoặc khôi phục; lưu ADMIN thực hiện, thời gian và lý do, đồng thời khóa tài khoản gây sự cố. Đây là quyền xử lý khẩn cấp, không cấp quyền sửa nội dung hoặc thực hiện nghiệp vụ học vụ/đăng ký. Xác nhận U, giải quyết phần còn lại của Q-18; liên quan REQ-28, REQ-31–32.
+- Q: Phiên bản local đầu tiên được nghiệm thu theo mức chất lượng nào? → A: A — Dùng toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; kiểm tra chức năng, phân quyền backend, CSRF, mật khẩu băm, validation, không lộ secret, responsive trên desktop/tablet/mobile và các xung đột dữ liệu chính. Không đặt SLA định lượng cho thời gian phản hồi, số người dùng đồng thời, uptime hoặc backup ở phiên bản local. Xác nhận U, giải quyết Q-20 và G-Acceptance; các kết quả phụ thuộc Q nghiệp vụ còn lại tiếp tục ở trạng thái blocked cho tới khi từng Q được chốt.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Các story P1 tạo thành luồng bàn giao đầu tiên; thứ tự trình bày phản ánh phụ thuộc
@@ -122,6 +130,16 @@ Hai khoảng được phép tiếp giáp ở cùng một thời điểm; chỉ k
 13. **Given** người không có vai trò trưởng khoa,
     **When** sửa loại/lịch kể cả trước giờ mở GV,
     **Then** bị từ chối và dữ liệu không đổi (AS-1.13).
+14. **Given** tài khoản thuộc khoa, bộ môn hoặc nhóm khác phạm vi được cấp,
+    **When** đọc hoặc thay đổi dữ liệu được bảo vệ,
+    **Then** backend từ chối dữ liệu ngoài phạm vi đã xác nhận (AS-1.14).
+15. **Given** tài khoản chỉ có role ADMIN,
+    **When** thực hiện tạo đợt, duyệt/công bố đề tài hoặc xét đăng ký,
+    **Then** backend từ chối vì ADMIN không có quyền học vụ hoặc đăng ký (AS-1.15).
+16. **Given** nội dung do tài khoản gây sự cố đăng và ADMIN cung cấp lý do,
+    **When** ADMIN xử lý khẩn cấp,
+    **Then** nội dung bị ẩn khỏi website nhưng còn trong database, tài khoản gây sự cố
+    bị khóa và hệ thống lưu ADMIN, thời gian, lý do để kiểm tra/khôi phục (AS-1.16).
 
 ### User Story 2 - Giảng viên đăng đề tài có hướng dẫn (Priority: P1)
 
@@ -345,7 +363,8 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 ### Edge Cases
 
 - GV đăng hoặc một trong hai GVHD khác bộ môn đề tài: từ chối theo AS-2.5–2.6.
-  Chưa xác định chính sách khi giảng viên chuyển bộ môn sau khi đã đăng/phân công.
+  Phiên bản đầu giả định bộ môn của giảng viên ổn định khi còn đề tài/phân công hoạt động
+  và không cung cấp thao tác chuyển giảng viên; đây là chức năng mở rộng nếu làm sau.
 - Đúng giờ bắt đầu được tính trong hạn, đúng giờ kết thúc bị tính ngoài hạn;
   dùng Asia/Ho_Chi_Minh. Hai khoảng GV/SV không chồng lấn, GV trước SV.
 - Đến hạn SV nhưng chưa công bố danh sách: chưa nhận đăng ký; công bố sau giờ kết thúc
@@ -383,6 +402,12 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 - Hai yêu cầu đăng ký lại đồng thời không được tạo hai đăng ký có hiệu lực cho một nhóm.
 - Gửi lại thao tác hoặc giả mạo danh tính/nhóm/role: không được tạo dữ liệu trái ràng buộc
   hoặc cấp quyền chỉ vì thông tin bên gọi tự khai.
+- Tài khoản STUDENT đồng thời có vai trò LECTURER hoặc DEAN là cấu hình không hợp lệ.
+  LECTURER có thể đồng thời giữ DEAN. ADMIN là vai trò xử lý sự cố khẩn cấp và không
+  mang quyền học vụ; STUDENT không kết hợp với ADMIN, LECTURER hoặc DEAN.
+- Xử lý khẩn cấp không xóa cứng nội dung: nội dung bị ẩn, tài khoản gây sự cố bị khóa,
+  và lưu người xử lý/thời gian/lý do. Việc khôi phục phải dựa trên dấu vết này và không
+  tự thay đổi trạng thái nghiệp vụ khác.
 
 ## Requirements *(mandatory)*
 
@@ -390,7 +415,7 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 
 | ID | Yêu cầu | Căn cứ / trạng thái | Nghiệm thu |
 |---|---|---|---|
-| FR-01 | Nhận diện người dùng qua tài khoản nội bộ cấp sẵn bằng tên đăng nhập và mật khẩu, với vai trò/bộ môn đã cấp. Không cung cấp tự đăng ký tài khoản. Kiểm tra quyền và quan hệ tài nguyên cho thao tác trong luồng; không chấp nhận tự khai quyền/bộ môn. | U: phiên 2 ngày 2026-09-08, Q-18; REQ-28, REQ-31–32, INF-06; constitution III | AS-1.3, 1.5–1.8, 2.4, 3.3, 4.4, 5.6 |
+| FR-01 | Nhận diện người dùng qua tài khoản nội bộ cấp sẵn bằng tên đăng nhập và mật khẩu, được seed/import local với các role ADMIN, STUDENT, LECTURER, DEAN. LECTURER có thể kết hợp DEAN; STUDENT không kết hợp với ADMIN, LECTURER hoặc DEAN. Trưởng khoa chỉ quản lý trong khoa mình, giảng viên thao tác đề tài trong bộ môn mình, sinh viên xem đề tài đã công bố trong khoa và chỉ thay đổi nhóm/đăng ký mình có quyền. ADMIN chỉ xử lý sự cố khẩn cấp: ẩn nội dung vi phạm, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng dữ liệu, không sửa nội dung và không quản lý nghiệp vụ học tập, đăng ký, role, khoa/bộ môn hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Không cung cấp tự đăng ký và không chấp nhận quyền/phạm vi do bên gọi tự khai. | U: các phiên 2026-09-08 và 2026-09-09, Q-18 đã giải quyết; REQ-28, REQ-31–32, INF-06; constitution III | AS-1.3, 1.5–1.8, 1.14–1.16, 2.4, 3.3, 4.4, 5.6 |
 | FR-02 | Trưởng khoa tạo đợt có tên và một trong bốn loại môn học/NCKH/TLCN/KLTN. | E: REQ-01, 04 | AS-1.1, 1.4 |
 | FR-03 | Đợt có bắt đầu/kết thúc đăng ký GV và SV theo Asia/Ho_Chi_Minh; bắt đầu GV < kết thúc GV ≤ bắt đầu SV < kết thúc SV. Tự mở/đóng theo lịch; trong hạn khi bắt đầu ≤ thời điểm < kết thúc. Áp dụng khoảng SV cho đăng ký, đăng ký lại và rút chờ xét; đăng ký SV còn phải có danh sách đã công bố. | E: REQ-02–05; chi tiết xác nhận U, phiên 2 ngày 2026-09-08, Q-03–04 | AS-1.1, 1.9–1.10, 2.2, 5.2, 5.11, 5.13, 5.17–5.18 |
 | FR-04 | Hạn nộp điểm GVPB chỉ cấu hình cho TLCN/KLTN; ngày báo cáo hội đồng chỉ cho KLTN. | E: REQ-06–07; Q-02 | AS-1.2 |
@@ -407,12 +432,24 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 
 | FR-15 | Chỉ trưởng khoa được sửa loại đợt và bốn mốc đăng ký GV/SV trước giờ bắt đầu GV đang có hiệu lực. Từ đúng giờ bắt đầu GV trở đi khóa các trường này, không được dời lịch, gia hạn hay mở lại bằng cách sửa các trường đã khóa. Cấu hình sửa trước hạn phải vẫn thỏa quy tắc loại và lịch. | U: phiên 3 ngày 2026-09-08, Q-02; liên quan REQ-03–05, REQ-31 | AS-1.11–1.13 |
 
+### Non-Functional Requirements
+
+- **NFR-01 — Bảo mật nền tảng:** Mọi quyền được kiểm tra ở backend; các POST dùng CSRF;
+  mật khẩu được băm; đầu vào được validation; session được bảo vệ; secret không nằm trong
+  repository hoặc log. Các ca sai quyền/giả mạo phải không làm thay đổi dữ liệu.
+- **NFR-02 — Responsive:** Các trang chính phải sử dụng được ở desktop, tablet và mobile.
+  Ở viewport 360 px, 768 px và 1280 px, nội dung không tràn ngang toàn trang; bảng rộng
+  được cuộn trong vùng chứa; menu, form và thao tác chính vẫn nhìn thấy, đọc được và dùng
+  bằng bàn phím. Không đặt SLA định lượng về tải, uptime hoặc backup cho phiên bản local.
+
 ### Scope and Dependencies
 
 Trong phạm vi: FR-01–15, gồm cấu hình hai mốc liên quan giai đoạn sau trong FR-04.
 Nhận diện/phân quyền dùng tài khoản nội bộ cấp sẵn với tên đăng nhập/mật khẩu và vai trò/bộ môn.
-Không bao hàm toàn bộ quản trị tài khoản REQ-28 hay khôi phục mật khẩu; không cung cấp tự đăng ký.
-Nguồn danh tính cho đợt đầu không phụ thuộc đăng nhập của trường.
+Tài khoản được seed/import local và không cung cấp tự đăng ký. Role ADMIN chỉ xử lý sự cố
+khẩn cấp bằng cách ẩn nội dung, lưu dấu vết và khóa tài khoản gây sự cố; không có quyền học
+vụ, đăng ký hoặc thay đổi cơ cấu tổ chức. Nguồn danh tính cho đợt đầu không phụ thuộc đăng
+nhập của trường.
 
 Ngoài đợt này nhưng vẫn trong tổng thể: nộp báo cáo REQ-17; phân công GVPB thuộc
 REQ-11; phản biện/hội đồng REQ-18–22; chấm điểm REQ-23–25; kết quả REQ-26–27;
@@ -421,8 +458,8 @@ REQ-31–32 áp dụng xuyên suốt. Cấu hình REQ-06–07 không kéo nghi�
 
 Phụ thuộc nghiệp vụ: danh tính và vai trò đáng tin cậy; dữ liệu GV/SV/bộ môn;
 quyền trưởng khoa cho duyệt/công bố, quyết định đăng ký và quy tắc lịch đã xác nhận;
-điều kiện nhóm và một số chuyển trạng thái còn cần xác nhận. Danh tính là tài khoản nội bộ cấp sẵn;
-người/quy trình cấp tài khoản, vai trò/bộ môn và nguồn dữ liệu danh mục còn cần xác nhận.
+điều kiện nhóm và một số chuyển trạng thái còn cần xác nhận. Danh tính là tài khoản nội bộ
+cấp sẵn qua seed/import local; nguồn dữ liệu danh mục còn cần xác nhận.
 Không mặc định tích hợp bên ngoài hay thêm chức năng
 quản trị danh mục. Không cần các tính năng triển khai sau để đặc tả luồng này.
 
@@ -442,7 +479,7 @@ Không chỉ định giao thức, framework, database hay công cụ kiểm th�
 | AT-07 | Ca đồng thời thêm thành viên, cùng SV tham gia hai nhóm trong cùng đợt và nhóm đăng ký đề tài; kết quả không vi phạm REQ-12–14. Kiểm tra nhóm ở hai đợt khác nhau không xung đột vì REQ-13. Hai thao tác chấp nhận nhóm khác nhau cho cùng đề tài/đợt không được tạo hai nhóm được chấp nhận. Không mặc định cách chọn người thắng. | FR-08–11, 13; AS-5.8; constitution VI; Q-08, Q-10 đã xác nhận; còn Q-09 |
 | AT-08 | Ca quyền hoặc dữ liệu liên quan thay đổi trong lúc xử lý quyết định; kết quả vẫn tuân thủ chính sách đã chốt, không ghi trạng thái trái phép. Ca chuyển trưởng nhóm đồng thời với quản lý thành viên/gửi đăng ký phải giữ đúng một trưởng nhóm và không dùng quyền đã mất để thực hiện thao tác trái phép.  Rút và chấp nhận đồng thời không được tạo trạng thái vừa rút vừa chấp nhận; đăng ký lại đồng thời không tạo hai đăng ký có hiệu lực. | FR-01, 07–08, 10–13 |
 | AT-09 | Đầu vào sai tại ranh giới hệ thống bị từ chối và không lưu thay đổi dở dang. | constitution IV; các FR liên quan |
-| AT-10 | Đăng nhập đúng thông tin tài khoản cấp sẵn; từ chối sai mật khẩu/tài khoản không tồn tại và thao tác được bảo vệ khi chưa đăng nhập. Vai trò/bộ môn đúng dữ liệu được cấp, không thể tự khai để nâng quyền. Không cung cấp tự đăng ký. | FR-01; AS-1.5–1.8; REQ-31–32 |
+| AT-10 | Đăng nhập đúng thông tin tài khoản cấp sẵn; từ chối sai mật khẩu/tài khoản không tồn tại và thao tác được bảo vệ khi chưa đăng nhập. Cho phép LECTURER kết hợp DEAN; từ chối STUDENT kết hợp ADMIN, LECTURER hoặc DEAN. Vai trò/khoa/bộ môn đúng dữ liệu được cấp, không thể tự khai để nâng quyền; kiểm tra từ chối truy cập chéo phạm vi và không cung cấp tự đăng ký. Tài khoản ADMIN bị từ chối mọi thao tác học vụ, đăng ký, quản lý role/khoa/bộ môn và chuyển giảng viên. | FR-01; AS-1.5–1.8, 1.14–1.15; REQ-31–32 |
 | AT-11 | Chấp nhận một nhóm làm mọi đăng ký khác còn chờ xét cùng đề tài/đợt bị từ chối đúng lý do; không đổi đăng ký đã rút/từ chối. Từ chối đăng ký mới vào đề tài đã nhận nhóm, kể cả tranh chấp gửi/chấp nhận. Nhóm bị tự động từ chối được đăng ký đề tài khác hợp lệ trong hạn. | FR-10–13; AS-5.14–5.16; Q-10 đã xác nhận |
 
 Migration khi sử dụng database, tách nghiệp vụ khỏi controllers và bảo vệ secrets
@@ -462,12 +499,21 @@ Kiểm tra dời giờ bắt đầu về tương lai không vượt khóa, khôn
 người không phải trưởng khoa bị từ chối. Ca sửa đồng thời với mở đợt không được ghi thay đổi
 vi phạm khóa. Liên kết FR-15, AS-1.11–1.13; giữ dữ liệu không đổi khi từ chối.
 
+Yêu cầu kiểm thử tự động AT-14: ADMIN có lý do được ẩn nội dung vi phạm, khóa tài khoản
+gây sự cố và lưu đúng người xử lý/thời gian/lý do; nội dung không còn hiển thị nhưng không
+bị xóa khỏi database. Từ chối ADMIN sửa nội dung hoặc thực hiện học vụ/đăng ký; người không
+có ADMIN không được xử lý khẩn cấp. Liên kết FR-01, AS-1.15–1.16.
+
+Yêu cầu kiểm thử tự động AT-15: chạy các trang chính ở viewport 360 px, 768 px và 1280 px;
+không có tràn ngang toàn trang, bảng rộng cuộn trong vùng chứa, menu/form/thao tác chính
+dùng được bằng bàn phím và trạng thái không chỉ thể hiện bằng màu. Liên kết NFR-02, SC-009.
+
 ### Key Entities *(include if feature involves data)*
 
 - **Người dùng và vai trò/ngữ cảnh**: danh tính GV/SV/trưởng khoa; quyền trên thao tác
   và quan hệ với nhóm/đề tài. Tài khoản nội bộ cấp sẵn, đăng nhập bằng tên đăng nhập và
-  mật khẩu, được gán vai trò/bộ môn. Không tự đăng ký; không xác định vai trò quản trị mới
-  hoặc cách lưu thông tin xác thực ở mức kỹ thuật.
+  mật khẩu, được gán vai trò/bộ môn. Không tự đăng ký. ADMIN là vai trò xử lý sự cố:
+  ẩn nội dung, lưu dấu vết và khóa tài khoản gây sự cố, không có quyền học vụ/đăng ký.
   Bộ môn của GV là dữ liệu dùng để kiểm tra quyền đăng đề tài và tính hợp lệ của GVHD.
 - **Đợt đăng ký**: tên, loại, bốn mốc đăng ký GV/SV, hai ngày có điều kiện; hai giai đoạn.
   Lịch theo Asia/Ho_Chi_Minh; khoảng GV trước SV, không chồng lấn, tính đầu không tính cuối.
@@ -493,8 +539,8 @@ vi phạm khóa. Liên kết FR-15, AS-1.11–1.13; giữ dữ liệu không đ�
 
 ### Measurable Outcomes
 
-Các chỉ số sau là tiêu chuẩn nghiệm thu đề xuất I/U, không phải cam kết hiệu năng
-hay mức độ hài lòng do khách hàng cung cấp.
+Các chỉ số sau được xác nhận làm tiêu chuẩn nghiệm thu cho phiên bản local ngày
+2026-09-09. Chúng không tạo cam kết SLA định lượng về tải, uptime hoặc backup.
 
 - **SC-001**: Với cả 4 loại đợt, người có quyền hoàn tất tạo đợt; 100% trường được xác nhận
   cho mỗi loại được ghi nhận đúng và không chấp nhận ngày không áp dụng (US1; AT-01).
@@ -516,15 +562,20 @@ hay mức độ hài lòng do khách hàng cung cấp.
 - **SC-008**: Sau mỗi ca chấp nhận nhóm thành công, số đăng ký còn chờ xét cho cùng
   đề tài/đợt bằng 0; 100% đăng ký thuộc diện tự động từ chối có lý do “Đề tài đã nhận nhóm”;
   không tạo được đăng ký mới cho đề tài đã nhận nhóm trong đợt (AT-11).
+- **SC-009**: 100% trang chính được kiểm tra ở viewport 360 px, 768 px và 1280 px không
+  tràn ngang toàn trang; bảng rộng cuộn trong vùng chứa; menu, form và thao tác chính vẫn
+  nhìn thấy, đọc được và dùng được bằng bàn phím (AT-15).
 
-Không đặt thêm ngưỡng thời gian phản hồi, số người dùng đồng thời hoặc tỷ lệ hài lòng:
-nguồn chưa cung cấp, Q-20 vẫn mở.
+Không đặt ngưỡng thời gian phản hồi, số người dùng đồng thời, uptime hoặc backup cho
+phiên bản local theo quyết định Q-20 ngày 2026-09-09.
 
 ## Assumptions
 
 Không đặt giả định nghiệp vụ mặc định. Dùng “đề tài” và “thực hiện đề tài” theo A-01
-của bản phân tích để mô tả luồng; không quyết định thiết kế lưu trữ. Vai trò có thể theo
-ngữ cảnh là A-02, chưa xác nhận mọi tổ hợp vai trò. Trưởng khoa đã được xác nhận có quyền
+của bản phân tích để mô tả luồng; không quyết định thiết kế lưu trữ. Đã xác nhận LECTURER
+có thể kết hợp DEAN, còn STUDENT không kết hợp với ADMIN, LECTURER hoặc DEAN. ADMIN
+chỉ xử lý sự cố khẩn cấp và không có quyền học vụ hoặc đăng ký.
+Trưởng khoa đã được xác nhận có quyền
 duyệt/công bố và chấp nhận/từ chối đăng ký. Trưởng nhóm đã được xác nhận quản lý thành viên,
 chuyển quyền trong nhóm, gửi đăng ký và rút đăng ký chờ xét trong hạn SV.
 Các quyền khác chưa chốt không được suy rộng.
@@ -537,6 +588,8 @@ không bị thay bằng giả định để giới hạn số câu hỏi.
 - **CL-01**: Đã giải quyết thẩm quyền: trưởng khoa duyệt/công bố và chấp nhận/từ chối; trưởng nhóm quản lý thành viên, chuyển quyền cho thành viên cùng nhóm và gửi đăng ký; SV tạo nhóm là trưởng nhóm ban đầu.
 - **CL-02**: Đã xác nhận một nhóm/SV theo từng đợt (Q-08); nhiều nhóm chờ xét nhưng tối đa một nhóm được chấp nhận/đề tài/đợt (Q-10). Đã xác nhận trong hạn SV được rút chờ xét, đăng ký lại đề tài cũ/khác còn nhận đăng ký sau rút/từ chối; không rút đăng ký đã chấp nhận (Q-09).
 - **CL-03**: Đã xác nhận Asia/Ho_Chi_Minh, GV trước SV không chồng lấn, tự mở/đóng theo lịch, tính bắt đầu không tính kết thúc; SV chỉ đăng ký sau công bố và còn hạn. Trưởng khoa chỉ sửa loại/bốn mốc đăng ký trước giờ bắt đầu GV; từ giờ đó bị khóa. Ngày có điều kiện vẫn còn phần Q-02 chưa chốt.
+- **CL-04**: Đã chọn seed/import local; LECTURER có thể kết hợp DEAN, STUDENT không kết hợp ADMIN/vai trò nhân sự; quyền trưởng khoa/giảng viên/sinh viên giới hạn theo khoa, bộ môn và quan hệ dữ liệu. ADMIN chỉ xử lý sự cố bằng cách ẩn nội dung, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng, sửa nội dung hoặc quản lý nghiệp vụ/role/cơ cấu tổ chức. Chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Q-18 đã giải quyết cho phạm vi hiện tại.
+- **CL-05**: Đã xác nhận toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; bảo mật nền tảng, responsive và xung đột dữ liệu chính phải được kiểm tra. Không đặt SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup cho phiên bản local. Q-20 và G-Acceptance đã giải quyết; tiêu chí phụ thuộc Q nghiệp vụ khác vẫn blocked theo gate tương ứng.
 
 Các quyết định khác vẫn mở:
 
@@ -547,8 +600,6 @@ Các quyết định khác vẫn mở:
 | Q-06 (phần còn lại) | Thay đổi phân công bởi vai trò khác hoặc sau công bố chưa được xác nhận. Đã chốt GV đăng chọn GVHD trong Nháp, đủ 1–2 GVHD khi gửi duyệt và không sửa từ Chờ duyệt. | FR-06, FR-14 |
 | Q-07 (phần còn lại) | Nhóm nháp/thời điểm tạo nhóm và rời/chuyển nhóm. Đã chốt 1–3 SV đủ điều kiện số lượng để đăng ký, thêm trực tiếp không cần xác nhận, người tạo, quyền và thời điểm sửa: trong hạn SV, không có đăng ký chờ xét/đã chấp nhận. | FR-08–10 |
 | Q-09 (phần còn lại) | Tính bắt buộc của lý do từ chối, thứ tự ưu tiên khi rút/chấp nhận đồng thời, chính sách lưu lịch sử. Quyền rút và đăng ký lại đã chốt. | FR-10–13 |
-| Q-18 (phần còn lại) | Ai/quy trình nào cấp tài khoản và vai trò/bộ môn; tổ hợp vai trò; phạm vi quyền trưởng khoa và phạm vi chọn đề tài của SV; xử lý GV chuyển bộ môn. Đã chốt tài khoản nội bộ cấp sẵn đăng nhập tên/mật khẩu, không tự đăng ký; GV đăng và toàn bộ GVHD cùng bộ môn đề tài. | FR-01, FR-05–06 và các ca từ chối |
-| Q-20 | Ngưỡng chất lượng/bảo mật nền tảng còn thiếu. | Tiêu chí phi chức năng; không tự chọn công nghệ |
 
-Chưa sẵn sàng cho `$speckit-plan`; bước tiếp theo là xác nhận các câu hỏi và
-cập nhật đặc tả/checklist bằng `$speckit-clarify`. Không triển khai tính năng ở bước này.
+Chưa sẵn sàng triển khai toàn bộ vì Q-02, Q-05, Q-06, Q-07 và Q-09 vẫn còn phần
+cần xác nhận. Q-18 và Q-20 đã đóng; các câu hỏi còn lại tiếp tục được xử lý tuần tự.

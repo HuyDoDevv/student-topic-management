@@ -12,7 +12,7 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 
 | Thao tác | Role/quan hệ được phép | Điều kiện dữ liệu/thời gian | FR |
 |---|---|---|---|
-| Tạo đợt | DEAN | Tên/loại/lịch hợp lệ; scope B Q-18, conditional dates Q-02 | 02–04 |
+| Tạo đợt | DEAN | Tên/loại/lịch hợp lệ; chỉ trong khoa của DEAN; conditional dates Q-02 | 02–04 |
 | Sửa loại/bốn mốc | DEAN | Trước lecturer_start hiện hành; scope B | 15 |
 | Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình, bộ môn mình, DRAFT | 05–06,14 |
 | Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, 1–2 GVHD cùng bộ môn | 05–06,14 |
@@ -24,12 +24,16 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 | Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt, chưa accepted, không active; scope SV B | 10,13 |
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
 | Chấp nhận/từ chối registration | DEAN | PENDING, scope B; auto-reject khi accept | 11–12 |
-| Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | Phạm vi dữ liệu SV/dean và dữ liệu thành viên hiển thị B Q-18 | 01,07,10 |
+| Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
+| Xử lý nội dung vi phạm | ADMIN | Có lý do; ẩn mềm nội dung, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung | 01 |
 
 Với từng dòng, người không có role/quan hệ phải bị từ chối: GVHD không tự có quyền
 duyệt/accept; thành viên thường không gửi/rút/sửa; leader nhóm khác không thao tác nhóm này;
 leader cũ mất quyền sau chuyển. Kiểm tra cả truy vấn danh sách và chi tiết, không chỉ POST.
-Không tự bổ sung role ADMIN, endpoint quản trị tài khoản hay xem dữ liệu toàn hệ thống.
+ADMIN chỉ xử lý khẩn cấp khi có nội dung do kẻ gian đăng: ẩn nội dung khỏi website nhưng
+giữ dữ liệu, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung. ADMIN không được
+sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý role/khoa/bộ môn hoặc chuyển
+giảng viên. Mọi kiểm tra quyền này phải nằm ở backend.
 Các hàng B là chỗ cần hoàn thiện policy trước triển khai, không phải chính sách “deny tất cả”
 được khách hàng phê duyệt.
 
@@ -45,7 +49,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
 | GET /periods; GET /periods/{id} | — | 200 danh sách/chi tiết theo scope | 01–04 |
-| POST /periods | name,type,4 timestamps,conditional dates | 303 tới period mới; Q-02/18 gate | 02–04 |
+| POST /periods | name,type,4 timestamps,conditional dates | 303 tới period mới; Q-02 gate | 02–04 |
 | POST /periods/{id}/schedule | type,4 timestamps,version | 303 sau sửa hợp lệ; không bind tên/ngày phụ đang Q | 15 |
 | GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt | 05,07 |
 | POST /periods/{id}/topics | 5 nội dung,supervisorIds | Tạo DRAFT; author/department từ identity | 05–06,14 |
@@ -55,7 +59,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /topics/{id}/approve | version | PENDING_APPROVAL → APPROVED | 07,14 |
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |
 | POST /periods/{id}/topics/publish | topicIds,versions | Đề xuất tập APPROVED → PUBLISHED nguyên tử; chốt granularity trong AC | 07,14 |
-| POST /periods/{id}/groups | CSRF | Nhóm mới, người tạo leader; Q-07/18 gate | 08–09 |
+| POST /periods/{id}/groups | CSRF | Nhóm mới, người tạo leader; Q-07 gate | 08–09 |
 | GET /groups/{id} | — | Chi tiết nhóm; chỉ trường policy cho phép | 01,08 |
 | POST /groups/{id}/members | studentId,version | Thêm trực tiếp, không invitation | 08–09 |
 | POST /groups/{id}/members/{studentId}/remove | version | Xóa thành viên, giữ leader hợp lệ và tối thiểu 1 | 08 |
@@ -65,6 +69,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | REJECTED; required reason Q-09 | 12 |
+| POST /admin/moderation/content/{id}/hide | reason,version | Ẩn mềm nội dung, ghi audit và khóa tài khoản nguồn trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự rời nhóm, tái dùng topic, đổi GVHD sau công bố,
 xóa lịch sử, gia hạn sau mở GV hoặc tự đăng ký tài khoản. URI route là thiết kế đề xuất,
@@ -107,4 +112,3 @@ không dùng màu badge làm dấu hiệu trạng thái duy nhất. Đây là ti
 Mỗi route bảo vệ có MockMvc test cho phép/từ chối và xác nhận DB không đổi khi từ chối.
 Browser E2E chứng minh toàn luồng, nhưng không thay thế ca backend gọi trực tiếp
 với ID giả, role giả, CSRF thiếu và stale version.
-

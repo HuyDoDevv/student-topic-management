@@ -1,6 +1,6 @@
 -- MySQL 8.4 LTS: full-system relational schema, REQ-01..32.
--- Select an empty database in DBeaver before running this script.
--- Versioned SQL applied manually; it contains no DROP and creates no demo accounts.
+-- Flyway applies this migration to the configured empty database.
+-- The script contains no DROP and creates no demo accounts.
 -- InnoDB supplies transactions and foreign keys; utf8mb4 stores Vietnamese text safely.
 
 SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
@@ -22,6 +22,7 @@ CREATE TABLE roles (
   COMMENT='Danh mục vai trò tài khoản';
 
 INSERT INTO roles(code, name) VALUES
+    ('ADMIN', 'Quản trị viên'),
     ('STUDENT', 'Sinh viên'),
     ('LECTURER', 'Giảng viên'),
     ('DEAN', 'Trưởng khoa');
