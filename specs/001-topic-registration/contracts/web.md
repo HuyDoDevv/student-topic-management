@@ -69,7 +69,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | REJECTED; required reason Q-09 | 12 |
-| POST /admin/moderation/content/{id}/hide | reason,version | Ẩn mềm nội dung, ghi audit và khóa tài khoản nguồn trong một transaction | 01 |
+| POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự rời nhóm, tái dùng topic, đổi GVHD sau công bố,
 xóa lịch sử, gia hạn sau mở GV hoặc tự đăng ký tài khoản. URI route là thiết kế đề xuất,

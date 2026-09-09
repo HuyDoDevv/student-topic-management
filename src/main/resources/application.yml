@@ -22,3 +22,7 @@ server:
       cookie:
         http-only: true
         same-site: lax
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never

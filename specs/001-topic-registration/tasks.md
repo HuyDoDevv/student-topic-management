@@ -6,7 +6,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/web.md](contracts/web.md), [quickstart.md](quickstart.md).
-**Status**: Đã triển khai nền tảng giới hạn theo yêu cầu người dùng ngày 2026-09-08: T001, T003–T007 hoàn thành; T002 một phần (wrapper/DB đã khóa, Playwright chờ hạ tầng E2E). T008 trở đi chờ các gate nghiệp vụ liên quan. Xem [foundation-report.md](foundation-report.md).
+**Status**: Foundation T001–T016 hoàn thành ngày 2026-09-10; các user story tiếp theo vẫn tuân theo gate nghiệp vụ riêng. Xem [foundation-report.md](foundation-report.md).
 **Tests**: Bắt buộc theo spec AT-01–15 và constitution VIII. Viết test trước phần thực thi;
 chạy để chứng minh thất bại do hành vi chưa có, rồi làm cho đạt. Không coi lỗi biên dịch là bằng chứng đầy đủ.
 
@@ -46,7 +46,7 @@ Mục tiêu: chuẩn bị build/tài nguyên độc lập nghiệp vụ. Chỉ t
 
 - [X] T001 Khởi tạo Java 21/Spring Boot 4.1.1 với MVC, Thymeleaf, Security, Validation, JPA, MySQL Connector/J và test dependencies theo BOM tại `pom.xml`; tạo entrypoint `src/main/java/vn/edu/topicregistration/TopicRegistrationApplication.java`, cấu hình finalName topic-registration.
 
-- [ ] T002 Tạo Maven Wrapper 3.9.x và khóa patch tại `.mvn/wrapper/maven-wrapper.properties`, `mvnw`, `mvnw.cmd`; ghi phiên bản MySQL 8.4 patch và Playwright Java được kiểm chứng vào `README.md`, dùng cùng minor LTS cho test/local.
+- [X] T002 Tạo Maven Wrapper 3.9.x và khóa patch tại `.mvn/wrapper/maven-wrapper.properties`, `mvnw`, `mvnw.cmd`; ghi phiên bản MySQL 8.4 patch và Playwright Java được kiểm chứng vào `README.md`, dùng cùng minor LTS cho test/local.
 
 - [X] T003 [P] Thiết lập biến môi trường MySQL, bind 127.0.0.1, local profile, ddl-auto=validate, SQL init tắt và open-in-view=false tại `src/main/resources/application.yml`, `src/main/resources/application-local.yml`; ignore secrets trong `.gitignore`, không fallback DB khác.
 
@@ -64,23 +64,23 @@ T006–T007 là việc xác nhận tài liệu; không tự tạo đáp án. T00
 
 - [X] T007 Xác nhận tiêu chí AS/SC và cách xử lý Q-20 trong `specs/001-topic-registration/spec.md`; lập `specs/001-topic-registration/acceptance-matrix.md` ánh xạ FR/REQ→AS/AT/SC→test và trạng thái xác nhận; giữ các hàng phụ thuộc gate story là blocked đến khi đáp án được ghi, không cho qua gate bằng phần trăm test giả.
 
-- [ ] T008 Đối chiếu phần identity/department/role trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/identity/persistence/UserAccountEntity.java`, `UserAccountRepository.java`, `DepartmentEntity.java`; unique username, password hash và FK scope đã xác nhận.
+- [X] T008 Đối chiếu phần identity/faculty/department/role trong `src/main/resources/db/migration/V1__full_system.sql`; tạo `FacultyEntity.java`, `DepartmentEntity.java`, `RoleEntity.java`, `UserRoleEntity.java`, `UserRoleId.java`, `UserAccountEntity.java` và `UserAccountRepository.java` tại `src/main/java/vn/edu/topicregistration/identity/persistence/`; unique username, password hash, role và FK scope đã xác nhận.
 
-- [ ] T009 Viết test login đúng/sai, chưa login, role tự khai, logout, session/CSRF và không có self-registration tại `src/test/java/vn/edu/topicregistration/web/AuthenticationTest.java` (FR-01; AS-1.5–1.8; AT-06,09–10; SC-007).
+- [X] T009 Viết test login đúng/sai, chưa login, role tự khai, logout, session/CSRF và không có self-registration tại `src/test/java/vn/edu/topicregistration/web/AuthenticationTest.java` (FR-01; AS-1.5–1.8; AT-06,09–10; SC-007).
 
-- [ ] T010 Cài form login/session, PasswordEncoder, HttpOnly/SameSite, session fixation protection, CSRF và lookup identity tin cậy tại `src/main/java/vn/edu/topicregistration/shared/security/SecurityConfig.java`, `identity/application/AccountDetailsService.java`; tạo `src/main/resources/templates/auth/login.html`, không log secrets.
+- [X] T010 Cài form login/session, PasswordEncoder, HttpOnly/SameSite, session fixation protection, CSRF và lookup identity tin cậy tại `src/main/java/vn/edu/topicregistration/shared/security/SecurityConfig.java`, `identity/application/AccountDetailsService.java`; tạo `src/main/resources/templates/auth/login.html`, không log secrets.
 
-- [ ] T011 Cài service policy đọc/ghi theo T006 và contracts tại `src/main/java/vn/edu/topicregistration/shared/security/AuthorizationPolicy.java`; role, scope, author và leader được đọc lại từ dữ liệu, không tin hidden field/session role cũ; thiếu bằng chứng quyền phải từ chối.
+- [X] T011 Cài service policy đọc/ghi theo T006 và contracts tại `src/main/java/vn/edu/topicregistration/shared/security/AuthorizationPolicy.java`; role, scope, author và leader được đọc lại từ dữ liệu, không tin hidden field/session role cũ; thiếu bằng chứng quyền phải từ chối.
 
-- [ ] T012 [P] Tạo Clock có thể thay trong test và quy đổi Asia/Ho_Chi_Minh tại `src/main/java/vn/edu/topicregistration/shared/time/TimeConfig.java`; không tạo endpoint đổi giờ; kiểm thử chuyển đổi và biên tại `src/test/java/vn/edu/topicregistration/unit/TimeTest.java`.
+- [X] T012 [P] Tạo Clock có thể thay trong test và quy đổi Asia/Ho_Chi_Minh tại `src/main/java/vn/edu/topicregistration/shared/time/TimeConfig.java`; không tạo endpoint đổi giờ; kiểm thử chuyển đổi và biên tại `src/test/java/vn/edu/topicregistration/unit/TimeTest.java`.
 
-- [ ] T013 [P] Tạo exception/HTTP mapping 400/403/404/409/422 và redirect thành công theo contract tại `src/main/java/vn/edu/topicregistration/shared/web/WebExceptionHandler.java`, `src/main/resources/templates/error/error.html`; whitelist DTO, escape nội dung, không leak SQL/secret.
+- [X] T013 [P] Tạo exception/HTTP mapping 400/403/404/409/422 và redirect thành công theo contract tại `src/main/java/vn/edu/topicregistration/shared/web/WebExceptionHandler.java`, `src/main/resources/templates/error/error.html`; whitelist DTO, escape nội dung, không leak SQL/secret.
 
-- [ ] T014 Cấu hình Surefire/Failsafe, profiles integration/e2e và Playwright CLI tại `pom.xml`; tạo `src/test/java/vn/edu/topicregistration/integration/MySqlTestSupport.java` nhận TEST_DATABASE_* và chặn reset DB không phải DB test; không dùng H2 hoặc skip test khi thiếu cấu hình.
+- [X] T014 Cấu hình Surefire/Failsafe, profiles integration/e2e và Playwright CLI tại `pom.xml`; tạo `src/test/java/vn/edu/topicregistration/integration/MySqlTestSupport.java` nhận TEST_DATABASE_* và chặn reset DB không phải DB test; không dùng H2 hoặc skip test khi thiếu cấu hình.
 
-- [ ] T015 Tạo fixture builder có clock/identity scope xác định và barrier cho nhiều connection tại `src/test/java/vn/edu/topicregistration/integration/FixtureSupport.java`, `src/test/java/vn/edu/topicregistration/concurrency/ConcurrentTestSupport.java`; tạo browser harness tự khởi động app test tại `src/test/java/vn/edu/topicregistration/e2e/BrowserTestSupport.java`.
+- [X] T015 Tạo fixture builder có clock/identity scope xác định và barrier cho nhiều connection tại `src/test/java/vn/edu/topicregistration/integration/FixtureSupport.java`, `src/test/java/vn/edu/topicregistration/concurrency/ConcurrentTestSupport.java`; tạo browser harness tự khởi động app test tại `src/test/java/vn/edu/topicregistration/e2e/BrowserTestSupport.java`.
 
-- [ ] T016 Chạy kiểm tra foundation và ghi kết quả AT-09–10 tại `specs/001-topic-registration/acceptance-matrix.md`; xác nhận login không cấp sai quyền, secrets không bị log, lỗi rollback không đổi dữ liệu và test database được cô lập.
+- [X] T016 Chạy kiểm tra foundation và ghi kết quả AT-09–10 tại `specs/001-topic-registration/acceptance-matrix.md`; xác nhận login không cấp sai quyền, secrets không bị log, lỗi rollback không đổi dữ liệu và test database được cô lập.
 
 ## Phase 3: US1 — Tạo đợt đăng ký đúng loại (P1, MVP)
 
@@ -120,7 +120,7 @@ Chờ US1 và T025; T026–T027 song song.
 
 - [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
-- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
+- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V2 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
 
 - [ ] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
 
@@ -143,11 +143,11 @@ Chờ US2/T033; T034–T035 song song.
 
 - [ ] T034 [P] [US3] Viết state test approve/reject/publish, không nhảy duyệt, reject về DRAFT và gửi lại đúng hạn tại `src/test/java/vn/edu/topicregistration/unit/TopicReviewRulesTest.java` (AT-12).
 
-- [ ] T035 [P] [US3] Viết test HTTP scope dean, GV/tác giả/GVHD bị từ chối, publish input sai không đổi một phần tại `src/test/java/vn/edu/topicregistration/web/TopicReviewContractTest.java` (AT-06,09; AS-3.*).
+- [ ] T035 [P] [US3] Viết test HTTP scope dean, GV/tác giả/GVHD bị từ chối, publish input sai không đổi một phần tại `src/test/java/vn/edu/topicregistration/web/TopicReviewContractTest.java`; viết `TopicModerationContractTest.java` cho ADMIN ẩn mềm đề tài, audit, khóa tác giả và từ chối sửa/xóa cứng (AT-06,09,14; AS-1.15–1.16, AS-3.*).
 
 - [ ] T036 [US3] Cài review/publish transaction theo T033 tại `src/main/java/vn/edu/topicregistration/topics/application/TopicReviewService.java`, `topics/web/TopicReviewController.java`; khóa period trước, kiểm tra lại trạng thái/quyền/version, không auto-publish theo đồng hồ.
 
-- [ ] T037 [US3] Tạo giao diện duyệt/công bố tại `src/main/resources/templates/topics/review.html`; tích hợp trạng thái công bố với truy vấn danh sách tại `src/main/java/vn/edu/topicregistration/topics/application/PublishedTopicQueryService.java`, không hiển thị dữ liệu ngoài scope.
+- [ ] T037 [US3] Tạo giao diện duyệt/công bố tại `src/main/resources/templates/topics/review.html`; tích hợp trạng thái công bố với truy vấn danh sách tại `src/main/java/vn/edu/topicregistration/topics/application/PublishedTopicQueryService.java`, không hiển thị dữ liệu ngoài scope; cài `TopicModerationService.java` và route ADMIN `/admin/moderation/topics/{id}/hide` theo contract mà không cấp quyền học vụ.
 
 - [ ] T038 [US3] Chạy fixture review/publication trong `src/test/java/vn/edu/topicregistration/integration/TopicPublicationIT.java`; ghi kết quả US3 và phần AS-3.2 còn chờ US5 tại `specs/001-topic-registration/acceptance-matrix.md`.
 
@@ -216,7 +216,7 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [ ] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
 
-- [ ] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ (FR-01–15; AT-06,08–10; SC-004,007).
+- [ ] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ, gồm ADMIN không có quyền học vụ (FR-01–15; AT-06,08–10,14; SC-004,007).
 
 - [ ] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
 

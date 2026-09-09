@@ -2,6 +2,9 @@
 
 Java 21 · Spring Boot 4.1.1 · Thymeleaf/Tabler · MySQL 8.4 LTS.
 
+Các phiên bản đã kiểm chứng trong bộ test nền tảng: Maven Wrapper 3.9.11,
+MySQL 8.4.11 và Playwright Java 1.62.0 (Chromium).
+
 ## Quy trình phát triển
 
 Dự án dùng Git Flow với `main`, `develop`, `feature/*`, `release/*` và `hotfix/*`.
@@ -60,11 +63,14 @@ Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới 
 
 ## Trạng thái thực tế
 
-Schema bao phủ toàn hệ thống. Phần giao diện hiện có 27 template Thymeleaf và các route
-preview cho đăng nhập, dashboard, đợt đăng ký, đề tài, nhóm và nguyện vọng. Dữ liệu trên
-các trang này vẫn là dữ liệu mẫu; service, repository, đăng nhập thật và CRUD kết nối DB
-chưa được triển khai. Profile preview không truy cập DB; local bật kết nối JPA.
-Những quy tắc nghiệp vụ còn mở được ghi ở database/README.md.
+Foundation T001–T016 đã hoàn thành: schema 20 bảng, identity repository, đăng nhập
+Spring Security bằng tài khoản được cấp, policy role/scope, clock nghiệp vụ, ánh xạ lỗi
+và hạ tầng unit/integration/E2E. Profile `local` dùng MySQL và Hibernate validate;
+profile `preview` chỉ hiển thị catalogue UI mà không truy cập database.
+
+CRUD nghiệp vụ cho đợt, đề tài, nhóm và đăng ký chưa được triển khai; dữ liệu trên các
+route preview vẫn là mẫu giao diện. Dự án không tự tạo tài khoản mặc định. Dữ liệu seed
+local và từng user story được làm ở các task tiếp theo sau khi gate tương ứng được chốt.
 
 ## Kiểm thử và cấu trúc
 

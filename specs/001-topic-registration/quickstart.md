@@ -28,6 +28,8 @@ Test Connection, tải driver nếu được hỏi, rồi Finish.
 
 Tạo database riêng `topic_registration_local` và tài khoản local sở hữu schema.
 Tạo database riêng `topic_registration_test` cho kiểm thử, không trỏ test vào DB demo.
+Vì V1 tạo trigger, nếu MySQL local bật binary log thì tài khoản quản trị chạy
+`SET PERSIST log_bin_trust_function_creators = 1` một lần; nếu thiếu, Flyway trả lỗi 1419.
 Thực hiện provisioning database/user bằng UI/SQL quản trị; đây không phải thay thế
 migration cho bảng ứng dụng. Không ghi password thật vào SQL file trong repository.
 
@@ -50,6 +52,7 @@ Nguồn: [DBeaver Create Connection](https://dbeaver.com/docs/dbeaver/Create-Con
 | SPRING_DATASOURCE_PASSWORD | Secret do người chạy nhập, không commit |
 | TEST_DATABASE_URL | jdbc:mysql://127.0.0.1:3306/topic_registration_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true |
 | TEST_DATABASE_USERNAME / TEST_DATABASE_PASSWORD | Tài khoản test; chỉ có quyền trên DB test |
+| E2E_ACCOUNT_PASSWORD | Mật khẩu tạm chỉ dùng để tạo tài khoản trong DB test khi chạy browser E2E |
 | DEMO_SEED_ENABLED | false mặc định; true chỉ khi muốn tạo fixture demo |
 | DEMO_SEED_PASSWORD | Secret nhập khi bật demo; hash trước lưu, không log |
 

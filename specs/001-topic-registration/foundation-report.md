@@ -10,6 +10,35 @@ Ngày: 2026-09-08. Phạm vi được người dùng yêu cầu: làm nền tả
 Q-18 và tiêu chí nghiệm thu/Q-20 đã được người dùng xác nhận ngày 2026-09-09. Các gate
 ngày/đề tài/nhóm/đăng ký còn lại chưa được xác nhận thay khách hàng.
 
+## Foundation identity/security/test — 2026-09-10
+
+- T001–T016 đã hoàn thành trên nhánh feature theo Git Flow; identity ánh xạ đúng
+  `faculties`, `departments`, `roles`, `user_accounts`, `user_roles` của V1.
+- Spring Security dùng form login, BCrypt, session fixation protection, CSRF, logout POST,
+  JSESSIONID HttpOnly/SameSite=Lax và không có self-registration.
+- `AuthorizationPolicy` đọc lại tài khoản, role và scope từ database cho mỗi kiểm tra;
+  STUDENT không được kết hợp role khác, LECTURER+DEAN hợp lệ, ADMIN chỉ có policy khẩn cấp.
+- Clock nghiệp vụ cố định Asia/Ho_Chi_Minh; thời điểm lưu là UTC; cửa sổ tính đầu và loại
+  trừ cuối. Phản hồi web chuẩn hóa 400/403/404/409/422, redirect thành công 303 và không
+  đưa chi tiết lỗi SQL vào view.
+- Maven có ba tầng: unit/web, MySQL integration và Playwright Chromium E2E. Database test
+  bắt buộc có tên chứa `test`; thiếu biến môi trường làm suite thất bại thay vì bị skip.
+- Local datasource dùng READ COMMITTED theo transaction protocol trong data model.
+
+Kết quả trên Java 21.0.12.1, MySQL 8.4.11 tạm và Playwright Java 1.62.0:
+
+| Lệnh | Kết quả |
+|---|---|
+| `./mvnw test` | PASS — 19 unit/web tests |
+| `./mvnw verify -Pintegration` | PASS — 19 unit/web + 4 MySQL integration tests |
+| `./mvnw verify -Pe2e` | PASS — 19 unit/web + 1 Chromium login E2E |
+
+MySQL tạm xác nhận 20 bảng nghiệp vụ, 6 trigger, 4 role, rollback, fixture xác định,
+hai connection đồng thời, Hibernate validate và đăng nhập browser. Không reset database
+local. Khi MySQL local bật binary log, quản trị viên phải bật
+`log_bin_trust_function_creators` như hướng dẫn trong `database/README.md` để tài khoản
+ứng dụng tạo trigger qua Flyway.
+
 ## Kiểm chứng MySQL hiện tại — 2026-09-09
 
 - Java 21.0.12.1 và Spring Boot 4.1.1: `./mvnw clean test` đạt 3/3 test với profile preview.

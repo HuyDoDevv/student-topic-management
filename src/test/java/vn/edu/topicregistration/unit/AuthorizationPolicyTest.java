@@ -1,0 +1,122 @@
+package vn.edu.topicregistration.unit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+import java.util.Set;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.identity.persistence.DepartmentEntity;
+import vn.edu.topicregistration.identity.persistence.FacultyEntity;
+import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
+import vn.edu.topicregistration.identity.persistence.UserAccountRepository;
+import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
+
+class AuthorizationPolicyTest {
+    UserAccountRepository accounts;
+    AuthorizationPolicy policy;
+
+    @BeforeEach
+    void setUp() {
+        accounts = mock(UserAccountRepository.class);
+        policy = new AuthorizationPolicy(accounts);
+        authenticateAs("actor", "ROLE_ADMIN");
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void ignoresAuthoritiesClaimedByTheSessionAndReloadsPersistedRoles() {
+        stubAccount(7L, true, Set.of(RoleCode.STUDENT), 11L, 21L);
+
+        assertThrows(AccessDeniedException.class, () -> policy.requireEmergencyAdmin());
+        assertEquals(7L, policy.requireStudentOfFaculty(21L).accountId());
+    }
+
+    @Test
+    void lecturerDeanCombinationIsValidAndBothScopesComeFromTheDatabase() {
+        stubAccount(7L, true, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 11L, 21L);
+
+        assertEquals(7L, policy.requireLecturerOfDepartment(11L).accountId());
+        assertEquals(7L, policy.requireDeanOfFaculty(21L).accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireLecturerOfDepartment(12L));
+        assertThrows(AccessDeniedException.class, () -> policy.requireDeanOfFaculty(22L));
+    }
+
+    @Test
+    void authorAndLeaderChecksUsePersistedRelationshipIds() {
+        stubAccount(7L, true, Set.of(RoleCode.LECTURER), 11L, 21L);
+        assertEquals(7L, policy.requireTopicAuthor(7L, 11L).accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireTopicAuthor(8L, 11L));
+
+        stubAccount(7L, true, Set.of(RoleCode.STUDENT), 11L, 21L);
+        assertEquals(7L, policy.requireGroupLeader(7L).accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireGroupLeader(8L));
+    }
+
+    @Test
+    void adminHasOnlyEmergencyAuthority() {
+        stubAccount(7L, true, Set.of(RoleCode.ADMIN), null, null);
+
+        assertEquals(7L, policy.requireEmergencyAdmin().accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireDeanOfFaculty(21L));
+        assertThrows(AccessDeniedException.class, () -> policy.requireGroupLeader(7L));
+    }
+
+    @Test
+    void missingDisabledOrInvalidRoleAssignmentsFailClosed() {
+        when(accounts.findByUsername("actor")).thenReturn(Optional.empty());
+        assertThrows(AccessDeniedException.class, policy::currentActor);
+
+        stubAccount(7L, false, Set.of(RoleCode.LECTURER), 11L, 21L);
+        assertThrows(AccessDeniedException.class, policy::currentActor);
+
+        stubAccount(7L, true, Set.of(RoleCode.STUDENT, RoleCode.LECTURER), 11L, 21L);
+        assertThrows(AccessDeniedException.class, policy::currentActor);
+    }
+
+    private void authenticateAs(String username, String claimedAuthority) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        username,
+                        "unused",
+                        Set.of(new SimpleGrantedAuthority(claimedAuthority))));
+    }
+
+    private UserAccountEntity account(Long id, boolean enabled, Set<RoleCode> roles,
+            Long departmentId, Long facultyId) {
+        UserAccountEntity account = mock(UserAccountEntity.class);
+        when(account.getId()).thenReturn(id);
+        when(account.isEnabled()).thenReturn(enabled);
+        when(account.getRoleCodes()).thenReturn(roles);
+        if (departmentId != null) {
+            FacultyEntity faculty = mock(FacultyEntity.class);
+            DepartmentEntity department = mock(DepartmentEntity.class);
+            when(faculty.getId()).thenReturn(facultyId);
+            when(department.getId()).thenReturn(departmentId);
+            when(department.getFaculty()).thenReturn(faculty);
+            when(account.getDepartment()).thenReturn(department);
+        }
+        return account;
+    }
+
+    private void stubAccount(Long id, boolean enabled, Set<RoleCode> roles,
+            Long departmentId, Long facultyId) {
+        UserAccountEntity account = account(id, enabled, roles, departmentId, facultyId);
+        when(accounts.findByUsername("actor")).thenReturn(Optional.of(account));
+    }
+}

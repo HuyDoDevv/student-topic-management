@@ -11,10 +11,12 @@ thực hiện bằng migration mới.
 
 | Entity / bảng dự kiến | Trường chính | Quan hệ và ghi chú |
 |---|---|---|
-| Department / departments | id bigint PK, name text | Bộ môn thuộc khoa; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
+| Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope của DEAN và của từng đợt đăng ký |
+| Department / departments | id bigint PK, name varchar(255), faculty_id FK | Bộ môn thuộc khoa; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
 | UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
-| UserRole / user_roles | user_id FK, role_code | PK hai trường; ADMIN/STUDENT/LECTURER/DEAN. LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
-| RegistrationPeriod / registration_periods | id, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký timestamptz; ngày giai đoạn sau kiểu date dự kiến, độ chính xác/bắt buộc còn Q-02 |
+| Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
+| UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
+| RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký lưu `TIMESTAMP(6)` theo UTC; ngày giai đoạn sau dùng `DATE`, độ chính xác/bắt buộc còn Q-02 |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Bản đề tài thuộc một đợt cho luồng hiện tại. Nếu Q-05 cho tái sử dụng, tách catalog và offering bằng migration trước triển khai phần đó |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc GVHD |
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
@@ -30,7 +32,7 @@ Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nộ
 được tạo bằng migration trước khi cài quyền này. Đây là luồng sự cố riêng, không làm thay
 đổi trạng thái duyệt học vụ của đề tài và không cho ADMIN sửa nội dung.
 
-Dữ liệu nhập form dùng giờ Asia/Ho_Chi_Minh, chuyển sang instant lưu timestamptz.
+Dữ liệu nhập form dùng giờ Asia/Ho_Chi_Minh, chuyển sang instant và lưu `TIMESTAMP(6)` UTC.
 Hiển thị lại bằng cùng zone; không dùng múi giờ trình duyệt để quyết định hạn.
 version bigint là optimistic concurrency token kỹ thuật, không phải trạng thái nghiệp vụ.
 
@@ -43,15 +45,15 @@ version bigint là optimistic concurrency token kỹ thuật, không phải tr�
 | DB-03 | CHECK status thuộc DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED; khi khác DRAFT, cả 5 trường nội dung trim khác rỗng | REQ-08–09; FR-05,14 |
 | DB-04 | PK(topic_id,lecturer_id), UNIQUE(topic_id,slot), CHECK slot BETWEEN 1 AND 2 | REQ-10; FR-06 |
 | DB-05 | PK(group_id,student_id); UNIQUE(period_id,student_id); UNIQUE(group_id,slot); CHECK slot BETWEEN 1 AND 3 | REQ-12–13; FR-08–09 |
-| DB-06 | leader_student_id NOT NULL; FK (group.id,leader_student_id) → membership(group_id,student_id), DEFERRABLE INITIALLY DEFERRED | REQ-12; FR-08 |
+| DB-06 | leader_student_id NOT NULL; trigger sau insert tự tạo membership slot 1; trigger cập nhật/xóa bảo đảm leader luôn là thành viên | REQ-12; FR-08 |
 | DB-07 | UNIQUE(id,period_id) trên topic/group; membership FK(group_id,period_id) → group; registration FK(group_id,period_id) và FK(topic_id,period_id) | REQ-13–15; FR-09–10 |
-| DB-08 | Partial UNIQUE(period_id,group_id) WHERE status IN ('PENDING','ACCEPTED') | REQ-14; FR-10,13 |
-| DB-09 | Partial UNIQUE(period_id,topic_id) WHERE status='ACCEPTED' | Xác nhận U Q-10; FR-11 |
+| DB-08 | Generated column nullable `active_group_guard` kết hợp UNIQUE(period_id,active_group_guard) khi status PENDING/ACCEPTED | REQ-14; FR-10,13 |
+| DB-09 | Generated column nullable `accepted_topic_guard` kết hợp UNIQUE(period_id,accepted_topic_guard) khi status ACCEPTED | Xác nhận U Q-10; FR-11 |
 | DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
 
-DB-06 cùng membership FK tạo vòng quan hệ có chủ đích: insert nhóm và thành viên trưởng
-nhóm trong cùng transaction, kiểm tra FK deferred ở commit. Điều này bảo đảm tối thiểu
-một thành viên và đúng một leader; không được xóa leader mà không chuyển leader hợp lệ.
+DB-06 dùng trigger vì MySQL không hỗ trợ deferred FK: insert nhóm tự tạo membership của
+trưởng nhóm; đổi leader chỉ nhận thành viên hiện hữu và không được xóa leader khi chưa
+chuyển quyền. Điều này bảo đảm tối thiểu một thành viên và đúng một leader.
 DB-05 bảo vệ tối đa 3 mà không dùng CHECK đếm hàng.
 
 Không UNIQUE(group_id,topic_id) trên mọi trạng thái: phải cho đăng ký lại sau rút/từ chối.
