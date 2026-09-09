@@ -2,12 +2,22 @@
 
 Java 21 · Spring Boot 4.1.1 · Thymeleaf/Tabler · MySQL 8.4 LTS.
 
+## Quy trình phát triển
+
+Dự án dùng Git Flow với `main`, `develop`, `feature/*`, `release/*` và `hotfix/*`.
+Mỗi thành viên và AI phải đọc [AGENTS.md](AGENTS.md) trước khi sửa code. Không phát triển
+trực tiếp trên `main` hoặc `develop`; mỗi user story/feature dùng một nhánh riêng và chỉ
+merge về `develop` sau khi task, test và bằng chứng nghiệm thu đã hoàn tất.
+
 ## Chạy cơ bản
 
 1. Có JDK 21 và MySQL 8.4 local đang chạy.
 2. Sao chép `.env.example` thành `.env` và điền cấu hình riêng của máy.
 3. Muốn xem giao diện: đặt `SPRING_PROFILES_ACTIVE=preview` trong `.env`.
 4. Chạy lệnh tương ứng bên dưới, mở http://localhost:8080. Dừng bằng Ctrl+C.
+
+Kiểm tra `./mvnw --version` phải hiển thị Java 21. Nếu terminal đang có `JAVA_HOME`
+trỏ tới Java cũ, khai báo đúng JDK 21 trong `.env` và chạy qua script bên dưới.
 
 macOS/Linux:
 
@@ -37,18 +47,16 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
 
 ## Database toàn hệ thống
 
-- Mở [database/V1__full_system.sql](database/V1__full_system.sql) trong DBeaver,
-  kết nối đúng database và Execute SQL Script trong một transaction.
-- File tạo **20 bảng trong database đang chọn**; hướng dẫn và danh sách bảng ở
-  [database/README.md](database/README.md).
-- Dùng database mới hoặc chưa có các bảng cùng tên. File không xóa hay ghi đè dữ liệu.
-- Đổi `.env` sang `SPRING_PROFILES_ACTIVE=local`, điền URL/user/password thực tế rồi
-  chạy `./run.sh` trên macOS hoặc `run.cmd` trên Windows. Cổng MySQL trong URL phải
-  trùng DBeaver (mặc định 3306).
+- Tạo database MySQL 8.4 rỗng và tài khoản local theo [hướng dẫn database](database/README.md).
+- Đổi `.env` sang `SPRING_PROFILES_ACTIVE=local`, điền URL/user/password rồi chạy
+  `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
+- Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql),
+  tạo 20 bảng và ghi lịch sử vào `flyway_schema_history`.
+- Các thay đổi schema tiếp theo phải là migration mới `V2__...sql`, `V3__...sql`; không
+  sửa migration đã được dùng trên database chung.
 
-Dự án dùng SQL có phiên bản, import thủ công; đã bỏ Flyway để không tạo bảng lần hai.
-Các thay đổi sau tạo file V2, V3…; không chạy lại V1 trên database đã import.
-Database PostgreSQL cũ không bị ứng dụng tự xóa hoặc tự chuyển dữ liệu sang MySQL.
+Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway
+đầu tiên. Ứng dụng không tự xóa hoặc tự chuyển đổi database cũ.
 
 ## Trạng thái thực tế
 
@@ -62,10 +70,11 @@ Những quy tắc nghiệp vụ còn mở được ghi ở database/README.md.
 
 Chạy kiểm thử bằng `./mvnw verify` trên macOS hoặc `.\mvnw.cmd verify` trên Windows.
 Kiểm thử SQL nằm ở `src/test/resources/database/full-schema-check.sql`, chạy trên DB
-kiểm thử đã import V1; dữ liệu fixture được rollback.
+kiểm thử đã được Flyway migrate; dữ liệu fixture được rollback.
 
 - `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`: ứng dụng và build đa nền tảng.
-- `database/`: SQL toàn hệ thống và hướng dẫn import.
+- `src/main/resources/db/migration/`: migration SQL toàn hệ thống.
+- `database/`: tài liệu thiết kế, luồng dữ liệu và hướng dẫn MySQL/DBeaver.
 - `docs/customer/`, `specs/`, `.specify/`, `.agents/`: giữ yêu cầu gốc và Spec Kit.
 - `licenses/`, `THIRD_PARTY_NOTICES.md`: giấy phép các tài nguyên UI đang sử dụng.
 - `target/`: Maven tự sinh khi build; không phải mã nguồn.

@@ -1,10 +1,7 @@
-> Cập nhật theo yêu cầu người dùng tạo DB toàn hệ thống và đơn giản hóa chạy local:
-> SQL hiện tại là `database/V1__full_system.sql` (20 bảng MySQL), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
-> Quyết định công nghệ ngày 2026-09-09: MySQL 8.4 LTS thay PostgreSQL cho code,
-> kiểm thử DB và hướng dẫn DBeaver. Dùng `database/V1__full_system.sql` bản MySQL.
-> Nội dung bên dưới lưu lại kế hoạch/báo cáo feature 001 trước thay đổi này;
-> các lệnh Flyway/scripts cũ không còn là hướng dẫn chạy hiện tại. Xem README.md gốc.
+> Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Flyway tự áp dụng
+> `src/main/resources/db/migration/V1__full_system.sql` để tạo 20 bảng; DBeaver dùng
+> để quản lý và kiểm tra database. Chạy bằng `./run.sh` trên macOS/Linux hoặc
+> `run.cmd` trên Windows.
 
 # Implementation Plan: Quản lý đợt, đề tài và đăng ký nhóm
 
@@ -12,9 +9,10 @@
 **Date**: 2026-09-08 | **Spec**: [spec.md](spec.md)
 **Status**: Thiết kế có điều kiện — nền tảng đã chốt, chưa đạt gate nghiệp vụ để triển khai toàn bộ.
 
-**Implementation update 2026-09-09:** đã có khung ứng dụng/local UI và SQL MySQL V1,
-chưa có bảng/tài khoản nghiệp vụ. Profile preview được thêm để xem UI mà không cần DB;
-local vẫn yêu cầu kết nối MySQL và không tự fallback. Xem [foundation-report.md](foundation-report.md).
+**Implementation update 2026-09-09:** đã có khung ứng dụng, UI và migration MySQL V1
+cho 20 bảng; chưa có entity/service/repository hoặc tài khoản nghiệp vụ thật. Profile
+preview dùng để xem UI mà không cần DB; local yêu cầu MySQL và không tự fallback.
+Xem [foundation-report.md](foundation-report.md).
 
 ## Summary
 
@@ -38,14 +36,14 @@ Giữ nguyên spec, bản phân tích, constitution và PDF.
 | Language/Version | Java 21 |
 | Primary Dependencies | Spring Boot **4.1.1**; Spring MVC, Thymeleaf, Spring Security, Bean Validation, Spring Data JPA; phiên bản phụ thuộc do BOM Boot quản lý |
 | Storage | MySQL **8.4 LTS**, InnoDB và utf8mb4 cho local/integration test |
-| Migration | SQL có phiên bản import bằng DBeaver; Hibernate chỉ validate schema |
+| Migration | Flyway tự áp dụng SQL có phiên bản; Hibernate chỉ validate schema; DBeaver dùng để quản lý/kiểm tra DB |
 | Build | Maven Wrapper 3.9.x, khóa patch trong wrapper khi triển khai |
 | Testing | JUnit Jupiter/Spring Boot Test theo BOM, MockMvc + Spring Security Test; MySQL thật cho integration/concurrency; Playwright Java cho browser E2E |
-| Target Platform | JVM trên máy local; MySQL local; trình duyệt Chromium cho nghiệm thu đề xuất |
+| Target Platform | JVM trên máy local; MySQL local; trình duyệt Chromium cho nghiệm thu đã xác nhận |
 | Project Type | Monolith web render HTML phía server; một executable JAR |
-| Performance Goals | Q-20 chưa có ngưỡng được xác nhận; không tự đặt SLA hoặc tuyên bố đạt tải |
-| Constraints | Backend auth/validation; giao dịch nhất quán; không secrets trong repository; không runtime CDN/đường dẫn Tabler tuyệt đối |
-| Scale/Scope | 5 user stories, FR-01–15; số người dùng/dữ liệu chưa xác nhận; khóa theo đợt ưu tiên đơn giản và đúng dữ liệu |
+| Performance Goals | Phiên bản local không có SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup theo Q-20 |
+| Constraints | Backend auth/validation/CSRF; mật khẩu băm; giao dịch nhất quán; không secrets trong repository/log; responsive desktop/tablet/mobile; không runtime CDN/đường dẫn Tabler tuyệt đối |
+| Scale/Scope | 5 user stories, FR-01–15 và NFR-01–02; không đặt tải định lượng cho bản local; khóa theo đợt ưu tiên đơn giản và đúng dữ liệu |
 
 Không yêu cầu Docker để chạy local. Integration test dùng database riêng được cấu hình
 qua biến môi trường. Có thể bổ sung Testcontainers sau nếu môi trường có Docker;
@@ -64,7 +62,7 @@ không dùng H2 thay MySQL cho kiểm thử ràng buộc và đồng thời.
 | VII. Migration | PASS về thiết kế | SQL V1, V2… quản lý thay đổi; Hibernate validate khi boot |
 | VIII. Tests | PASS về kế hoạch, chưa chạy | Unit, HTTP, DB, concurrency, browser |
 | IX. Secrets | PASS về thiết kế | Biến môi trường; mật khẩu mẫu do người chạy cung cấp |
-| X. Nghiệm thu | BLOCKED | AS/SC còn đề xuất, phần Q chưa có kết quả kỳ vọng cuối cùng |
+| X. Nghiệm thu | PASS về chuẩn nền | AS/SC và mức bảo mật/responsive đã xác nhận; các kết quả phụ thuộc Q nghiệp vụ giữ blocked theo gate tương ứng |
 
 **Gate tổng: ERROR / chưa đạt**, không phải miễn trừ constitution. Theo yêu cầu tiếp tục
 lập kế hoạch, các tài liệu Phase 1 được cung cấp dưới dạng **draft có điều kiện**.
@@ -80,9 +78,6 @@ lệnh triển khai đầy đủ. Chỉ công việc độc lập với Q mới 
 | Q-06 | Đổi GVHD bởi vai trò khác hoặc sau công bố | Không thêm endpoint đổi phân công; mô hình hiện tại chỉ nháp |
 | Q-07 | Thời điểm tạo nhóm; tự rời/chuyển nhóm | Create-group và luồng rời nhóm chưa đủ điều kiện cuối cùng |
 | Q-09 | Lý do từ chối thủ công bắt buộc; ưu tiên rút/chấp nhận; lưu lịch sử | Validation rejection, kỳ vọng tranh chấp, retention |
-| Q-18 | Cấp tài khoản/role/bộ môn; tổ hợp role; phạm vi trưởng khoa/SV; GV đổi bộ môn | Policy dữ liệu, provisioning thật, schema tổ chức cuối cùng |
-| Q-20 | Chất lượng, quy mô, bảo mật định lượng | Nghiệm thu phi chức năng; không ngăn ghi kế hoạch kiểm tra correctness |
-| AC/SC | Tiêu chí suy luận chưa được xác nhận toàn bộ | Không tuyên bố tính năng hoàn thành |
 
 Việc người dùng bỏ qua clarify không xác nhận bất kỳ phương án nghiệp vụ nào.
 Hạn xử lý duyệt/công bố và quyết định của trưởng khoa chưa được quy định riêng:
@@ -145,9 +140,9 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 1 | Build, cấu hình local, migration cơ sở, Tabler layout, session login | FR-01; REQ-28,31–32; constitution V,VII,IX | AT-09–10; asset portability |
 | 2 | Đợt và thời gian, khóa cấu hình | FR-02–04,15; REQ-01–07,31 | AT-01–02,13; Q-02 gate |
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
-| 4 | Nhóm, thành viên, chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; Q-07/18 gate |
+| 4 | Nhóm, thành viên, chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; Q-07 gate |
 | 5 | Gửi/rút/đăng ký lại, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-05–08,11; Q-09/18 gate |
-| 6 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15; REQ-31–32 | AS toàn bộ, SC-001–008 sau xác nhận |
+| 6 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 
 Đây là trình tự kế hoạch, không phải tasks.md và không cho phép bỏ qua gate ở mỗi phần.
 
@@ -174,5 +169,5 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 ## Complexity Tracking
 
 Không xin miễn trừ nguyên tắc. Khóa ghi theo đợt đơn giản hóa correctness nhưng giảm
-song song trong cùng đợt; Q-20 chưa có tải mục tiêu. Chỉ tối ưu thành khóa nhỏ hơn khi
+song song trong cùng đợt; Q-20 đã xác nhận không đặt tải mục tiêu cho bản local. Chỉ tối ưu thành khóa nhỏ hơn khi
 có đo đạc và kiểm thử bảo toàn invariants tương đương.

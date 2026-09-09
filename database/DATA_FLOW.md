@@ -1,6 +1,6 @@
 # Luồng dữ liệu và class diagram — 20 bảng
 
-Đối chiếu `V1__full_system.sql`. Đây là luồng nghiệp vụ dự kiến trên cấu trúc SQL hiện
+Đối chiếu `../src/main/resources/db/migration/V1__full_system.sql`. Đây là luồng nghiệp vụ dự kiến trên cấu trúc SQL hiện
 tại, không phải các chức năng Java đã hoàn thành. SQL không tự tạo màn hình, phân
 quyền, chuyển trạng thái, tính điểm hoặc công bố kết quả.
 
@@ -10,7 +10,7 @@ quyền, chuyển trạng thái, tính điểm hoặc công bố kết quả.
 |---|---|---|---|---|
 | 1 | `faculties` | Một khoa | Khởi tạo danh mục khoa | `departments`, `registration_periods`, `announcements` tham chiếu khoa |
 | 2 | `departments` | Một bộ môn thuộc khoa | Tên bộ môn + `faculty_id` đã có | Gắn bộ môn cho `user_accounts` và `topics` |
-| 3 | `roles` | Một loại vai trò tài khoản | SQL seed STUDENT, LECTURER, DEAN | `user_roles` dùng mã role để gán cho tài khoản |
+| 3 | `roles` | Một loại vai trò tài khoản | SQL seed ADMIN, STUDENT, LECTURER, DEAN | `user_roles` dùng mã role để gán cho tài khoản |
 | 4 | `user_accounts` | Một tài khoản | Username, password hash, tên và bộ môn nếu có; người/quy trình cấp còn cần chốt | Được tham chiếu khi đăng đề tài, phân công, lập nhóm, nộp báo cáo, chấm, tổng hợp và công bố |
 | 5 | `user_roles` | Một vai trò được gán cho một tài khoản | `user_id` + `role_code`; ghi khi cấp vai trò | Backend đọc khi kiểm tra quyền; bảng không tự cấp quyền trong MySQL |
 | 6 | `registration_periods` | Một đợt thuộc khoa | Trưởng khoa nhập loại đề tài, bốn mốc đăng ký và ngày có điều kiện | `topics`, `student_groups`, `registrations`, `councils`, `score_components` tổ chức dữ liệu theo đợt |
@@ -62,7 +62,8 @@ một lịch mới. Không mặc định mọi loại đề tài đều cần h�
 - Nhóm tối đa một đăng ký PENDING/ACCEPTED. Rút/từ chối giữ hàng cũ; đăng ký lại tạo ID mới.
 - Báo cáo, phản biện, hội đồng và kết quả gắn với **đăng ký đã được nhận**, không chỉ topic_id.
 - `topic_supervisors` khác `reviewer_assignments`: một bên hướng dẫn, một bên phản biện.
-- `roles` là vai trò tài khoản; trưởng nhóm/GVHD/GVPB/chủ tịch/thư ký là vai trò theo quan hệ.
+- `roles` là vai trò tài khoản; hiện có ADMIN, STUDENT, LECTURER và DEAN. Trưởng
+  nhóm/GVHD/GVPB/chủ tịch/thư ký là vai trò theo quan hệ.
 - `score_components` định nghĩa điểm; `evaluations` là điểm từng người; `final_results`
   là kết quả chốt. SQL chưa tự tính trung bình hoặc xác minh mọi điểm cần thiết đã có.
 - Khi tạo nhóm, trigger MySQL tự tạo membership slot 1 cho trưởng nhóm. Khi tạo hội đồng,
