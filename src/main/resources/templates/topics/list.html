@@ -6,17 +6,17 @@
     <div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title">Danh sách đề tài</h1><p class="text-secondary mt-2 mb-0">Theo dõi đề tài từ bản nháp đến khi được công bố.</p></div>
     <a class="btn btn-primary" th:href="@{/periods/{id}/topics/new(id=${period.id})}"><span aria-hidden="true">＋</span> Tạo đề tài</a>
   </div>
-  <div class="card">
-    <div class="card-header"><div class="input-icon flex-fill topic-search"><span class="input-icon-addon" aria-hidden="true">⌕</span><input class="form-control" type="search" placeholder="Tìm theo tên đề tài hoặc giảng viên" aria-label="Tìm đề tài" data-table-filter></div><div class="ms-auto"><select class="form-select" aria-label="Lọc trạng thái" data-status-filter><option value="">Tất cả trạng thái</option><option>DRAFT</option><option>PENDING_APPROVAL</option><option>APPROVED</option><option>PUBLISHED</option></select></div></div>
+  <div class="card data-card">
+    <div class="card-header table-toolbar"><div class="input-icon flex-fill topic-search"><span class="input-icon-addon" aria-hidden="true">⌕</span><input class="form-control" type="search" placeholder="Tìm theo tên đề tài hoặc giảng viên" aria-label="Tìm đề tài" data-table-filter></div><div class="ms-md-auto"><select class="form-select" aria-label="Lọc trạng thái" data-status-filter><option value="">Tất cả trạng thái</option><option>DRAFT</option><option>PENDING_APPROVAL</option><option>APPROVED</option><option>PUBLISHED</option></select></div></div>
     <div class="table-responsive">
-      <table class="table table-vcenter card-table" data-filter-table>
+      <table class="table table-vcenter card-table responsive-table" data-filter-table>
         <thead><tr><th>Đề tài</th><th>Giảng viên đề xuất</th><th>Giảng viên hướng dẫn</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
         <tbody>
         <tr th:each="topic : ${topics}" th:attr="data-status=${topic.status}">
-          <td><a class="fw-semibold" th:href="@{/topics/{id}(id=${topic.id})}" th:text="${topic.title}">Tên đề tài</a><div class="small text-secondary" th:text="${topic.department}">Bộ môn</div></td>
-          <td th:text="${topic.author}">Giảng viên</td><td th:text="${topic.supervisors}">Giảng viên hướng dẫn</td>
-          <td><span class="badge bg-blue-lt" th:text="${topic.status}">DRAFT</span></td>
-          <td class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/topics/{id}(id=${topic.id})}">Chi tiết</a></td>
+          <td data-label="Đề tài"><a class="fw-semibold" th:href="@{/topics/{id}(id=${topic.id})}" th:text="${topic.title}">Tên đề tài</a><div class="small text-secondary" th:text="${topic.department}">Bộ môn</div></td>
+          <td data-label="Người đề xuất" th:text="${topic.author}">Giảng viên</td><td data-label="Giảng viên hướng dẫn" th:text="${topic.supervisors}">Giảng viên hướng dẫn</td>
+          <td data-label="Trạng thái"><span class="badge bg-blue-lt" th:text="${topic.status}">DRAFT</span></td>
+          <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/topics/{id}(id=${topic.id})}">Xem chi tiết</a></td>
         </tr>
         </tbody>
       </table>

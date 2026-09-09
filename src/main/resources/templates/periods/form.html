@@ -5,7 +5,7 @@
   <div class="page-header">
     <div><div class="page-pretitle">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${editing} ? 'Sửa lịch đợt đăng ký' : 'Tạo đợt đăng ký'">Tạo đợt đăng ký</h1><p class="text-secondary mt-2 mb-0">Bốn mốc thời gian quyết định khi giảng viên và sinh viên được thao tác.</p></div>
   </div>
-  <form class="card" method="post" data-prevent-double-submit
+  <form class="card content-form" method="post" data-prevent-double-submit
         th:action="${editing} ? @{/periods/{id}/schedule(id=${period.id})} : @{/periods}">
     <div class="card-body">
       <div th:if="${formError}" th:replace="~{fragments/feedback :: error(${formError})}"></div>

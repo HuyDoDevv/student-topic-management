@@ -5,7 +5,7 @@
   <div class="page-header">
     <div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title">Duyệt và công bố đề tài</h1><p class="text-secondary mt-2 mb-0">Kiểm tra nội dung trước khi cho phép sinh viên đăng ký.</p></div>
   </div>
-  <div class="card" th:each="topic : ${topics}">
+  <div class="card mb-3" th:each="topic : ${topics}">
     <div class="card-body"><div class="d-flex flex-wrap justify-content-between gap-3"><div><span class="badge bg-yellow-lt mb-2" th:text="${topic.status}">PENDING_APPROVAL</span><h2 class="h3 mb-1" th:text="${topic.title}">Tên đề tài</h2><p class="text-secondary mb-0"><span th:text="${topic.author}">Giảng viên</span> · <span th:text="${topic.department}">Bộ môn</span></p></div><a class="btn btn-outline-secondary align-self-start" th:href="@{/topics/{id}(id=${topic.id})}">Xem nội dung</a></div></div>
     <div class="card-footer d-flex flex-wrap justify-content-end gap-2"><form th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-outline-danger" type="submit">Từ chối</button></form><form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-success" type="submit">Duyệt đề tài</button></form></div>
   </div>

@@ -3,7 +3,7 @@
 <body>
 <section>
   <div class="page-header"><div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title">Tạo nhóm sinh viên</h1><p class="text-secondary mt-2 mb-0">Bạn sẽ trở thành trưởng nhóm ngay khi nhóm được tạo.</p></div></div>
-  <form class="card" th:action="@{/periods/{id}/groups(id=${period.id})}" method="post" data-prevent-double-submit>
+  <form class="card content-form" th:action="@{/periods/{id}/groups(id=${period.id})}" method="post" data-prevent-double-submit>
     <div class="card-body">
       <div class="alert alert-info" role="status"><strong>Quy tắc nhóm:</strong> mỗi nhóm có từ 1 đến 3 sinh viên; một sinh viên chỉ thuộc một nhóm trong cùng đợt.</div>
       <h2 class="h3">Trưởng nhóm</h2><div class="member-preview"><span class="avatar bg-blue-lt">SV</span><div><strong>Sinh viên đang đăng nhập</strong><div class="text-secondary">Được thêm tự động vào vị trí thành viên thứ nhất</div></div></div>

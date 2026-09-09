@@ -5,7 +5,7 @@
   <div class="page-header">
     <div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${editing} ? 'Sửa nội dung đề tài' : 'Đề xuất đề tài mới'">Đề xuất đề tài mới</h1><p class="text-secondary mt-2 mb-0">Lưu bản nháp trước khi gửi trưởng khoa duyệt.</p></div>
   </div>
-  <form class="card" method="post" data-prevent-double-submit
+  <form class="card content-form" method="post" data-prevent-double-submit
         th:action="${editing} ? @{/topics/{id}/draft(id=${topic.id})} : @{/periods/{id}/topics(id=${period.id})}">
     <div class="card-body">
       <div th:if="${formError}" th:replace="~{fragments/feedback :: error(${formError})}"></div>

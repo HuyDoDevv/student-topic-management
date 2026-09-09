@@ -6,18 +6,22 @@
     <div><div class="page-pretitle">QUẢN LÝ HỌC VỤ</div><h1 class="page-title">Đợt đăng ký</h1><p class="text-secondary mt-2 mb-0">Quản lý lịch giảng viên đề xuất và sinh viên đăng ký đề tài.</p></div>
     <a class="btn btn-primary" th:href="@{/periods/new}"><span aria-hidden="true">＋</span> Tạo đợt</a>
   </div>
-  <div class="card" th:if="${periods != null and !periods.isEmpty()}">
+  <div class="card data-card" th:if="${periods != null and !periods.isEmpty()}">
+    <div class="card-header">
+      <div><h2 class="card-title mb-1">Danh sách đợt đăng ký</h2><div class="text-secondary small">Theo dõi lịch và trạng thái theo từng học kỳ</div></div>
+      <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(periods)} + ' đợt'">2 đợt</span>
+    </div>
     <div class="table-responsive">
-      <table class="table table-vcenter card-table">
+      <table class="table table-vcenter card-table responsive-table">
         <thead><tr><th>Tên đợt</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
         <tbody>
         <tr th:each="item : ${periods}">
-          <td><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đồ án chuyên ngành</a></td>
-          <td th:text="${item.type}">Đồ án</td>
-          <td class="text-secondary" th:text="${item.lecturerWindow}">01/09 – 15/09</td>
-          <td class="text-secondary" th:text="${item.studentWindow}">20/09 – 30/09</td>
-          <td><span class="badge bg-blue-lt" th:text="${item.status}">Đang mở</span></td>
-          <td class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/periods/{id}(id=${item.id})}">Xem</a></td>
+          <td data-label="Tên đợt"><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đồ án chuyên ngành</a></td>
+          <td data-label="Loại" th:text="${item.type}">Đồ án</td>
+          <td data-label="Lịch giảng viên" class="text-secondary" th:text="${item.lecturerWindow}">01/09 – 15/09</td>
+          <td data-label="Lịch sinh viên" class="text-secondary" th:text="${item.studentWindow}">20/09 – 30/09</td>
+          <td data-label="Trạng thái"><span class="badge bg-blue-lt" th:text="${item.status}">Đang mở</span></td>
+          <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/periods/{id}(id=${item.id})}">Xem chi tiết</a></td>
         </tr>
         </tbody>
       </table>
