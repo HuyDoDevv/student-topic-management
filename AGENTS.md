@@ -28,8 +28,11 @@ Dự án dùng lệnh Git chuẩn, không phụ thuộc chương trình mở r�
 7. Chạy kiểm tra phù hợp, cập nhật bằng chứng nghiệm thu và đánh dấu `[X]` cho task thực sự
    hoàn thành. Không đánh dấu task chỉ vì code biên dịch.
 8. Chạy `git diff --check`, xem lại `git diff` và bảo đảm không có secret hoặc file máy cá nhân.
-9. Tạo commit nhỏ, có nội dung hoàn chỉnh và báo lại branch, commit, test đã chạy và phần
-   còn lại. Chuẩn bị pull request vào `develop`.
+9. Mỗi checkbox task `Txxx` trong `tasks.md` phải tương ứng đúng một commit hoàn chỉnh;
+   commit gồm code, test, tài liệu và bằng chứng cần thiết của riêng task đó. Không đánh dấu
+   hoặc gộp nhiều task vào cùng một commit. Tiêu đề commit phải ghi task ID, ví dụ
+   `feat(periods): implement period rules (T018)`. Báo lại branch, commit, test đã chạy và
+   phần còn lại; một pull request có thể chứa nhiều commit task theo đúng thứ tự phụ thuộc.
 10. Chỉ push, tạo/merge pull request, merge nhánh hoặc xóa nhánh khi người dùng yêu cầu.
 
 Không dùng `git reset --hard`, `git clean`, tự động stash hoặc xóa thay đổi chưa commit của
@@ -62,6 +65,11 @@ test(groups): cover concurrent membership constraints
 docs(spec): record Q-02 clarification
 chore(build): configure integration test profile
 ```
+
+Các task được đánh dấu `[P]` có thể được thực hiện song song nhưng vẫn phải tạo commit riêng.
+Hoàn thành và kiểm tra toàn bộ phạm vi của một task trước khi tạo commit, để không phải chia
+một checkbox thành nhiều commit. Nếu phát hiện lỗi sau khi commit đã chia sẻ, tạo commit
+`fix` riêng có ghi task gốc; không sửa lịch sử đã chia sẻ.
 
 Trước khi hoàn tất feature, chạy tối thiểu:
 
