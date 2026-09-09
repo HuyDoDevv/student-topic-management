@@ -1,17 +1,13 @@
-> Cập nhật theo yêu cầu người dùng tạo DB toàn hệ thống và đơn giản hóa chạy local:
-> SQL hiện tại là `database/V1__full_system.sql` (20 bảng MySQL), import thủ công.
-> Đã bỏ Flyway, scripts Python và cache .tools; chạy bằng ./run.sh trên macOS hoặc run.cmd trên Windows.
-> Quyết định ngày 2026-09-09: mọi task DB dùng MySQL 8.4 LTS, Connector/J và schema
-> `database/V1__full_system.sql`; các nhắc PostgreSQL/Flyway cũ đã được thay thế bên dưới.
-> Nội dung bên dưới lưu lại kế hoạch/báo cáo feature 001 trước thay đổi này;
-> các lệnh Flyway/scripts cũ không còn là hướng dẫn chạy hiện tại. Xem README.md gốc.
+> Cập nhật ngày 2026-09-09: mọi task DB dùng MySQL 8.4 LTS, Connector/J và Flyway.
+> Schema 20 bảng nằm tại `src/main/resources/db/migration/V1__full_system.sql`.
+> Chạy bằng `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows.
 
 # Tasks: Quản lý đợt, đề tài và đăng ký nhóm
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/web.md](contracts/web.md), [quickstart.md](quickstart.md).
-**Status**: Đã triển khai nền tảng giới hạn theo yêu cầu người dùng ngày 2026-09-08: T001, T003–T005 hoàn thành; T002 một phần (wrapper/DB đã khóa, Playwright chờ hạ tầng E2E). T006 trở đi vẫn bị chặn. Xem [foundation-report.md](foundation-report.md).
-**Tests**: Bắt buộc theo spec AT-01–13 và constitution VIII. Viết test trước phần thực thi;
+**Status**: Đã triển khai nền tảng giới hạn theo yêu cầu người dùng ngày 2026-09-08: T001, T003–T007 hoàn thành; T002 một phần (wrapper/DB đã khóa, Playwright chờ hạ tầng E2E). T008 trở đi chờ các gate nghiệp vụ liên quan. Xem [foundation-report.md](foundation-report.md).
+**Tests**: Bắt buộc theo spec AT-01–15 và constitution VIII. Viết test trước phần thực thi;
 chạy để chứng minh thất bại do hành vi chưa có, rồi làm cho đạt. Không coi lỗi biên dịch là bằng chứng đầy đủ.
 
 ## Format and paths
@@ -32,13 +28,13 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 
 | Gate | Task | Điều kiện giải phóng |
 |---|---|---|
-| G-Identity | T006 | Q-18: nguồn/cấp tài khoản, tổ hợp role, scope đọc/ghi dean/SV, dữ liệu tổ chức và GV đổi bộ môn |
+| G-Identity | T006 | Đã giải phóng: seed/import, tổ hợp role, scope; chuyển GV ngoài phiên bản đầu; ADMIN ẩn mềm nội dung vi phạm, ghi audit và khóa tài khoản nguồn |
 | G-Period | T017 | Q-02: bắt buộc/độ chính xác ngày, đổi loại và sửa trường phụ |
 | G-Topic | T025 | Q-05/06: chốt mô hình topic theo đợt/reuse và phạm vi phân công trong feature |
 | G-Publish | T033 | Chốt granularity công bố và chính sách thời hạn cho quyết định dean nếu có |
 | G-Group | T039 | Q-07: thời điểm tạo nhóm và phạm vi rời/chuyển nhóm |
 | G-Registration | T047 | Q-09: reason thủ công, ưu tiên rút/accept, lưu lịch sử |
-| G-Acceptance | T007 | Xác nhận AS/SC suy luận, xử lý Q-20 bằng mục tiêu hoặc quyết định trì hoãn rõ ràng |
+| G-Acceptance | T007 | Đã giải phóng: AS/SC hiện tại được chấp nhận; kiểm tra bảo mật, responsive và xung đột chính; phiên bản local không có SLA định lượng |
 
 Nếu quyết định mới mở rộng phạm vi, cập nhật spec/plan/contracts/tasks trước, không
 triển khai một chức năng mới bằng cách suy rộng task hiện tại. Không có task cho reports,
@@ -56,7 +52,7 @@ Mục tiêu: chuẩn bị build/tài nguyên độc lập nghiệp vụ. Chỉ t
 
 - [X] T004 [P] Lấy CSS/JS và tài nguyên được tham chiếu từ Tabler 1.4.0 theo research R-03 vào `src/main/resources/static/vendor/tabler/1.4.0/`; giữ banners, chép LICENSE vào `licenses/tabler-1.4.0-LICENSE`, lập nguồn/version/checksum/license của từng tài nguyên tại `THIRD_PARTY_NOTICES.md`; không nạp Bootstrap hai lần hoặc phụ thuộc runtime CDN.
 
-- [X] T005 Chuyển layout/menu/header/error components Tabler thành `src/main/resources/templates/fragments/layout.html` và `src/main/resources/templates/fragments/errors.html`; bổ sung `src/main/resources/static/css/app.css`, `src/main/resources/static/js/app.js` cho labels, keyboard, empty/loading/error và system font local; không đưa demo nghiệp vụ vào app.
+- [X] T005 Chuyển layout/menu/header/error components Tabler thành `src/main/resources/templates/layouts/main.html`, `src/main/resources/templates/layouts/error.html` và các fragment dùng chung trong `src/main/resources/templates/fragments/`; bổ sung `src/main/resources/static/css/app.css`, `src/main/resources/static/js/app.js` cho labels, keyboard, empty/loading/error và system font local; không đưa demo nghiệp vụ vào app.
 
 ## Phase 2: Foundational
 
@@ -64,11 +60,11 @@ Mục tiêu: quyết định nền tảng dữ liệu/quyền, hạ tầng bảo
 **Chặn tất cả user stories cho tới khi T006–T016 hoàn thành.**
 T006–T007 là việc xác nhận tài liệu; không tự tạo đáp án. T008–T016 phụ thuộc hai gate này.
 
-- [ ] T006 Lấy xác nhận khách hàng cho G-Identity/Q-18 và ghi bằng chứng vào `specs/001-topic-registration/spec.md`; đồng bộ phạm vi quyền và schema tổ chức trong `specs/001-topic-registration/data-model.md`, `specs/001-topic-registration/contracts/web.md`, `specs/001-topic-registration/plan.md`; không thêm role ADMIN hoặc mặc định scope toàn hệ thống.
+- [X] T006 Hoàn tất xác nhận khách hàng cho G-Identity/Q-18 và ghi bằng chứng vào `specs/001-topic-registration/spec.md`; đồng bộ phạm vi quyền và schema tổ chức trong `specs/001-topic-registration/data-model.md`, `specs/001-topic-registration/contracts/web.md`, `specs/001-topic-registration/plan.md`; ADMIN chỉ ẩn mềm nội dung vi phạm, ghi audit, khóa tài khoản nguồn và không có quyền học vụ/đăng ký/cơ cấu tổ chức; chuyển GV ngoài phiên bản đầu.
 
-- [ ] T007 Xác nhận tiêu chí AS/SC và cách xử lý Q-20 trong `specs/001-topic-registration/spec.md`; lập `specs/001-topic-registration/acceptance-matrix.md` ánh xạ FR/REQ→AS/AT/SC→test và trạng thái xác nhận; giữ các hàng phụ thuộc gate story là blocked đến khi đáp án được ghi, không cho qua gate bằng phần trăm test giả.
+- [X] T007 Xác nhận tiêu chí AS/SC và cách xử lý Q-20 trong `specs/001-topic-registration/spec.md`; lập `specs/001-topic-registration/acceptance-matrix.md` ánh xạ FR/REQ→AS/AT/SC→test và trạng thái xác nhận; giữ các hàng phụ thuộc gate story là blocked đến khi đáp án được ghi, không cho qua gate bằng phần trăm test giả.
 
-- [ ] T008 Đối chiếu phần identity/department/role trong `database/V1__full_system.sql`; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/identity/persistence/UserAccountEntity.java`, `UserAccountRepository.java`, `DepartmentEntity.java`; unique username, password hash và FK scope đã xác nhận.
+- [ ] T008 Đối chiếu phần identity/department/role trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/identity/persistence/UserAccountEntity.java`, `UserAccountRepository.java`, `DepartmentEntity.java`; unique username, password hash và FK scope đã xác nhận.
 
 - [ ] T009 Viết test login đúng/sai, chưa login, role tự khai, logout, session/CSRF và không có self-registration tại `src/test/java/vn/edu/topicregistration/web/AuthenticationTest.java` (FR-01; AS-1.5–1.8; AT-06,09–10; SC-007).
 
@@ -80,7 +76,7 @@ T006–T007 là việc xác nhận tài liệu; không tự tạo đáp án. T00
 
 - [ ] T013 [P] Tạo exception/HTTP mapping 400/403/404/409/422 và redirect thành công theo contract tại `src/main/java/vn/edu/topicregistration/shared/web/WebExceptionHandler.java`, `src/main/resources/templates/error/error.html`; whitelist DTO, escape nội dung, không leak SQL/secret.
 
-- [ ] T014 Cấu hình Surefire/Failsafe, profiles integration/e2e và Playwright CLI tại `pom.xml`; tạo `src/test/java/vn/edu/topicregistration/integration/PostgresTestSupport.java` nhận TEST_DATABASE_* và chặn reset DB không phải DB test; không dùng H2 hoặc skip test khi thiếu cấu hình.
+- [ ] T014 Cấu hình Surefire/Failsafe, profiles integration/e2e và Playwright CLI tại `pom.xml`; tạo `src/test/java/vn/edu/topicregistration/integration/MySqlTestSupport.java` nhận TEST_DATABASE_* và chặn reset DB không phải DB test; không dùng H2 hoặc skip test khi thiếu cấu hình.
 
 - [ ] T015 Tạo fixture builder có clock/identity scope xác định và barrier cho nhiều connection tại `src/test/java/vn/edu/topicregistration/integration/FixtureSupport.java`, `src/test/java/vn/edu/topicregistration/concurrency/ConcurrentTestSupport.java`; tạo browser harness tự khởi động app test tại `src/test/java/vn/edu/topicregistration/e2e/BrowserTestSupport.java`.
 
@@ -100,7 +96,7 @@ Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi ch�
 
 - [ ] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
 
-- [ ] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày trong `database/V1__full_system.sql`; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
+- [ ] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
 
 - [ ] T021 [US1] Cài transaction READ COMMITTED và khóa period trước mutation tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodTransactionService.java`; sau chờ đọc lại quyền/giờ/version, không lấy child lock trước period; create period mới xác thực trước insert.
 
@@ -124,7 +120,7 @@ Chờ US1 và T025; T026–T027 song song.
 
 - [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
-- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `database/V1__full_system.sql`; tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
+- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
 
 - [ ] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
 
@@ -169,7 +165,7 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [ ] T041 [P] [US4] Viết contract test nhóm create/read/add/remove/leader với role/scope, leader cũ/người ngoài, thêm trực tiếp không invitation và không ghi khi denied tại `src/test/java/vn/edu/topicregistration/web/GroupContractTest.java` (AT-06,09).
 
-- [ ] T042 [US4] Đối chiếu group schema DB-05–07 trong `database/V1__full_system.sql`, slot 1–3, UNIQUE SV/đợt và trigger tự tạo membership trưởng nhóm; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/groups/persistence/StudentGroupEntity.java`, `GroupMembershipEntity.java`, `StudentGroupRepository.java`; backend không insert lặp leader membership.
+- [ ] T042 [US4] Đối chiếu group schema DB-05–07 trong `src/main/resources/db/migration/V1__full_system.sql`, slot 1–3, UNIQUE SV/đợt và trigger tự tạo membership trưởng nhóm; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/groups/persistence/StudentGroupEntity.java`, `GroupMembershipEntity.java`, `StudentGroupRepository.java`; backend không insert lặp leader membership.
 
 - [ ] T043 [US4] Cài group rules/create/add/remove/transfer dưới khóa period tại `src/main/java/vn/edu/topicregistration/groups/application/GroupService.java`, `groups/domain/GroupRules.java`; khai báo `groups/application/ActiveRegistrationQuery.java` làm port bắt buộc, không dùng stub luôn false trong runtime; adapter thật ở T054.
 
@@ -196,7 +192,7 @@ Chờ US3, các task US4 T039–T046 và T047; T048–T050 song song.
 
 - [ ] T050 [P] [US5] Viết MySQL constraint test một active/nhóm, một accepted/topic/đợt, cùng đợt FK và được đăng ký lại cùng topic sau reject/rút tại `src/test/java/vn/edu/topicregistration/integration/RegistrationConstraintsIT.java` (DB-07–10; AT-05,07).
 
-- [ ] T051 [US5] Đối chiếu registrations trong `database/V1__full_system.sql` theo T047 với generated-column unique DB-08–09 và trạng thái/reason DB-10; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/registrations/persistence/RegistrationEntity.java`, `RegistrationRepository.java`; không UNIQUE group/topic trên toàn lịch sử.
+- [ ] T051 [US5] Đối chiếu registrations trong `src/main/resources/db/migration/V1__full_system.sql` theo T047 với generated-column unique DB-08–09 và trạng thái/reason DB-10; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/registrations/persistence/RegistrationEntity.java`, `RegistrationRepository.java`; không UNIQUE group/topic trên toàn lịch sử.
 
 - [ ] T052 [US5] Cài gửi/rút/đăng ký lại tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationService.java`, `registrations/domain/RegistrationRules.java`; khóa period rồi đọc lại leader, giờ, nhóm, publication, topic accepted, active; tạo ID mới khi reapply, không rút ACCEPTED.
 
@@ -222,11 +218,11 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [ ] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ (FR-01–15; AT-06,08–10; SC-004,007).
 
-- [ ] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần.
+- [ ] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
 
 - [ ] T063 Thực hiện quickstart trên DB local bằng DBeaver, ghi lệnh thực tế/phiên bản/env/migration/seed/backup và kết quả tại `specs/001-topic-registration/quickstart.md`, `README.md`; không chỉnh schema ứng dụng thủ công và không ghi secrets vào tài liệu.
 
-- [ ] T064 Đối chiếu mọi FR-01–15, AS và AT-01–13, SC-001–008 trong `specs/001-topic-registration/acceptance-matrix.md`; chạy ./mvnw test, verify -Pintegration và verify -Pe2e, ghi pass/fail/blocked, rà constitution I–X tại `specs/001-topic-registration/validation-report.md`; chỉ đánh dấu feature hoàn thành nếu các Q/AC trong phạm vi đã chốt và tests đều đạt.
+- [ ] T064 Đối chiếu mọi FR-01–15, NFR-01–02, AS, AT-01–15 và SC-001–009 trong `specs/001-topic-registration/acceptance-matrix.md`; chạy ./mvnw test, verify -Pintegration và verify -Pe2e, ghi pass/fail/blocked, rà constitution I–X tại `specs/001-topic-registration/validation-report.md`; chỉ đánh dấu feature hoàn thành nếu các Q/AC trong phạm vi đã chốt và tests đều đạt.
 
 ## Dependencies & execution order
 
@@ -279,7 +275,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 
 | Requirement | Tasks chính | Tests / nguồn |
 |---|---|---|
-| FR-01 | T006,T008–T011,T016,T061 | REQ-28,31–32; AT-06,09–10 |
+| FR-01 | T006,T008–T011,T016,T061 | REQ-28,31–32; AT-06,09–10,14 |
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
 | FR-03 | T018–T024,T026,T029,T048,T052 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
@@ -302,6 +298,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 | SC-006 | T007,T064 và các checkpoint story | Ánh xạ FR/REQ/AS/AT và xác nhận nghiệm thu |
 | SC-007 | T009–T011,T016,T061,T064 | Không cấp sai danh tính/quyền |
 | SC-008 | T048,T050–T053,T057–T058,T064 | Một accepted, không pending cạnh tranh, reason chính xác |
+| SC-009 | T005,T058,T062,T064 | Responsive 360/768/1280, keyboard và không tràn ngang toàn trang |
 
 T001–T005: quyết định stack/Tabler của người dùng và constitution V/IX.
 T012–T015: constitution III–VIII; T059–T060: VII–IX; T062–T063: portability/DBeaver

@@ -1,7 +1,9 @@
 # Database toàn hệ thống — MySQL 8.4 LTS
 
-Schema chính nằm trong [V1__full_system.sql](V1__full_system.sql). File tạo 20 bảng
-InnoDB, dùng `utf8mb4`, không có `DROP` và không tạo tài khoản ứng dụng mẫu.
+Schema chính nằm trong
+[V1__full_system.sql](../src/main/resources/db/migration/V1__full_system.sql). Flyway
+tự áp dụng file này để tạo 20 bảng InnoDB dùng `utf8mb4`; migration không có `DROP`
+và không tạo tài khoản ứng dụng mẫu.
 
 ## Tạo database trong DBeaver
 
@@ -23,16 +25,20 @@ GRANT ALL PRIVILEGES ON topic_registration_local.* TO 'topic_local'@'localhost';
 Nếu ứng dụng kết nối bằng `127.0.0.1` và MySQL phân biệt host của user, tạo hoặc cấp
 quyền tương ứng cho `'topic_local'@'127.0.0.1'`.
 
-## Import 20 bảng
+## Tạo 20 bảng bằng Flyway
 
-1. Tạo connection DBeaver mới bằng `topic_local`, database `topic_registration_local`.
-2. Mở `V1__full_system.sql` trong SQL Editor của database này.
-3. Chọn **Execute SQL Script**, không chỉ Execute Statement.
-4. Refresh database → Tables; phải thấy 20 bảng. Mở **ER Diagram** để xem quan hệ.
+1. Tạo connection DBeaver bằng `topic_local`, database `topic_registration_local`.
+2. Cấu hình `.env` theo phần dưới và chạy ứng dụng bằng profile `local`.
+3. Flyway tự chạy migration V1 đúng một lần.
+4. Refresh database trong DBeaver; phải thấy 20 bảng nghiệp vụ và bảng
+   `flyway_schema_history`. Mở **ER Diagram** để xem quan hệ.
 
-MySQL tự commit phần lớn câu lệnh DDL. Nếu import lỗi giữa chừng, hãy sửa nguyên nhân,
-xóa database thử nghiệm chưa dùng và tạo lại database rỗng trước khi chạy lại V1. Không
-chạy V1 lần hai trên database đã import thành công.
+Nếu migration lỗi trên database local chưa dùng, hãy sửa nguyên nhân rồi tạo lại database
+rỗng trước khi chạy lại. Không chỉnh sửa migration V1 sau khi nó đã được dùng trên database
+chung; tạo V2 cho thay đổi tiếp theo.
+
+Bạn vẫn có thể mở migration V1 trong DBeaver để đọc hoặc chạy trên database thử nghiệm
+rỗng. Không chạy thủ công trên database mà Flyway đang quản lý.
 
 ## Cấu hình ứng dụng
 
@@ -90,4 +96,4 @@ thái, số thành viên tối thiểu của hội đồng và cách tổng hợ
 thay thế các kiểm tra nghiệp vụ trong service.
 
 File [full-schema-check.sql](../src/test/resources/database/full-schema-check.sql) chứa
-fixture kiểm tra schema MySQL và phải chạy trên database kiểm thử đã import V1.
+fixture kiểm tra schema MySQL và phải chạy trên database kiểm thử đã được Flyway migrate.
