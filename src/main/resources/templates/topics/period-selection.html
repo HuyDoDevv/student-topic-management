@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chọn đợt đề tài', ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle">ĐỀ TÀI</div>
+      <h1 class="page-title">Chọn đợt đăng ký</h1>
+      <p class="text-secondary mt-2 mb-0">Mỗi đề tài thuộc một đợt. Chọn đợt để xem hoặc tạo đề tài của bạn.</p>
+    </div>
+  </div>
+
+  <div class="row row-cards" th:if="${!periods.isEmpty()}">
+    <div class="col-md-6 col-xl-4" th:each="period : ${periods}">
+      <article class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3">
+            <span class="badge"
+                  th:classappend="${period.lecturerOpen ? 'bg-green-lt' : 'bg-secondary-lt'}"
+                  th:text="${period.lecturerOpen ? 'Đang nhận đề tài' : 'Ngoài thời gian gửi'}">Trạng thái</span>
+          </div>
+          <h2 class="h3" th:text="${period.name}">Tên đợt</h2>
+          <p class="text-secondary">Bạn vẫn có thể xem và chỉnh sửa bản nháp của mình ngoài thời gian gửi duyệt.</p>
+          <a class="btn btn-outline-primary mt-auto"
+             th:href="@{/periods/{id}/topics(id=${period.id})}">Mở danh sách đề tài</a>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="card" th:if="${periods.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Trưởng khoa cần tạo đợt trước khi giảng viên đề xuất đề tài.')}"></div>
+</section>
+</body>
+</html>

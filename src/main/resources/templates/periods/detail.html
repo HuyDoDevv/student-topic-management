@@ -14,7 +14,8 @@
     </div>
     <div class="btn-list">
       <a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa cấu hình</a>
-      <a class="btn btn-primary" th:href="@{/periods/{id}/topics(id=${period.id})}">Xem đề tài</a>
+      <a class="btn btn-primary" th:if="${canAuthorTopics}"
+         th:href="@{/periods/{id}/topics(id=${period.id})}">Xem đề tài</a>
     </div>
   </div>
 

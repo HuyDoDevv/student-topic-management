@@ -74,10 +74,13 @@ lệnh triển khai đầy đủ. Chỉ công việc độc lập với Q mới 
 
 | ID | Chưa chốt | Phần bị chặn |
 |---|---|---|
-| Q-05 | Tái sử dụng đề tài, nguồn/người quản lý danh mục | Thiết kế catalog/reuse, cấp dữ liệu thật |
-| Q-06 | Đổi GVHD bởi vai trò khác hoặc sau công bố | Không thêm endpoint đổi phân công; mô hình hiện tại chỉ nháp |
 | Q-07 | Thời điểm tạo nhóm; tự rời/chuyển nhóm | Create-group và luồng rời nhóm chưa đủ điều kiện cuối cùng |
 | Q-09 | Lý do từ chối thủ công bắt buộc; ưu tiên rút/chấp nhận; lưu lịch sử | Validation rejection, kỳ vọng tranh chấp, retention |
+
+G-Topic/Q-05–06 đã được giải quyết ngày 2026-09-10: mỗi topic thuộc đúng một đợt,
+không có reuse/copy; bộ môn và tài khoản GV được seed/import, form chỉ chọn LECTURER
+đang hoạt động cùng bộ môn. Chỉ tác giả thay đổi nội dung/GVHD khi DRAFT; dữ liệu bị khóa
+từ PENDING_APPROVAL và không có chức năng thay GVHD trong quá trình thực hiện.
 
 Việc người dùng bỏ qua clarify không xác nhận bất kỳ phương án nghiệp vụ nào.
 Hạn xử lý duyệt/công bố và quyết định của trưởng khoa chưa được quy định riêng:

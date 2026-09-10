@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
 import vn.edu.topicregistration.periods.web.PeriodForm;
 import vn.edu.topicregistration.shared.time.TimeConfig;
+import vn.edu.topicregistration.topics.web.TopicDraftForm;
 
 /**
  * Supplies deterministic sample view models for reviewing Thymeleaf pages.
@@ -36,16 +37,33 @@ public class UiPreviewController {
                     "05/09/2026", "12/09/2026",
                     "20/12/2026", "10/01/2027", "Đã đóng", "bg-secondary-lt"));
 
-    private static final List<Map<String, Object>> TOPICS = List.of(
-            Map.of("id", 101, "title", "Hệ thống quản lý đăng ký đề tài", "author", "TS. Nguyễn Văn An",
-                    "department", "Công nghệ phần mềm", "supervisors", "TS. Nguyễn Văn An",
-                    "status", "PUBLISHED"),
-            Map.of("id", 102, "title", "Phân tích dữ liệu học tập bằng học máy", "author", "ThS. Trần Thu Hà",
-                    "department", "Hệ thống thông tin", "supervisors", "ThS. Trần Thu Hà, TS. Lê Minh",
-                    "status", "PENDING_APPROVAL"),
-            Map.of("id", 103, "title", "Ứng dụng di động hỗ trợ sinh viên", "author", "ThS. Phạm Quốc Bảo",
-                    "department", "Công nghệ phần mềm", "supervisors", "ThS. Phạm Quốc Bảo",
-                    "status", "DRAFT"));
+    private static final List<PreviewTopic> TOPICS = List.of(
+            new PreviewTopic(
+                    101, "Hệ thống quản lý đăng ký đề tài", "TS. Nguyễn Văn An",
+                    "Công nghệ phần mềm", "TS. Nguyễn Văn An", "Đã công bố", "bg-green-lt",
+                    "Thiết kế hệ thống tập trung để quản lý đợt, đề tài, nhóm sinh viên và quá trình đăng ký.",
+                    "Xây dựng luồng đăng ký có kiểm soát quyền, thời gian và trạng thái.",
+                    "Nắm vững Java, Spring Boot và cơ sở dữ liệu quan hệ.",
+                    "Ứng dụng web chạy được, mã nguồn và tài liệu thiết kế.", 2, false),
+            new PreviewTopic(
+                    102, "Phân tích dữ liệu học tập bằng học máy", "ThS. Trần Thu Hà",
+                    "Hệ thống thông tin", "ThS. Trần Thu Hà, TS. Lê Minh", "Chờ duyệt", "bg-yellow-lt",
+                    "Phân tích dữ liệu kết quả học tập để hỗ trợ cố vấn học tập.",
+                    "Xây dựng mô hình dự báo và trang tổng hợp kết quả.",
+                    "Có kiến thức Python, thống kê và học máy.",
+                    "Mô hình thử nghiệm, báo cáo đánh giá và ứng dụng minh họa.", 1, false),
+            new PreviewTopic(
+                    103, "Ứng dụng di động hỗ trợ sinh viên", "ThS. Phạm Quốc Bảo",
+                    "Công nghệ phần mềm", "ThS. Phạm Quốc Bảo", "Nháp", "bg-secondary-lt",
+                    "Ứng dụng tập hợp thông báo và các tiện ích dành cho sinh viên.",
+                    "Hoàn thiện bản thử nghiệm trên thiết bị di động.",
+                    "Biết lập trình ứng dụng di động và làm việc với REST API.",
+                    "Ứng dụng thử nghiệm và tài liệu hướng dẫn sử dụng.", 0, true));
+
+    private static final List<PreviewLecturer> LECTURERS = List.of(
+            new PreviewLecturer(11, "TS. Nguyễn Văn An", "nguyenvanan"),
+            new PreviewLecturer(12, "ThS. Phạm Quốc Bảo", "phamquocbao"),
+            new PreviewLecturer(13, "ThS. Trần Thu Hà", "tranthuha"));
 
     private static final List<Map<String, Object>> MEMBERS = List.of(
             Map.of("id", 201, "code", "23110001", "name", "Nguyễn Minh Anh", "role", "Trưởng nhóm"),
@@ -57,7 +75,7 @@ public class UiPreviewController {
         return "auth/login";
     }
 
-    @GetMapping("/dashboard")
+    @GetMapping({"/", "/dashboard"})
     String dashboard(Model model) {
         common(model, "dashboard", "Không gian làm việc");
         model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE).format(
@@ -114,11 +132,21 @@ public class UiPreviewController {
         return "topics/list";
     }
 
+    @GetMapping("/topics")
+    String topicPeriods(Model model) {
+        common(model, "topics", "Đề tài");
+        model.addAttribute("periods", PERIODS);
+        return "topics/period-selection";
+    }
+
     @GetMapping("/periods/{periodId}/topics/new")
     String topicCreate(@PathVariable long periodId, Model model) {
         common(model, "topics", "Đề tài");
         model.addAttribute("editing", false);
         model.addAttribute("period", PERIODS.getFirst());
+        model.addAttribute("form", new TopicDraftForm());
+        model.addAttribute("departmentName", "Công nghệ phần mềm");
+        model.addAttribute("lecturers", LECTURERS);
         return "topics/form";
     }
 
@@ -127,7 +155,10 @@ public class UiPreviewController {
         common(model, "topics", "Đề tài");
         model.addAttribute("editing", true);
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("topic", TOPICS.getFirst());
+        model.addAttribute("topic", TOPICS.getLast());
+        model.addAttribute("form", previewTopicForm());
+        model.addAttribute("departmentName", "Công nghệ phần mềm");
+        model.addAttribute("lecturers", LECTURERS);
         return "topics/form";
     }
 
@@ -199,6 +230,9 @@ public class UiPreviewController {
         model.addAttribute("currentUserName", "Nguyễn Văn An");
         model.addAttribute("currentRoleLabel", "Chế độ xem trước");
         model.addAttribute("currentUserInitials", "NA");
+        model.addAttribute("canManagePeriods", true);
+        model.addAttribute("canAuthorTopics", true);
+        model.addAttribute("previewMode", true);
     }
 
     private PeriodForm previewPeriodForm() {
@@ -210,6 +244,19 @@ public class UiPreviewController {
         form.setStudentStart(LocalDate.of(2026, 9, 20));
         form.setStudentEnd(LocalDate.of(2026, 9, 30));
         form.setVersion(0L);
+        return form;
+    }
+
+    private TopicDraftForm previewTopicForm() {
+        PreviewTopic topic = TOPICS.getLast();
+        TopicDraftForm form = new TopicDraftForm();
+        form.setTitle(topic.title());
+        form.setDescription(topic.description());
+        form.setObjectives(topic.objectives());
+        form.setStudentRequirements(topic.studentRequirements());
+        form.setExpectedResults(topic.expectedResults());
+        form.setSupervisorIds(List.of(12L));
+        form.setVersion(topic.version());
         return form;
     }
 
@@ -241,5 +288,31 @@ public class UiPreviewController {
         public String studentWindow() {
             return studentStart + " – " + studentEnd;
         }
+
+        public boolean lecturerOpen() {
+            return true;
+        }
+    }
+
+    public record PreviewTopic(
+            int id,
+            String title,
+            String author,
+            String department,
+            String supervisors,
+            String status,
+            String statusClass,
+            String description,
+            String objectives,
+            String studentRequirements,
+            String expectedResults,
+            long version,
+            boolean draft) {
+        public String supervisorNames() {
+            return supervisors;
+        }
+    }
+
+    public record PreviewLecturer(long id, String fullName, String username) {
     }
 }

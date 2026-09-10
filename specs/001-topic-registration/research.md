@@ -98,11 +98,12 @@ kiểm tra network browser không có request bắt buộc ra CDN. Bước này 
 
 ## R-07 — Điểm không thể giải quyết bằng nghiên cứu
 
-Q-02,05,06,07,09,18 và xác nhận AC cần quyết định khách hàng, không thể lấy “best practice”
-làm đáp án. Q-20 cần mục tiêu chất lượng nếu dùng để nghiệm thu định lượng.
-Không bổ sung API quản trị tài khoản/catalog, đổi GVHD sau công bố, tự rời nhóm hay
-chính sách xem toàn khoa/toàn trường. Policy còn thiếu được đánh dấu BLOCKED;
-không coi fixture thử nghiệm một khoa là xác nhận phạm vi thật.
+Q-07, Q-09 và các xác nhận AC tương ứng cần quyết định khách hàng, không thể lấy
+“best practice” làm đáp án. Q-05/Q-06 đã chốt mô hình topic theo đợt, nguồn danh mục
+seed/import và khóa GVHD từ PENDING_APPROVAL; không cần nghiên cứu phương án catalog/reuse
+hoặc thay GVHD trong quá trình thực hiện cho phiên bản đầu. Không bổ sung API quản trị
+tài khoản/catalog, tự rời nhóm hay chính sách xem toàn khoa/toàn trường. Policy còn thiếu
+được đánh dấu BLOCKED; không coi fixture thử nghiệm một khoa là xác nhận phạm vi thật.
 
 Đã có rà soát nghiên cứu độc lập về constraints/khóa; kết luận được tích hợp vào data-model.
 Không có extension hooks before_plan/after_plan trong workspace.

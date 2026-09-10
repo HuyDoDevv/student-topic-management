@@ -1,27 +1,99 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page(${editing ? 'Sửa đề tài' : 'Tạo đề tài'}, ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page(${editing ? 'Sửa đề tài' : 'Tạo đề tài'}, ~{::section})}">
 <body>
 <section>
   <div class="page-header">
-    <div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${editing} ? 'Sửa nội dung đề tài' : 'Đề xuất đề tài mới'">Đề xuất đề tài mới</h1><p class="text-secondary mt-2 mb-0">Lưu bản nháp trước khi gửi trưởng khoa duyệt.</p></div>
-  </div>
-  <form class="card content-form" method="post" data-prevent-double-submit
-        th:action="${editing} ? @{/topics/{id}/draft(id=${topic.id})} : @{/periods/{id}/topics(id=${period.id})}">
-    <div class="card-body">
-      <div th:if="${formError}" th:replace="~{fragments/feedback :: error(${formError})}"></div>
-      <div class="mb-3"><label class="form-label required" for="topic-title">Tên đề tài</label><input class="form-control" id="topic-title" name="title" required th:value="${topic?.title}" placeholder="Nhập tên đề tài rõ ràng, ngắn gọn"></div>
-      <div class="mb-3"><label class="form-label required" for="topic-description">Mô tả</label><textarea class="form-control" id="topic-description" name="description" rows="4" required placeholder="Bối cảnh và phạm vi của đề tài"></textarea></div>
-      <div class="row g-3">
-        <div class="col-md-6"><label class="form-label required" for="topic-objectives">Mục tiêu</label><textarea class="form-control" id="topic-objectives" name="objectives" rows="5" required placeholder="Kết quả mà đề tài cần đạt"></textarea></div>
-        <div class="col-md-6"><label class="form-label required" for="student-requirements">Yêu cầu sinh viên</label><textarea class="form-control" id="student-requirements" name="studentRequirements" rows="5" required placeholder="Kiến thức và kỹ năng cần có"></textarea></div>
-      </div>
-      <div class="mt-3"><label class="form-label required" for="expected-results">Kết quả dự kiến</label><textarea class="form-control" id="expected-results" name="expectedResults" rows="4" required placeholder="Sản phẩm, tài liệu hoặc số liệu cần bàn giao"></textarea></div>
-      <hr class="my-4">
-      <h2 class="h3">Giảng viên hướng dẫn</h2><p class="text-secondary">Chọn từ một đến hai giảng viên cùng bộ môn.</p>
-      <div class="row g-3"><div class="col-md-6"><label class="form-label required" for="supervisor-one">Giảng viên hướng dẫn 1</label><select class="form-select" id="supervisor-one" name="supervisorIds" required><option value="">Chọn giảng viên</option><option value="11">TS. Nguyễn Văn An</option><option value="12">ThS. Phạm Quốc Bảo</option></select></div><div class="col-md-6"><label class="form-label" for="supervisor-two">Giảng viên hướng dẫn 2</label><select class="form-select" id="supervisor-two" name="supervisorIds"><option value="">Không chọn</option><option value="13">TS. Lê Minh</option><option value="14">ThS. Trần Thu Hà</option></select></div></div>
-      <input th:if="${editing}" type="hidden" name="version" value="0">
+    <div>
+      <div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div>
+      <h1 class="page-title"
+          th:text="${editing ? 'Sửa nội dung đề tài' : 'Đề xuất đề tài mới'}">Đề xuất đề tài mới</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Có thể lưu nội dung chưa hoàn chỉnh. Trước khi gửi duyệt, cần điền đủ 5 trường và chọn từ 1 đến 2 giảng viên hướng dẫn.
+      </p>
     </div>
-    <div class="card-footer d-flex flex-wrap justify-content-end gap-2"><a class="btn btn-ghost-secondary" th:href="@{/periods/{id}/topics(id=${period.id})}">Hủy</a><button class="btn btn-primary" type="submit">Lưu bản nháp</button></div>
+  </div>
+
+  <form class="card content-form" method="post" data-prevent-double-submit
+        th:object="${form}"
+        th:action="${editing ? '/topics/' + topic.id + '/draft' : '/periods/' + period.id + '/topics'}">
+    <div class="card-body">
+      <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary
+           th:if="${#fields.hasAnyErrors()}">
+        <strong>Chưa thể lưu bản nháp.</strong>
+        <ul class="mb-0 mt-2" th:if="${#fields.hasGlobalErrors()}">
+          <li th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</li>
+        </ul>
+        <span th:unless="${#fields.hasGlobalErrors()}">Vui lòng kiểm tra các trường được đánh dấu.</span>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="topic-title">Tên đề tài</label>
+        <input class="form-control" id="topic-title" th:field="*{title}"
+               th:errorclass="is-invalid" maxlength="500"
+               placeholder="Nhập tên đề tài rõ ràng, ngắn gọn">
+        <div class="invalid-feedback" th:errors="*{title}">Tên đề tài chưa hợp lệ.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="topic-description">Mô tả</label>
+        <textarea class="form-control" id="topic-description" th:field="*{description}"
+                  rows="4" placeholder="Bối cảnh và phạm vi của đề tài"></textarea>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="topic-objectives">Mục tiêu</label>
+          <textarea class="form-control" id="topic-objectives" th:field="*{objectives}"
+                    rows="5" placeholder="Kết quả mà đề tài cần đạt"></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="student-requirements">Yêu cầu sinh viên</label>
+          <textarea class="form-control" id="student-requirements" th:field="*{studentRequirements}"
+                    rows="5" placeholder="Kiến thức và kỹ năng cần có"></textarea>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label" for="expected-results">Kết quả dự kiến</label>
+        <textarea class="form-control" id="expected-results" th:field="*{expectedResults}"
+                  rows="4" placeholder="Sản phẩm, tài liệu hoặc số liệu cần bàn giao"></textarea>
+      </div>
+
+      <hr class="my-4">
+      <fieldset>
+        <legend class="h3 mb-1">Giảng viên hướng dẫn</legend>
+        <p class="text-secondary mb-1">
+          Danh sách gồm các tài khoản giảng viên đang hoạt động thuộc bộ môn
+          <strong th:text="${departmentName}">Công nghệ phần mềm</strong>.
+        </p>
+        <p class="form-hint mb-3">Có thể chưa chọn khi lưu nháp; cần chọn 1–2 người trước khi gửi duyệt.</p>
+
+        <div class="alert alert-warning mb-0" th:if="${lecturers.isEmpty()}">
+          Bộ môn chưa có tài khoản giảng viên phù hợp. Vui lòng liên hệ trưởng khoa để kiểm tra dữ liệu tài khoản.
+        </div>
+
+        <div class="supervisor-grid" th:if="${!lecturers.isEmpty()}" data-supervisor-group>
+          <label class="topic-option supervisor-option" th:each="lecturer : ${lecturers}">
+            <input class="form-check-input" type="checkbox" th:field="*{supervisorIds}"
+                   th:value="${lecturer.id}">
+            <span>
+              <strong th:text="${lecturer.fullName}">Giảng viên</strong>
+              <small th:text="${lecturer.username}">tên đăng nhập</small>
+            </span>
+          </label>
+        </div>
+        <div class="text-danger small mt-2" th:errors="*{supervisorIds}">Giảng viên hướng dẫn chưa hợp lệ.</div>
+      </fieldset>
+
+      <input th:if="${editing}" type="hidden" th:field="*{version}">
+      <div class="text-danger small mt-3" th:errors="*{version}">Phiên bản dữ liệu chưa hợp lệ.</div>
+    </div>
+    <div class="card-footer d-flex flex-wrap justify-content-end gap-2">
+      <a class="btn btn-ghost-secondary"
+         th:href="@{/periods/{id}/topics(id=${period.id})}">Hủy</a>
+      <button class="btn btn-primary" type="submit">Lưu bản nháp</button>
+    </div>
   </form>
 </section>
 </body>
