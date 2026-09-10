@@ -55,7 +55,7 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 
 - Q: Khi gửi duyệt, đề tài bắt buộc phải có những thông tin nội dung nào? → A: A — Tên đề tài, mô tả, mục tiêu, yêu cầu đối với sinh viên và kết quả dự kiến đều bắt buộc, ngoài bộ môn và 1–2 GVHD đã chốt. Xác nhận U, phiên 3; làm rõ nội dung trong Q-05, liên quan REQ-08–10. Không đặt thêm giới hạn độ dài hoặc mẫu trình bày chưa được xác nhận.
 
-- Q: Trưởng khoa được thay đổi loại đợt và thời gian đăng ký sau khi đợt đã bắt đầu không? → A: A — Chỉ sửa loại và các mốc đăng ký trước giờ bắt đầu GV; từ giờ đó trở đi khóa các trường này. Xác nhận U, phiên 3; làm rõ phần sửa loại/lịch trong Q-02, liên quan REQ-03–05, REQ-31. Không suy rộng quyết định này sang tên đợt, hạn điểm GVPB hoặc ngày báo cáo hội đồng.
+- Q: Trưởng khoa được thay đổi loại đợt và thời gian đăng ký sau khi đợt đã bắt đầu không? → A: Quy tắc cuối được cập nhật ngày 2026-09-10 — từ giờ bắt đầu GV, khóa tên, loại và các mốc bắt đầu; trưởng khoa chỉ được kéo dài mốc kết thúc của giai đoạn chưa hết hạn, không được rút ngắn hoặc mở lại giai đoạn đã đóng, và lịch sau sửa vẫn phải đúng thứ tự. Quyết định này thay thế phương án khóa toàn bộ loại/bốn mốc đã ghi ở phiên 3; liên quan REQ-03–05, REQ-31.
 
 ### Session 2026-09-09
 
@@ -64,6 +64,14 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 - Q: Khi trưởng khoa chuyển một giảng viên đang có đề tài hoặc phân công GVHD sang bộ môn/khoa khác, các trách nhiệm đang hoạt động phải được xử lý thế nào? → A: Bỏ qua trong phiên bản đầu vì là chức năng mở rộng, mức độ không quan trọng. Phiên bản đầu không cung cấp thao tác chuyển giảng viên và giả định thông tin bộ môn/khoa ổn định trong các luồng đang hoạt động; nếu có thời gian sẽ đặc tả và triển khai sau. Xác nhận U, đóng phần chuyển bộ môn của Q-18 bằng quyết định ngoài phạm vi hiện tại.
 - Q: Khi có kẻ gian đăng nội dung, ADMIN nên “xóa” theo cách nào? → A: A — ADMIN ẩn nội dung khỏi website nhưng giữ dữ liệu để kiểm tra hoặc khôi phục; lưu ADMIN thực hiện, thời gian và lý do, đồng thời khóa tài khoản gây sự cố. Đây là quyền xử lý khẩn cấp, không cấp quyền sửa nội dung hoặc thực hiện nghiệp vụ học vụ/đăng ký. Xác nhận U, giải quyết phần còn lại của Q-18; liên quan REQ-28, REQ-31–32.
 - Q: Phiên bản local đầu tiên được nghiệm thu theo mức chất lượng nào? → A: A — Dùng toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; kiểm tra chức năng, phân quyền backend, CSRF, mật khẩu băm, validation, không lộ secret, responsive trên desktop/tablet/mobile và các xung đột dữ liệu chính. Không đặt SLA định lượng cho thời gian phản hồi, số người dùng đồng thời, uptime hoặc backup ở phiên bản local. Xác nhận U, giải quyết Q-20 và G-Acceptance; các kết quả phụ thuộc Q nghiệp vụ còn lại tiếp tục ở trạng thái blocked cho tới khi từng Q được chốt.
+
+### Session 2026-09-10
+
+- Q: Khi tạo đợt TLCN hoặc KLTN, các ngày phụ có bắt buộc phải nhập không? → A: TLCN và KLTN bắt buộc có hạn nộp điểm GVPB; riêng KLTN bắt buộc thêm ngày báo cáo hội đồng. Xác nhận U, làm rõ phần bắt buộc của Q-02; liên quan REQ-06–07 và FR-04.
+- Q: Khi trưởng khoa đổi loại đợt trước giờ bắt đầu đăng ký giảng viên, hệ thống phải xử lý các ngày không còn phù hợp như thế nào? → A: Tự xóa ngày không còn áp dụng; yêu cầu nhập đủ ngày bắt buộc của loại mới trước khi lưu. Nếu thiếu ngày mới bắt buộc thì từ chối toàn bộ thay đổi. Xác nhận U, làm rõ xử lý đổi loại của Q-02; liên quan REQ-03–07 và FR-04/FR-15.
+- Q: Hạn nộp điểm GVPB và ngày báo cáo hội đồng cần lưu chính xác đến ngày hay đến cả giờ và phút? → A: Chỉ lưu ngày lịch theo Asia/Ho_Chi_Minh, không có giờ và phút. Xác nhận U, làm rõ độ chính xác của Q-02; liên quan REQ-06–07 và FR-04.
+- Q: Sau khi đợt bắt đầu, trưởng khoa được thay đổi lịch đăng ký theo quy tắc nào? → A: Từ giờ bắt đầu GV, khóa tên, loại và các mốc bắt đầu. Chỉ được kéo dài mốc kết thúc của giai đoạn chưa hết hạn; không rút ngắn thời gian, không mở lại giai đoạn đã đóng và lịch sau sửa vẫn phải thỏa bắt đầu GV < kết thúc GV ≤ bắt đầu SV < kết thúc SV. Xác nhận U, thay thế quy tắc khóa toàn bộ bốn mốc trước đó của Q-02; liên quan REQ-03–05 và FR-15.
+- Q: Trưởng khoa được sửa hạn nộp điểm GVPB và ngày báo cáo hội đồng theo quy tắc nào? → A: Với từng ngày đang áp dụng, chỉ được dời sang ngày muộn hơn khi ngày hiện hành theo Asia/Ho_Chi_Minh vẫn chưa tới ngày đang lưu; không được dời sớm, sửa từ đầu ngày đang lưu hoặc mở lại mốc đã qua. Quy tắc này áp dụng cho sửa trực tiếp; tạo đợt và đổi loại trước giờ mở GV vẫn tuân theo quy tắc bắt buộc/xóa ngày đã chốt. Xác nhận U, giải quyết phần còn lại của Q-02; liên quan REQ-06–07 và FR-04/FR-15.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -91,7 +99,8 @@ môn học, NCKH, TLCN, KLTN và đối chiếu giá trị đã ghi nhận.
 2. **Given** từng loại trong bốn loại, **When** cấu hình ngày,
    **Then** hạn nộp điểm GVPB chỉ áp dụng TLCN/KLTN và ngày báo cáo hội đồng
    chỉ áp dụng KLTN; giá trị không áp dụng không được chấp nhận (AS-1.2).
-   Tính bắt buộc của ngày hợp lệ còn Q-02.
+   TLCN/KLTN bắt buộc có hạn nộp điểm GVPB; KLTN bắt buộc thêm ngày báo cáo hội đồng.
+   Hai trường này là ngày lịch theo Asia/Ho_Chi_Minh, không có giờ và phút.
 3. **Given** người gọi không chứng minh được quyền tạo đợt,
    **When** yêu cầu tạo đợt, **Then** bị từ chối và số đợt không đổi (AS-1.3).
    Không tự xác định quyền được ủy nhiệm ngoài trưởng khoa.
@@ -121,12 +130,16 @@ Lịch đăng ký tuân theo: bắt đầu GV < kết thúc GV ≤ bắt đầu 
 Hai khoảng được phép tiếp giáp ở cùng một thời điểm; chỉ khoảng SV tính thời điểm tiếp giáp.
 
 11. **Given** chưa đến giờ bắt đầu GV của lịch đang có hiệu lực,
-    **When** trưởng khoa sửa loại hoặc bốn mốc bắt đầu/kết thúc GV/SV thành cấu hình hợp lệ,
-    **Then** thay đổi được ghi nhận (AS-1.11).
+    **When** trưởng khoa sửa tên, loại hoặc bốn mốc bắt đầu/kết thúc GV/SV thành cấu hình hợp lệ,
+    **Then** thay đổi được ghi nhận; khi đổi loại, hệ thống tự xóa ngày không còn áp dụng
+    và chỉ lưu nếu đã nhập đủ ngày bắt buộc của loại mới (AS-1.11).
 12. **Given** đã đến hoặc qua giờ bắt đầu GV của lịch đang có hiệu lực,
-    **When** trưởng khoa sửa loại hoặc bất kỳ mốc đăng ký nào,
-    **Then** bị từ chối, cấu hình không đổi; kể cả dời giờ bắt đầu về tương lai,
-    kéo dài hạn hoặc mở lại đợt đã đóng (AS-1.12).
+    **When** trưởng khoa sửa tên, loại, một mốc bắt đầu, rút ngắn mốc kết thúc hoặc
+    mở lại một giai đoạn đã đóng, **Then** bị từ chối và cấu hình không đổi. Nếu giai đoạn
+    chưa hết hạn, trưởng khoa được kéo dài mốc kết thúc khi lịch mới vẫn đúng thứ tự.
+    Với từng hạn điểm GVPB/ngày hội đồng đang áp dụng, chỉ được dời sang ngày muộn hơn
+    khi ngày hiện tại theo Asia/Ho_Chi_Minh còn trước ngày đang lưu; từ đầu ngày đang lưu
+    thì mốc đó bị khóa và không được mở lại (AS-1.12).
 13. **Given** người không có vai trò trưởng khoa,
     **When** sửa loại/lịch kể cả trước giờ mở GV,
     **Then** bị từ chối và dữ liệu không đổi (AS-1.13).
@@ -368,9 +381,10 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 - Đúng giờ bắt đầu được tính trong hạn, đúng giờ kết thúc bị tính ngoài hạn;
   dùng Asia/Ho_Chi_Minh. Hai khoảng GV/SV không chồng lấn, GV trước SV.
 - Đến hạn SV nhưng chưa công bố danh sách: chưa nhận đăng ký; công bố sau giờ kết thúc
-  SV không tự gia hạn hoặc mở lại đợt. Loại và bốn mốc đăng ký bị khóa từ giờ bắt đầu GV.
-- Trước giờ bắt đầu GV, đổi loại vẫn phải tuân thủ điều kiện ngày áp dụng;
-  cách xử lý ngày không còn áp dụng sau đổi loại còn Q-02.
+  SV không tự gia hạn hoặc mở lại đợt. Tên, loại và các mốc bắt đầu bị khóa từ giờ bắt đầu GV;
+  chỉ kéo dài mốc kết thúc trước khi giai đoạn tương ứng hết hạn.
+- Trước giờ bắt đầu GV, đổi loại vẫn phải tuân thủ điều kiện ngày áp dụng: tự xóa ngày
+  không còn áp dụng và từ chối toàn bộ thay đổi nếu thiếu ngày bắt buộc của loại mới.
 - Kiểm tra quyền sửa lịch theo giờ bắt đầu GV đang có hiệu lực trước thay đổi,
   không dùng giờ bắt đầu mới để vượt qua trạng thái đã khóa.
 - Bản nháp có thể chưa đủ thông tin; gửi duyệt phải đủ nội dung, bộ môn và 1–2 GVHD hợp lệ.
@@ -418,7 +432,7 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 | FR-01 | Nhận diện người dùng qua tài khoản nội bộ cấp sẵn bằng tên đăng nhập và mật khẩu, được seed/import local với các role ADMIN, STUDENT, LECTURER, DEAN. LECTURER có thể kết hợp DEAN; STUDENT không kết hợp với ADMIN, LECTURER hoặc DEAN. Trưởng khoa chỉ quản lý trong khoa mình, giảng viên thao tác đề tài trong bộ môn mình, sinh viên xem đề tài đã công bố trong khoa và chỉ thay đổi nhóm/đăng ký mình có quyền. ADMIN chỉ xử lý sự cố khẩn cấp: ẩn nội dung vi phạm, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng dữ liệu, không sửa nội dung và không quản lý nghiệp vụ học tập, đăng ký, role, khoa/bộ môn hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Không cung cấp tự đăng ký và không chấp nhận quyền/phạm vi do bên gọi tự khai. | U: các phiên 2026-09-08 và 2026-09-09, Q-18 đã giải quyết; REQ-28, REQ-31–32, INF-06; constitution III | AS-1.3, 1.5–1.8, 1.14–1.16, 2.4, 3.3, 4.4, 5.6 |
 | FR-02 | Trưởng khoa tạo đợt có tên và một trong bốn loại môn học/NCKH/TLCN/KLTN. | E: REQ-01, 04 | AS-1.1, 1.4 |
 | FR-03 | Đợt có bắt đầu/kết thúc đăng ký GV và SV theo Asia/Ho_Chi_Minh; bắt đầu GV < kết thúc GV ≤ bắt đầu SV < kết thúc SV. Tự mở/đóng theo lịch; trong hạn khi bắt đầu ≤ thời điểm < kết thúc. Áp dụng khoảng SV cho đăng ký, đăng ký lại và rút chờ xét; đăng ký SV còn phải có danh sách đã công bố. | E: REQ-02–05; chi tiết xác nhận U, phiên 2 ngày 2026-09-08, Q-03–04 | AS-1.1, 1.9–1.10, 2.2, 5.2, 5.11, 5.13, 5.17–5.18 |
-| FR-04 | Hạn nộp điểm GVPB chỉ cấu hình cho TLCN/KLTN; ngày báo cáo hội đồng chỉ cho KLTN. | E: REQ-06–07; Q-02 | AS-1.2 |
+| FR-04 | Hạn nộp điểm GVPB chỉ cấu hình và bắt buộc cho TLCN/KLTN; ngày báo cáo hội đồng chỉ cấu hình và bắt buộc cho KLTN. Cả hai là ngày lịch theo Asia/Ho_Chi_Minh, không có giờ/phút. Khi đổi loại trước giờ mở GV, tự xóa ngày không còn áp dụng và chỉ lưu nếu đã nhập đủ ngày bắt buộc của loại mới. Khi sửa trực tiếp một ngày đang áp dụng, chỉ được dời sang ngày muộn hơn nếu ngày hiện tại còn trước ngày đang lưu; từ đầu ngày đang lưu thì khóa và không mở lại. | E: REQ-06–07; Q-02 được người dùng giải quyết ngày 2026-09-10 | AS-1.2, 1.11–1.12 |
 | FR-05 | GV chỉ được gửi duyệt đề tài thuộc bộ môn mình trong hạn GV. Khi gửi duyệt bắt buộc có tên đề tài, mô tả, mục tiêu, yêu cầu đối với SV và kết quả dự kiến; không chấp nhận trường thiếu hoặc trống. Bộ môn người đăng phải được kiểm chứng từ dữ liệu đáng tin cậy. | E: REQ-08–09; giới hạn bộ môn và năm trường xác nhận U, phiên 2–3 ngày 2026-09-08, Q-05/Q-18 | AS-2.1–2.2, 2.5, 2.10–2.11 |
 | FR-06 | Đề tài được phân công 1–2 GVHD, tất cả cùng bộ môn của đề tài và người đăng. Gửi duyệt bắt buộc có nội dung, bộ môn và 1–2 GVHD hợp lệ; bản nháp có thể chưa đủ. GV đăng lựa chọn GVHD khi sửa bản nháp của mình. | E: REQ-10; REQ-11 phần GVHD; giới hạn bộ môn xác nhận U, phiên 2 ngày 2026-09-08; thời điểm đầy đủ và quyền sửa đã chốt | AS-2.1, 2.3, 2.6–2.9 |
 | FR-07 | Chỉ trưởng khoa được duyệt đề tài và công bố danh sách trước khi nhóm chọn đề tài từ danh sách đó. Đến giờ bắt đầu SV không thay thế việc công bố; công bố không bỏ qua giờ kết thúc SV. | E: REQ-02, 08, 15; quyền/lịch xác nhận U, các phiên ngày 2026-09-08 | AS-3.1–3.3, 5.17–5.18 |
@@ -430,7 +444,7 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 | FR-13 | Trong hạn SV, chỉ trưởng nhóm của nhóm được rút đăng ký đang chờ xét. Sau khi rút hoặc bị từ chối, trưởng nhóm được đăng ký lại đề tài cũ hoặc đề tài khác đã công bố còn nhận đăng ký, nếu không có đăng ký có hiệu lực khác trong đợt. Không cho rút đăng ký đã chấp nhận; không cho rút hoặc đăng ký lại ngoài hạn SV. | U: Session 2026-09-08, Q-09; liên quan REQ-03, REQ-14–16, REQ-31 | AS-5.9–5.13 |
 | FR-14 | Vòng đời đề tài: Nháp → Chờ duyệt → Đã duyệt → Đã công bố. GV chỉ sửa bản nháp của mình và gửi duyệt trong hạn GV. Trưởng khoa duyệt/từ chối đề tài Chờ duyệt; từ chối đưa về Nháp để sửa/gửi lại trong hạn GV. Chỉ đề tài Đã duyệt được công bố; GV không sửa khi Chờ duyệt, Đã duyệt hoặc Đã công bố. | U: phiên 2 ngày 2026-09-08, Q-05–06; liên quan REQ-02–03, REQ-08–11, REQ-15, REQ-31 | AS-2.1–2.3, 2.7–2.9, 3.1, 3.4–3.5 |
 
-| FR-15 | Chỉ trưởng khoa được sửa loại đợt và bốn mốc đăng ký GV/SV trước giờ bắt đầu GV đang có hiệu lực. Từ đúng giờ bắt đầu GV trở đi khóa các trường này, không được dời lịch, gia hạn hay mở lại bằng cách sửa các trường đã khóa. Cấu hình sửa trước hạn phải vẫn thỏa quy tắc loại và lịch. | U: phiên 3 ngày 2026-09-08, Q-02; liên quan REQ-03–05, REQ-31 | AS-1.11–1.13 |
+| FR-15 | Trước giờ bắt đầu GV, trưởng khoa được sửa tên, loại và bốn mốc đăng ký khi cấu hình vẫn hợp lệ; đổi loại tự xóa ngày không còn áp dụng và yêu cầu đủ ngày của loại mới. Từ đúng giờ bắt đầu GV, khóa tên, loại và các mốc bắt đầu. Chỉ được kéo dài mốc kết thúc của giai đoạn chưa hết hạn; không rút ngắn, không mở lại giai đoạn đã đóng và lịch sau sửa vẫn phải đúng thứ tự. Mỗi ngày phụ đang áp dụng chỉ được dời muộn hơn trước ngày đang lưu. | U: Q-02 được người dùng giải quyết ngày 2026-09-10, thay thế quyết định khóa toàn bộ bốn mốc ở phiên 3; liên quan REQ-03–07, REQ-31 | AS-1.11–1.13 |
 
 ### Non-Functional Requirements
 
@@ -493,11 +507,13 @@ trưởng khoa từ chối đưa về Nháp; gửi lại trong hạn thành côn
 không công bố Nháp/Chờ duyệt. Kiểm tra sửa đồng thời với gửi duyệt không làm nội dung
 Chờ duyệt tiếp tục bị thay đổi. Liên kết FR-05–07, FR-14, AS-2.7–2.9, AS-3.4–3.5.
 
-Yêu cầu kiểm thử tự động AT-13: sửa loại/bốn mốc đăng ký trước giờ bắt đầu GV bằng
-trưởng khoa được phép nếu cấu hình hợp lệ; đúng giờ bắt đầu và sau đó bị từ chối.
-Kiểm tra dời giờ bắt đầu về tương lai không vượt khóa, không gia hạn/mở lại sau khóa;
-người không phải trưởng khoa bị từ chối. Ca sửa đồng thời với mở đợt không được ghi thay đổi
-vi phạm khóa. Liên kết FR-15, AS-1.11–1.13; giữ dữ liệu không đổi khi từ chối.
+Yêu cầu kiểm thử tự động AT-13: sửa tên/loại/bốn mốc đăng ký trước giờ bắt đầu GV bằng
+trưởng khoa được phép nếu cấu hình hợp lệ. Từ giờ bắt đầu GV, kiểm tra khóa tên/loại/mốc
+bắt đầu, chỉ kéo dài mốc kết thúc của giai đoạn chưa hết hạn, không rút ngắn hoặc mở lại.
+Kiểm tra ngày phụ chỉ được dời muộn hơn khi ngày hiện tại còn trước ngày đang lưu và bị
+khóa từ đầu ngày đang lưu; dời giờ bắt đầu về tương lai không được vượt khóa. Người không
+phải trưởng khoa bị từ chối. Ca sửa đồng thời với thời điểm khóa không được ghi thay đổi
+vi phạm. Liên kết FR-04, FR-15, AS-1.11–1.13; giữ dữ liệu không đổi khi từ chối.
 
 Yêu cầu kiểm thử tự động AT-14: ADMIN có lý do được ẩn nội dung vi phạm, khóa tài khoản
 gây sự cố và lưu đúng người xử lý/thời gian/lý do; nội dung không còn hiển thị nhưng không
@@ -517,7 +533,9 @@ dùng được bằng bàn phím và trạng thái không chỉ thể hiện b�
   Bộ môn của GV là dữ liệu dùng để kiểm tra quyền đăng đề tài và tính hợp lệ của GVHD.
 - **Đợt đăng ký**: tên, loại, bốn mốc đăng ký GV/SV, hai ngày có điều kiện; hai giai đoạn.
   Lịch theo Asia/Ho_Chi_Minh; khoảng GV trước SV, không chồng lấn, tính đầu không tính cuối.
-  Loại và bốn mốc đăng ký bị khóa từ giờ bắt đầu GV đang có hiệu lực.
+  Hạn điểm GVPB và ngày hội đồng chỉ có độ chính xác ngày lịch; từng ngày chỉ được dời
+  muộn hơn trước ngày đang lưu. Từ giờ bắt đầu GV hiện hành, tên, loại và các mốc bắt đầu
+  bị khóa; mốc kết thúc chỉ được kéo dài trước khi giai đoạn tương ứng hết hạn.
 - **Bộ môn**: đơn vị mà đề tài thuộc về; quy trình quản trị bộ môn không được đặc tả ở đây.
 - **Đề tài**: tên đề tài, mô tả, mục tiêu, yêu cầu đối với SV, kết quả dự kiến;
   bộ môn, GV đăng, quan hệ 1–2 GVHD, tình trạng duyệt/công bố.
@@ -587,7 +605,7 @@ không bị thay bằng giả định để giới hạn số câu hỏi.
 
 - **CL-01**: Đã giải quyết thẩm quyền: trưởng khoa duyệt/công bố và chấp nhận/từ chối; trưởng nhóm quản lý thành viên, chuyển quyền cho thành viên cùng nhóm và gửi đăng ký; SV tạo nhóm là trưởng nhóm ban đầu.
 - **CL-02**: Đã xác nhận một nhóm/SV theo từng đợt (Q-08); nhiều nhóm chờ xét nhưng tối đa một nhóm được chấp nhận/đề tài/đợt (Q-10). Đã xác nhận trong hạn SV được rút chờ xét, đăng ký lại đề tài cũ/khác còn nhận đăng ký sau rút/từ chối; không rút đăng ký đã chấp nhận (Q-09).
-- **CL-03**: Đã xác nhận Asia/Ho_Chi_Minh, GV trước SV không chồng lấn, tự mở/đóng theo lịch, tính bắt đầu không tính kết thúc; SV chỉ đăng ký sau công bố và còn hạn. Trưởng khoa chỉ sửa loại/bốn mốc đăng ký trước giờ bắt đầu GV; từ giờ đó bị khóa. Ngày có điều kiện vẫn còn phần Q-02 chưa chốt.
+- **CL-03**: Đã giải quyết Q-02. Dùng Asia/Ho_Chi_Minh; GV trước SV không chồng lấn, tự mở/đóng theo lịch, tính bắt đầu không tính kết thúc; SV chỉ đăng ký sau công bố và còn hạn. Từ giờ bắt đầu GV, khóa tên, loại và các mốc bắt đầu; chỉ kéo dài mốc kết thúc trước khi giai đoạn hết hạn, không rút ngắn hoặc mở lại. TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc ngày hội đồng; hai trường chỉ lưu ngày lịch và từng ngày chỉ được dời muộn hơn trước ngày đang lưu. Đổi loại trước giờ mở GV tự xóa ngày không còn áp dụng và yêu cầu đủ ngày của loại mới.
 - **CL-04**: Đã chọn seed/import local; LECTURER có thể kết hợp DEAN, STUDENT không kết hợp ADMIN/vai trò nhân sự; quyền trưởng khoa/giảng viên/sinh viên giới hạn theo khoa, bộ môn và quan hệ dữ liệu. ADMIN chỉ xử lý sự cố bằng cách ẩn nội dung, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng, sửa nội dung hoặc quản lý nghiệp vụ/role/cơ cấu tổ chức. Chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Q-18 đã giải quyết cho phạm vi hiện tại.
 - **CL-05**: Đã xác nhận toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; bảo mật nền tảng, responsive và xung đột dữ liệu chính phải được kiểm tra. Không đặt SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup cho phiên bản local. Q-20 và G-Acceptance đã giải quyết; tiêu chí phụ thuộc Q nghiệp vụ khác vẫn blocked theo gate tương ứng.
 
@@ -595,11 +613,10 @@ Các quyết định khác vẫn mở:
 
 | Câu hỏi nguồn | Phần cần xác nhận trong đợt này | Ảnh hưởng |
 |---|---|---|
-| Q-02 (phần còn lại) | Ngày có điều kiện có bắt buộc không; xử lý ngày không còn áp dụng khi đổi loại trước mở GV; quyền sửa tên đợt/hạn điểm GVPB/ngày hội đồng. Đã chốt loại và bốn mốc đăng ký chỉ được trưởng khoa sửa trước giờ bắt đầu GV. | FR-03–04, FR-15 |
 | Q-05 (phần còn lại) | Người quản lý danh mục và khả năng tái sử dụng đề tài. Năm trường nội dung bắt buộc đã xác nhận. Đề xuất đề tài bởi SV chưa thuộc phạm vi đã yêu cầu. | FR-05, 07 |
 | Q-06 (phần còn lại) | Thay đổi phân công bởi vai trò khác hoặc sau công bố chưa được xác nhận. Đã chốt GV đăng chọn GVHD trong Nháp, đủ 1–2 GVHD khi gửi duyệt và không sửa từ Chờ duyệt. | FR-06, FR-14 |
 | Q-07 (phần còn lại) | Nhóm nháp/thời điểm tạo nhóm và rời/chuyển nhóm. Đã chốt 1–3 SV đủ điều kiện số lượng để đăng ký, thêm trực tiếp không cần xác nhận, người tạo, quyền và thời điểm sửa: trong hạn SV, không có đăng ký chờ xét/đã chấp nhận. | FR-08–10 |
 | Q-09 (phần còn lại) | Tính bắt buộc của lý do từ chối, thứ tự ưu tiên khi rút/chấp nhận đồng thời, chính sách lưu lịch sử. Quyền rút và đăng ký lại đã chốt. | FR-10–13 |
 
-Chưa sẵn sàng triển khai toàn bộ vì Q-02, Q-05, Q-06, Q-07 và Q-09 vẫn còn phần
-cần xác nhận. Q-18 và Q-20 đã đóng; các câu hỏi còn lại tiếp tục được xử lý tuần tự.
+Chưa sẵn sàng triển khai toàn bộ vì Q-05, Q-06, Q-07 và Q-09 vẫn còn phần
+cần xác nhận. Q-02, Q-18 và Q-20 đã đóng; các câu hỏi còn lại tiếp tục được xử lý tuần tự.

@@ -29,7 +29,7 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | Gate | Task | Điều kiện giải phóng |
 |---|---|---|
 | G-Identity | T006 | Đã giải phóng: seed/import, tổ hợp role, scope; chuyển GV ngoài phiên bản đầu; ADMIN ẩn mềm nội dung vi phạm, ghi audit và khóa tài khoản nguồn |
-| G-Period | T017 | Q-02: bắt buộc/độ chính xác ngày, đổi loại và sửa trường phụ |
+| G-Period | T017 | Đã giải phóng: ngày bắt buộc/null theo loại, độ chính xác DATE, đổi loại, gia hạn mốc đăng ký và ngày phụ đã chốt |
 | G-Topic | T025 | Q-05/06: chốt mô hình topic theo đợt/reuse và phạm vi phân công trong feature |
 | G-Publish | T033 | Chốt granularity công bố và chính sách thời hạn cho quyết định dean nếu có |
 | G-Group | T039 | Q-07: thời điểm tạo nhóm và phạm vi rời/chuyển nhóm |
@@ -90,9 +90,9 @@ từ giờ mở GV; tài khoản sai quyền không ghi dữ liệu. Không cầ
 **Trace:** FR-01–04, FR-15; REQ-01–07,28,31–32; AS-1.1–1.13; AT-01–02,06,09–10,13.
 Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi chờ tests được viết.
 
-- [ ] T017 [US1] Giải quyết G-Period/Q-02 với khách hàng; ghi required/date precision/đổi loại/sửa tên-ngày phụ vào `specs/001-topic-registration/spec.md` và đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md` cùng thư mục trước DDL hoặc validation phụ thuộc.
+- [X] T017 [US1] Giải quyết G-Period/Q-02 với khách hàng; ghi required/date precision/đổi loại/sửa tên-ngày phụ vào `specs/001-topic-registration/spec.md` và đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md` cùng thư mục trước DDL hoặc validation phụ thuộc.
 
-- [ ] T018 [P] [US1] Viết unit test 4 loại, lịch liên tiếp/chồng lấn, start-inclusive/end-exclusive, khóa lịch theo giá trị đang lưu tại `src/test/java/vn/edu/topicregistration/unit/PeriodRulesTest.java` (AT-01–02,13).
+- [ ] T018 [P] [US1] Viết unit test 4 loại/ngày bắt buộc, đổi loại, lịch liên tiếp/chồng lấn, start-inclusive/end-exclusive, khóa và quy tắc chỉ gia hạn theo giá trị đang lưu tại `src/test/java/vn/edu/topicregistration/unit/PeriodRulesTest.java` (AT-01–02,13).
 
 - [ ] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
 
@@ -100,9 +100,9 @@ Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi ch�
 
 - [ ] T021 [US1] Cài transaction READ COMMITTED và khóa period trước mutation tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodTransactionService.java`; sau chờ đọc lại quyền/giờ/version, không lấy child lock trước period; create period mới xác thực trước insert.
 
-- [ ] T022 [US1] Cài create/update và trạng thái thời gian suy ra tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodService.java`, `periods/domain/PeriodRules.java`; không gia hạn bằng lịch mới sau khóa, không tự công bố hoặc auto-reject do hết hạn.
+- [ ] T022 [US1] Cài create/update và trạng thái thời gian suy ra tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodService.java`, `periods/domain/PeriodRules.java`; chỉ gia hạn mốc kết thúc/ngày phụ theo T017, không rút ngắn, mở lại, tự công bố hoặc auto-reject do hết hạn.
 
-- [ ] T023 [US1] Cài GET/POST periods và schedule theo contract tại `src/main/java/vn/edu/topicregistration/periods/web/PeriodController.java`, `PeriodForm.java`; tạo `src/main/resources/templates/periods/list.html`, `detail.html`, `form.html` với dữ liệu scope và lỗi validation.
+- [ ] T023 [US1] Cài GET/POST periods và sửa cấu hình theo contract tại `src/main/java/vn/edu/topicregistration/periods/web/PeriodController.java`, `PeriodForm.java`; tạo `src/main/resources/templates/periods/list.html`, `detail.html`, `form.html` với dữ liệu scope, trạng thái trường bị khóa và lỗi validation.
 
 - [ ] T024 [US1] Kiểm thử sửa lịch đồng thời với mở đợt, kiểm tra thời gian sau chờ khóa tại `src/test/java/vn/edu/topicregistration/concurrency/PeriodScheduleIT.java`; chạy nghiệm thu US1 và ghi AT-01–02,13/SC-001 tại `specs/001-topic-registration/acceptance-matrix.md`.
 

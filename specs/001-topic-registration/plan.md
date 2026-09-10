@@ -73,7 +73,6 @@ lệnh triển khai đầy đủ. Chỉ công việc độc lập với Q mới 
 
 | ID | Chưa chốt | Phần bị chặn |
 |---|---|---|
-| Q-02 | Ngày có điều kiện bắt buộc không; đổi loại xử lý ngày cũ; sửa tên/ngày giai đoạn sau | Schema nullability/validation và form đợt hoàn chỉnh |
 | Q-05 | Tái sử dụng đề tài, nguồn/người quản lý danh mục | Thiết kế catalog/reuse, cấp dữ liệu thật |
 | Q-06 | Đổi GVHD bởi vai trò khác hoặc sau công bố | Không thêm endpoint đổi phân công; mô hình hiện tại chỉ nháp |
 | Q-07 | Thời điểm tạo nhóm; tự rời/chuyển nhóm | Create-group và luồng rời nhóm chưa đủ điều kiện cuối cùng |
@@ -82,6 +81,11 @@ lệnh triển khai đầy đủ. Chỉ công việc độc lập với Q mới 
 Việc người dùng bỏ qua clarify không xác nhận bất kỳ phương án nghiệp vụ nào.
 Hạn xử lý duyệt/công bố và quyết định của trưởng khoa chưa được quy định riêng:
 không áp hạn GV/SV cho các thao tác này một cách suy diễn; cần rà soát khi chốt AC.
+
+G-Period/Q-02 đã được giải quyết ngày 2026-09-10: ngày bắt buộc/null theo loại và độ
+chính xác `DATE` đã chốt; đổi loại trước giờ mở GV tự xóa ngày không còn áp dụng và yêu
+cầu đủ ngày của loại mới. Từ giờ mở GV, khóa tên/loại/mốc bắt đầu, chỉ tăng mốc kết thúc
+của giai đoạn chưa hết hạn. Mỗi ngày phụ chỉ được dời muộn hơn trước ngày đang lưu.
 
 ## Project Structure
 
@@ -138,7 +142,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | Thứ tự | Phần việc dự kiến | FR / REQ | Bằng chứng |
 |---|---|---|---|
 | 1 | Build, cấu hình local, migration cơ sở, Tabler layout, session login | FR-01; REQ-28,31–32; constitution V,VII,IX | AT-09–10; asset portability |
-| 2 | Đợt và thời gian, khóa cấu hình | FR-02–04,15; REQ-01–07,31 | AT-01–02,13; Q-02 gate |
+| 2 | Đợt và thời gian, khóa cấu hình | FR-02–04,15; REQ-01–07,31 | AT-01–02,13; G-Period đã giải phóng |
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
 | 4 | Nhóm, thành viên, chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; Q-07 gate |
 | 5 | Gửi/rút/đăng ký lại, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-05–08,11; Q-09/18 gate |

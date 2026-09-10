@@ -16,7 +16,7 @@ thực hiện bằng migration mới.
 | UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
 | UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
-| RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký lưu `TIMESTAMP(6)` theo UTC; ngày giai đoạn sau dùng `DATE`, độ chính xác/bắt buộc còn Q-02 |
+| RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký lưu `TIMESTAMP(6)` theo UTC; hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Bản đề tài thuộc một đợt cho luồng hiện tại. Nếu Q-05 cho tái sử dụng, tách catalog và offering bằng migration trước triển khai phần đó |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc GVHD |
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
@@ -41,7 +41,7 @@ version bigint là optimistic concurrency token kỹ thuật, không phải tr�
 | ID | Cơ chế DB dự kiến | REQ / FR |
 |---|---|---|
 | DB-01 | NOT NULL tên/loại/bốn mốc; CHECK lecturer_start < lecturer_end AND lecturer_end <= student_start AND student_start < student_end | REQ-04–05; FR-02–03 |
-| DB-02 | CHECK reviewer_score_deadline IS NULL nếu không TLCN/KLTN; council_report_date IS NULL nếu không KLTN. Bắt buộc khi áp dụng chưa chốt; chưa hoàn tất DDL | REQ-06–07; FR-04, Q-02 |
+| DB-02 | CHECK theo loại: COURSE/NCKH có cả hai ngày null; TLCN có reviewer_score_deadline NOT NULL và council_report_date null; KLTN có cả hai ngày NOT NULL | REQ-06–07; FR-04 |
 | DB-03 | CHECK status thuộc DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED; khi khác DRAFT, cả 5 trường nội dung trim khác rỗng | REQ-08–09; FR-05,14 |
 | DB-04 | PK(topic_id,lecturer_id), UNIQUE(topic_id,slot), CHECK slot BETWEEN 1 AND 2 | REQ-10; FR-06 |
 | DB-05 | PK(group_id,student_id); UNIQUE(period_id,student_id); UNIQUE(group_id,slot); CHECK slot BETWEEN 1 AND 3 | REQ-12–13; FR-08–09 |
@@ -77,7 +77,11 @@ luồng nghiệp vụ được hỗ trợ và không thay thế kiểm thử bac
 
 BETWEEN_WINDOWS có thể rỗng. Công bố đề tài là điều kiện riêng; STUDENT_OPEN không tự
 công bố. REGISTRATION_CLOSED chỉ nói đóng đăng ký, không kết thúc toàn bộ dự án hoặc
-tự từ chối pending. Sửa loại/bốn mốc chỉ trước lecturer_start **đang lưu** (FR-15).
+tự từ chối pending. Trước lecturer_start **đang lưu**, DEAN được sửa tên, loại và bốn mốc
+nếu cấu hình mới hợp lệ. Từ lecturer_start, tên/loại/mốc bắt đầu bị khóa; chỉ được tăng
+mốc kết thúc khi giai đoạn tương ứng chưa hết hạn và toàn bộ thứ tự vẫn hợp lệ. Với từng
+ngày phụ đang áp dụng, chỉ được tăng giá trị khi ngày hiện tại tại Asia/Ho_Chi_Minh còn
+trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không cho mở lại (FR-04, FR-15).
 
 ### Đề tài
 

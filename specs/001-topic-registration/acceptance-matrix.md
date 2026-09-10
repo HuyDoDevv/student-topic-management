@@ -15,7 +15,7 @@ là chưa có bằng chứng test; không được hiểu là đạt.
 | FR-01 Identity, role, scope, ADMIN | REQ-28,31–32 + U | AS-1.3,1.5–1.8,1.14–1.16; AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, LoginE2ETest, các contract test theo story | CONFIRMED | FOUNDATION PASS 2026-09-10: login/role/scope/session/cookie; moderation còn NOT RUN |
 | FR-02 Tạo bốn loại đợt | REQ-01,04 | AS-1.1,1.4; AT-01; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | NOT RUN |
 | FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodScheduleIT | CONFIRMED | NOT RUN |
-| FR-04 Ngày theo loại | REQ-06–07 | AS-1.2; AT-01; SC-001 | PeriodRulesTest, PeriodContractTest | BLOCKED Q-02 | NOT RUN |
+| FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | NOT RUN |
 | FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | BLOCKED Q-05 | NOT RUN |
 | FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | BLOCKED Q-06 | NOT RUN |
 | FR-07 Duyệt và công bố | REQ-02,08,15 + U | AS-3.1–3.3,5.17–5.18; AT-05,06,12; SC-002–004 | TopicReviewContractTest, TopicPublicationIT | BLOCKED G-Publish | NOT RUN |
@@ -36,7 +36,7 @@ là chưa có bằng chứng test; không được hiểu là đạt.
 |---|---|---|
 | G-Identity / T006 | CONFIRMED | Foundation identity/security T008–T016 đã triển khai; contract theo story chạy ở phase tương ứng |
 | G-Acceptance / T007 | CONFIRMED | Không còn; các hàng phụ thuộc Q khác vẫn BLOCKED |
-| G-Period / T017 | BLOCKED | Q-02 |
+| G-Period / T017 | CONFIRMED | Q-02 đã giải quyết ngày 2026-09-10; chờ triển khai T018–T024 |
 | G-Topic / T025 | BLOCKED | Q-05, Q-06 |
 | G-Publish / T033 | BLOCKED | Granularity và thời điểm xử lý |
 | G-Group / T039 | BLOCKED | Q-07 |
