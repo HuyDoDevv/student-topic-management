@@ -102,7 +102,7 @@ public final class PeriodRules {
 
     private static void validateSchedule(PeriodConfiguration period) {
         if (!period.lecturerStart().isBefore(period.lecturerEnd())
-                || period.lecturerEnd().isAfter(period.studentStart())
+                || !period.lecturerEnd().isBefore(period.studentStart())
                 || !period.studentStart().isBefore(period.studentEnd())) {
             throw new IllegalArgumentException("Registration windows are out of order");
         }

@@ -41,9 +41,9 @@ INSERT INTO registration_periods(
     lecturer_start, lecturer_end, student_start, student_end
 ) VALUES
     (-1, -1, 'Test period', 'COURSE', '2026-01-01 00:00:00', '2026-02-01 00:00:00',
-     '2026-02-01 00:00:00', '2026-03-01 00:00:00'),
+     '2026-02-02 00:00:00', '2026-03-01 00:00:00'),
     (-2, -1, 'Other period', 'COURSE', '2026-01-01 00:00:00', '2026-02-01 00:00:00',
-     '2026-02-01 00:00:00', '2026-03-01 00:00:00');
+     '2026-02-02 00:00:00', '2026-03-01 00:00:00');
 
 INSERT INTO topics(id, period_id, department_id, author_id) VALUES
     (-1, -1, -1, -1), (-2, -1, -1, -1), (-3, -2, -1, -1);
@@ -63,6 +63,7 @@ CALL expect_failure('UPDATE student_groups SET leader_student_id=-8 WHERE id=-1'
 CALL expect_failure('DELETE FROM group_memberships WHERE group_id=-1 AND student_id=-3');
 CALL expect_failure('UPDATE topics SET status=''PUBLISHED'' WHERE id=-1');
 CALL expect_failure('UPDATE registration_periods SET student_start=lecturer_start WHERE id=-1');
+CALL expect_failure('UPDATE registration_periods SET student_start=lecturer_end WHERE id=-1');
 CALL expect_failure('UPDATE registration_periods SET council_report_date=CURRENT_DATE WHERE id=-1');
 CALL expect_failure('INSERT INTO registrations(period_id,group_id,topic_id) VALUES (-1,-1,-3)');
 

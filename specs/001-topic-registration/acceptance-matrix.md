@@ -63,9 +63,13 @@ Các hàng user story và responsive vẫn giữ `NOT RUN` cho tới khi code/te
 | Phạm vi | Kết quả | Bằng chứng |
 |---|---|---|
 | AT-01 / SC-001 | PASS | `PeriodRulesTest` kiểm tra đủ COURSE/NCKH/TLCN/KLTN và ngày theo loại; `PeriodContractTest` xác nhận tạo/đọc và rollback dữ liệu sai; `RegistrationPeriodPersistenceIT` xác nhận CHECK MySQL |
-| AT-02 | PASS trong phạm vi US1 | `PeriodRulesTest` kiểm tra thứ tự, hai khoảng tiếp giáp, chồng lấn và start-inclusive/end-exclusive; trạng thái được suy ra từ clock, không lưu cờ mở/đóng |
+| AT-02 | PASS trong phạm vi US1 | `PeriodRulesTest` kiểm tra thứ tự, từ chối mốc kết thúc GV trùng/bị chồng với bắt đầu SV và start-inclusive/end-exclusive; trạng thái được suy ra từ clock, không lưu cờ mở/đóng |
 | AT-13 | PASS | `PeriodRulesTest` kiểm tra khóa/gia hạn/ngày phụ; `PeriodContractTest` kiểm tra quyền, scope và stale version; `PeriodScheduleIT` có 2 ca giữ `FOR UPDATE` qua giờ mở, từ chối sửa tên nhưng cho gia hạn hai mốc kết thúc còn hiệu lực |
 | Lệnh nghiệm thu | PASS | `./mvnw -Pintegration -Dit.test=PeriodScheduleIT verify`: 38 unit/web test và 2 concurrency test, 0 failure, 0 error trên MySQL 8.4.11 tạm |
+
+Điều chỉnh lịch ngày 2026-09-10 được kiểm tra lại bằng `./mvnw clean verify -Pintegration`:
+38 unit/web test và 10 integration/concurrency test đạt; Flyway áp dụng V1–V3 trên MySQL
+8.4.11 tạm và database từ chối `lecturer_end = student_start`.
 
 Database nghiệm thu có tên chứa `test`, được tạo cô lập và xóa sau khi chạy; không truy cập
 database local của người dùng.

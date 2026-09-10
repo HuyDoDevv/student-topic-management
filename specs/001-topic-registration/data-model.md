@@ -1,5 +1,6 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
-> `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt.
+> `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt,
+> V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu.
 
 # Data Model — Thiết kế có điều kiện
 
@@ -40,7 +41,7 @@ version bigint là optimistic concurrency token kỹ thuật, không phải tr�
 
 | ID | Cơ chế DB dự kiến | REQ / FR |
 |---|---|---|
-| DB-01 | NOT NULL tên/loại/bốn mốc; CHECK lecturer_start < lecturer_end AND lecturer_end <= student_start AND student_start < student_end | REQ-04–05; FR-02–03 |
+| DB-01 | NOT NULL tên/loại/bốn mốc; CHECK lecturer_start < lecturer_end AND lecturer_end < student_start AND student_start < student_end | REQ-04–05; FR-02–03 |
 | DB-02 | CHECK theo loại: COURSE/NCKH có cả hai ngày null; TLCN có reviewer_score_deadline NOT NULL và council_report_date null; KLTN có cả hai ngày NOT NULL | REQ-06–07; FR-04 |
 | DB-03 | CHECK status thuộc DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED; khi khác DRAFT, cả 5 trường nội dung trim khác rỗng | REQ-08–09; FR-05,14 |
 | DB-04 | PK(topic_id,lecturer_id), UNIQUE(topic_id,slot), CHECK slot BETWEEN 1 AND 2 | REQ-10; FR-06 |
@@ -156,8 +157,9 @@ trong khi test không đại diện một luồng quản trị đã chốt.
 ## Migration and sample data
 
 V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. V2 thay hai
-CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. Các quyết định nghiệp vụ còn mở làm thay
-đổi schema phải được đưa vào migration mới sau V2 khi được xác nhận.
+CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. V3 siết hai giai đoạn đăng ký không được
+trùng mốc kết thúc GV/bắt đầu SV. Các quyết định nghiệp vụ còn mở làm thay đổi schema phải
+được đưa vào migration mới sau V3 khi được xác nhận.
 Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra

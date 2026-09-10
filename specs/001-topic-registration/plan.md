@@ -1,5 +1,6 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Flyway tự áp dụng
-> V1 để tạo 20 bảng và V2 để bắt buộc ngày theo loại đợt; DBeaver dùng để quản lý
+> V1 để tạo 20 bảng, V2 để bắt buộc ngày theo loại đợt và V3 để tách hai khoảng
+> đăng ký GV/SV; DBeaver dùng để quản lý
 > và kiểm tra database. Chạy bằng `./run.sh` trên macOS/Linux hoặc
 > `run.cmd` trên Windows.
 

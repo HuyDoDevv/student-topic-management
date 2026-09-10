@@ -120,6 +120,19 @@ class RegistrationPeriodPersistenceIT {
                         facultyId, "COURSE", LocalDate.of(2026, 9, 20), null));
     }
 
+    @Test
+    void databaseRejectsStudentWindowStartingWhenLecturerWindowEnds() {
+        long facultyId = insertFaculty("Khoa strict schedule");
+
+        assertThrows(SQLException.class,
+                () -> insertRawPeriod(
+                        facultyId,
+                        "COURSE",
+                        null,
+                        null,
+                        LECTURER_END));
+    }
+
     private long insertFaculty(String name) {
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement(
@@ -141,6 +154,20 @@ class RegistrationPeriodPersistenceIT {
             String topicType,
             LocalDate reviewerDeadline,
             LocalDate councilDate) throws SQLException {
+        insertRawPeriod(
+                facultyId,
+                topicType,
+                reviewerDeadline,
+                councilDate,
+                STUDENT_START);
+    }
+
+    private void insertRawPeriod(
+            long facultyId,
+            String topicType,
+            LocalDate reviewerDeadline,
+            LocalDate councilDate,
+            Instant studentStart) throws SQLException {
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement statement = connection.prepareStatement("""
                         INSERT INTO registration_periods(
@@ -153,7 +180,7 @@ class RegistrationPeriodPersistenceIT {
             statement.setString(2, topicType);
             statement.setTimestamp(3, Timestamp.from(LECTURER_START));
             statement.setTimestamp(4, Timestamp.from(LECTURER_END));
-            statement.setTimestamp(5, Timestamp.from(STUDENT_START));
+            statement.setTimestamp(5, Timestamp.from(studentStart));
             statement.setTimestamp(6, Timestamp.from(STUDENT_END));
             statement.setObject(7, reviewerDeadline);
             statement.setObject(8, councilDate);

@@ -1,5 +1,6 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS, cổng mặc định 3306.
-> Flyway tự áp dụng V1 để tạo 20 bảng và V2 để bắt buộc ngày theo loại đợt khi chạy
+> Flyway tự áp dụng V1 để tạo 20 bảng, V2 để bắt buộc ngày theo loại đợt và V3 để
+> tách hai khoảng đăng ký GV/SV khi chạy
 > profile local. DBeaver dùng để tạo database/tài khoản và kiểm tra schema.
 
 # Quickstart — Kế hoạch chạy và kiểm chứng local
@@ -89,7 +90,7 @@ chứng nghiệm thu; lệnh package trên chỉ tạo bản chạy sau unit tes
 
 Kiểm tra đủ 20 bảng, generated columns, unique keys và triggers trong DBeaver.
 Restart ứng dụng không tạo lại schema hoặc xóa dữ liệu. Không sửa file SQL đã áp dụng;
-thay đổi tiếp theo phải tạo migration mới sau V2 và sao lưu trước khi chạy.
+thay đổi tiếp theo phải tạo migration mới sau V3 và sao lưu trước khi chạy.
 
 Để demo, bật DEMO_SEED_ENABLED và nhập DEMO_SEED_PASSWORD bằng cơ chế nhập kín tương tự.
 Seeder chạy sau migration, chỉ profile local, lặp lại không nhân đôi/reset dữ liệu.

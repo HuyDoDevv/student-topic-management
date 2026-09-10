@@ -54,9 +54,10 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
 - Đổi `.env` sang `SPRING_PROFILES_ACTIVE=local`, điền URL/user/password rồi chạy
   `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
 - Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql)
-  để tạo 20 bảng, rồi chạy V2 để áp dụng quy tắc ngày theo loại đợt; lịch sử được ghi vào
+  để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
+  đăng ký GV/SV; lịch sử được ghi vào
   `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới `V3__...sql`, `V4__...sql`; không
+- Các thay đổi schema tiếp theo phải là migration mới `V4__...sql`, `V5__...sql`; không
   sửa migration đã được dùng trên database chung.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway

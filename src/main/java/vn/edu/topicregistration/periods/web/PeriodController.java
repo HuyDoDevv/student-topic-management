@@ -88,7 +88,7 @@ public class PeriodController {
                 throw exception;
             }
             bindingResult.reject("period.invalid",
-                    "Lịch đăng ký hoặc các ngày theo loại đề tài chưa hợp lệ.");
+                    "Lịch chưa hợp lệ: thời gian giảng viên phải kết thúc trước khi thời gian sinh viên bắt đầu, đồng thời các ngày phải đúng với loại đề tài.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, false, null, FieldLocks.unlocked());
         }
@@ -136,7 +136,7 @@ public class PeriodController {
                 throw exception;
             }
             bindingResult.reject("period.invalid",
-                    "Chỉ được kéo dài mốc còn hiệu lực và lịch sau sửa phải đúng thứ tự.");
+                    "Chỉ được kéo dài mốc còn hiệu lực; thời gian giảng viên phải kết thúc trước khi thời gian sinh viên bắt đầu.");
             return renderInvalidEdit(id, form, bindingResult, response, model);
         }
     }

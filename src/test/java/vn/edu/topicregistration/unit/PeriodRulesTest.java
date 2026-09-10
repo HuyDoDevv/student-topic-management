@@ -62,9 +62,15 @@ class PeriodRulesTest {
     }
 
     @Test
-    void scheduleAcceptsAdjacentWindowsAndRejectsOverlapOrEmptyWindows() {
+    void scheduleRequiresGapAndRejectsAdjacentOverlapOrEmptyWindows() {
         assertDoesNotThrow(() -> rules.create(config("COURSE", null, null)
-                .withSchedule(LECTURER_START, LECTURER_END, LECTURER_END, STUDENT_END)));
+                .withSchedule(LECTURER_START, LECTURER_END,
+                        LECTURER_END.plusNanos(1), STUDENT_END)));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> rules.create(config("COURSE", null, null)
+                        .withSchedule(LECTURER_START, LECTURER_END,
+                                LECTURER_END, STUDENT_END)));
 
         assertThrows(IllegalArgumentException.class,
                 () -> rules.create(config("COURSE", null, null)

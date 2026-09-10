@@ -71,12 +71,14 @@
 
       <fieldset class="mt-4">
         <legend class="h3">Thời gian sinh viên đăng ký</legend>
+        <p class="text-secondary small">Thời gian này phải bắt đầu sau khi thời gian giảng viên đề xuất đã kết thúc.</p>
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label required" for="student-start">Bắt đầu</label>
             <input class="form-control" id="student-start" type="datetime-local" th:field="*{studentStart}"
                    th:errorclass="is-invalid" th:readonly="${locks.base}" required>
             <div class="invalid-feedback" th:errors="*{studentStart}">Thời điểm chưa hợp lệ.</div>
+            <div class="form-hint">Không được trùng với thời điểm kết thúc của giảng viên.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required" for="student-end">Kết thúc</label>
