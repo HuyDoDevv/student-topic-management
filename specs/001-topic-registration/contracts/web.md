@@ -12,7 +12,7 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 
 | Thao tác | Role/quan hệ được phép | Điều kiện dữ liệu/thời gian | FR |
 |---|---|---|---|
-| Tạo đợt | DEAN | Tên/loại/lịch hợp lệ; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
+| Tạo đợt | DEAN | Tên/loại/lịch ngày hợp lệ, không có ngày đã qua; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
 | Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình, bộ môn mình, DRAFT | 05–06,14 |
 | Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, 1–2 GVHD cùng bộ môn | 05–06,14 |
@@ -49,8 +49,8 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
 | GET /periods; GET /periods/{id} | — | 200 danh sách/chi tiết theo scope | 01–04 |
-| POST /periods | name,type,4 timestamps,reviewerScoreDeadline,councilReportDate | 303 tới period mới; ngày bắt buộc/null đúng theo loại | 02–04 |
-| POST /periods/{id} | name,type,4 timestamps,reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |
+| POST /periods | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate | 303 tới period mới; từ chối giá trị có giờ hoặc ngày đã qua; ngày bắt buộc/null đúng theo loại | 02–04 |
+| POST /periods/{id} | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |
 | GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt | 05,07 |
 | POST /periods/{id}/topics | 5 nội dung,supervisorIds | Tạo DRAFT; author/department từ identity | 05–06,14 |
 | GET /topics/{id}; GET /topics/{id}/edit | — | Chỉ dữ liệu/view được policy cho phép | 01,05 |

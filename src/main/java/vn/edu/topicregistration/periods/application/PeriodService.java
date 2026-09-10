@@ -45,13 +45,7 @@ public class PeriodService {
     public PeriodView create(PeriodConfiguration request) {
         ActorIdentity dean = currentDean();
         RegistrationPeriodEntity saved = transactions.create(dean.facultyId(), context -> {
-            PeriodConfiguration valid = validateCreate(request);
-            System.out.println(request);
-            System.out.println(request);
-            System.out.println(request);
-            System.out.println(request);
-            System.out.println(request);
-            System.out.println(request);
+            PeriodConfiguration valid = validateCreate(request, context.now());
             return new RegistrationPeriodEntity(
                     context.faculty(),
                     valid.name(),
@@ -111,9 +105,9 @@ public class PeriodService {
         return actor;
     }
 
-    private PeriodConfiguration validateCreate(PeriodConfiguration request) {
+    private PeriodConfiguration validateCreate(PeriodConfiguration request, Instant now) {
         try {
-            return PeriodRules.validateForCreate(request);
+            return PeriodRules.validateForCreate(request, now, TimeConfig.BUSINESS_ZONE);
         } catch (IllegalArgumentException | NullPointerException exception) {
             throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
         }

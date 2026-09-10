@@ -15,7 +15,7 @@ chứng test; không được hiểu là đạt.
 |---|---|---|---|---|---|
 | FR-01 Identity, role, scope, ADMIN | REQ-28,31–32 + U | AS-1.3,1.5–1.8,1.14–1.16; AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, LoginE2ETest, các contract test theo story | CONFIRMED | FOUNDATION PASS; T021 quyền sau khóa + T023 CSRF/role DB/scope khoa PASS; moderation NOT RUN |
 | FR-02 Tạo bốn loại đợt | REQ-01,04 | AS-1.1,1.4; AT-01; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: bốn loại, persistence, service và web contract |
-| FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024: thứ tự/biên/trạng thái và thời gian đọc sau row lock |
+| FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.4,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024; kiểm tra bổ sung ngày-only/ngày đã qua trong fix T017 |
 | FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: DB-02, required/null theo loại và chỉ dời muộn hơn |
 | FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | BLOCKED Q-05 | NOT RUN |
 | FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | BLOCKED Q-06 | NOT RUN |
@@ -63,13 +63,14 @@ Các hàng user story và responsive vẫn giữ `NOT RUN` cho tới khi code/te
 | Phạm vi | Kết quả | Bằng chứng |
 |---|---|---|
 | AT-01 / SC-001 | PASS | `PeriodRulesTest` kiểm tra đủ COURSE/NCKH/TLCN/KLTN và ngày theo loại; `PeriodContractTest` xác nhận tạo/đọc và rollback dữ liệu sai; `RegistrationPeriodPersistenceIT` xác nhận CHECK MySQL |
-| AT-02 | PASS trong phạm vi US1 | `PeriodRulesTest` kiểm tra thứ tự, từ chối mốc kết thúc GV trùng/bị chồng với bắt đầu SV và start-inclusive/end-exclusive; trạng thái được suy ra từ clock, không lưu cờ mở/đóng |
+| AT-02 | PASS trong phạm vi US1 | `PeriodRulesTest` kiểm tra thứ tự, biên đầu/cuối ngày và ngày SV phải sau ngày kết thúc GV; `PeriodContractTest` từ chối ngày đã qua và giá trị có giờ; trạng thái được suy ra từ clock, không lưu cờ mở/đóng |
 | AT-13 | PASS | `PeriodRulesTest` kiểm tra khóa/gia hạn/ngày phụ; `PeriodContractTest` kiểm tra quyền, scope và stale version; `PeriodScheduleIT` có 2 ca giữ `FOR UPDATE` qua giờ mở, từ chối sửa tên nhưng cho gia hạn hai mốc kết thúc còn hiệu lực |
 | Lệnh nghiệm thu | PASS | `./mvnw -Pintegration -Dit.test=PeriodScheduleIT verify`: 38 unit/web test và 2 concurrency test, 0 failure, 0 error trên MySQL 8.4.11 tạm |
 
 Điều chỉnh lịch ngày 2026-09-10 được kiểm tra lại bằng `./mvnw clean verify -Pintegration`:
-38 unit/web test và 10 integration/concurrency test đạt; Flyway áp dụng V1–V3 trên MySQL
-8.4.11 tạm và database từ chối `lecturer_end = student_start`.
+41 unit/web test và 10 integration/concurrency test đạt; Flyway áp dụng V1–V3 trên MySQL
+8.4.11 tạm. Contract xác nhận form chỉ nhận ngày, từ chối ngày đã qua/giá trị có giờ và
+lưu đúng đầu/cuối ngày Việt Nam; database từ chối `lecturer_end = student_start`.
 
 Database nghiệm thu có tên chứa `test`, được tạo cô lập và xóa sau khi chạy; không truy cập
 database local của người dùng.

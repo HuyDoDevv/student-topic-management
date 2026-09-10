@@ -25,6 +25,29 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-period-form]").forEach((form) => {
     const type = form.querySelector("[data-period-type]");
     const conditionalFields = [...form.querySelectorAll("[data-period-conditional]")];
+    const today = form.dataset.today ?? "";
+    const lecturerStart = form.querySelector("#lecturer-start");
+    const lecturerEnd = form.querySelector("#lecturer-end");
+    const studentStart = form.querySelector("#student-start");
+    const studentEnd = form.querySelector("#student-end");
+
+    const addDays = (value, days) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+      const [year, month, day] = value.split("-").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day + days));
+      return date.toISOString().slice(0, 10);
+    };
+    const laterDate = (...values) => values.filter(Boolean).sort().at(-1) ?? "";
+    const setMinimum = (input, value) => {
+      if (input && value) input.min = value;
+    };
+    const updateScheduleMinimums = () => {
+      setMinimum(lecturerStart, today);
+      setMinimum(lecturerEnd, laterDate(today, lecturerStart?.value));
+      setMinimum(studentStart, laterDate(today, addDays(lecturerEnd?.value ?? "", 1)));
+      setMinimum(studentEnd, laterDate(today, studentStart?.value));
+    };
+
     const updateConditionalFields = () => {
       const selected = type?.value ?? "";
       conditionalFields.forEach((container) => {
@@ -35,7 +58,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     };
     type?.addEventListener("change", updateConditionalFields);
+    [lecturerStart, lecturerEnd, studentStart, studentEnd].forEach((input) => {
+      input?.addEventListener("change", updateScheduleMinimums);
+    });
     updateConditionalFields();
+    updateScheduleMinimums();
   });
 
   const search = document.querySelector("[data-table-filter]");

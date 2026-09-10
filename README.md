@@ -55,7 +55,8 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
   `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
 - Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql)
   để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
-  đăng ký GV/SV; lịch sử được ghi vào
+  đăng ký GV/SV. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ đầu ngày, ngày kết thúc
+  tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
   `flyway_schema_history`.
 - Các thay đổi schema tiếp theo phải là migration mới `V4__...sql`, `V5__...sql`; không
   sửa migration đã được dùng trên database chung.
@@ -70,9 +71,9 @@ Spring Security bằng tài khoản được cấp, policy role/scope, clock ngh
 và hạ tầng unit/integration/E2E. Profile `local` dùng MySQL và Hibernate validate;
 profile `preview` chỉ hiển thị catalogue UI mà không truy cập database.
 
-CRUD nghiệp vụ cho đợt, đề tài, nhóm và đăng ký chưa được triển khai; dữ liệu trên các
-route preview vẫn là mẫu giao diện. Dự án không tự tạo tài khoản mặc định. Dữ liệu seed
-local và từng user story được làm ở các task tiếp theo sau khi gate tương ứng được chốt.
+US1 quản lý đợt đã có create/read/update thật trên profile `local`; các route còn lại trong
+profile `preview` vẫn là mẫu giao diện. Dự án không tự tạo tài khoản mặc định. Dữ liệu seed
+local và các user story tiếp theo được làm sau khi gate tương ứng được chốt.
 
 ## Kiểm thử và cấu trúc
 

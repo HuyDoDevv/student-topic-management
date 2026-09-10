@@ -9,8 +9,15 @@ public final class PeriodRules {
     private PeriodRules() {
     }
 
-    public static PeriodConfiguration validateForCreate(PeriodConfiguration request) {
+    public static PeriodConfiguration validateForCreate(
+            PeriodConfiguration request,
+            Instant now,
+            ZoneId businessZone) {
+        Objects.requireNonNull(now, "now");
+        Objects.requireNonNull(businessZone, "businessZone");
         PeriodConfiguration normalized = normalizeCommon(request);
+        validateLecturerStartIsNotBeforeToday(normalized, now, businessZone);
+        validateApplicableDatesAreNotBeforeToday(normalized, now, businessZone);
         validateSchedule(normalized);
         validateDatesForType(normalized);
         return normalized;
@@ -28,8 +35,10 @@ public final class PeriodRules {
         boolean typeChanged = current.topicType() != normalized.topicType();
 
         if (now.isBefore(current.lecturerStart())) {
+            validateLecturerStartIsNotBeforeToday(normalized, now, businessZone);
             if (typeChanged) {
                 normalized = normalizeDatesAfterTypeChange(normalized);
+                validateApplicableDatesAreNotBeforeToday(normalized, now, businessZone);
             } else {
                 validateDirectDateChanges(current, normalized, now, businessZone);
             }
@@ -58,13 +67,13 @@ public final class PeriodRules {
         if (now.isBefore(period.lecturerStart())) {
             return RegistrationState.BEFORE_LECTURER;
         }
-        if (now.isBefore(period.lecturerEnd())) {
+        if (!now.isAfter(period.lecturerEnd())) {
             return RegistrationState.LECTURER_OPEN;
         }
         if (now.isBefore(period.studentStart())) {
             return RegistrationState.BETWEEN_WINDOWS;
         }
-        if (now.isBefore(period.studentEnd())) {
+        if (!now.isAfter(period.studentEnd())) {
             return RegistrationState.STUDENT_OPEN;
         }
         return RegistrationState.REGISTRATION_CLOSED;
@@ -105,6 +114,32 @@ public final class PeriodRules {
                 || !period.lecturerEnd().isBefore(period.studentStart())
                 || !period.studentStart().isBefore(period.studentEnd())) {
             throw new IllegalArgumentException("Registration windows are out of order");
+        }
+    }
+
+    private static void validateLecturerStartIsNotBeforeToday(
+            PeriodConfiguration period,
+            Instant now,
+            ZoneId businessZone) {
+        Instant todayStart = now.atZone(businessZone)
+                .toLocalDate()
+                .atStartOfDay(businessZone)
+                .toInstant();
+        if (period.lecturerStart().isBefore(todayStart)) {
+            throw new IllegalArgumentException("Lecturer start cannot be before today");
+        }
+    }
+
+    private static void validateApplicableDatesAreNotBeforeToday(
+            PeriodConfiguration period,
+            Instant now,
+            ZoneId businessZone) {
+        LocalDate today = now.atZone(businessZone).toLocalDate();
+        if ((period.reviewerScoreDeadline() != null
+                && period.reviewerScoreDeadline().isBefore(today))
+                || (period.councilReportDate() != null
+                && period.councilReportDate().isBefore(today))) {
+            throw new IllegalArgumentException("Conditional dates cannot be before today");
         }
     }
 
@@ -163,7 +198,7 @@ public final class PeriodRules {
         if (Objects.equals(current, request)) {
             return;
         }
-        if (!request.isAfter(current) || !now.isBefore(current)) {
+        if (!request.isAfter(current) || now.isAfter(current)) {
             throw new IllegalArgumentException(message);
         }
     }

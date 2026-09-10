@@ -35,8 +35,6 @@ import vn.edu.topicregistration.shared.web.WebRedirects;
 @Profile("!preview & !test")
 @RequestMapping("/periods")
 public class PeriodController {
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
-            "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy", Locale.forLanguageTag("vi-VN"));
 
@@ -88,7 +86,7 @@ public class PeriodController {
                 throw exception;
             }
             bindingResult.reject("period.invalid",
-                    "Lịch chưa hợp lệ: thời gian giảng viên phải kết thúc trước khi thời gian sinh viên bắt đầu, đồng thời các ngày phải đúng với loại đề tài.");
+                    "Lịch chưa hợp lệ: không chọn ngày trước hôm nay, ngày sinh viên phải sau ngày kết thúc của giảng viên và các ngày phải đúng với loại đề tài.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, false, null, FieldLocks.unlocked());
         }
@@ -171,6 +169,7 @@ public class PeriodController {
     private void common(Model model) {
         model.addAttribute("activeNav", "periods");
         model.addAttribute("pageSection", "Quản lý học vụ");
+        model.addAttribute("today", projectTime.today());
     }
 
     private RedirectView redirectTo(long id) {
@@ -183,8 +182,8 @@ public class PeriodController {
         boolean base = !now.isBefore(period.lecturerStart());
         return new FieldLocks(
                 base,
-                !now.isBefore(period.lecturerEnd()),
-                !now.isBefore(period.studentEnd()),
+                now.isAfter(period.lecturerEnd()),
+                now.isAfter(period.studentEnd()),
                 period.reviewerScoreDeadline() == null
                         ? base
                         : !today.isBefore(period.reviewerScoreDeadline()),
@@ -212,7 +211,7 @@ public class PeriodController {
     }
 
     private String format(Instant instant) {
-        return DATE_TIME.format(projectTime.toBusinessTime(instant));
+        return DATE.format(projectTime.toBusinessDate(instant));
     }
 
     private static String typeLabel(TopicType type) {

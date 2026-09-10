@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
@@ -15,26 +15,31 @@ import vn.edu.topicregistration.shared.time.TimeConfig;
 
 class TimeTest {
     @Test
-    void convertsVietnamFormTimeToUtcAndBack() {
+    void convertsVietnamCalendarDayToUtcBoundariesAndBack() {
         ProjectTime time = at("2026-09-09T03:00:00Z");
-        LocalDateTime formValue = LocalDateTime.of(2026, 9, 9, 10, 0);
+        LocalDate formValue = LocalDate.of(2026, 9, 9);
 
-        Instant stored = time.toStoredInstant(formValue);
+        Instant storedStart = time.toStartOfDay(formValue);
+        Instant storedEnd = time.toEndOfDay(formValue);
 
-        assertEquals(Instant.parse("2026-09-09T03:00:00Z"), stored);
-        assertEquals(formValue, time.toBusinessTime(stored).toLocalDateTime());
-        assertEquals(TimeConfig.BUSINESS_ZONE, time.toBusinessTime(stored).getZone());
+        assertEquals(Instant.parse("2026-09-08T17:00:00Z"), storedStart);
+        assertEquals(Instant.parse("2026-09-09T16:59:59.999999Z"), storedEnd);
+        assertEquals(formValue, time.toBusinessDate(storedStart));
+        assertEquals(formValue, time.toBusinessDate(storedEnd));
+        assertEquals(formValue, time.today());
+        assertEquals(TimeConfig.BUSINESS_ZONE, time.toBusinessTime(storedStart).getZone());
     }
 
     @Test
-    void registrationWindowIncludesStartAndExcludesEnd() {
+    void registrationWindowIncludesBothCalendarDayBoundaries() {
         Instant start = Instant.parse("2026-09-09T03:00:00Z");
         Instant end = Instant.parse("2026-09-09T04:00:00Z");
 
         assertFalse(at("2026-09-09T02:59:59.999999Z").isOpen(start, end));
         assertTrue(at("2026-09-09T03:00:00Z").isOpen(start, end));
         assertTrue(at("2026-09-09T03:59:59.999999Z").isOpen(start, end));
-        assertFalse(at("2026-09-09T04:00:00Z").isOpen(start, end));
+        assertTrue(at("2026-09-09T04:00:00Z").isOpen(start, end));
+        assertFalse(at("2026-09-09T04:00:00.000001Z").isOpen(start, end));
     }
 
     private ProjectTime at(String instant) {

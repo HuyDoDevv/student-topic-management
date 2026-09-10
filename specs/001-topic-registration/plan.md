@@ -153,7 +153,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 
 ## Verification Strategy
 
-- Unit: đồng hồ có thể thay thế, đầy đủ biên start-inclusive/end-exclusive; nội dung
+- Unit: đồng hồ có thể thay thế, đầy đủ biên ngày bắt đầu/kết thúc; nội dung
   gửi duyệt, GVHD, quyền trưởng nhóm, chuyển trạng thái hợp lệ/bị cấm.
 - HTTP: MockMvc với session/CSRF; cho phép và từ chối cho từng dòng ma trận;
   giả mạo role/department/author, truy cập ID của nhóm khác, input sai và stale version.

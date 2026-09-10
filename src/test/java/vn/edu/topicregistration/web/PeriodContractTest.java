@@ -47,10 +47,10 @@ import vn.edu.topicregistration.shared.time.TimeConfig;
 @Import(PeriodContractTest.ContractClockConfiguration.class)
 class PeriodContractTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-09-10T00:00:00Z");
-    private static final Instant LECTURER_START = Instant.parse("2026-09-10T01:00:00Z");
-    private static final Instant LECTURER_END = Instant.parse("2026-09-10T03:00:00Z");
-    private static final Instant STUDENT_START = Instant.parse("2026-09-10T04:00:00Z");
-    private static final Instant STUDENT_END = Instant.parse("2026-09-10T06:00:00Z");
+    private static final Instant LECTURER_START = Instant.parse("2026-09-10T17:00:00Z");
+    private static final Instant LECTURER_END = Instant.parse("2026-09-11T16:59:59.999999Z");
+    private static final Instant STUDENT_START = Instant.parse("2026-09-11T17:00:00Z");
+    private static final Instant STUDENT_END = Instant.parse("2026-09-13T16:59:59.999999Z");
     private static final String UNUSED_HASH = "unusable-contract-test-hash";
     private static final MySqlTestSupport DATABASE = preparedDatabase();
 
@@ -107,6 +107,30 @@ class PeriodContractTest {
     }
 
     @Test
+    void formUsesCalendarDatesAndRejectsPastOrTimeValues() throws Exception {
+        mvc.perform(get("/periods/new")
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("type=\"date\"")))
+                .andExpect(content().string(containsString("min=\"2026-09-10\"")))
+                .andExpect(content().string(not(containsString("datetime-local"))));
+
+        mvc.perform(baseCreateRequest(
+                        "COURSE", "2026-09-09", "2026-09-11", "2026-09-12", "2026-09-13")
+                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(csrf()))
+                .andExpect(status().isUnprocessableContent());
+        assertEquals(0L, periodCount());
+
+        mvc.perform(baseCreateRequest(
+                        "COURSE", "2026-09-10T08:00", "2026-09-11", "2026-09-12", "2026-09-13")
+                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(csrf()))
+                .andExpect(status().isUnprocessableContent());
+        assertEquals(0L, periodCount());
+    }
+
+    @Test
     void conditionalDatesAndScheduleValidationRejectTheWholeCreate() throws Exception {
         mvc.perform(baseCreateRequest("KLTN")
                         .param("reviewerScoreDeadline", "2026-09-20")
@@ -115,7 +139,7 @@ class PeriodContractTest {
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
-        mvc.perform(baseCreateRequest("COURSE", "2026-09-10T09:30")
+        mvc.perform(baseCreateRequest("COURSE", "2026-09-11")
                         .with(user("dean").roles("LECTURER", "DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
@@ -204,18 +228,29 @@ class PeriodContractTest {
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             baseCreateRequest(String topicType) {
-        return baseCreateRequest(topicType, "2026-09-10T11:00");
+        return baseCreateRequest(topicType, "2026-09-12");
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             baseCreateRequest(String topicType, String studentStart) {
+        return baseCreateRequest(
+                topicType, "2026-09-11", "2026-09-11", studentStart, "2026-09-13");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            baseCreateRequest(
+                    String topicType,
+                    String lecturerStart,
+                    String lecturerEnd,
+                    String studentStart,
+                    String studentEnd) {
         return post("/periods")
                 .param("name", "Đợt HK1")
                 .param("topicType", topicType)
-                .param("lecturerStart", "2026-09-10T08:00")
-                .param("lecturerEnd", "2026-09-10T10:00")
+                .param("lecturerStart", lecturerStart)
+                .param("lecturerEnd", lecturerEnd)
                 .param("studentStart", studentStart)
-                .param("studentEnd", "2026-09-10T13:00");
+                .param("studentEnd", studentEnd);
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
@@ -223,10 +258,10 @@ class PeriodContractTest {
         return post("/periods/{id}", periodId)
                 .param("name", "Tên đã sửa")
                 .param("topicType", "COURSE")
-                .param("lecturerStart", "2026-09-10T08:00")
-                .param("lecturerEnd", "2026-09-10T10:30")
-                .param("studentStart", "2026-09-10T11:00")
-                .param("studentEnd", "2026-09-10T13:30")
+                .param("lecturerStart", "2026-09-11")
+                .param("lecturerEnd", "2026-09-11")
+                .param("studentStart", "2026-09-12")
+                .param("studentEnd", "2026-09-13")
                 .param("version", Long.toString(version));
     }
 

@@ -17,7 +17,7 @@ thực hiện bằng migration mới.
 | UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
 | UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
-| RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký lưu `TIMESTAMP(6)` theo UTC; hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
+| RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Bản đề tài thuộc một đợt cho luồng hiện tại. Nếu Q-05 cho tái sử dụng, tách catalog và offering bằng migration trước triển khai phần đó |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc GVHD |
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
@@ -33,8 +33,10 @@ Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nộ
 được tạo bằng migration trước khi cài quyền này. Đây là luồng sự cố riêng, không làm thay
 đổi trạng thái duyệt học vụ của đề tài và không cho ADMIN sửa nội dung.
 
-Dữ liệu nhập form dùng giờ Asia/Ho_Chi_Minh, chuyển sang instant và lưu `TIMESTAMP(6)` UTC.
-Hiển thị lại bằng cùng zone; không dùng múi giờ trình duyệt để quyết định hạn.
+Dữ liệu nhập form chỉ nhận ngày `yyyy-MM-dd` theo Asia/Ho_Chi_Minh, không nhận giờ/phút/giây.
+Ngày bắt đầu quy đổi thành `00:00:00`; ngày kết thúc thành `23:59:59.999999`, rồi lưu
+`TIMESTAMP(6)` UTC. Khi đọc, quy đổi lại thành ngày bằng cùng zone; không dùng múi giờ
+trình duyệt để quyết định hạn. Tạo mới và đổi loại không nhận ngày trước ngày hiện tại.
 version bigint là optimistic concurrency token kỹ thuật, không phải trạng thái nghiệp vụ.
 
 ## Database invariants
@@ -71,14 +73,14 @@ luồng nghiệp vụ được hỗ trợ và không thay thế kiểm thử bac
 | Khoảng thời gian | Nhãn kỹ thuật |
 |---|---|
 | now < lecturer_start | BEFORE_LECTURER |
-| lecturer_start <= now < lecturer_end | LECTURER_OPEN |
-| lecturer_end <= now < student_start | BETWEEN_WINDOWS |
-| student_start <= now < student_end | STUDENT_OPEN |
-| now >= student_end | REGISTRATION_CLOSED |
+| lecturer_start <= now <= lecturer_end | LECTURER_OPEN |
+| lecturer_end < now < student_start | BETWEEN_WINDOWS |
+| student_start <= now <= student_end | STUDENT_OPEN |
+| now > student_end | REGISTRATION_CLOSED |
 
-BETWEEN_WINDOWS có thể rỗng. Công bố đề tài là điều kiện riêng; STUDENT_OPEN không tự
+BETWEEN_WINDOWS là khoảng sau cuối ngày GV đến trước đầu ngày SV. Công bố đề tài là điều kiện riêng; STUDENT_OPEN không tự
 công bố. REGISTRATION_CLOSED chỉ nói đóng đăng ký, không kết thúc toàn bộ dự án hoặc
-tự từ chối pending. Trước lecturer_start **đang lưu**, DEAN được sửa tên, loại và bốn mốc
+tự từ chối pending. Trước lecturer_start **đang lưu**, DEAN được sửa tên, loại và bốn ngày
 nếu cấu hình mới hợp lệ. Từ lecturer_start, tên/loại/mốc bắt đầu bị khóa; chỉ được tăng
 mốc kết thúc khi giai đoạn tương ứng chưa hết hạn và toàn bộ thứ tự vẫn hợp lệ. Với từng
 ngày phụ đang áp dụng, chỉ được tăng giá trị khi ngày hiện tại tại Asia/Ho_Chi_Minh còn

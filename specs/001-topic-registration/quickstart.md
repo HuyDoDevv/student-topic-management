@@ -99,9 +99,9 @@ Cấp mật khẩu ngoài repository, không ghi password/hash sử dụng đư�
 Tắt seed sau lần tạo. Tài khoản local được seed/import theo Q-18; seeder chỉ phục vụ
 local và không thay thế kiểm tra role/scope ở backend.
 
-Các mốc demo được ghi rõ khi seed, không tự dịch giờ ở lần restart.
-Để đi xuyên hai giai đoạn không chồng lấn, chuẩn bị một đợt mới có cửa sổ GV ngắn
-sau thời điểm hiện tại, gửi/duyệt topic, rồi đợi tới cửa sổ SV. Automated E2E dùng clock
+Các ngày demo được ghi rõ khi seed, không tự dịch ngày ở lần restart.
+Để đi xuyên hai giai đoạn không chồng lấn, chuẩn bị một đợt mới có lịch GV
+từ ngày hiện tại hoặc sau đó, gửi/duyệt topic, rồi đợi tới lịch SV. Automated E2E dùng clock
 cố định thay vì đợi thời gian thực. Không có endpoint đổi giờ hoặc mở lại đợt đã khóa.
 
 ## 4. Automated validation dự kiến
@@ -139,7 +139,7 @@ Nếu chưa có biến DB test, fail cấu hình thay vì skip rồi báo thành
 | 7 | Leader nhóm bị reject chọn topic khác còn mở | PENDING mới trong hạn, hàng cũ không bị ghi đè |
 | 8 | Leader rút PENDING rồi gửi lại | WITHDRAWN cũ, PENDING mới; không rút ACCEPTED hoặc ngoài hạn |
 | 9 | Gọi backend bằng tài khoản sai quyền | Không có thay đổi DB; kiểm tra cả ID của nhóm khác |
-| 10 | Đúng giờ kết thúc SV | Gửi/rút/đăng ký lại bị từ chối, không tự gia hạn |
+| 10 | Sau ngày kết thúc SV | Gửi/rút/đăng ký lại bị từ chối, không tự gia hạn |
 
 Các bước có scope chưa chốt dùng fixture kiểm thử có quan hệ xác định, chưa chứng minh
 policy tổng thể Q-18. Nhánh từ chối thủ công chờ chốt bắt buộc reason; tranh chấp

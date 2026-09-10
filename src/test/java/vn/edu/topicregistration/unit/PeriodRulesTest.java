@@ -87,14 +87,36 @@ class PeriodRulesTest {
     }
 
     @Test
-    void stateIncludesEachStartAndExcludesEachEnd() {
+    void createRejectsLecturerStartBeforeCurrentBusinessDate() {
+        TestConfig previousDay = config("COURSE", null, null)
+                .withSchedule(
+                        LECTURER_START.minusSeconds(86_400),
+                        LECTURER_END,
+                        STUDENT_START,
+                        STUDENT_END);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> rules.create(previousDay));
+    }
+
+    @Test
+    void createRejectsApplicableDatesBeforeCurrentBusinessDate() {
+        assertThrows(IllegalArgumentException.class,
+                () -> rules.create(config(
+                        "TLCN", LocalDate.of(2026, 9, 9), null)));
+    }
+
+    @Test
+    void stateIncludesEachCalendarDayBoundary() {
         TestConfig period = config("COURSE", null, null);
 
         assertEquals("BEFORE_LECTURER", rules.state(period, LECTURER_START.minusNanos(1)));
         assertEquals("LECTURER_OPEN", rules.state(period, LECTURER_START));
-        assertEquals("BETWEEN_WINDOWS", rules.state(period, LECTURER_END));
+        assertEquals("LECTURER_OPEN", rules.state(period, LECTURER_END));
+        assertEquals("BETWEEN_WINDOWS", rules.state(period, LECTURER_END.plusNanos(1)));
         assertEquals("STUDENT_OPEN", rules.state(period, STUDENT_START));
-        assertEquals("REGISTRATION_CLOSED", rules.state(period, STUDENT_END));
+        assertEquals("STUDENT_OPEN", rules.state(period, STUDENT_END));
+        assertEquals("REGISTRATION_CLOSED", rules.state(period, STUDENT_END.plusNanos(1)));
     }
 
     @Test
@@ -122,14 +144,16 @@ class PeriodRulesTest {
                         current.withSchedule(LECTURER_START, LECTURER_END.minusSeconds(30),
                                 STUDENT_START, STUDENT_END),
                         LECTURER_START));
+        assertDoesNotThrow(() -> rules.update(current, lecturerExtension, LECTURER_END));
         assertThrows(IllegalArgumentException.class,
-                () -> rules.update(current, lecturerExtension, LECTURER_END));
+                () -> rules.update(current, lecturerExtension, LECTURER_END.plusNanos(1)));
 
         TestConfig studentExtension = current.withSchedule(
                 LECTURER_START, LECTURER_END, STUDENT_START, STUDENT_END.plusSeconds(30));
         assertDoesNotThrow(() -> rules.update(current, studentExtension, STUDENT_START));
+        assertDoesNotThrow(() -> rules.update(current, studentExtension, STUDENT_END));
         assertThrows(IllegalArgumentException.class,
-                () -> rules.update(current, studentExtension, STUDENT_END));
+                () -> rules.update(current, studentExtension, STUDENT_END.plusNanos(1)));
     }
 
     @Test
@@ -203,8 +227,8 @@ class PeriodRulesTest {
         TestConfig create(TestConfig request) {
             Object result = invoke(
                     "validateForCreate",
-                    new Class<?>[] { configurationClass() },
-                    productionConfig(request));
+                    new Class<?>[] { configurationClass(), Instant.class, ZoneId.class },
+                    productionConfig(request), LECTURER_START.minusSeconds(1), BUSINESS_ZONE);
             return testConfig(result);
         }
 

@@ -1,7 +1,6 @@
 package vn.edu.topicregistration.shared.web;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
 import vn.edu.topicregistration.periods.web.PeriodForm;
+import vn.edu.topicregistration.shared.time.TimeConfig;
 
 /**
  * Supplies deterministic sample view models for reviewing Thymeleaf pages.
@@ -27,13 +27,13 @@ public class UiPreviewController {
     private static final List<PreviewPeriod> PERIODS = List.of(
             new PreviewPeriod(
                     1, "Đồ án chuyên ngành HK1 2026–2027", "Đồ án chuyên ngành",
-                    "01/09/2026 08:00", "15/09/2026 17:00",
-                    "20/09/2026 08:00", "30/09/2026 17:00",
+                    "01/09/2026", "15/09/2026",
+                    "20/09/2026", "30/09/2026",
                     null, null, "Đang nhận đề tài", "bg-green-lt"),
             new PreviewPeriod(
                     2, "Khóa luận tốt nghiệp HK1 2026–2027", "Khóa luận tốt nghiệp",
-                    "15/08/2026 08:00", "30/08/2026 17:00",
-                    "05/09/2026 08:00", "12/09/2026 17:00",
+                    "15/08/2026", "30/08/2026",
+                    "05/09/2026", "12/09/2026",
                     "20/12/2026", "10/01/2027", "Đã đóng", "bg-secondary-lt"));
 
     private static final List<Map<String, Object>> TOPICS = List.of(
@@ -60,7 +60,7 @@ public class UiPreviewController {
     @GetMapping("/dashboard")
     String dashboard(Model model) {
         common(model, "dashboard", "Không gian làm việc");
-        model.addAttribute("today", LocalDate.now().format(
+        model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE).format(
                 DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))));
         model.addAttribute("topicCount", 12);
         model.addAttribute("groupCount", 7);
@@ -83,6 +83,7 @@ public class UiPreviewController {
         model.addAttribute("editing", false);
         model.addAttribute("form", new PeriodForm());
         model.addAttribute("locks", previewLocks(false));
+        model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE));
         return "periods/form";
     }
 
@@ -93,6 +94,7 @@ public class UiPreviewController {
         model.addAttribute("period", PERIODS.getFirst());
         model.addAttribute("form", previewPeriodForm());
         model.addAttribute("locks", previewLocks(false));
+        model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE));
         return "periods/form";
     }
 
@@ -203,10 +205,10 @@ public class UiPreviewController {
         PeriodForm form = new PeriodForm();
         form.setName("Đồ án chuyên ngành HK1 2026–2027");
         form.setTopicType(TopicType.COURSE);
-        form.setLecturerStart(LocalDateTime.of(2026, 9, 1, 8, 0));
-        form.setLecturerEnd(LocalDateTime.of(2026, 9, 15, 17, 0));
-        form.setStudentStart(LocalDateTime.of(2026, 9, 20, 8, 0));
-        form.setStudentEnd(LocalDateTime.of(2026, 9, 30, 17, 0));
+        form.setLecturerStart(LocalDate.of(2026, 9, 1));
+        form.setLecturerEnd(LocalDate.of(2026, 9, 15));
+        form.setStudentStart(LocalDate.of(2026, 9, 20));
+        form.setStudentEnd(LocalDate.of(2026, 9, 30));
         form.setVersion(0L);
         return form;
     }

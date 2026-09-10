@@ -6,11 +6,12 @@
     <div>
       <div class="page-pretitle">ĐỢT ĐĂNG KÝ</div>
       <h1 class="page-title" th:text="${editing ? 'Sửa cấu hình đợt đăng ký' : 'Tạo đợt đăng ký'}">Tạo đợt đăng ký</h1>
-      <p class="text-secondary mt-2 mb-0">Thời gian được nhập theo múi giờ Việt Nam. Mốc bắt đầu được tính, mốc kết thúc không được tính.</p>
+      <p class="text-secondary mt-2 mb-0">Chọn ngày theo múi giờ Việt Nam, không chọn ngày trước hôm nay. Ngày kết thúc được tính trọn ngày.</p>
     </div>
   </div>
 
   <form class="card content-form" method="post" data-prevent-double-submit data-period-form
+        th:attr="data-today=${today}"
         th:object="${form}" th:action="${editing ? '/periods/' + period.id : '/periods'}">
     <div class="card-body">
       <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary
@@ -55,16 +56,16 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label required" for="lecturer-start">Bắt đầu</label>
-            <input class="form-control" id="lecturer-start" type="datetime-local" th:field="*{lecturerStart}"
-                   th:errorclass="is-invalid" th:readonly="${locks.base}" required>
-            <div class="invalid-feedback" th:errors="*{lecturerStart}">Thời điểm chưa hợp lệ.</div>
+            <input class="form-control" id="lecturer-start" type="date" th:field="*{lecturerStart}"
+                   th:errorclass="is-invalid" th:readonly="${locks.base}" th:min="${today}" required>
+            <div class="invalid-feedback" th:errors="*{lecturerStart}">Ngày chưa hợp lệ.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required" for="lecturer-end">Kết thúc</label>
-            <input class="form-control" id="lecturer-end" type="datetime-local" th:field="*{lecturerEnd}"
-                   th:errorclass="is-invalid" th:readonly="${locks.lecturerEnd}" required>
-            <div class="invalid-feedback" th:errors="*{lecturerEnd}">Thời điểm chưa hợp lệ.</div>
-            <div class="form-hint" th:if="${editing and !locks.lecturerEnd}">Chỉ được dời sang thời điểm muộn hơn.</div>
+            <input class="form-control" id="lecturer-end" type="date" th:field="*{lecturerEnd}"
+                   th:errorclass="is-invalid" th:readonly="${locks.lecturerEnd}" th:min="${today}" required>
+            <div class="invalid-feedback" th:errors="*{lecturerEnd}">Ngày chưa hợp lệ.</div>
+            <div class="form-hint" th:if="${editing and !locks.lecturerEnd}">Chỉ được dời sang ngày muộn hơn.</div>
           </div>
         </div>
       </fieldset>
@@ -75,17 +76,17 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label required" for="student-start">Bắt đầu</label>
-            <input class="form-control" id="student-start" type="datetime-local" th:field="*{studentStart}"
-                   th:errorclass="is-invalid" th:readonly="${locks.base}" required>
-            <div class="invalid-feedback" th:errors="*{studentStart}">Thời điểm chưa hợp lệ.</div>
-            <div class="form-hint">Không được trùng với thời điểm kết thúc của giảng viên.</div>
+            <input class="form-control" id="student-start" type="date" th:field="*{studentStart}"
+                   th:errorclass="is-invalid" th:readonly="${locks.base}" th:min="${today}" required>
+            <div class="invalid-feedback" th:errors="*{studentStart}">Ngày chưa hợp lệ.</div>
+            <div class="form-hint">Phải sau ngày kết thúc của giảng viên.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label required" for="student-end">Kết thúc</label>
-            <input class="form-control" id="student-end" type="datetime-local" th:field="*{studentEnd}"
-                   th:errorclass="is-invalid" th:readonly="${locks.studentEnd}" required>
-            <div class="invalid-feedback" th:errors="*{studentEnd}">Thời điểm chưa hợp lệ.</div>
-            <div class="form-hint" th:if="${editing and !locks.studentEnd}">Chỉ được dời sang thời điểm muộn hơn.</div>
+            <input class="form-control" id="student-end" type="date" th:field="*{studentEnd}"
+                   th:errorclass="is-invalid" th:readonly="${locks.studentEnd}" th:min="${today}" required>
+            <div class="invalid-feedback" th:errors="*{studentEnd}">Ngày chưa hợp lệ.</div>
+            <div class="form-hint" th:if="${editing and !locks.studentEnd}">Chỉ được dời sang ngày muộn hơn.</div>
           </div>
         </div>
       </fieldset>
@@ -99,7 +100,7 @@
             <input class="form-control" id="reviewer-score-deadline" type="date"
                    th:field="*{reviewerScoreDeadline}" th:errorclass="is-invalid"
                    th:readonly="${locks.reviewerScoreDeadline}"
-                   th:attr="data-locked=${locks.reviewerScoreDeadline}">
+                   th:min="${today}" th:attr="data-locked=${locks.reviewerScoreDeadline}">
             <div class="invalid-feedback" th:errors="*{reviewerScoreDeadline}">Ngày chưa hợp lệ.</div>
           </div>
           <div class="col-md-6" data-period-conditional="KLTN">
@@ -107,7 +108,7 @@
             <input class="form-control" id="council-report-date" type="date"
                    th:field="*{councilReportDate}" th:errorclass="is-invalid"
                    th:readonly="${locks.councilReportDate}"
-                   th:attr="data-locked=${locks.councilReportDate}">
+                   th:min="${today}" th:attr="data-locked=${locks.councilReportDate}">
             <div class="invalid-feedback" th:errors="*{councilReportDate}">Ngày chưa hợp lệ.</div>
           </div>
         </div>

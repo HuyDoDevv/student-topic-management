@@ -1,7 +1,6 @@
 package vn.edu.topicregistration.periods.web;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,21 +21,21 @@ public class PeriodForm {
     @NotNull(message = "Vui lòng chọn loại đề tài.")
     private TopicType topicType;
 
-    @NotNull(message = "Vui lòng nhập thời điểm bắt đầu của giảng viên.")
-    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
-    private LocalDateTime lecturerStart;
+    @NotNull(message = "Vui lòng nhập ngày bắt đầu của giảng viên.")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate lecturerStart;
 
-    @NotNull(message = "Vui lòng nhập thời điểm kết thúc của giảng viên.")
-    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
-    private LocalDateTime lecturerEnd;
+    @NotNull(message = "Vui lòng nhập ngày kết thúc của giảng viên.")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate lecturerEnd;
 
-    @NotNull(message = "Vui lòng nhập thời điểm bắt đầu của sinh viên.")
-    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
-    private LocalDateTime studentStart;
+    @NotNull(message = "Vui lòng nhập ngày bắt đầu của sinh viên.")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate studentStart;
 
-    @NotNull(message = "Vui lòng nhập thời điểm kết thúc của sinh viên.")
-    @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
-    private LocalDateTime studentEnd;
+    @NotNull(message = "Vui lòng nhập ngày kết thúc của sinh viên.")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate studentEnd;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate reviewerScoreDeadline;
@@ -51,10 +50,10 @@ public class PeriodForm {
         PeriodForm form = new PeriodForm();
         form.name = period.name();
         form.topicType = period.topicType();
-        form.lecturerStart = projectTime.toBusinessTime(period.lecturerStart()).toLocalDateTime();
-        form.lecturerEnd = projectTime.toBusinessTime(period.lecturerEnd()).toLocalDateTime();
-        form.studentStart = projectTime.toBusinessTime(period.studentStart()).toLocalDateTime();
-        form.studentEnd = projectTime.toBusinessTime(period.studentEnd()).toLocalDateTime();
+        form.lecturerStart = projectTime.toBusinessDate(period.lecturerStart());
+        form.lecturerEnd = projectTime.toBusinessDate(period.lecturerEnd());
+        form.studentStart = projectTime.toBusinessDate(period.studentStart());
+        form.studentEnd = projectTime.toBusinessDate(period.studentEnd());
         form.reviewerScoreDeadline = period.reviewerScoreDeadline();
         form.councilReportDate = period.councilReportDate();
         form.version = period.version();
@@ -65,16 +64,20 @@ public class PeriodForm {
         return new PeriodConfiguration(
                 name,
                 topicType,
-                toInstant(projectTime, lecturerStart),
-                toInstant(projectTime, lecturerEnd),
-                toInstant(projectTime, studentStart),
-                toInstant(projectTime, studentEnd),
+                toStart(projectTime, lecturerStart),
+                toEnd(projectTime, lecturerEnd),
+                toStart(projectTime, studentStart),
+                toEnd(projectTime, studentEnd),
                 reviewerScoreDeadline,
                 councilReportDate);
     }
 
-    private static java.time.Instant toInstant(ProjectTime projectTime, LocalDateTime value) {
-        return value == null ? null : projectTime.toStoredInstant(value);
+    private static java.time.Instant toStart(ProjectTime projectTime, LocalDate value) {
+        return value == null ? null : projectTime.toStartOfDay(value);
+    }
+
+    private static java.time.Instant toEnd(ProjectTime projectTime, LocalDate value) {
+        return value == null ? null : projectTime.toEndOfDay(value);
     }
 
     public String getName() {
@@ -93,35 +96,35 @@ public class PeriodForm {
         this.topicType = topicType;
     }
 
-    public LocalDateTime getLecturerStart() {
+    public LocalDate getLecturerStart() {
         return lecturerStart;
     }
 
-    public void setLecturerStart(LocalDateTime lecturerStart) {
+    public void setLecturerStart(LocalDate lecturerStart) {
         this.lecturerStart = lecturerStart;
     }
 
-    public LocalDateTime getLecturerEnd() {
+    public LocalDate getLecturerEnd() {
         return lecturerEnd;
     }
 
-    public void setLecturerEnd(LocalDateTime lecturerEnd) {
+    public void setLecturerEnd(LocalDate lecturerEnd) {
         this.lecturerEnd = lecturerEnd;
     }
 
-    public LocalDateTime getStudentStart() {
+    public LocalDate getStudentStart() {
         return studentStart;
     }
 
-    public void setStudentStart(LocalDateTime studentStart) {
+    public void setStudentStart(LocalDate studentStart) {
         this.studentStart = studentStart;
     }
 
-    public LocalDateTime getStudentEnd() {
+    public LocalDate getStudentEnd() {
         return studentEnd;
     }
 
-    public void setStudentEnd(LocalDateTime studentEnd) {
+    public void setStudentEnd(LocalDate studentEnd) {
         this.studentEnd = studentEnd;
     }
 
