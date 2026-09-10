@@ -3,14 +3,51 @@
 <body>
 <section>
   <div class="page-header page-header-actions">
-    <div><div class="page-pretitle">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${period.name}">Đồ án chuyên ngành</h1><p class="text-secondary mt-2 mb-0" th:text="${period.type}">Đồ án chuyên ngành</p></div>
-    <div class="btn-list"><a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa lịch</a><a class="btn btn-primary" th:href="@{/periods/{id}/topics(id=${period.id})}">Xem đề tài</a></div>
+    <div>
+      <div class="page-pretitle">ĐỢT ĐĂNG KÝ</div>
+      <h1 class="page-title" th:text="${period.name}">Đợt HK1</h1>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+        <span class="text-secondary" th:text="${period.type}">Đồ án môn học</span>
+        <span aria-hidden="true" class="text-secondary">·</span>
+        <span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Chưa mở</span>
+      </div>
+    </div>
+    <div class="btn-list">
+      <a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa cấu hình</a>
+      <a class="btn btn-primary" th:href="@{/periods/{id}/topics(id=${period.id})}">Xem đề tài</a>
+    </div>
   </div>
+
   <div class="row row-cards mb-4">
-    <div class="col-md-6"><div class="card h-100"><div class="card-body"><div class="subheader">GIẢNG VIÊN ĐỀ XUẤT</div><div class="h3 mt-2" th:text="${period.lecturerWindow}">01/09 – 15/09</div><p class="text-secondary mb-0">Chỉ đề tài nháp hợp lệ mới được gửi duyệt trong khoảng này.</p></div></div></div>
-    <div class="col-md-6"><div class="card h-100"><div class="card-body"><div class="subheader">SINH VIÊN ĐĂNG KÝ</div><div class="h3 mt-2" th:text="${period.studentWindow}">20/09 – 30/09</div><p class="text-secondary mb-0">Nhóm hợp lệ chọn đề tài đã công bố và gửi một đăng ký đang hoạt động.</p></div></div></div>
+    <div class="col-md-6">
+      <article class="card h-100"><div class="card-body">
+        <div class="subheader">GIẢNG VIÊN ĐỀ XUẤT</div>
+        <dl class="period-window mt-3 mb-0">
+          <div><dt>Bắt đầu</dt><dd th:text="${period.lecturerStart}">10/09/2026</dd></div>
+          <div><dt>Kết thúc</dt><dd th:text="${period.lecturerEnd}">15/09/2026</dd></div>
+        </dl>
+      </div></article>
+    </div>
+    <div class="col-md-6">
+      <article class="card h-100"><div class="card-body">
+        <div class="subheader">SINH VIÊN ĐĂNG KÝ</div>
+        <dl class="period-window mt-3 mb-0">
+          <div><dt>Bắt đầu</dt><dd th:text="${period.studentStart}">16/09/2026</dd></div>
+          <div><dt>Kết thúc</dt><dd th:text="${period.studentEnd}">30/09/2026</dd></div>
+        </dl>
+      </div></article>
+    </div>
   </div>
-  <div class="card"><div class="card-header"><h2 class="card-title">Đề tài gần đây</h2><span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(topics)} + ' đề tài'">3 đề tài</span></div><div class="list-group list-group-flush"><a class="list-group-item list-group-item-action" th:each="topic : ${topics}" th:href="@{/topics/{id}(id=${topic.id})}"><div class="d-flex justify-content-between gap-3"><div><strong th:text="${topic.title}">Tên đề tài</strong><div class="text-secondary mt-1" th:text="${topic.author}">Giảng viên</div></div><span class="badge bg-secondary-lt align-self-start" th:text="${topic.status}">DRAFT</span></div></a></div></div>
+
+  <div class="card">
+    <div class="card-header"><h2 class="card-title">Các mốc theo loại đề tài</h2></div>
+    <div class="card-body">
+      <dl class="detail-list mb-0">
+        <dt>Hạn nộp điểm GVPB</dt><dd th:text="${period.reviewerScoreDeadline ?: 'Không áp dụng'}">Không áp dụng</dd>
+        <dt>Ngày báo cáo hội đồng</dt><dd th:text="${period.councilReportDate ?: 'Không áp dụng'}">Không áp dụng</dd>
+      </dl>
+    </div>
+  </div>
 </section>
 </body>
 </html>

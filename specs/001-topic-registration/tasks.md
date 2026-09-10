@@ -1,5 +1,6 @@
 > Cập nhật ngày 2026-09-09: mọi task DB dùng MySQL 8.4 LTS, Connector/J và Flyway.
-> Schema 20 bảng nằm tại `src/main/resources/db/migration/V1__full_system.sql`.
+> Schema 20 bảng nằm tại V1; V2 bắt buộc ngày theo loại đợt; V3 bắt buộc khoảng GV
+> hoàn thành trước khi khoảng SV bắt đầu.
 > Chạy bằng `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows.
 
 # Tasks: Quản lý đợt, đề tài và đăng ký nhóm
@@ -29,7 +30,7 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | Gate | Task | Điều kiện giải phóng |
 |---|---|---|
 | G-Identity | T006 | Đã giải phóng: seed/import, tổ hợp role, scope; chuyển GV ngoài phiên bản đầu; ADMIN ẩn mềm nội dung vi phạm, ghi audit và khóa tài khoản nguồn |
-| G-Period | T017 | Q-02: bắt buộc/độ chính xác ngày, đổi loại và sửa trường phụ |
+| G-Period | T017 | Đã giải phóng: ngày bắt buộc/null theo loại, độ chính xác DATE, đổi loại, gia hạn mốc đăng ký và ngày phụ đã chốt |
 | G-Topic | T025 | Q-05/06: chốt mô hình topic theo đợt/reuse và phạm vi phân công trong feature |
 | G-Publish | T033 | Chốt granularity công bố và chính sách thời hạn cho quyết định dean nếu có |
 | G-Group | T039 | Q-07: thời điểm tạo nhóm và phạm vi rời/chuyển nhóm |
@@ -90,21 +91,21 @@ từ giờ mở GV; tài khoản sai quyền không ghi dữ liệu. Không cầ
 **Trace:** FR-01–04, FR-15; REQ-01–07,28,31–32; AS-1.1–1.13; AT-01–02,06,09–10,13.
 Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi chờ tests được viết.
 
-- [ ] T017 [US1] Giải quyết G-Period/Q-02 với khách hàng; ghi required/date precision/đổi loại/sửa tên-ngày phụ vào `specs/001-topic-registration/spec.md` và đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md` cùng thư mục trước DDL hoặc validation phụ thuộc.
+- [X] T017 [US1] Giải quyết G-Period/Q-02 với khách hàng; ghi required/date precision/đổi loại/sửa tên-ngày phụ vào `specs/001-topic-registration/spec.md` và đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md` cùng thư mục trước DDL hoặc validation phụ thuộc.
 
-- [ ] T018 [P] [US1] Viết unit test 4 loại, lịch liên tiếp/chồng lấn, start-inclusive/end-exclusive, khóa lịch theo giá trị đang lưu tại `src/test/java/vn/edu/topicregistration/unit/PeriodRulesTest.java` (AT-01–02,13).
+- [X] T018 [P] [US1] Viết unit test 4 loại/ngày bắt buộc, đổi loại, lịch ngày liên tiếp/chồng lấn, biên đầu/cuối ngày, khóa và quy tắc chỉ gia hạn theo giá trị đang lưu tại `src/test/java/vn/edu/topicregistration/unit/PeriodRulesTest.java` (AT-01–02,13).
 
-- [ ] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
+- [X] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
 
-- [ ] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
+- [X] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày từ `src/main/resources/db/migration/V1__full_system.sql`, bổ sung migration V2 vì V1 đã chia sẻ; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
 
-- [ ] T021 [US1] Cài transaction READ COMMITTED và khóa period trước mutation tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodTransactionService.java`; sau chờ đọc lại quyền/giờ/version, không lấy child lock trước period; create period mới xác thực trước insert.
+- [X] T021 [US1] Cài transaction READ COMMITTED và khóa period trước mutation tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodTransactionService.java`; sau chờ đọc lại quyền/giờ/version, không lấy child lock trước period; create period mới xác thực trước insert.
 
-- [ ] T022 [US1] Cài create/update và trạng thái thời gian suy ra tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodService.java`, `periods/domain/PeriodRules.java`; không gia hạn bằng lịch mới sau khóa, không tự công bố hoặc auto-reject do hết hạn.
+- [X] T022 [US1] Cài create/update và trạng thái thời gian suy ra tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodService.java`, `periods/domain/PeriodRules.java`; chỉ gia hạn mốc kết thúc/ngày phụ theo T017, không rút ngắn, mở lại, tự công bố hoặc auto-reject do hết hạn.
 
-- [ ] T023 [US1] Cài GET/POST periods và schedule theo contract tại `src/main/java/vn/edu/topicregistration/periods/web/PeriodController.java`, `PeriodForm.java`; tạo `src/main/resources/templates/periods/list.html`, `detail.html`, `form.html` với dữ liệu scope và lỗi validation.
+- [X] T023 [US1] Cài GET/POST periods và sửa cấu hình theo contract tại `src/main/java/vn/edu/topicregistration/periods/web/PeriodController.java`, `PeriodForm.java`; tạo `src/main/resources/templates/periods/list.html`, `detail.html`, `form.html` với dữ liệu scope, trạng thái trường bị khóa và lỗi validation.
 
-- [ ] T024 [US1] Kiểm thử sửa lịch đồng thời với mở đợt, kiểm tra thời gian sau chờ khóa tại `src/test/java/vn/edu/topicregistration/concurrency/PeriodScheduleIT.java`; chạy nghiệm thu US1 và ghi AT-01–02,13/SC-001 tại `specs/001-topic-registration/acceptance-matrix.md`.
+- [X] T024 [US1] Kiểm thử sửa lịch đồng thời với mở đợt, kiểm tra thời gian sau chờ khóa tại `src/test/java/vn/edu/topicregistration/concurrency/PeriodScheduleIT.java`; chạy nghiệm thu US1 và ghi AT-01–02,13/SC-001 tại `specs/001-topic-registration/acceptance-matrix.md`.
 
 ## Phase 4: US2 — Giảng viên đăng đề tài có hướng dẫn (P1)
 
@@ -120,7 +121,7 @@ Chờ US1 và T025; T026–T027 song song.
 
 - [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
-- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V2 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
+- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V4 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
 
 - [ ] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
 

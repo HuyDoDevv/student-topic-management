@@ -12,6 +12,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
+import vn.edu.topicregistration.periods.web.PeriodForm;
+import vn.edu.topicregistration.shared.time.TimeConfig;
+
 /**
  * Supplies deterministic sample view models for reviewing Thymeleaf pages.
  * This controller is unavailable when the application uses the local database profile.
@@ -20,13 +24,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 @Profile("preview")
 public class UiPreviewController {
 
-    private static final List<Map<String, Object>> PERIODS = List.of(
-            Map.of("id", 1, "name", "Đồ án chuyên ngành HK1 2026–2027", "type", "Đồ án chuyên ngành",
-                    "lecturerWindow", "01/09/2026 – 15/09/2026", "studentWindow", "20/09/2026 – 30/09/2026",
-                    "status", "Đang nhận đề tài"),
-            Map.of("id", 2, "name", "Khóa luận tốt nghiệp HK1 2026–2027", "type", "Khóa luận tốt nghiệp",
-                    "lecturerWindow", "15/08/2026 – 30/08/2026", "studentWindow", "05/09/2026 – 12/09/2026",
-                    "status", "Đã đóng"));
+    private static final List<PreviewPeriod> PERIODS = List.of(
+            new PreviewPeriod(
+                    1, "Đồ án chuyên ngành HK1 2026–2027", "Đồ án chuyên ngành",
+                    "01/09/2026", "15/09/2026",
+                    "20/09/2026", "30/09/2026",
+                    null, null, "Đang nhận đề tài", "bg-green-lt"),
+            new PreviewPeriod(
+                    2, "Khóa luận tốt nghiệp HK1 2026–2027", "Khóa luận tốt nghiệp",
+                    "15/08/2026", "30/08/2026",
+                    "05/09/2026", "12/09/2026",
+                    "20/12/2026", "10/01/2027", "Đã đóng", "bg-secondary-lt"));
 
     private static final List<Map<String, Object>> TOPICS = List.of(
             Map.of("id", 101, "title", "Hệ thống quản lý đăng ký đề tài", "author", "TS. Nguyễn Văn An",
@@ -52,7 +60,7 @@ public class UiPreviewController {
     @GetMapping("/dashboard")
     String dashboard(Model model) {
         common(model, "dashboard", "Không gian làm việc");
-        model.addAttribute("today", LocalDate.now().format(
+        model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE).format(
                 DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))));
         model.addAttribute("topicCount", 12);
         model.addAttribute("groupCount", 7);
@@ -73,6 +81,9 @@ public class UiPreviewController {
     String periodCreate(Model model) {
         common(model, "periods", "Quản lý học vụ");
         model.addAttribute("editing", false);
+        model.addAttribute("form", new PeriodForm());
+        model.addAttribute("locks", previewLocks(false));
+        model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE));
         return "periods/form";
     }
 
@@ -81,6 +92,9 @@ public class UiPreviewController {
         common(model, "periods", "Quản lý học vụ");
         model.addAttribute("editing", true);
         model.addAttribute("period", PERIODS.getFirst());
+        model.addAttribute("form", previewPeriodForm());
+        model.addAttribute("locks", previewLocks(false));
+        model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE));
         return "periods/form";
     }
 
@@ -185,5 +199,47 @@ public class UiPreviewController {
         model.addAttribute("currentUserName", "Nguyễn Văn An");
         model.addAttribute("currentRoleLabel", "Chế độ xem trước");
         model.addAttribute("currentUserInitials", "NA");
+    }
+
+    private PeriodForm previewPeriodForm() {
+        PeriodForm form = new PeriodForm();
+        form.setName("Đồ án chuyên ngành HK1 2026–2027");
+        form.setTopicType(TopicType.COURSE);
+        form.setLecturerStart(LocalDate.of(2026, 9, 1));
+        form.setLecturerEnd(LocalDate.of(2026, 9, 15));
+        form.setStudentStart(LocalDate.of(2026, 9, 20));
+        form.setStudentEnd(LocalDate.of(2026, 9, 30));
+        form.setVersion(0L);
+        return form;
+    }
+
+    private Map<String, Boolean> previewLocks(boolean locked) {
+        return Map.of(
+                "base", locked,
+                "lecturerEnd", locked,
+                "studentEnd", locked,
+                "reviewerScoreDeadline", locked,
+                "councilReportDate", locked);
+    }
+
+    public record PreviewPeriod(
+            int id,
+            String name,
+            String type,
+            String lecturerStart,
+            String lecturerEnd,
+            String studentStart,
+            String studentEnd,
+            String reviewerScoreDeadline,
+            String councilReportDate,
+            String status,
+            String statusClass) {
+        public String lecturerWindow() {
+            return lecturerStart + " – " + lecturerEnd;
+        }
+
+        public String studentWindow() {
+            return studentStart + " – " + studentEnd;
+        }
     }
 }

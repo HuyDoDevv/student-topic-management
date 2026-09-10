@@ -1,5 +1,6 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS, cổng mặc định 3306.
-> Flyway tự áp dụng `src/main/resources/db/migration/V1__full_system.sql` khi chạy
+> Flyway tự áp dụng V1 để tạo 20 bảng, V2 để bắt buộc ngày theo loại đợt và V3 để
+> tách hai khoảng đăng ký GV/SV khi chạy
 > profile local. DBeaver dùng để tạo database/tài khoản và kiểm tra schema.
 
 # Quickstart — Kế hoạch chạy và kiểm chứng local
@@ -89,7 +90,7 @@ chứng nghiệm thu; lệnh package trên chỉ tạo bản chạy sau unit tes
 
 Kiểm tra đủ 20 bảng, generated columns, unique keys và triggers trong DBeaver.
 Restart ứng dụng không tạo lại schema hoặc xóa dữ liệu. Không sửa file SQL đã áp dụng;
-thay đổi tiếp theo phải tạo V2, V3… và sao lưu trước khi chạy.
+thay đổi tiếp theo phải tạo migration mới sau V3 và sao lưu trước khi chạy.
 
 Để demo, bật DEMO_SEED_ENABLED và nhập DEMO_SEED_PASSWORD bằng cơ chế nhập kín tương tự.
 Seeder chạy sau migration, chỉ profile local, lặp lại không nhân đôi/reset dữ liệu.
@@ -98,9 +99,9 @@ Cấp mật khẩu ngoài repository, không ghi password/hash sử dụng đư�
 Tắt seed sau lần tạo. Tài khoản local được seed/import theo Q-18; seeder chỉ phục vụ
 local và không thay thế kiểm tra role/scope ở backend.
 
-Các mốc demo được ghi rõ khi seed, không tự dịch giờ ở lần restart.
-Để đi xuyên hai giai đoạn không chồng lấn, chuẩn bị một đợt mới có cửa sổ GV ngắn
-sau thời điểm hiện tại, gửi/duyệt topic, rồi đợi tới cửa sổ SV. Automated E2E dùng clock
+Các ngày demo được ghi rõ khi seed, không tự dịch ngày ở lần restart.
+Để đi xuyên hai giai đoạn không chồng lấn, chuẩn bị một đợt mới có lịch GV
+từ ngày hiện tại hoặc sau đó, gửi/duyệt topic, rồi đợi tới lịch SV. Automated E2E dùng clock
 cố định thay vì đợi thời gian thực. Không có endpoint đổi giờ hoặc mở lại đợt đã khóa.
 
 ## 4. Automated validation dự kiến
@@ -138,7 +139,7 @@ Nếu chưa có biến DB test, fail cấu hình thay vì skip rồi báo thành
 | 7 | Leader nhóm bị reject chọn topic khác còn mở | PENDING mới trong hạn, hàng cũ không bị ghi đè |
 | 8 | Leader rút PENDING rồi gửi lại | WITHDRAWN cũ, PENDING mới; không rút ACCEPTED hoặc ngoài hạn |
 | 9 | Gọi backend bằng tài khoản sai quyền | Không có thay đổi DB; kiểm tra cả ID của nhóm khác |
-| 10 | Đúng giờ kết thúc SV | Gửi/rút/đăng ký lại bị từ chối, không tự gia hạn |
+| 10 | Sau ngày kết thúc SV | Gửi/rút/đăng ký lại bị từ chối, không tự gia hạn |
 
 Các bước có scope chưa chốt dùng fixture kiểm thử có quan hệ xác định, chưa chứng minh
 policy tổng thể Q-18. Nhánh từ chối thủ công chờ chốt bắt buộc reason; tranh chấp

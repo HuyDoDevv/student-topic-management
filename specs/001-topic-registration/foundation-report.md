@@ -18,8 +18,8 @@ ngày/đề tài/nhóm/đăng ký còn lại chưa được xác nhận thay kh�
   JSESSIONID HttpOnly/SameSite=Lax và không có self-registration.
 - `AuthorizationPolicy` đọc lại tài khoản, role và scope từ database cho mỗi kiểm tra;
   STUDENT không được kết hợp role khác, LECTURER+DEAN hợp lệ, ADMIN chỉ có policy khẩn cấp.
-- Clock nghiệp vụ cố định Asia/Ho_Chi_Minh; thời điểm lưu là UTC; cửa sổ tính đầu và loại
-  trừ cuối. Phản hồi web chuẩn hóa 400/403/404/409/422, redirect thành công 303 và không
+- Clock nghiệp vụ cố định Asia/Ho_Chi_Minh; thời điểm lưu là UTC; cửa sổ tính cả đầu và cuối
+  ngày đã chọn. Phản hồi web chuẩn hóa 400/403/404/409/422, redirect thành công 303 và không
   đưa chi tiết lỗi SQL vào view.
 - Maven có ba tầng: unit/web, MySQL integration và Playwright Chromium E2E. Database test
   bắt buộc có tên chứa `test`; thiếu biến môi trường làm suite thất bại thay vì bị skip.

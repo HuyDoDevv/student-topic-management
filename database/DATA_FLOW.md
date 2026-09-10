@@ -1,7 +1,8 @@
 # Luồng dữ liệu và class diagram — 20 bảng
 
-Đối chiếu `../src/main/resources/db/migration/V1__full_system.sql`. Đây là luồng nghiệp vụ dự kiến trên cấu trúc SQL hiện
-tại, không phải các chức năng Java đã hoàn thành. SQL không tự tạo màn hình, phân
+Đối chiếu `../src/main/resources/db/migration/V1__full_system.sql` và các migration
+tiếp theo. Đây là luồng nghiệp vụ dự kiến trên cấu trúc SQL hiện tại, không phải các
+chức năng Java đã hoàn thành. SQL không tự tạo màn hình, phân
 quyền, chuyển trạng thái, tính điểm hoặc công bố kết quả.
 
 ## Bảng giải thích luồng dữ liệu

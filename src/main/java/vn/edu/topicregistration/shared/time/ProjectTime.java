@@ -2,8 +2,9 @@ package vn.edu.topicregistration.shared.time;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.stereotype.Component;
 
@@ -19,17 +20,32 @@ public class ProjectTime {
         return clock.instant();
     }
 
-    public Instant toStoredInstant(LocalDateTime localDateTime) {
-        return localDateTime.atZone(TimeConfig.BUSINESS_ZONE).toInstant();
+    public LocalDate today() {
+        return now().atZone(TimeConfig.BUSINESS_ZONE).toLocalDate();
+    }
+
+    public Instant toStartOfDay(LocalDate localDate) {
+        return localDate.atStartOfDay(TimeConfig.BUSINESS_ZONE).toInstant();
+    }
+
+    public Instant toEndOfDay(LocalDate localDate) {
+        return localDate.plusDays(1)
+                .atStartOfDay(TimeConfig.BUSINESS_ZONE)
+                .toInstant()
+                .minus(1, ChronoUnit.MICROS);
+    }
+
+    public LocalDate toBusinessDate(Instant instant) {
+        return toBusinessTime(instant).toLocalDate();
     }
 
     public ZonedDateTime toBusinessTime(Instant instant) {
         return instant.atZone(TimeConfig.BUSINESS_ZONE);
     }
 
-    /** A registration window includes its start and excludes its end. */
-    public boolean isOpen(Instant startInclusive, Instant endExclusive) {
+    /** A date-based registration window includes both stored calendar-day boundaries. */
+    public boolean isOpen(Instant startInclusive, Instant endInclusive) {
         Instant current = now();
-        return !current.isBefore(startInclusive) && current.isBefore(endExclusive);
+        return !current.isBefore(startInclusive) && !current.isAfter(endInclusive);
     }
 }
