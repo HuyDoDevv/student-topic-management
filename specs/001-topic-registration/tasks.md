@@ -94,7 +94,7 @@ Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi ch�
 
 - [X] T018 [P] [US1] Viết unit test 4 loại/ngày bắt buộc, đổi loại, lịch liên tiếp/chồng lấn, start-inclusive/end-exclusive, khóa và quy tắc chỉ gia hạn theo giá trị đang lưu tại `src/test/java/vn/edu/topicregistration/unit/PeriodRulesTest.java` (AT-01–02,13).
 
-- [ ] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
+- [X] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
 
 - [ ] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
 
