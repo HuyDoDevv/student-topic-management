@@ -32,7 +32,7 @@ import vn.edu.topicregistration.shared.time.ProjectTime;
 import vn.edu.topicregistration.shared.web.WebRedirects;
 
 @Controller
-@Profile("!preview")
+@Profile("!preview & !test")
 @RequestMapping("/periods")
 public class PeriodController {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(

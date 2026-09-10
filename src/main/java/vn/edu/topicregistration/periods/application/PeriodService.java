@@ -24,7 +24,7 @@ import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentit
 import vn.edu.topicregistration.shared.time.TimeConfig;
 
 @Service
-@Profile("!preview")
+@Profile("!preview & !test")
 public class PeriodService {
     private final PeriodTransactionService transactions;
     private final RegistrationPeriodRepository periods;
@@ -46,6 +46,12 @@ public class PeriodService {
         ActorIdentity dean = currentDean();
         RegistrationPeriodEntity saved = transactions.create(dean.facultyId(), context -> {
             PeriodConfiguration valid = validateCreate(request);
+            System.out.println(request);
+            System.out.println(request);
+            System.out.println(request);
+            System.out.println(request);
+            System.out.println(request);
+            System.out.println(request);
             return new RegistrationPeriodEntity(
                     context.faculty(),
                     valid.name(),

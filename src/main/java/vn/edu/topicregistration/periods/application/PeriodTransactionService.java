@@ -22,7 +22,7 @@ import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
 import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
-@Profile("!preview")
+@Profile("!preview & !test")
 public class PeriodTransactionService {
     private final RegistrationPeriodRepository periods;
     private final AuthorizationPolicy authorization;
