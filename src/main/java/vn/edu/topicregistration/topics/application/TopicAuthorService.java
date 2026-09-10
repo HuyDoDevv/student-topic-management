@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.topicregistration.identity.domain.RoleCode;
 import vn.edu.topicregistration.identity.persistence.DepartmentEntity;
 import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
+import vn.edu.topicregistration.identity.persistence.UserAccountRepository;
 import vn.edu.topicregistration.periods.persistence.RegistrationPeriodEntity;
 import vn.edu.topicregistration.periods.persistence.RegistrationPeriodRepository;
 import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
@@ -38,6 +39,7 @@ import vn.edu.topicregistration.topics.persistence.TopicSupervisorEntity;
 public class TopicAuthorService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;
+    private final UserAccountRepository accounts;
     private final AuthorizationPolicy authorization;
     private final EntityManager entityManager;
     private final Clock clock;
@@ -45,11 +47,13 @@ public class TopicAuthorService {
     public TopicAuthorService(
             RegistrationPeriodRepository periods,
             TopicRepository topics,
+            UserAccountRepository accounts,
             AuthorizationPolicy authorization,
             EntityManager entityManager,
             Clock clock) {
         this.periods = periods;
         this.topics = topics;
+        this.accounts = accounts;
         this.authorization = authorization;
         this.entityManager = entityManager;
         this.clock = clock;
@@ -109,6 +113,68 @@ public class TopicAuthorService {
         return toView(topic);
     }
 
+    @Transactional(readOnly = true)
+    public TopicWorkspace listOwnForPeriod(long periodId) {
+        TopicFormContext context = formContext(periodId);
+        ActorIdentity actor = currentLecturer();
+        List<TopicView> ownTopics = topics
+                .findAllByPeriodIdAndAuthorIdAndHiddenAtIsNullOrderByIdDesc(
+                        periodId, actor.accountId())
+                .stream()
+                .map(this::toView)
+                .toList();
+        return new TopicWorkspace(context.period(), ownTopics);
+    }
+
+    @Transactional(readOnly = true)
+    public TopicView getOwn(long topicId) {
+        ActorIdentity actor = currentLecturer();
+        TopicEntity topic = topics
+                .findByIdAndAuthorIdAndDepartmentIdAndHiddenAtIsNull(
+                        topicId, actor.accountId(), actor.departmentId())
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (!Objects.equals(actor.facultyId(), topic.getPeriod().getFaculty().getId())) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return toView(topic);
+    }
+
+    @Transactional(readOnly = true)
+    public TopicView getOwnDraft(long topicId) {
+        TopicView topic = getOwn(topicId);
+        if (topic.status() != TopicStatus.DRAFT) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_TOPIC_STATE);
+        }
+        return topic;
+    }
+
+    @Transactional(readOnly = true)
+    public TopicFormContext formContext(long periodId) {
+        ActorIdentity actor = currentLecturer();
+        RegistrationPeriodEntity period = periods
+                .findByIdAndFacultyId(periodId, actor.facultyId())
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        DepartmentEntity department = requiredEntity(DepartmentEntity.class, actor.departmentId());
+        List<LecturerOption> lecturers = accounts
+                .findEnabledByDepartmentAndRole(actor.departmentId(), RoleCode.LECTURER)
+                .stream()
+                .map(account -> new LecturerOption(
+                        account.getId(), displayName(account), account.getUsername()))
+                .toList();
+        Instant now = clock.instant();
+        return new TopicFormContext(
+                new TopicPeriodView(
+                        period.getId(),
+                        period.getName(),
+                        period.getLecturerStart(),
+                        period.getLecturerEnd(),
+                        !now.isBefore(period.getLecturerStart())
+                                && !now.isAfter(period.getLecturerEnd())),
+                department.getId(),
+                department.getName(),
+                lecturers);
+    }
+
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
         return periods.findByIdForUpdate(periodId)
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
@@ -130,11 +196,18 @@ public class TopicAuthorService {
     }
 
     private ActorIdentity currentLecturerFor(RegistrationPeriodEntity period) {
-        ActorIdentity actor = authorization.requireRole(RoleCode.LECTURER);
-        if (actor.departmentId() == null
-                || actor.facultyId() == null
+        ActorIdentity actor = currentLecturer();
+        if (actor.facultyId() == null
                 || !Objects.equals(actor.facultyId(), period.getFaculty().getId())) {
             throw new AccessDeniedException("Lecturer scope does not match the period");
+        }
+        return actor;
+    }
+
+    private ActorIdentity currentLecturer() {
+        ActorIdentity actor = authorization.requireRole(RoleCode.LECTURER);
+        if (actor.accountId() == null || actor.departmentId() == null || actor.facultyId() == null) {
+            throw new AccessDeniedException("Lecturer organization scope is missing");
         }
         return actor;
     }
@@ -284,6 +357,7 @@ public class TopicAuthorService {
                 topic.getDepartment().getId(),
                 topic.getDepartment().getName(),
                 topic.getAuthor().getId(),
+                displayName(topic.getAuthor()),
                 topic.getTitle(),
                 topic.getDescription(),
                 topic.getObjectives(),
@@ -292,6 +366,12 @@ public class TopicAuthorService {
                 TopicStatus.valueOf(topic.getStatus()),
                 topic.getVersion(),
                 supervisors);
+    }
+
+    private static String displayName(UserAccountEntity account) {
+        return account.getFullName() == null || account.getFullName().isBlank()
+                ? account.getUsername()
+                : account.getFullName();
     }
 
     @FunctionalInterface
@@ -323,12 +403,40 @@ public class TopicAuthorService {
     public record SupervisorView(Long id, String fullName, int slot) {
     }
 
+    public record LecturerOption(Long id, String fullName, String username) {
+    }
+
+    public record TopicPeriodView(
+            Long id,
+            String name,
+            Instant lecturerStart,
+            Instant lecturerEnd,
+            boolean lecturerOpen) {
+    }
+
+    public record TopicFormContext(
+            TopicPeriodView period,
+            Long departmentId,
+            String departmentName,
+            List<LecturerOption> lecturers) {
+        public TopicFormContext {
+            lecturers = List.copyOf(lecturers);
+        }
+    }
+
+    public record TopicWorkspace(TopicPeriodView period, List<TopicView> topics) {
+        public TopicWorkspace {
+            topics = List.copyOf(topics);
+        }
+    }
+
     public record TopicView(
             Long id,
             Long periodId,
             Long departmentId,
             String departmentName,
             Long authorId,
+            String authorName,
             String title,
             String description,
             String objectives,
