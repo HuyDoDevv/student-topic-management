@@ -1,5 +1,5 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
-> `src/main/resources/db/migration/V1__full_system.sql` và được Flyway áp dụng.
+> `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt.
 
 # Data Model — Thiết kế có điều kiện
 
@@ -155,8 +155,9 @@ trong khi test không đại diện một luồng quản trị đã chốt.
 
 ## Migration and sample data
 
-V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. Các quyết
-định nghiệp vụ còn mở làm thay đổi schema phải được đưa vào V2 trở đi sau khi xác nhận.
+V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. V2 thay hai
+CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. Các quyết định nghiệp vụ còn mở làm thay
+đổi schema phải được đưa vào migration mới sau V2 khi được xác nhận.
 Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra

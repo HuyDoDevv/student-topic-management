@@ -1,6 +1,6 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Flyway tự áp dụng
-> `src/main/resources/db/migration/V1__full_system.sql` để tạo 20 bảng; DBeaver dùng
-> để quản lý và kiểm tra database. Chạy bằng `./run.sh` trên macOS/Linux hoặc
+> V1 để tạo 20 bảng và V2 để bắt buộc ngày theo loại đợt; DBeaver dùng để quản lý
+> và kiểm tra database. Chạy bằng `./run.sh` trên macOS/Linux hoặc
 > `run.cmd` trên Windows.
 
 # Implementation Plan: Quản lý đợt, đề tài và đăng ký nhóm

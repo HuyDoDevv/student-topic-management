@@ -1,5 +1,5 @@
 > Cập nhật ngày 2026-09-09: mọi task DB dùng MySQL 8.4 LTS, Connector/J và Flyway.
-> Schema 20 bảng nằm tại `src/main/resources/db/migration/V1__full_system.sql`.
+> Schema 20 bảng nằm tại V1; V2 bắt buộc ngày theo loại đợt.
 > Chạy bằng `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows.
 
 # Tasks: Quản lý đợt, đề tài và đăng ký nhóm
@@ -96,7 +96,7 @@ Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi ch�
 
 - [X] T019 [P] [US1] Viết MockMvc/DB test create/read/schedule, conditional dates theo T017, role/scope/CSRF/input sai không ghi, stale version tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java` (AS-1.*, AT-06,09).
 
-- [ ] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày trong `src/main/resources/db/migration/V1__full_system.sql`; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
+- [X] T020 [US1] Đối chiếu period schema và CHECK lịch/loại/ngày từ `src/main/resources/db/migration/V1__full_system.sql`, bổ sung migration V2 vì V1 đã chia sẻ; tạo entity và repository có FOR UPDATE tại `src/main/java/vn/edu/topicregistration/periods/persistence/RegistrationPeriodEntity.java`, `RegistrationPeriodRepository.java` (DB-01–02).
 
 - [ ] T021 [US1] Cài transaction READ COMMITTED và khóa period trước mutation tại `src/main/java/vn/edu/topicregistration/periods/application/PeriodTransactionService.java`; sau chờ đọc lại quyền/giờ/version, không lấy child lock trước period; create period mới xác thực trước insert.
 
@@ -120,7 +120,7 @@ Chờ US1 và T025; T026–T027 song song.
 
 - [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
-- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V2 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
+- [ ] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V3 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
 
 - [ ] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
 
