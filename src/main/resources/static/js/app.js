@@ -22,6 +22,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelectorAll("[data-supervisor-group]").forEach((group) => {
+    const choices = [...group.querySelectorAll("input[type='checkbox']")];
+    const updateChoices = () => {
+      const selectedCount = choices.filter((choice) => choice.checked).length;
+      choices.forEach((choice) => {
+        choice.disabled = selectedCount >= 2 && !choice.checked;
+      });
+    };
+    choices.forEach((choice) => choice.addEventListener("change", updateChoices));
+    updateChoices();
+  });
+
   document.querySelectorAll("[data-period-form]").forEach((form) => {
     const type = form.querySelector("[data-period-type]");
     const conditionalFields = [...form.querySelectorAll("[data-period-conditional]")];
