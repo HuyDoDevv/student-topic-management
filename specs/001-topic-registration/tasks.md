@@ -123,7 +123,7 @@ US1 và T025 đã hoàn tất; T026–T027 có thể thực hiện song song.
 
 - [X] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V4 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
 
-- [ ] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
+- [X] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
 
 - [ ] T030 [US2] Cài controller/DTO tác giả tại `src/main/java/vn/edu/topicregistration/topics/web/TopicAuthorController.java`, `TopicDraftForm.java`; kiểm tra quyền trước truy vấn protected list/detail và bind whitelist, trạng thái do service quyết định.
 

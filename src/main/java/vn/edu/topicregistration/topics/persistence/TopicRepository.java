@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface TopicRepository extends JpaRepository<TopicEntity, Long> {
+    @Query("select topic.period.id from TopicEntity topic where topic.id = :id")
+    Optional<Long> findPeriodIdByTopicId(@Param("id") long id);
+
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "department", "author",
             "supervisors", "supervisors.lecturer"
