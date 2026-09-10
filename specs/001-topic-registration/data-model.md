@@ -13,13 +13,13 @@ thực hiện bằng migration mới.
 | Entity / bảng dự kiến | Trường chính | Quan hệ và ghi chú |
 |---|---|---|
 | Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope của DEAN và của từng đợt đăng ký |
-| Department / departments | id bigint PK, name varchar(255), faculty_id FK | Bộ môn thuộc khoa; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
-| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
+| Department / departments | id bigint PK, name varchar(255), faculty_id FK | Bộ môn thuộc khoa, được seed/import sẵn; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
+| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Tài khoản được seed/import; mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
 | UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
-| Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Bản đề tài thuộc một đợt cho luồng hiện tại. Nếu Q-05 cho tái sử dụng, tách catalog và offering bằng migration trước triển khai phần đó |
-| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc GVHD |
+| Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
+| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc; chỉ thay đổi khi topic DRAFT |
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
 | GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Một tư cách SV/đợt; slot 1–3 chỉ bảo vệ sức chứa |
 | Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | rejected/withdrawn không tái dùng ID khi đăng ký lại; tạo hàng mới; retention còn Q-09 |
@@ -90,13 +90,15 @@ trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không 
 
 | Từ → đến | Actor | Điều kiện |
 |---|---|---|
-| DRAFT → DRAFT | GV tác giả | Chỉ sửa nháp của mình; không suy diễn thêm deadline sửa nháp |
+| DRAFT → DRAFT | GV tác giả | Chỉ sửa nội dung/GVHD của nháp mình tạo; danh mục GVHD lấy từ tài khoản LECTURER đang hoạt động cùng bộ môn |
 | DRAFT → PENDING_APPROVAL | GV tác giả | Trong hạn GV, đủ 5 nội dung, 1–2 GVHD cùng bộ môn |
 | PENDING_APPROVAL → APPROVED | Trưởng khoa | Chỉ đề tài thuộc khoa của trưởng khoa |
 | PENDING_APPROVAL → DRAFT | Trưởng khoa | Từ chối; gửi lại vẫn phải trong hạn GV |
 | APPROVED → PUBLISHED | Trưởng khoa | Công bố; không nhảy qua duyệt |
 
-Không có sửa GV sau DRAFT, hủy công bố hoặc xóa topic trong phạm vi đã chốt.
+Không sửa nội dung hoặc GVHD từ PENDING_APPROVAL trở đi; khi bị từ chối về DRAFT,
+tác giả có thể sửa và gửi lại trong hạn GV. Không có thay GVHD trong quá trình thực hiện,
+hủy công bố hoặc xóa topic trong phạm vi đã chốt.
 Công bố danh sách thể hiện bằng tập đề tài PUBLISHED; granularity công bố cần đối chiếu
 AC nếu yêu cầu công bố toàn danh sách một lần. Contract giữ thao tác tập hợp nguyên tử
 là đề xuất kỹ thuật, không cho công bố DRAFT/PENDING.
@@ -158,7 +160,9 @@ trong khi test không đại diện một luồng quản trị đã chốt.
 
 ## Migration and sample data
 
-V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. V2 thay hai
+V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. Q-05/Q-06
+đã chốt giữ mô hình topic theo đợt và supervisors hiện tại, không cần tách catalog/offering
+hoặc bảng lịch sử thay GVHD. V2 thay hai
 CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. V3 siết hai giai đoạn đăng ký không được
 trùng mốc kết thúc GV/bắt đầu SV. Các quyết định nghiệp vụ còn mở làm thay đổi schema phải
 được đưa vào migration mới sau V3 khi được xác nhận.

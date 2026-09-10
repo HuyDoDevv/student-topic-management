@@ -17,8 +17,8 @@ chứng test; không được hiểu là đạt.
 | FR-02 Tạo bốn loại đợt | REQ-01,04 | AS-1.1,1.4; AT-01; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: bốn loại, persistence, service và web contract |
 | FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.4,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024; kiểm tra bổ sung ngày-only/ngày đã qua trong fix T017 |
 | FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: DB-02, required/null theo loại và chỉ dời muộn hơn |
-| FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | BLOCKED Q-05 | NOT RUN |
-| FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | BLOCKED Q-06 | NOT RUN |
+| FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | CONFIRMED | T025: topic thuộc một đợt, không reuse/copy; danh mục seed/import; tests NOT RUN |
+| FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | CONFIRMED | T025: chỉ tác giả đổi GVHD khi DRAFT, khóa từ PENDING_APPROVAL; tests NOT RUN |
 | FR-07 Duyệt và công bố | REQ-02,08,15 + U | AS-3.1–3.3,5.17–5.18; AT-05,06,12; SC-002–004 | TopicReviewContractTest, TopicPublicationIT | BLOCKED G-Publish | NOT RUN |
 | FR-08 Nhóm và trưởng nhóm | REQ-12–13 + U | AS-4.1–4.2,4.4,4.6–4.14; AT-04,06–08; SC-003–005 | GroupRulesTest, GroupContractTest, GroupMembershipIT | BLOCKED Q-07 | NOT RUN |
 | FR-09 Một nhóm/SV/đợt | REQ-13 + U | AS-4.3,4.5; AT-04,07; SC-003,005 | GroupRulesTest, GroupMembershipIT | CONFIRMED | NOT RUN |
@@ -26,7 +26,7 @@ chứng test; không được hiểu là đạt.
 | FR-11 Chấp nhận một nhóm/đề tài | REQ-16 + U | AS-5.4,5.6–5.8,5.14–5.16; AT-05–08,11; SC-002,005,008 | RegistrationConstraintsIT, RegistrationConcurrencyIT | BLOCKED Q-09 | NOT RUN |
 | FR-12 Từ chối đăng ký | REQ-16 + U | AS-5.5–5.6,5.14–5.16; AT-05,06,11; SC-002,008 | RegistrationContractTest, RegistrationJourneyE2ETest | BLOCKED Q-09 | NOT RUN |
 | FR-13 Rút và đăng ký lại | REQ-03,14–16 + U | AS-5.9–5.13; AT-02,05,07–08; SC-002,003,005 | RegistrationRulesTest, RegistrationConcurrencyIT | BLOCKED Q-09 | NOT RUN |
-| FR-14 Vòng đời đề tài | REQ-02–03,08–11,15,31 + U | AS-2.1–2.3,2.7–2.9,3.1,3.4–3.5; AT-12; SC-002 | TopicReviewRulesTest, TopicPublicationIT | BLOCKED Q-05/Q-06 | NOT RUN |
+| FR-14 Vòng đời đề tài | REQ-02–03,08–11,15,31 + U | AS-2.1–2.3,2.7–2.9,3.1,3.4–3.5; AT-12; SC-002 | TopicReviewRulesTest, TopicPublicationIT | CONFIRMED | T025 giải phóng vòng đời tác giả/GVHD; tests NOT RUN |
 | FR-15 Khóa sửa lịch | REQ-03–05,31 + U | AS-1.11–1.13; AT-13; SC-001,003,005 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024: FOR UPDATE, version, khóa theo thời gian sau chờ và chỉ gia hạn mốc còn hiệu lực |
 | NFR-01 Bảo mật nền tảng | Constitution III,IV,IX + U | AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, WebExceptionHandlerTest, TestDatabaseSafetyTest | CONFIRMED | FOUNDATION PASS 2026-09-10; T023 period contract PASS cho CSRF/role/scope/input/version; route story khác còn NOT RUN |
 | NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; viewport AT-15 chưa chạy |
@@ -38,7 +38,7 @@ chứng test; không được hiểu là đạt.
 | G-Identity / T006 | CONFIRMED | Foundation identity/security T008–T016 đã triển khai; contract theo story chạy ở phase tương ứng |
 | G-Acceptance / T007 | CONFIRMED | Không còn; các hàng phụ thuộc Q khác vẫn BLOCKED |
 | G-Period / T017 | PASS | Q-02 đã giải quyết; US1 T018–T024 đã triển khai và nghiệm thu |
-| G-Topic / T025 | BLOCKED | Q-05, Q-06 |
+| G-Topic / T025 | CONFIRMED | Q-05/Q-06 đã giải quyết ngày 2026-09-10; US2 T026–T032 được phép triển khai |
 | G-Publish / T033 | BLOCKED | Granularity và thời điểm xử lý |
 | G-Group / T039 | BLOCKED | Q-07 |
 | G-Registration / T047 | BLOCKED | Q-09 |
