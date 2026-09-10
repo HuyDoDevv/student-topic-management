@@ -3,24 +3,121 @@
 <body>
 <section>
   <div class="page-header">
-    <div><div class="page-pretitle">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${editing} ? 'Sửa lịch đợt đăng ký' : 'Tạo đợt đăng ký'">Tạo đợt đăng ký</h1><p class="text-secondary mt-2 mb-0">Bốn mốc thời gian quyết định khi giảng viên và sinh viên được thao tác.</p></div>
-  </div>
-  <form class="card content-form" method="post" data-prevent-double-submit
-        th:action="${editing} ? @{/periods/{id}/schedule(id=${period.id})} : @{/periods}">
-    <div class="card-body">
-      <div th:if="${formError}" th:replace="~{fragments/feedback :: error(${formError})}"></div>
-      <div class="row g-3">
-        <div class="col-md-8"><label class="form-label required" for="period-name">Tên đợt</label><input class="form-control" id="period-name" name="name" required th:value="${period?.name}" placeholder="Ví dụ: Đồ án chuyên ngành HK1 2026–2027"></div>
-        <div class="col-md-4"><label class="form-label required" for="topic-type">Loại đề tài</label><select class="form-select" id="topic-type" name="type" required><option value="">Chọn loại</option><option value="COURSE">Đồ án môn học</option><option value="SPECIALIZED">Đồ án chuyên ngành</option><option value="GRADUATION">Khóa luận tốt nghiệp</option><option value="RESEARCH">Nghiên cứu khoa học</option></select></div>
-      </div>
-      <hr class="my-4">
-      <h2 class="h3">Thời gian giảng viên đề xuất đề tài</h2>
-      <div class="row g-3 mb-4"><div class="col-md-6"><label class="form-label required" for="lecturer-start">Bắt đầu</label><input class="form-control" id="lecturer-start" name="lecturerStart" type="datetime-local" required></div><div class="col-md-6"><label class="form-label required" for="lecturer-end">Kết thúc</label><input class="form-control" id="lecturer-end" name="lecturerEnd" type="datetime-local" required></div></div>
-      <h2 class="h3">Thời gian sinh viên đăng ký</h2>
-      <div class="row g-3"><div class="col-md-6"><label class="form-label required" for="student-start">Bắt đầu</label><input class="form-control" id="student-start" name="studentStart" type="datetime-local" required></div><div class="col-md-6"><label class="form-label required" for="student-end">Kết thúc</label><input class="form-control" id="student-end" name="studentEnd" type="datetime-local" required></div></div>
-      <input th:if="${editing}" type="hidden" name="version" value="0">
+    <div>
+      <div class="page-pretitle">ĐỢT ĐĂNG KÝ</div>
+      <h1 class="page-title" th:text="${editing ? 'Sửa cấu hình đợt đăng ký' : 'Tạo đợt đăng ký'}">Tạo đợt đăng ký</h1>
+      <p class="text-secondary mt-2 mb-0">Thời gian được nhập theo múi giờ Việt Nam. Mốc bắt đầu được tính, mốc kết thúc không được tính.</p>
     </div>
-    <div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-ghost-secondary" th:href="@{/periods}">Hủy</a><button class="btn btn-primary" type="submit" th:text="${editing} ? 'Lưu lịch' : 'Tạo đợt'">Tạo đợt</button></div>
+  </div>
+
+  <form class="card content-form" method="post" data-prevent-double-submit data-period-form
+        th:object="${form}" th:action="${editing ? '/periods/' + period.id : '/periods'}">
+    <div class="card-body">
+      <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary
+           th:if="${#fields.hasAnyErrors()}">
+        <strong>Chưa thể lưu đợt đăng ký.</strong>
+        <ul class="mb-0 mt-2" th:if="${#fields.hasGlobalErrors()}">
+          <li th:each="error : ${#fields.globalErrors()}" th:text="${error}">Lịch chưa hợp lệ.</li>
+        </ul>
+        <span th:unless="${#fields.hasGlobalErrors()}">Vui lòng kiểm tra các trường được đánh dấu.</span>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label required" for="period-name">Tên đợt</label>
+          <input class="form-control" id="period-name" th:field="*{name}" th:errorclass="is-invalid"
+                 th:readonly="${locks.base}" maxlength="255" required
+                 placeholder="Ví dụ: Đồ án môn học HK1 2026–2027">
+          <div class="invalid-feedback" th:errors="*{name}">Tên đợt chưa hợp lệ.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label required" for="topic-type">Loại đề tài</label>
+          <select class="form-select" id="topic-type" th:field="*{topicType}" th:errorclass="is-invalid"
+                  th:disabled="${locks.base}" data-period-type required>
+            <option value="">Chọn loại</option>
+            <option value="COURSE">Đồ án môn học</option>
+            <option value="NCKH">Nghiên cứu khoa học</option>
+            <option value="TLCN">Tiểu luận chuyên ngành</option>
+            <option value="KLTN">Khóa luận tốt nghiệp</option>
+          </select>
+          <input th:if="${locks.base}" type="hidden" name="topicType" th:value="*{topicType}">
+          <div class="invalid-feedback" th:errors="*{topicType}">Loại đề tài chưa hợp lệ.</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info mt-4 mb-0" th:if="${editing and locks.base}">
+        Tên, loại và các mốc bắt đầu đã khóa vì đợt đã mở cho giảng viên. Chỉ mốc kết thúc còn hiệu lực mới được kéo dài.
+      </div>
+
+      <hr class="my-4">
+      <fieldset>
+        <legend class="h3">Thời gian giảng viên đề xuất đề tài</legend>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label required" for="lecturer-start">Bắt đầu</label>
+            <input class="form-control" id="lecturer-start" type="datetime-local" th:field="*{lecturerStart}"
+                   th:errorclass="is-invalid" th:readonly="${locks.base}" required>
+            <div class="invalid-feedback" th:errors="*{lecturerStart}">Thời điểm chưa hợp lệ.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required" for="lecturer-end">Kết thúc</label>
+            <input class="form-control" id="lecturer-end" type="datetime-local" th:field="*{lecturerEnd}"
+                   th:errorclass="is-invalid" th:readonly="${locks.lecturerEnd}" required>
+            <div class="invalid-feedback" th:errors="*{lecturerEnd}">Thời điểm chưa hợp lệ.</div>
+            <div class="form-hint" th:if="${editing and !locks.lecturerEnd}">Chỉ được dời sang thời điểm muộn hơn.</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="mt-4">
+        <legend class="h3">Thời gian sinh viên đăng ký</legend>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label required" for="student-start">Bắt đầu</label>
+            <input class="form-control" id="student-start" type="datetime-local" th:field="*{studentStart}"
+                   th:errorclass="is-invalid" th:readonly="${locks.base}" required>
+            <div class="invalid-feedback" th:errors="*{studentStart}">Thời điểm chưa hợp lệ.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label required" for="student-end">Kết thúc</label>
+            <input class="form-control" id="student-end" type="datetime-local" th:field="*{studentEnd}"
+                   th:errorclass="is-invalid" th:readonly="${locks.studentEnd}" required>
+            <div class="invalid-feedback" th:errors="*{studentEnd}">Thời điểm chưa hợp lệ.</div>
+            <div class="form-hint" th:if="${editing and !locks.studentEnd}">Chỉ được dời sang thời điểm muộn hơn.</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="mt-4">
+        <legend class="h3">Các mốc theo loại đề tài</legend>
+        <p class="text-secondary small">TLCN và KLTN cần hạn nộp điểm GVPB; riêng KLTN cần thêm ngày báo cáo hội đồng.</p>
+        <div class="row g-3">
+          <div class="col-md-6" data-period-conditional="TLCN,KLTN">
+            <label class="form-label" for="reviewer-score-deadline">Hạn nộp điểm GVPB</label>
+            <input class="form-control" id="reviewer-score-deadline" type="date"
+                   th:field="*{reviewerScoreDeadline}" th:errorclass="is-invalid"
+                   th:readonly="${locks.reviewerScoreDeadline}"
+                   th:attr="data-locked=${locks.reviewerScoreDeadline}">
+            <div class="invalid-feedback" th:errors="*{reviewerScoreDeadline}">Ngày chưa hợp lệ.</div>
+          </div>
+          <div class="col-md-6" data-period-conditional="KLTN">
+            <label class="form-label" for="council-report-date">Ngày báo cáo hội đồng</label>
+            <input class="form-control" id="council-report-date" type="date"
+                   th:field="*{councilReportDate}" th:errorclass="is-invalid"
+                   th:readonly="${locks.councilReportDate}"
+                   th:attr="data-locked=${locks.councilReportDate}">
+            <div class="invalid-feedback" th:errors="*{councilReportDate}">Ngày chưa hợp lệ.</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <input th:if="${editing}" type="hidden" th:field="*{version}">
+      <div class="text-danger small mt-3" th:errors="*{version}">Phiên bản chưa hợp lệ.</div>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <a class="btn btn-ghost-secondary" th:href="${editing ? '/periods/' + period.id : '/periods'}">Hủy</a>
+      <button class="btn btn-primary" type="submit" th:text="${editing ? 'Lưu thay đổi' : 'Tạo đợt'}">Tạo đợt</button>
+    </div>
   </form>
 </section>
 </body>

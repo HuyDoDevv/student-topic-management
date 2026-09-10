@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentit
 import vn.edu.topicregistration.shared.time.TimeConfig;
 
 @Service
+@Profile("!preview")
 public class PeriodService {
     private final PeriodTransactionService transactions;
     private final RegistrationPeriodRepository periods;

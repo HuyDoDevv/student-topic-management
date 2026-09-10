@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 import jakarta.persistence.EntityManager;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
 import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
+@Profile("!preview")
 public class PeriodTransactionService {
     private final RegistrationPeriodRepository periods;
     private final AuthorizationPolicy authorization;

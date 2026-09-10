@@ -108,15 +108,14 @@ class PeriodContractTest {
 
     @Test
     void conditionalDatesAndScheduleValidationRejectTheWholeCreate() throws Exception {
-        mvc.perform(validCreateRequest("KLTN")
+        mvc.perform(baseCreateRequest("KLTN")
                         .param("reviewerScoreDeadline", "2026-09-20")
                         .with(user("dean").roles("LECTURER", "DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
-        mvc.perform(validCreateRequest("COURSE")
-                        .param("studentStart", "2026-09-10T09:30")
+        mvc.perform(baseCreateRequest("COURSE", "2026-09-10T09:30")
                         .with(user("dean").roles("LECTURER", "DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
@@ -193,13 +192,7 @@ class PeriodContractTest {
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
             validCreateRequest(String topicType) {
-        var request = post("/periods")
-                .param("name", "Đợt HK1")
-                .param("topicType", topicType)
-                .param("lecturerStart", "2026-09-10T08:00")
-                .param("lecturerEnd", "2026-09-10T10:00")
-                .param("studentStart", "2026-09-10T11:00")
-                .param("studentEnd", "2026-09-10T13:00");
+        var request = baseCreateRequest(topicType);
         if ("TLCN".equals(topicType) || "KLTN".equals(topicType)) {
             request.param("reviewerScoreDeadline", "2026-09-20");
         }
@@ -207,6 +200,22 @@ class PeriodContractTest {
             request.param("councilReportDate", "2026-09-25");
         }
         return request;
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            baseCreateRequest(String topicType) {
+        return baseCreateRequest(topicType, "2026-09-10T11:00");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+            baseCreateRequest(String topicType, String studentStart) {
+        return post("/periods")
+                .param("name", "Đợt HK1")
+                .param("topicType", topicType)
+                .param("lecturerStart", "2026-09-10T08:00")
+                .param("lecturerEnd", "2026-09-10T10:00")
+                .param("studentStart", studentStart)
+                .param("studentEnd", "2026-09-10T13:00");
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

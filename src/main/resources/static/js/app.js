@@ -22,6 +22,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelectorAll("[data-period-form]").forEach((form) => {
+    const type = form.querySelector("[data-period-type]");
+    const conditionalFields = [...form.querySelectorAll("[data-period-conditional]")];
+    const updateConditionalFields = () => {
+      const selected = type?.value ?? "";
+      conditionalFields.forEach((container) => {
+        const applies = container.dataset.periodConditional.split(",").includes(selected);
+        const input = container.querySelector("input");
+        container.hidden = !applies;
+        if (input && input.dataset.locked !== "true") input.disabled = !applies;
+      });
+    };
+    type?.addEventListener("change", updateConditionalFields);
+    updateConditionalFields();
+  });
+
   const search = document.querySelector("[data-table-filter]");
   const status = document.querySelector("[data-status-filter]");
   const rows = [...document.querySelectorAll("[data-filter-table] tbody tr")];
