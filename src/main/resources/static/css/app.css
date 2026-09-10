@@ -72,6 +72,25 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .header-mobile-context { display: none; color: #384454; font-weight: 700; }
 .header-actions { margin-left: auto; }
 .notification-menu { width: min(20rem, calc(100vw - 2rem)); }
+.app-header .header-ghost-button:hover,
+.app-header .header-ghost-button:focus,
+.app-header .header-ghost-button[aria-expanded="true"] {
+  border-color: rgba(6, 111, 209, .08);
+  background: #edf7fb;
+  color: #24455e;
+  box-shadow: inset 0 0 0 1px rgba(6, 111, 209, .08);
+}
+.app-header .account-menu-trigger:hover .text-secondary,
+.app-header .account-menu-trigger:focus .text-secondary,
+.app-header .account-menu-trigger[aria-expanded="true"] .text-secondary {
+  color: #5d6f7e !important;
+}
+.app-header .account-menu-trigger:hover .avatar,
+.app-header .account-menu-trigger:focus .avatar,
+.app-header .account-menu-trigger[aria-expanded="true"] .avatar {
+  background: #dceeff !important;
+  color: #1769aa !important;
+}
 
 /* Page heading and actions */
 .page-wrapper .page-header {

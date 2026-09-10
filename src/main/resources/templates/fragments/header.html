@@ -12,7 +12,7 @@
     <div class="header-actions d-flex align-items-center gap-3">
       <span class="badge bg-teal-lt d-none d-sm-inline-flex">Cổng học vụ</span>
       <div class="dropdown">
-        <button class="btn btn-icon btn-ghost-secondary" type="button" data-bs-toggle="dropdown"
+        <button class="btn btn-icon btn-ghost-secondary header-ghost-button" type="button" data-bs-toggle="dropdown"
                 aria-expanded="false" aria-label="Xem thông báo">
           <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -25,7 +25,7 @@
         </div>
       </div>
       <div class="dropdown">
-        <button class="btn btn-ghost-secondary d-flex align-items-center gap-2" type="button"
+        <button class="btn btn-ghost-secondary header-ghost-button account-menu-trigger d-flex align-items-center gap-2" type="button"
                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mở menu tài khoản">
           <span class="avatar avatar-sm bg-blue-lt" th:text="${currentUserInitials ?: 'ND'}">ND</span>
           <span class="d-none d-md-block text-start">
