@@ -75,7 +75,7 @@ public class UiPreviewController {
         return "auth/login";
     }
 
-    @GetMapping("/dashboard")
+    @GetMapping({"/", "/dashboard"})
     String dashboard(Model model) {
         common(model, "dashboard", "Không gian làm việc");
         model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE).format(
@@ -130,6 +130,13 @@ public class UiPreviewController {
         model.addAttribute("period", PERIODS.getFirst());
         model.addAttribute("topics", TOPICS);
         return "topics/list";
+    }
+
+    @GetMapping("/topics")
+    String topicPeriods(Model model) {
+        common(model, "topics", "Đề tài");
+        model.addAttribute("periods", PERIODS);
+        return "topics/period-selection";
     }
 
     @GetMapping("/periods/{periodId}/topics/new")
@@ -223,6 +230,9 @@ public class UiPreviewController {
         model.addAttribute("currentUserName", "Nguyễn Văn An");
         model.addAttribute("currentRoleLabel", "Chế độ xem trước");
         model.addAttribute("currentUserInitials", "NA");
+        model.addAttribute("canManagePeriods", true);
+        model.addAttribute("canAuthorTopics", true);
+        model.addAttribute("previewMode", true);
     }
 
     private PeriodForm previewPeriodForm() {

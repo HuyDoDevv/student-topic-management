@@ -48,6 +48,13 @@ public class TopicAuthorController {
                 "version");
     }
 
+    @GetMapping("/topics")
+    String periods(Model model) {
+        common(model);
+        model.addAttribute("periods", topics.listPeriodsForAuthor());
+        return "topics/period-selection";
+    }
+
     @GetMapping("/periods/{periodId}/topics")
     String list(@PathVariable long periodId, Model model) {
         TopicWorkspace workspace = topics.listOwnForPeriod(periodId);

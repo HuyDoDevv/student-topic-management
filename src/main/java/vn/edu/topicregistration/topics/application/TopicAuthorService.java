@@ -127,6 +127,21 @@ public class TopicAuthorService {
     }
 
     @Transactional(readOnly = true)
+    public List<TopicPeriodView> listPeriodsForAuthor() {
+        ActorIdentity actor = currentLecturer();
+        Instant now = clock.instant();
+        return periods.findAllByFacultyIdOrderByLecturerStartDesc(actor.facultyId()).stream()
+                .map(period -> new TopicPeriodView(
+                        period.getId(),
+                        period.getName(),
+                        period.getLecturerStart(),
+                        period.getLecturerEnd(),
+                        !now.isBefore(period.getLecturerStart())
+                                && !now.isAfter(period.getLecturerEnd())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public TopicView getOwn(long topicId) {
         ActorIdentity actor = currentLecturer();
         TopicEntity topic = topics

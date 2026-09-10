@@ -3,6 +3,7 @@ package vn.edu.topicregistration.shared.web;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import vn.edu.topicregistration.shared.time.ProjectTime;
 
 @Controller
+@Profile("!preview")
 public class FoundationController {
     private final ProjectTime projectTime;
 
@@ -17,7 +19,7 @@ public class FoundationController {
         this.projectTime = projectTime;
     }
 
-    @GetMapping("/")
+    @GetMapping({"/", "/dashboard"})
     String home(Model model) {
         model.addAttribute("today", projectTime.toBusinessTime(projectTime.now()).toLocalDate().format(
                 DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))));
