@@ -81,9 +81,11 @@ không có reuse/copy; bộ môn và tài khoản GV được seed/import, form 
 đang hoạt động cùng bộ môn. Chỉ tác giả thay đổi nội dung/GVHD khi DRAFT; dữ liệu bị khóa
 từ PENDING_APPROVAL và không có chức năng thay GVHD trong quá trình thực hiện.
 
-G-Group/Q-07 đã được giải quyết ngày 2026-09-11: chỉ tạo nhóm trong hạn SV; không có nhóm
-nháp hoặc thao tác tự rời/chuyển. Chuyển nhóm đi qua leader cũ xóa rồi leader mới thêm;
-leader muốn rời phải chuyển quyền cho thành viên hiện có trước.
+G-Group/Q-07 được thay đổi và chốt lại ngày 2026-09-11: chỉ tạo/sửa nhóm trong hạn SV và
+khi không có đăng ký PENDING/ACCEPTED. Leader gửi lời mời giữ chỗ; SV chỉ thành thành viên
+sau khi chấp nhận, mỗi SV tối đa một lời mời PENDING/đợt. Thành viên thường được tự rời;
+leader có thành viên khác phải chuyển quyền trước, leader một người được giải tán nhóm.
+Nhóm còn lời mời PENDING chưa được gửi đăng ký đề tài.
 
 Việc người dùng bỏ qua clarify không xác nhận bất kỳ phương án nghiệp vụ nào.
 Hạn xử lý duyệt/công bố và quyết định của trưởng khoa chưa được quy định riêng:
@@ -151,7 +153,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 1 | Build, cấu hình local, migration cơ sở, Tabler layout, session login | FR-01; REQ-28,31–32; constitution V,VII,IX | AT-09–10; asset portability |
 | 2 | Đợt và thời gian, khóa cấu hình | FR-02–04,15; REQ-01–07,31 | AT-01–02,13; G-Period đã giải phóng |
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
-| 4 | Nhóm, thành viên, chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã giải phóng |
+| 4 | Nhóm, lời mời có xác nhận, thành viên, tự rời/giải tán và chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã chốt lại ngày 2026-09-11 |
 | 5 | Gửi/rút/đăng ký lại, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-05–08,11; Q-09/18 gate |
 | 6 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 

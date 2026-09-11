@@ -33,7 +33,7 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | G-Period | T017 | Đã giải phóng: ngày bắt buộc/null theo loại, độ chính xác DATE, đổi loại, gia hạn mốc đăng ký và ngày phụ đã chốt |
 | G-Topic | T025 | Đã giải phóng: mỗi topic thuộc một đợt, không reuse/copy; danh mục seed/import; chỉ tác giả đổi GVHD khi DRAFT, không thay trong quá trình thực hiện |
 | G-Publish | T033 | Chốt granularity công bố và chính sách thời hạn cho quyết định dean nếu có |
-| G-Group | T039 | Đã giải phóng: chỉ tạo trong hạn SV; không tự rời/chuyển, leader cũ xóa rồi leader mới thêm |
+| G-Group | T039,T065 | Đã chốt lại: lời mời cần xác nhận và giữ chỗ; tự rời/giải tán; chặn đăng ký khi còn lời mời PENDING |
 | G-Registration | T047 | Q-09: reason thủ công, ưu tiên rút/accept, lưu lịch sử |
 | G-Acceptance | T007 | Đã giải phóng: AS/SC hiện tại được chấp nhận; kiểm tra bảo mật, responsive và xung đột chính; phiên bản local không có SLA định lượng |
 
@@ -154,17 +154,18 @@ Chờ US2/T033; T034–T035 song song.
 
 ## Phase 6: US4 — Quản lý nhóm và trưởng nhóm (P1)
 
-**Goal:** nhóm 1–3 SV, một leader; sửa đúng quyền và thời gian.
-**Independent test:** fixture SV/đợt; tạo/thêm/xóa/chuyển leader, trùng SV cùng đợt và khác
-đợt, denied người ngoài. Việc freeze bằng đăng ký thật được tích hợp US5.
-**Trace:** FR-08–09; REQ-12–13,31; AS-4.1–4.14; AT-04,06–08.
+**Goal:** nhóm 1–3 SV, một leader; lời mời có xác nhận; tự rời/giải tán và sửa đúng quyền/thời gian.
+**Independent test:** fixture SV/đợt; tạo/mời/chấp nhận/từ chối/hủy, xóa/tự rời/giải tán,
+chuyển leader, trùng SV cùng đợt và khác đợt, denied người ngoài. Việc freeze bằng đăng ký
+thật được tích hợp US5.
+**Trace:** FR-08–09; REQ-12–13,31; AS-4.1–4.15; AT-04,06–08.
 Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sau các gate.
 
 - [X] T039 [US4] Giải quyết G-Group/Q-07 trong `specs/001-topic-registration/spec.md`: thời điểm tạo nhóm và phạm vi tự rời/chuyển; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md` và task nếu phạm vi đổi, không suy ra lịch tạo từ lịch sửa.
 
-- [ ] T040 [P] [US4] Viết unit test 1–3 thành viên, duy nhất leader thuộc nhóm, chuyển cho thành viên, chỉ sửa trong hạn và không active tại `src/test/java/vn/edu/topicregistration/unit/GroupRulesTest.java` (AS-4.*, AT-04).
+- [ ] T040 [P] [US4] Viết unit test sức chứa gồm membership + invitation PENDING, accept/reject/cancel, tự rời/giải tán, duy nhất leader, chỉ sửa trong hạn và không active tại `src/test/java/vn/edu/topicregistration/unit/GroupRulesTest.java` (AS-4.*, AT-04).
 
-- [ ] T041 [P] [US4] Viết contract test nhóm create/read/add/remove/leader với role/scope, leader cũ/người ngoài, thêm trực tiếp không invitation và không ghi khi denied tại `src/test/java/vn/edu/topicregistration/web/GroupContractTest.java` (AT-06,09).
+- [ ] T041 [P] [US4] Viết contract test nhóm create/read/invite/accept/reject/cancel/remove/leave/dissolve/leader với role/scope, invitee/leader cũ/người ngoài và không ghi khi denied tại `src/test/java/vn/edu/topicregistration/web/GroupContractTest.java` (AT-06,09).
 
 - [X] T042 [US4] Đối chiếu group schema DB-05–07 trong `src/main/resources/db/migration/V1__full_system.sql`, slot 1–3, UNIQUE SV/đợt và trigger tự tạo membership trưởng nhóm; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/groups/persistence/StudentGroupEntity.java`, `GroupMembershipEntity.java`, `StudentGroupRepository.java`; backend không insert lặp leader membership.
 
@@ -172,7 +173,15 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [X] T044 [US4] Cài routes/form nhóm tại `src/main/java/vn/edu/topicregistration/groups/web/GroupController.java`, `GroupMemberForm.java`; tạo `src/main/resources/templates/groups/detail.html`, `form.html` và kiểm soát trường SV được phép xem theo T006.
 
-- [ ] T045 [US4] Viết MySQL race thêm người thứ tư, cùng SV vào hai nhóm, chuyển leader đồng thời sửa tại `src/test/java/vn/edu/topicregistration/concurrency/GroupMembershipIT.java`; kiểm tra trigger giữ leader và unique key (AT-04,07–08).
+- [X] T065 [US4] Ghi thay đổi Q-07 ngày 2026-09-11 trong `spec.md`: leader gửi lời mời giữ chỗ, SV accept/reject, member tự rời, leader một người giải tán và chặn đăng ký khi còn PENDING; đồng bộ `data-model.md`, `contracts/web.md`, `plan.md`, `acceptance-matrix.md`, `quickstart.md`, `research.md`, checklist và tasks.
+
+- [ ] T066 [US4] Tạo migration Flyway mới cho `group_invitations` với status/audit/slot/version, generated guards một PENDING/SV/đợt và một PENDING/slot/nhóm; thêm `student_groups.dissolved_at`, điều chỉnh trigger leader cho soft dissolve; tạo `GroupInvitationEntity.java`, `GroupInvitationRepository.java`, không sửa V1 đã chia sẻ.
+
+- [ ] T067 [US4] Thay thêm trực tiếp bằng invite/accept/reject/cancel trong group application/domain; giữ chỗ theo tổng membership + PENDING dưới khóa period, cài tự rời và giải tán theo T065, hiển thị hết hiệu lực theo clock và cung cấp truy vấn lời mời của chính SV.
+
+- [ ] T068 [US4] Đổi group controller/form/templates sang routes invitation, màn hình lời mời đến và các thao tác accept/reject/cancel/leave/dissolve responsive; bỏ POST thêm trực tiếp và chỉ hiển thị dữ liệu theo policy T006.
+
+- [ ] T045 [US4] Viết MySQL race lời mời/accept khi còn một chỗ, hai nhóm mời cùng SV, accept đồng thời rời/chuyển leader tại `src/test/java/vn/edu/topicregistration/concurrency/GroupMembershipIT.java`; kiểm tra trigger leader và DB-05/DB-11 (AT-04,07–08).
 
 - [ ] T046 [US4] Chạy test US4 bằng fixture active/inactive, ghi phần freeze cần adapter thật T054 và E2E US5 vào `specs/001-topic-registration/acceptance-matrix.md`; không tuyên bố US4 tích hợp hoàn tất trước T054/T057.
 
@@ -182,8 +191,8 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 **Independent test:** seed nhóm hợp lệ/topic công bố/đợt; chạy cả accept/reject/withdraw,
 nhiều pending cùng topic và các race; không phụ thuộc thao tác UI tạo fixture.
 **Trace:** FR-10–13 và tích hợp FR-01,03,07–09; REQ-03,12–16,31–32;
-AS-5.1–5.18, AS-3.2, AS-4.9–4.14; AT-02,04–11.
-Chờ US3, các task US4 T039–T046 và T047; T048–T050 song song.
+AS-5.1–5.18, AS-3.2, AS-4.9–4.15; AT-02,04–11.
+Chờ US3, các task US4 T039–T046/T065–T068 và T047; T048–T050 song song.
 
 - [ ] T047 [US5] Giải quyết G-Registration/Q-09 cùng khách hàng: reason thủ công, ưu tiên rút/accept, retention trong `specs/001-topic-registration/spec.md`; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md`; nếu ưu tiên không thể bảo đảm bằng khóa period hiện tại, sửa protocol plan trước code.
 
@@ -195,7 +204,7 @@ Chờ US3, các task US4 T039–T046 và T047; T048–T050 song song.
 
 - [ ] T051 [US5] Đối chiếu registrations trong `src/main/resources/db/migration/V1__full_system.sql` theo T047 với generated-column unique DB-08–09 và trạng thái/reason DB-10; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/registrations/persistence/RegistrationEntity.java`, `RegistrationRepository.java`; không UNIQUE group/topic trên toàn lịch sử.
 
-- [ ] T052 [US5] Cài gửi/rút/đăng ký lại tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationService.java`, `registrations/domain/RegistrationRules.java`; khóa period rồi đọc lại leader, giờ, nhóm, publication, topic accepted, active; tạo ID mới khi reapply, không rút ACCEPTED.
+- [ ] T052 [US5] Cài gửi/rút/đăng ký lại tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationService.java`, `registrations/domain/RegistrationRules.java`; khóa period rồi đọc lại leader, giờ, nhóm, publication, topic accepted, active và từ chối gửi khi còn group invitation PENDING; tạo ID mới khi reapply, không rút ACCEPTED.
 
 - [ ] T053 [US5] Cài dean accept/reject tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationDecisionService.java`; cùng transaction accept một và reject mọi PENDING khác đúng lý do “Đề tài đã nhận nhóm”, không đổi hàng đã rút/reject; rollback toàn bộ nếu lỗi và xử lý ưu tiên theo T047.
 
@@ -262,7 +271,7 @@ flowchart TD
 | US1 | T018 PeriodRulesTest + T019 PeriodContractTest | Sau foundation và T017 |
 | US2 | T026 TopicRulesTest + T027 TopicAuthorContractTest | Sau US1 và T025 |
 | US3 | T034 TopicReviewRulesTest + T035 TopicReviewContractTest | Sau US2 và T033 |
-| US4 | T040 GroupRulesTest + T041 GroupContractTest | Sau US1 và T039; dùng fixture port |
+| US4 | T040 GroupRulesTest + T041 GroupContractTest | Sau T065–T068; dùng fixture port |
 | US5 | T048 RegistrationRulesTest + T049 RegistrationContractTest + T050 RegistrationConstraintsIT | Sau US3, US4 component và T047 |
 
 Đây là khả năng phân công khi triển khai sau này, không yêu cầu chạy agent hoặc thực thi
@@ -283,8 +292,8 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 | FR-05 | T025–T032 | REQ-08–09; AT-03,12 |
 | FR-06 | T025–T032 | REQ-10–11 phần GVHD; AT-03 |
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
-| FR-08 | T039–T046,T054,T057–T058 | REQ-12–13; AT-04,06–08 |
-| FR-09 | T040–T046,T050,T057 | REQ-13; AT-04,07 |
+| FR-08 | T039–T046,T054,T057–T058,T065–T068 | REQ-12–13; AT-04,06–08 |
+| FR-09 | T040–T046,T050,T057,T065–T068 | REQ-13; AT-04,07 |
 | FR-10 | T047–T058 | REQ-03,14–15; AT-05–08,11 |
 | FR-11 | T047–T058 | REQ-16 + U Q-10; AT-05–08,11 |
 | FR-12 | T047–T058 | U nhánh từ chối, liên quan REQ-16; AT-05–06,11 |
@@ -323,5 +332,5 @@ cách gọi `$speckit-implement`.
 
 ## Generation summary
 
-64 tasks: setup 5; foundation 11; US1 8; US2 8; US3 6; US4 8; US5 12; final 6.
+68 tasks: setup 5; foundation 11; US1 8; US2 8; US3 6; US4 12; US5 12; final 6.
 Tất cả user stories P1 như spec. 16 task có [P], chỉ trong nhóm dependency đã mô tả.

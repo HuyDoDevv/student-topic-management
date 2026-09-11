@@ -19,20 +19,22 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; scope B | 07,14 |
 | Công bố | DEAN | APPROVED; scope B | 07,14 |
 | Tạo nhóm | STUDENT người tạo | Trong hạn SV; trở thành leader, chưa nhóm khác cùng đợt | 08–09 |
-| Thêm/xóa thành viên | STUDENT leader hiện tại của đúng nhóm | Hạn SV, không active, 1–3 thành viên, một leader | 08–09 |
+| Gửi/hủy lời mời | STUDENT leader hiện tại của đúng nhóm | Hạn SV, không active; tổng thành viên + PENDING tối đa 3; ứng viên cùng khoa, chưa có nhóm/lời mời PENDING trong đợt | 08–09 |
+| Chấp nhận/từ chối lời mời | STUDENT được mời | Chấp nhận trong hạn SV và nhóm không active; từ chối bất cứ lúc nào; chỉ accept mới tạo membership | 08–09 |
+| Xóa/tự rời/giải tán | Leader xóa thành viên thường; chính thành viên tự rời; leader nhóm một người giải tán | Rời/giải tán trong hạn SV, không active; leader có thành viên khác phải chuyển quyền trước | 08–09 |
 | Chuyển leader | Leader hiện tại | Người nhận đã là thành viên; hạn SV, không active | 08 |
-| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt, chưa accepted, không active; scope SV B | 10,13 |
+| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt, chưa accepted, không active, không còn invitation PENDING; scope SV B | 10,13 |
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
 | Chấp nhận/từ chối registration | DEAN | PENDING, scope B; auto-reject khi accept | 11–12 |
 | Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
 | Xử lý nội dung vi phạm | ADMIN | Có lý do; ẩn mềm nội dung, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung | 01 |
 
 Với từng dòng, người không có role/quan hệ phải bị từ chối: GVHD không tự có quyền
-duyệt/accept; thành viên thường không gửi/rút/sửa; leader nhóm khác không thao tác nhóm này;
-leader cũ mất quyền sau chuyển. Kiểm tra cả truy vấn danh sách và chi tiết, không chỉ POST.
-Thành viên không tự rời/chuyển nhóm. Muốn chuyển, leader nhóm cũ xóa thành viên trước khi
-leader nhóm mới thêm; leader muốn rời phải chuyển quyền cho thành viên hiện có rồi mới được
-leader mới xóa. Không có thao tác làm nhóm trở thành rỗng.
+duyệt/accept; thành viên thường không gửi/rút hoặc quản lý người khác; leader nhóm khác không
+thao tác nhóm này; leader cũ mất quyền sau chuyển. Kiểm tra cả truy vấn danh sách và chi tiết,
+không chỉ POST. Thành viên thường chỉ được tự rời chính nhóm mình. Leader có thành viên khác
+phải chuyển quyền trước khi rời; leader nhóm một người dùng thao tác giải tán. Không tự chọn
+leader thay thế và không để lại nhóm rỗng.
 ADMIN chỉ xử lý khẩn cấp khi có nội dung do kẻ gian đăng: ẩn nội dung khỏi website nhưng
 giữ dữ liệu, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung. ADMIN không được
 sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý role/khoa/bộ môn hoặc chuyển
@@ -64,9 +66,15 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /periods/{id}/topics/publish | topicIds,versions | Đề xuất tập APPROVED → PUBLISHED nguyên tử; chốt granularity trong AC | 07,14 |
 | POST /periods/{id}/groups | CSRF | Trong hạn SV; nhóm mới, người tạo là leader và thành viên đầu tiên | 08–09 |
 | GET /groups/{id} | — | Chi tiết nhóm; chỉ trường policy cho phép | 01,08 |
-| POST /groups/{id}/members | studentId,version | Thêm trực tiếp, không invitation | 08–09 |
+| GET /group-invitations | — | SV chỉ thấy lời mời gửi cho chính mình; PENDING sau hạn hiển thị hết hiệu lực | 01,08 |
+| POST /groups/{id}/invitations | studentId,version | Leader gửi lời mời giữ slot; chưa tạo membership | 08–09 |
+| POST /group-invitations/{id}/accept | version | Chỉ SV được mời; PENDING → ACCEPTED và tạo membership nguyên tử | 08–09 |
+| POST /group-invitations/{id}/reject | version | Chỉ SV được mời; PENDING → REJECTED, được phép cả sau hạn | 08–09 |
+| POST /group-invitations/{id}/cancel | version | Chỉ leader đúng nhóm; PENDING → CANCELLED trong hạn SV, không active | 08–09 |
 | POST /groups/{id}/members/{studentId}/remove | version | Xóa thành viên, giữ leader hợp lệ và tối thiểu 1 | 08 |
 | POST /groups/{id}/leader | studentId,version | Chuyển cho thành viên hiện hữu | 08 |
+| POST /groups/{id}/leave | version | Thành viên thường tự rời chính nhóm trong hạn SV, không active | 08–09 |
+| POST /groups/{id}/dissolve | version | Chỉ leader nhóm một người; giải tán mềm trong hạn SV, không active; giữ lịch sử và loại khỏi nhóm đang hoạt động | 08–09 |
 | POST /groups/{id}/registrations | topicId,version | Tạo PENDING mới | 10,13 |
 | GET /registrations/{id} | — | Trạng thái/kết quả theo policy | 01,10–13 |
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
@@ -74,8 +82,9 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/reject | reason,version | REJECTED; required reason Q-09 | 12 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
-Không có GET gây mutation. Không route tự rời/chuyển nhóm hoặc xóa nhóm, tái dùng/sao chép topic hoặc đổi GVHD
-từ PENDING_APPROVAL trở đi,
+Không có GET gây mutation. Không route tự chuyển sang nhóm khác; SV rời nhóm cũ rồi chỉ tham
+gia nhóm mới sau khi chấp nhận lời mời hợp lệ. Không có route xóa nhóm nhiều người, tái dùng/
+sao chép topic hoặc đổi GVHD từ PENDING_APPROVAL trở đi,
 xóa lịch sử hoặc tự đăng ký tài khoản. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 quy tắc FR-04/FR-15. URI route là thiết kế đề xuất, không khẳng định các phần B đã được
 phép triển khai.

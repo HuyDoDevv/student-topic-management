@@ -1,6 +1,7 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
 > `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt,
-> V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu.
+> V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu. Thay đổi Q-07 ngày
+> 2026-09-11 sẽ thêm bảng lời mời bằng migration mới, không sửa V1 đã dùng.
 
 # Data Model — Thiết kế có điều kiện
 
@@ -20,8 +21,9 @@ thực hiện bằng migration mới.
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc; chỉ thay đổi khi topic DRAFT |
-| StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Tạo trong hạn SV; trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc hoặc trạng thái nhóm nháp |
-| GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Một tư cách SV/đợt; slot 1–3 chỉ bảo vệ sức chứa; không có thao tác tự rời/chuyển nhóm |
+| StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version, dissolved_at | Tạo trong hạn SV; nhóm đang hoạt động có trưởng nhóm là thành viên; giải tán bằng `dissolved_at` để giữ lịch sử đăng ký, không thêm tên nhóm bắt buộc hoặc trạng thái nhóm nháp |
+| GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Thành viên đã chấp nhận; một tư cách SV/đợt, slot 1–3 bảo vệ sức chứa; thành viên thường được tự rời theo FR-08 |
+| GroupInvitation / group_invitations | id, group_id, period_id, student_id FK, invited_by FK, slot, status, created_at, responded_at, version, pending guards | Lời mời PENDING giữ slot nhưng chưa tạo membership; ACCEPTED/REJECTED/CANCELLED giữ lịch sử phản hồi; hết hiệu lực được suy ra từ student_end |
 | Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | rejected/withdrawn không tái dùng ID khi đăng ký lại; tạo hàng mới; retention còn Q-09 |
 
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
@@ -48,16 +50,20 @@ version bigint là optimistic concurrency token kỹ thuật, không phải tr�
 | DB-03 | CHECK status thuộc DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED; khi khác DRAFT, cả 5 trường nội dung trim khác rỗng | REQ-08–09; FR-05,14 |
 | DB-04 | PK(topic_id,lecturer_id), UNIQUE(topic_id,slot), CHECK slot BETWEEN 1 AND 2 | REQ-10; FR-06 |
 | DB-05 | PK(group_id,student_id); UNIQUE(period_id,student_id); UNIQUE(group_id,slot); CHECK slot BETWEEN 1 AND 3 | REQ-12–13; FR-08–09 |
-| DB-06 | leader_student_id NOT NULL; trigger sau insert tự tạo membership slot 1; trigger cập nhật/xóa bảo đảm leader luôn là thành viên | REQ-12; FR-08 |
+| DB-06 | leader_student_id NOT NULL; trigger sau insert tự tạo membership slot 1; trigger cập nhật/xóa bảo đảm leader luôn là thành viên khi `dissolved_at IS NULL`; nhóm giải tán giữ hàng lịch sử nhưng không còn membership | REQ-12; FR-08 |
 | DB-07 | UNIQUE(id,period_id) trên topic/group; membership FK(group_id,period_id) → group; registration FK(group_id,period_id) và FK(topic_id,period_id) | REQ-13–15; FR-09–10 |
 | DB-08 | Generated column nullable `active_group_guard` kết hợp UNIQUE(period_id,active_group_guard) khi status PENDING/ACCEPTED | REQ-14; FR-10,13 |
 | DB-09 | Generated column nullable `accepted_topic_guard` kết hợp UNIQUE(period_id,accepted_topic_guard) khi status ACCEPTED | Xác nhận U Q-10; FR-11 |
 | DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
+| DB-11 | `group_invitations` có CHECK status PENDING/ACCEPTED/REJECTED/CANCELLED và slot 1–3; generated guard + UNIQUE bảo đảm một PENDING/SV/đợt và một PENDING/slot/nhóm; FK(group_id,period_id) giữ cùng đợt | U Q-07 ngày 2026-09-11; FR-08–10 |
 
 DB-06 dùng trigger vì MySQL không hỗ trợ deferred FK: insert nhóm tự tạo membership của
 trưởng nhóm; đổi leader chỉ nhận thành viên hiện hữu và không được xóa leader khi chưa
 chuyển quyền. Điều này bảo đảm tối thiểu một thành viên và đúng một leader.
 DB-05 bảo vệ tối đa 3 mà không dùng CHECK đếm hàng.
+Tổng membership và lời mời PENDING nằm ở hai bảng nên service kiểm tra lại dưới khóa period,
+cấp slot chưa dùng ở cả hai bảng và giữ tổng không quá ba. DB-05/DB-11 là hàng rào cuối
+cho từng loại hàng; không dựa riêng vào kiểm tra trước transaction.
 
 Không UNIQUE(group_id,topic_id) trên mọi trạng thái: phải cho đăng ký lại sau rút/từ chối.
 Không CHECK đọc bảng khác để kiểm tra số GVHD hay department. Service dưới khóa giao dịch
@@ -107,7 +113,7 @@ là đề xuất kỹ thuật, không cho công bố DRAFT/PENDING.
 
 | Từ → đến | Actor/trigger | Điều kiện |
 |---|---|---|
-| Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm 1–3, không active khác |
+| Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm 1–3 thành viên đã chấp nhận, không active khác và không còn lời mời PENDING |
 | PENDING → ACCEPTED | Trưởng khoa | Chưa có accepted khác; đồng thời auto-reject pending khác cùng topic/đợt |
 | PENDING → REJECTED | Trưởng khoa | Lý do bắt buộc chưa chốt Q-09 |
 | PENDING → REJECTED | Auto khi topic nhận nhóm khác | Lý do chính xác “Đề tài đã nhận nhóm” |
@@ -115,10 +121,22 @@ là đề xuất kỹ thuật, không cho công bố DRAFT/PENDING.
 | REJECTED/WITHDRAWN → đăng ký mới PENDING | Trưởng nhóm | Tạo ID mới, đầy đủ điều kiện gửi; hàng cũ không đổi |
 
 Không chuyển ACCEPTED sang WITHDRAWN. Không tự chọn FIFO hoặc ưu tiên rút/accept.
-Nhóm không cần trạng thái dư thừa: chỉ tạo trong hạn SV; quyền sửa suy ra từ thời gian và
-không tồn tại đăng ký PENDING/ACCEPTED. Không có trạng thái “nhóm nháp” hoặc thao tác tự
-rời/chuyển. Trưởng nhóm cũ xóa thành viên trước khi trưởng nhóm mới thêm; trưởng nhóm muốn
-rời phải chuyển quyền cho thành viên hiện có trước, nên nhóm không trở thành rỗng.
+### Lời mời và thành viên nhóm
+
+| Từ → đến | Actor | Điều kiện |
+|---|---|---|
+| Chưa tồn tại → PENDING | Trưởng nhóm | Trong hạn SV, không active registration, SV cùng khoa chưa có nhóm/lời mời PENDING trong đợt, tổng membership + PENDING dưới 3 |
+| PENDING → ACCEPTED + membership | SV được mời | Trong hạn SV, không active registration; khóa period, kiểm tra lại slot/sức chứa rồi tạo membership nguyên tử |
+| PENDING → REJECTED | SV được mời | Được phép bất cứ lúc nào; không tạo membership, giải phóng guard/slot |
+| PENDING → CANCELLED | Trưởng nhóm | Trong hạn SV, không active registration; giải phóng guard/slot |
+| membership → không còn | Chính thành viên thường hoặc trưởng nhóm | Trong hạn SV, không active registration; chính thành viên được tự rời, trưởng nhóm được xóa thành viên thường |
+| nhóm một người → DISSOLVED | Trưởng nhóm | Trong hạn SV, không active registration; đặt `dissolved_at`, hủy các lời mời PENDING và xóa membership trưởng nhóm trong cùng transaction |
+
+Lời mời còn PENDING sau `student_end` được hiển thị là hết hiệu lực và không thể chấp nhận;
+không cần job đổi trạng thái. Từ chối vẫn cập nhật thành REJECTED để giải phóng generated
+guard. Nhóm không có trạng thái nháp; `dissolved_at` chỉ là dấu lưu lịch sử và nhóm này bị
+loại khỏi mọi truy vấn nhóm đang hoạt động. Trưởng nhóm có thành viên khác phải chuyển quyền
+trước khi tự rời. Không tự chọn trưởng nhóm mới. Đăng ký đề tài bị chặn khi còn lời mời PENDING.
 
 ## Transaction protocol and concurrency
 
@@ -135,10 +153,11 @@ Nếu khách hàng yêu cầu deadline theo commit, phải xác nhận và sửa
 
 | Command/race | Cách bảo vệ |
 |---|---|
-| Cùng SV vào hai nhóm | Khóa period + DB-05; nhóm ở hai đợt độc lập |
-| Thêm 2 người khi nhóm có 2 | Kiểm tra lại sau khóa, cấp slot trống; tối đa 3 ở commit |
+| Hai nhóm mời cùng SV | Khóa period + DB-11; chỉ một lời mời PENDING/SV/đợt |
+| Mời/accept đồng thời khi còn một chỗ | Khóa period, đọc membership + invitation PENDING, cấp slot trống; DB-05/DB-11 chặn vi phạm cuối |
+| SV accept trong khi được thêm vào nhóm khác | Khóa period + DB-05; đọc lại membership/lời mời trước khi tạo membership nguyên tử |
 | Chuyển leader / gửi đăng ký | Khóa period, đọc lại leader; gửi chỉ với leader còn hiệu lực |
-| Sửa nhóm / gửi | Kiểm tra không active sau khóa; không sửa sau khi PENDING hình thành |
+| Rời/giải tán / gửi đăng ký | Chung khóa period; gửi kiểm tra không còn lời mời PENDING, rời/giải tán kiểm tra không active |
 | Hai đăng ký của cùng nhóm | Khóa + DB-08; thất bại không tạo hàng dở dang |
 | Hai accept cùng topic | Khóa + DB-09; một accepted, pending khác auto-rejected |
 | Accept / đăng ký mới | Chung khóa: nếu gửi trước thì nằm trong auto-reject; nếu gửi sau thì bị từ chối |
@@ -162,12 +181,15 @@ trong khi test không đại diện một luồng quản trị đã chốt.
 
 ## Migration and sample data
 
-V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. Q-05/Q-06
+V1 hiện tạo 20 bảng nền, khóa ngoại, chỉ mục và trigger đã được thiết kế. Q-05/Q-06
 đã chốt giữ mô hình topic theo đợt và supervisors hiện tại, không cần tách catalog/offering
 hoặc bảng lịch sử thay GVHD. V2 thay hai
 CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. V3 siết hai giai đoạn đăng ký không được
-trùng mốc kết thúc GV/bắt đầu SV. Các quyết định nghiệp vụ còn mở làm thay đổi schema phải
-được đưa vào migration mới sau V3 khi được xác nhận.
+trùng mốc kết thúc GV/bắt đầu SV. Luồng lời mời đã xác nhận sẽ tạo `group_invitations` và
+thêm `student_groups.dissolved_at` bằng migration mới sau V4, gồm trạng thái, slot giữ chỗ,
+audit thời gian và generated guards; migration cũng điều chỉnh trigger giữ leader để chỉ áp
+dụng cho nhóm đang hoạt động, không sửa lịch sử V1. Các quyết định nghiệp vụ còn mở khác
+phải đi qua migration tiếp theo.
 Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra

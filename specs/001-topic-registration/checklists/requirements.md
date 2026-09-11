@@ -28,14 +28,15 @@
 
 - [ ] Mọi FR có tiêu chí nghiệm thu rõ hoàn toàn: đã ánh xạ nhưng còn Q.
 - [x] User stories bao phủ luồng chính và nhánh từ chối.
-- [ ] Có đủ định nghĩa để xác minh toàn bộ kết quả đo được: AS/SC đã xác nhận nhưng kết quả phụ thuộc Q-02, Q-05, Q-06, Q-07, Q-09 còn blocked.
+- [ ] Có đủ định nghĩa để xác minh toàn bộ kết quả đo được: AS/SC đã xác nhận nhưng kết quả còn phụ thuộc G-Publish và Q-09.
 - [x] Không đưa lựa chọn triển khai vào đặc tả.
 
 ## Notes
 
 Rà soát ngày 2026-09-09: Q-18 và Q-20 đã giải quyết; AS/SC được xác nhận cho bản local.
-Q-02, Q-05, Q-06, Q-07 và Q-09 còn mở và bảng gate liệt kê đầy đủ tác động. Không tự điền
-chính sách để làm checklist đạt; phần foundation độc lập có thể triển khai theo T008–T016.
+Q-02, Q-05, Q-06 và Q-07 đã được giải quyết; Q-07 được chốt lại ngày 2026-09-11 theo luồng
+lời mời có xác nhận và tự rời/giải tán. G-Publish và Q-09 còn mở trong bảng gate. Không tự
+điền chính sách để làm checklist đạt; phần độc lập chỉ triển khai khi gate tương ứng cho phép.
 
 FR-12 có nguồn U từ yêu cầu hiện tại; không nhận nhầm nhánh từ chối là nội dung tường minh
 của REQ-16. REQ-11 được tách phần GVHD/GVPB; REQ-06–07 chỉ cấu hình ngày ở đợt này.

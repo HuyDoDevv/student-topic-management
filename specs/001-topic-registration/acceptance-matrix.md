@@ -20,7 +20,7 @@ chứng test; không được hiểu là đạt.
 | FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | CONFIRMED | T025: topic thuộc một đợt, không reuse/copy; danh mục seed/import; tests NOT RUN |
 | FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | CONFIRMED | T025: chỉ tác giả đổi GVHD khi DRAFT, khóa từ PENDING_APPROVAL; tests NOT RUN |
 | FR-07 Duyệt và công bố | REQ-02,08,15 + U | AS-3.1–3.3,5.17–5.18; AT-05,06,12; SC-002–004 | TopicReviewContractTest, TopicPublicationIT | BLOCKED G-Publish | NOT RUN |
-| FR-08 Nhóm và trưởng nhóm | REQ-12–13 + U | AS-4.1–4.2,4.4,4.6–4.14; AT-04,06–08; SC-003–005 | GroupRulesTest, GroupContractTest, GroupMembershipIT | CONFIRMED | T039: tạo nhóm chỉ trong hạn SV; không tự rời/chuyển; tests NOT RUN |
+| FR-08 Nhóm, lời mời và trưởng nhóm | REQ-12–13 + U | AS-4.1–4.2,4.4,4.6–4.15; AT-04,06–08; SC-003–005 | GroupRulesTest, GroupContractTest, GroupMembershipIT | CONFIRMED | Thay đổi Q-07: lời mời cần SV chấp nhận, PENDING giữ chỗ; thành viên được tự rời, leader một người được giải tán; tests NOT RUN |
 | FR-09 Một nhóm/SV/đợt | REQ-13 + U | AS-4.3,4.5; AT-04,07; SC-003,005 | GroupRulesTest, GroupMembershipIT | CONFIRMED | NOT RUN |
 | FR-10 Gửi đăng ký | REQ-03,14–15 + U | AS-5.1–5.3; AT-05–09,11; SC-002–005 | RegistrationRulesTest, RegistrationContractTest | BLOCKED Q-09 | NOT RUN |
 | FR-11 Chấp nhận một nhóm/đề tài | REQ-16 + U | AS-5.4,5.6–5.8,5.14–5.16; AT-05–08,11; SC-002,005,008 | RegistrationConstraintsIT, RegistrationConcurrencyIT | BLOCKED Q-09 | NOT RUN |
@@ -40,7 +40,7 @@ chứng test; không được hiểu là đạt.
 | G-Period / T017 | PASS | Q-02 đã giải quyết; US1 T018–T024 đã triển khai và nghiệm thu |
 | G-Topic / T025 | CONFIRMED | Q-05/Q-06 đã giải quyết ngày 2026-09-10; US2 T026–T032 được phép triển khai |
 | G-Publish / T033 | BLOCKED | Granularity và thời điểm xử lý |
-| G-Group / T039 | CONFIRMED | Q-07 đã giải quyết: thời điểm tạo và phạm vi rời/chuyển nhóm |
+| G-Group / T039,T065 | CONFIRMED | Q-07 đã chốt lại: invitation/accept/reject/cancel, giữ chỗ, tự rời/giải tán và chặn đăng ký khi còn PENDING |
 | G-Registration / T047 | BLOCKED | Q-09 |
 
 ## Bằng chứng foundation T008–T016 — 2026-09-10

@@ -133,7 +133,7 @@ Nếu chưa có biến DB test, fail cấu hình thay vì skip rồi báo thành
 | 1 | Dean tạo đợt với lịch hợp lệ | Đúng 4 mốc và loại; lịch sai bị từ chối; ngày phụ chờ Q-02 |
 | 2 | GV tạo draft, nhập đủ nội dung, chọn 1–2 GVHD cùng bộ môn, gửi trong hạn | PENDING_APPROVAL; thiếu trường/khác bộ môn không gửi được |
 | 3 | Dean duyệt và công bố | APPROVED → PUBLISHED; GV không tự duyệt được |
-| 4 | SV tạo nhóm, leader thêm thành viên | 1–3 SV, một leader, cùng SV không thuộc hai nhóm cùng đợt; thời điểm tạo chờ Q-07 |
+| 4 | SV tạo nhóm, leader gửi lời mời, SV accept/reject; thành viên tự rời | Membership chỉ sinh sau accept; tổng member + PENDING tối đa 3; một PENDING/SV/đợt; leader một người được giải tán |
 | 5 | Hai nhóm gửi cùng topic trong hạn SV | Hai PENDING được phép; một nhóm gửi thêm bị từ chối |
 | 6 | Dean accept một đăng ký | Một ACCEPTED; mọi PENDING cạnh tranh thành REJECTED với reason chuẩn |
 | 7 | Leader nhóm bị reject chọn topic khác còn mở | PENDING mới trong hạn, hàng cũ không bị ghi đè |
