@@ -96,15 +96,15 @@ kiểm tra network browser không có request bắt buộc ra CDN. Bước này 
   Không log mật khẩu/session/CSRF token; thông báo login sai không phân biệt tài khoản tồn tại.
   Các thiết lập này là thiết kế bảo mật theo constitution, không đóng Q-20.
 
-## R-07 — Điểm không thể giải quyết bằng nghiên cứu
+## R-07 — Các quyết định cần xác nhận khách hàng
 
-Q-09 và các xác nhận AC tương ứng cần quyết định khách hàng, không thể lấy “best practice”
-làm đáp án. Q-07 đã được khách hàng chốt lại ngày 2026-09-11 thành luồng lời mời có xác nhận,
+Q-09 đã được khách hàng chốt ngày 2026-09-11: reason thủ công bắt buộc; giao dịch lấy khóa
+period trước thắng khi rút/chấp nhận đồng thời; đăng ký lại tạo hàng mới và giữ lịch sử
+không thời hạn. Q-07 đã được khách hàng chốt lại ngày 2026-09-11 thành luồng lời mời có xác nhận,
 giữ chỗ và tự rời/giải tán; thiết kế tương ứng nằm trong data-model. Q-05/Q-06 đã chốt mô hình topic theo đợt, nguồn danh mục
 seed/import và khóa GVHD từ PENDING_APPROVAL; không cần nghiên cứu phương án catalog/reuse
 hoặc thay GVHD trong quá trình thực hiện cho phiên bản đầu. Không bổ sung API quản trị
-tài khoản/catalog hay chính sách xem toàn khoa/toàn trường. Policy còn thiếu
-được đánh dấu BLOCKED; không coi fixture thử nghiệm một khoa là xác nhận phạm vi thật.
+tài khoản/catalog hoặc chức năng chuyển giảng viên trong phiên bản đầu.
 
 Đã có rà soát nghiên cứu độc lập về constraints/khóa; kết luận được tích hợp vào data-model.
 Không có extension hooks before_plan/after_plan trong workspace.

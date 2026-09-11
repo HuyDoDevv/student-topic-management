@@ -34,7 +34,7 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | G-Topic | T025 | Đã giải phóng: mỗi topic thuộc một đợt, không reuse/copy; danh mục seed/import; chỉ tác giả đổi GVHD khi DRAFT, không thay trong quá trình thực hiện |
 | G-Publish | T033 | Đã giải phóng: duyệt/từ chối từng topic; publish toàn bộ APPROVED trong đợt; UI nhắc trước ngày SV, không SLA |
 | G-Group | T039,T065 | Đã giải phóng và chốt lại: lời mời cần xác nhận và giữ chỗ; tự rời/giải tán; chặn đăng ký khi còn lời mời PENDING |
-| G-Registration | T047 | Q-09: reason thủ công, ưu tiên rút/accept, lưu lịch sử |
+| G-Registration | T047 | Đã giải phóng: reason thủ công bắt buộc; khóa trước thắng khi rút/accept; giữ lịch sử không thời hạn |
 | G-Acceptance | T007 | Đã giải phóng: AS/SC hiện tại được chấp nhận; kiểm tra bảo mật, responsive và xung đột chính; phiên bản local không có SLA định lượng |
 
 Nếu quyết định mới mở rộng phạm vi, cập nhật spec/plan/contracts/tasks trước, không
@@ -194,9 +194,9 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 nhiều pending cùng topic và các race; không phụ thuộc thao tác UI tạo fixture.
 **Trace:** FR-10–13 và tích hợp FR-01,03,07–09; REQ-03,12–16,31–32;
 AS-5.1–5.18, AS-3.2, AS-4.9–4.15; AT-02,04–11.
-Chờ US3, các task US4 T039–T046/T065–T068 và T047; T048–T050 song song.
+US3, US4 component và T047 đã giải phóng dependency; T048–T050 có thể làm song song.
 
-- [ ] T047 [US5] Giải quyết G-Registration/Q-09 cùng khách hàng: reason thủ công, ưu tiên rút/accept, retention trong `specs/001-topic-registration/spec.md`; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md`; nếu ưu tiên không thể bảo đảm bằng khóa period hiện tại, sửa protocol plan trước code.
+- [X] T047 [US5] Giải quyết G-Registration/Q-09 cùng khách hàng: reason thủ công, ưu tiên rút/accept, retention trong `specs/001-topic-registration/spec.md`; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md`; nếu ưu tiên không thể bảo đảm bằng khóa period hiện tại, sửa protocol plan trước code.
 
 - [ ] T048 [P] [US5] Viết rules test gửi/reapply/withdraw/accept/reject, mọi biên SV, unpublished và topic đã nhận nhóm tại `src/test/java/vn/edu/topicregistration/unit/RegistrationRulesTest.java` (AT-02,05,11).
 

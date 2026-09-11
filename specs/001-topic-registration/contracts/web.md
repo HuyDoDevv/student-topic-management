@@ -1,4 +1,4 @@
-# Web / HTML contracts — Draft có điều kiện
+# Web / HTML contracts — Thiết kế triển khai
 
 Spring MVC + Thymeleaf, HTML cùng origin, session cookie. Đây là thiết kế giao diện,
 không phải REST API công khai. Các route chưa được triển khai.
@@ -8,7 +8,6 @@ Nguồn [spec](../spec.md), [model](../data-model.md), [gates](../plan.md#các-q
 
 Mỗi dòng yêu cầu đã login, role đáng tin cậy **và** quan hệ tài nguyên. Trưởng nhóm là
 quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyền do đồng thời là GVHD.
-Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quyền khi thiếu policy.
 
 | Thao tác | Role/quan hệ được phép | Điều kiện dữ liệu/thời gian | FR |
 |---|---|---|---|
@@ -23,9 +22,9 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 | Chấp nhận/từ chối lời mời | STUDENT được mời | Chấp nhận trong hạn SV và nhóm không active; từ chối bất cứ lúc nào; chỉ accept mới tạo membership | 08–09 |
 | Xóa/tự rời/giải tán | Leader xóa thành viên thường; chính thành viên tự rời; leader nhóm một người giải tán | Rời/giải tán trong hạn SV, không active; leader có thành viên khác phải chuyển quyền trước | 08–09 |
 | Chuyển leader | Leader hiện tại | Người nhận đã là thành viên; hạn SV, không active | 08 |
-| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt, chưa accepted, không active, không còn invitation PENDING; scope SV B | 10,13 |
+| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt và cùng khoa, chưa accepted, không active, không còn invitation PENDING | 10,13 |
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
-| Chấp nhận/từ chối registration | DEAN | PENDING, scope B; auto-reject khi accept | 11–12 |
+| Chấp nhận/từ chối registration | DEAN | PENDING thuộc đợt trong khoa của DEAN; từ chối thủ công cần reason không rỗng sau khi trim; auto-reject khi accept | 11–12 |
 | Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
 | Xử lý nội dung vi phạm | ADMIN | Có lý do; ẩn mềm nội dung, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung | 01 |
 
@@ -39,9 +38,6 @@ ADMIN chỉ xử lý khẩn cấp khi có nội dung do kẻ gian đăng: ẩn n
 giữ dữ liệu, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung. ADMIN không được
 sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý role/khoa/bộ môn hoặc chuyển
 giảng viên. Mọi kiểm tra quyền này phải nằm ở backend.
-Các hàng B là chỗ cần hoàn thiện policy trước triển khai, không phải chính sách “deny tất cả”
-được khách hàng phê duyệt.
-
 ## Routes and payloads
 
 Path ID chỉ định tài nguyên; backend đọc quan hệ thật. ID, author, role, status và scope
@@ -79,15 +75,14 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | GET /registrations/{id} | — | Trạng thái/kết quả theo policy | 01,10–13 |
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
-| POST /registrations/{id}/reject | reason,version | REJECTED; required reason Q-09 | 12 |
+| POST /registrations/{id}/reject | reason,version | PENDING → REJECTED khi reason không rỗng sau khi trim; thiếu reason trả lỗi validation và không đổi trạng thái | 12 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự chuyển sang nhóm khác; SV rời nhóm cũ rồi chỉ tham
 gia nhóm mới sau khi chấp nhận lời mời hợp lệ. Không có route xóa nhóm nhiều người, tái dùng/
-sao chép topic hoặc đổi GVHD từ PENDING_APPROVAL trở đi,
-xóa lịch sử hoặc tự đăng ký tài khoản. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
-quy tắc FR-04/FR-15. URI route là thiết kế đề xuất, không khẳng định các phần B đã được
-phép triển khai.
+sao chép topic hoặc đổi GVHD từ PENDING_APPROVAL trở đi, xóa lịch sử hoặc tự đăng ký
+tài khoản. Các registration REJECTED/WITHDRAWN được giữ không thời hạn và đăng ký lại tạo
+hàng mới. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng quy tắc FR-04/FR-15.
 
 ## Response and validation contract
 
@@ -97,8 +92,12 @@ phép triển khai.
   ID không tồn tại: 404; không tiết lộ dữ liệu bằng thông báo lỗi.
 - Kiểu/cấu trúc sai: 400; thiếu trường hoặc vi phạm validation: 422 với lỗi theo trường,
   giữ nội dung không nhạy cảm đã nhập. Không hiện lại mật khẩu.
+- `reason` của từ chối registration thủ công là bắt buộc; giá trị chỉ gồm khoảng trắng được
+  coi là thiếu và trả 422 mà không đổi đăng ký khỏi PENDING.
 - Stale version, trạng thái không còn hợp lệ hoặc tranh chấp: 409 với thông báo tải lại;
   không trả SQL/stack trace. Unique conflict sau rollback cũng dùng phản hồi này.
+- Với rút/chấp nhận đồng thời, request lấy khóa period trước được hoàn tất. Request sau đọc
+  lại registration không còn PENDING, trả 409 và không thay đổi kết quả đã commit trước.
 - Hết hạn hoặc vượt ràng buộc nghiệp vụ: 422 với mã lỗi nội bộ ổn định
   WINDOW_CLOSED, GROUP_FULL, ACTIVE_REGISTRATION_EXISTS, TOPIC_TAKEN,
   INVALID_TOPIC_STATE. Không biến lỗi nghiệp vụ thành 500.
