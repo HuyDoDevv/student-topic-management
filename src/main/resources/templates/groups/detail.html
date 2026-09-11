@@ -14,6 +14,10 @@
       </p>
     </div>
     <div class="btn-list">
+      <a class="btn btn-primary"
+         th:if="${group.canManage and (group.activeRegistration or (group.studentOpen and group.pendingInvitationCount == 0))}"
+         th:href="@{/groups/{id}/registrations/new(id=${group.id})}"
+         th:text="${group.activeRegistration ? 'Xem đăng ký đề tài' : 'Đăng ký đề tài'}">Đăng ký đề tài</a>
       <a class="btn btn-outline-primary" th:href="@{/group-invitations}">Lời mời của tôi</a>
       <a class="btn btn-outline-secondary" th:href="@{/groups}">Đổi đợt</a>
     </div>

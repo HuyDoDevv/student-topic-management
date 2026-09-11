@@ -34,7 +34,7 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | G-Topic | T025 | Đã giải phóng: mỗi topic thuộc một đợt, không reuse/copy; danh mục seed/import; chỉ tác giả đổi GVHD khi DRAFT, không thay trong quá trình thực hiện |
 | G-Publish | T033 | Đã giải phóng: duyệt/từ chối từng topic; publish toàn bộ APPROVED trong đợt; UI nhắc trước ngày SV, không SLA |
 | G-Group | T039,T065 | Đã giải phóng và chốt lại: lời mời cần xác nhận và giữ chỗ; tự rời/giải tán; chặn đăng ký khi còn lời mời PENDING |
-| G-Registration | T047 | Q-09: reason thủ công, ưu tiên rút/accept, lưu lịch sử |
+| G-Registration | T047 | Đã giải phóng: reason thủ công bắt buộc; khóa trước thắng khi rút/accept; giữ lịch sử không thời hạn |
 | G-Acceptance | T007 | Đã giải phóng: AS/SC hiện tại được chấp nhận; kiểm tra bảo mật, responsive và xung đột chính; phiên bản local không có SLA định lượng |
 
 Nếu quyết định mới mở rộng phạm vi, cập nhật spec/plan/contracts/tasks trước, không
@@ -194,9 +194,9 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 nhiều pending cùng topic và các race; không phụ thuộc thao tác UI tạo fixture.
 **Trace:** FR-10–13 và tích hợp FR-01,03,07–09; REQ-03,12–16,31–32;
 AS-5.1–5.18, AS-3.2, AS-4.9–4.15; AT-02,04–11.
-Chờ US3, các task US4 T039–T046/T065–T068 và T047; T048–T050 song song.
+US3, US4 component và T047 đã giải phóng dependency; T048–T050 có thể làm song song.
 
-- [ ] T047 [US5] Giải quyết G-Registration/Q-09 cùng khách hàng: reason thủ công, ưu tiên rút/accept, retention trong `specs/001-topic-registration/spec.md`; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md`; nếu ưu tiên không thể bảo đảm bằng khóa period hiện tại, sửa protocol plan trước code.
+- [X] T047 [US5] Giải quyết G-Registration/Q-09 cùng khách hàng: reason thủ công, ưu tiên rút/accept, retention trong `specs/001-topic-registration/spec.md`; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md`; nếu ưu tiên không thể bảo đảm bằng khóa period hiện tại, sửa protocol plan trước code.
 
 - [ ] T048 [P] [US5] Viết rules test gửi/reapply/withdraw/accept/reject, mọi biên SV, unpublished và topic đã nhận nhóm tại `src/test/java/vn/edu/topicregistration/unit/RegistrationRulesTest.java` (AT-02,05,11).
 
@@ -204,17 +204,17 @@ Chờ US3, các task US4 T039–T046/T065–T068 và T047; T048–T050 song song
 
 - [ ] T050 [P] [US5] Viết MySQL constraint test một active/nhóm, một accepted/topic/đợt, cùng đợt FK và được đăng ký lại cùng topic sau reject/rút tại `src/test/java/vn/edu/topicregistration/integration/RegistrationConstraintsIT.java` (DB-07–10; AT-05,07).
 
-- [ ] T051 [US5] Đối chiếu registrations trong `src/main/resources/db/migration/V1__full_system.sql` theo T047 với generated-column unique DB-08–09 và trạng thái/reason DB-10; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/registrations/persistence/RegistrationEntity.java`, `RegistrationRepository.java`; không UNIQUE group/topic trên toàn lịch sử.
+- [X] T051 [US5] Đối chiếu registrations trong `src/main/resources/db/migration/V1__full_system.sql` theo T047 với generated-column unique DB-08–09 và trạng thái/reason DB-10; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/registrations/persistence/RegistrationEntity.java`, `RegistrationRepository.java`; không UNIQUE group/topic trên toàn lịch sử.
 
-- [ ] T052 [US5] Cài gửi/rút/đăng ký lại tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationService.java`, `registrations/domain/RegistrationRules.java`; khóa period rồi đọc lại leader, giờ, nhóm, publication, topic accepted, active và từ chối gửi khi còn group invitation PENDING; tạo ID mới khi reapply, không rút ACCEPTED.
+- [X] T052 [US5] Cài gửi/rút/đăng ký lại tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationService.java`, `registrations/domain/RegistrationRules.java`; khóa period rồi đọc lại leader, giờ, nhóm, publication, topic accepted, active và từ chối gửi khi còn group invitation PENDING; tạo ID mới khi reapply, không rút ACCEPTED.
 
-- [ ] T053 [US5] Cài dean accept/reject tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationDecisionService.java`; cùng transaction accept một và reject mọi PENDING khác đúng lý do “Đề tài đã nhận nhóm”, không đổi hàng đã rút/reject; rollback toàn bộ nếu lỗi và xử lý ưu tiên theo T047.
+- [X] T053 [US5] Cài dean accept/reject tại `src/main/java/vn/edu/topicregistration/registrations/application/RegistrationDecisionService.java`; cùng transaction accept một và reject mọi PENDING khác đúng lý do “Đề tài đã nhận nhóm”, không đổi hàng đã rút/reject; rollback toàn bộ nếu lỗi và xử lý ưu tiên theo T047.
 
-- [ ] T054 [US5] Cài port active của US4 bằng truy vấn registrations tại `src/main/java/vn/edu/topicregistration/registrations/application/ActiveRegistrationQueryAdapter.java`; nối runtime GroupService, freeze membership/leader khi PENDING hoặc ACCEPTED và cho sửa sau reject/rút trong hạn; không phụ thuộc UI.
+- [X] T054 [US5] Cài port active của US4 bằng truy vấn registrations tại `src/main/java/vn/edu/topicregistration/registrations/application/ActiveRegistrationQueryAdapter.java`; nối runtime GroupService, freeze membership/leader khi PENDING hoặc ACCEPTED và cho sửa sau reject/rút trong hạn; không phụ thuộc UI.
 
-- [ ] T055 [US5] Cài registration controller/DTO tại `src/main/java/vn/edu/topicregistration/registrations/web/RegistrationController.java`, `RegistrationForm.java`, `RegistrationDecisionForm.java`; redirect/409/422 theo contract, không nhận actor/status từ client.
+- [X] T055 [US5] Cài registration controller/DTO tại `src/main/java/vn/edu/topicregistration/registrations/web/RegistrationController.java`, `RegistrationForm.java`, `RegistrationDecisionForm.java`; redirect/409/422 theo contract, không nhận actor/status từ client.
 
-- [ ] T056 [US5] Tạo Tabler form/detail/decision tại `src/main/resources/templates/registrations/form.html`, `detail.html`, `decision.html`; nối danh sách topic còn nhận đăng ký và nhóm; hiển thị reason auto-reject, không thêm notification.
+- [X] T056 [US5] Tạo Tabler form/detail/decision tại `src/main/resources/templates/registrations/form.html`, `detail.html`, `decision.html`; nối danh sách topic còn nhận đăng ký và nhóm; hiển thị reason auto-reject, không thêm notification.
 
 - [ ] T057 [US5] Viết/chạy race hai gửi cùng nhóm, hai accept cùng topic, accept/gửi mới, rút/accept theo T047, hai reapply, sửa nhóm/gửi, chuyển leader/gửi tại `src/test/java/vn/edu/topicregistration/concurrency/RegistrationConcurrencyIT.java`; nhiều connection/barrier, dữ liệu cuối không vi phạm và rollback lỗi giữa auto-reject (AT-07–08,11).
 
@@ -224,7 +224,7 @@ Chờ US3, các task US4 T039–T046/T065–T068 và T047; T048–T050 song song
 
 Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thiếu.
 
-- [ ] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
+- [X] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
 
 - [ ] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
 

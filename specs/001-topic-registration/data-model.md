@@ -1,13 +1,14 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
 > `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt,
 > V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu. Thay đổi Q-07 ngày
-> 2026-09-11 sẽ thêm bảng lời mời bằng migration mới, không sửa V1 đã dùng.
+> 2026-09-11 thêm bảng lời mời bằng V5; V6 bắt buộc metadata từ chối registration,
+> không sửa các migration đã dùng.
 
-# Data Model — Thiết kế có điều kiện
+# Data Model — Thiết kế triển khai
 
 Áp dụng [spec](spec.md) FR-01–15. MySQL 8.4 LTS; tên/kiểu dưới đây là thiết kế kỹ thuật,
-không thêm nghiệp vụ. Q có ảnh hưởng schema được ghi rõ; thay đổi sau khi chốt phải được
-thực hiện bằng migration mới.
+không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã được chốt; thay đổi sau này phải
+được thực hiện bằng migration mới.
 
 ## Entities
 
@@ -24,11 +25,11 @@ thực hiện bằng migration mới.
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version, dissolved_at | Tạo trong hạn SV; nhóm đang hoạt động có trưởng nhóm là thành viên; giải tán bằng `dissolved_at` để giữ lịch sử đăng ký, không thêm tên nhóm bắt buộc hoặc trạng thái nhóm nháp |
 | GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Thành viên đã chấp nhận; một tư cách SV/đợt, slot 1–3 bảo vệ sức chứa; thành viên thường được tự rời theo FR-08 |
 | GroupInvitation / group_invitations | id, group_id, period_id, student_id FK, invited_by FK, slot, status, created_at, responded_at, version, pending guards | Lời mời PENDING giữ slot nhưng chưa tạo membership; ACCEPTED/REJECTED/CANCELLED giữ lịch sử phản hồi; hết hiệu lực được suy ra từ student_end |
-| Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | rejected/withdrawn không tái dùng ID khi đăng ký lại; tạo hàng mới; retention còn Q-09 |
+| Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | REJECTED/WITHDRAWN không tái dùng ID khi đăng ký lại; tạo hàng mới; từ chối thủ công bắt buộc có reason sau khi trim; giữ toàn bộ lịch sử không thời hạn trong phiên bản đầu |
 
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
-Không suy ra department bắt buộc cho trưởng khoa hay quyền sinh viên từ FK bộ môn.
-Chưa chốt schema phạm vi khoa: không bỏ trống scope rồi hiểu là toàn quyền.
+Trưởng khoa thao tác dữ liệu trong khoa mình; sinh viên xem đề tài công bố trong khoa và
+chỉ thay đổi nhóm/đăng ký mà quan hệ dữ liệu cho phép. Không bỏ trống scope rồi hiểu là toàn quyền.
 
 Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nội dung cần cờ/trạng thái
 ẩn và metadata `hidden_by`, `hidden_at`, `hidden_reason`; mọi thay đổi schema tương ứng phải
@@ -54,7 +55,7 @@ version bigint là optimistic concurrency token kỹ thuật, không phải tr�
 | DB-07 | UNIQUE(id,period_id) trên topic/group; membership FK(group_id,period_id) → group; registration FK(group_id,period_id) và FK(topic_id,period_id) | REQ-13–15; FR-09–10 |
 | DB-08 | Generated column nullable `active_group_guard` kết hợp UNIQUE(period_id,active_group_guard) khi status PENDING/ACCEPTED | REQ-14; FR-10,13 |
 | DB-09 | Generated column nullable `accepted_topic_guard` kết hợp UNIQUE(period_id,accepted_topic_guard) khi status ACCEPTED | Xác nhận U Q-10; FR-11 |
-| DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
+| DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; manual rejection có rejection_kind=MANUAL và reason không rỗng sau khi trim; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
 | DB-11 | `group_invitations` có CHECK status PENDING/ACCEPTED/REJECTED/CANCELLED và slot 1–3; generated guard + UNIQUE bảo đảm một PENDING/SV/đợt và một PENDING/slot/nhóm; FK(group_id,period_id) giữ cùng đợt | U Q-07 ngày 2026-09-11; FR-08–10 |
 
 DB-06 dùng trigger vì MySQL không hỗ trợ deferred FK: insert nhóm tự tạo membership của
@@ -66,6 +67,8 @@ cấp slot chưa dùng ở cả hai bảng và giữ tổng không quá ba. DB-0
 cho từng loại hàng; không dựa riêng vào kiểm tra trước transaction.
 
 Không UNIQUE(group_id,topic_id) trên mọi trạng thái: phải cho đăng ký lại sau rút/từ chối.
+Mỗi lần đăng ký lại tạo một hàng mới. Không cascade hoặc job purge xóa registration
+REJECTED/WITHDRAWN; lịch sử được giữ không thời hạn trong phiên bản đầu.
 Không CHECK đọc bảng khác để kiểm tra số GVHD hay department. Service dưới khóa giao dịch
 kiểm tra tối thiểu 1 GVHD khi gửi duyệt, cùng bộ môn, quyền và trạng thái. Bản nháp có thể
 0 GVHD; giới hạn tối đa vẫn 2. Các đường ghi phải qua cùng service transaction.
@@ -117,12 +120,13 @@ Ngày bắt đầu SV là mốc UI nhắc trưởng khoa hoàn tất, không ph�
 |---|---|---|
 | Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm 1–3 thành viên đã chấp nhận, không active khác và không còn lời mời PENDING |
 | PENDING → ACCEPTED | Trưởng khoa | Chưa có accepted khác; đồng thời auto-reject pending khác cùng topic/đợt |
-| PENDING → REJECTED | Trưởng khoa | Lý do bắt buộc chưa chốt Q-09 |
+| PENDING → REJECTED | Trưởng khoa | Lý do bắt buộc, không rỗng sau khi trim; validation lỗi giữ nguyên PENDING |
 | PENDING → REJECTED | Auto khi topic nhận nhóm khác | Lý do chính xác “Đề tài đã nhận nhóm” |
 | PENDING → WITHDRAWN | Trưởng nhóm | Trong hạn SV |
 | REJECTED/WITHDRAWN → đăng ký mới PENDING | Trưởng nhóm | Tạo ID mới, đầy đủ điều kiện gửi; hàng cũ không đổi |
 
-Không chuyển ACCEPTED sang WITHDRAWN. Không tự chọn FIFO hoặc ưu tiên rút/accept.
+Không chuyển ACCEPTED sang WITHDRAWN. Khi rút và accept đồng thời, giao dịch lấy khóa period
+trước quyết định trạng thái cuối; giao dịch sau đọc lại trạng thái và bị từ chối.
 ### Lời mời và thành viên nhóm
 
 | Từ → đến | Actor | Điều kiện |
@@ -165,7 +169,7 @@ Nếu khách hàng yêu cầu deadline theo commit, phải xác nhận và sửa
 | Accept / đăng ký mới | Chung khóa: nếu gửi trước thì nằm trong auto-reject; nếu gửi sau thì bị từ chối |
 | Sửa draft / gửi duyệt | Chung khóa; kiểm tra status và version trước ghi |
 | Sửa lịch / mở đợt | Kiểm tra giờ và lecturer_start hiện hành sau khóa; không dùng giờ được đề nghị |
-| Rút / accept | Trạng thái cuối loại trừ nhau; **chính sách ưu tiên còn Q-09**, chưa phê duyệt hành vi chọn người thắng |
+| Rút / accept | Chung khóa period; giao dịch lấy khóa trước hoàn tất, giao dịch sau đọc lại trạng thái không còn PENDING và bị từ chối; không để lại trạng thái kép |
 
 Accept transaction: khóa → xác thực scope/actor → đọc PENDING và topic → kiểm tra chưa
 accepted → đổi đăng ký được chọn thành ACCEPTED → đổi tất cả PENDING khác sang REJECTED,
@@ -190,8 +194,8 @@ CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. V3 siết hai gia
 trùng mốc kết thúc GV/bắt đầu SV. Luồng lời mời đã xác nhận sẽ tạo `group_invitations` và
 thêm `student_groups.dissolved_at` bằng migration mới sau V4, gồm trạng thái, slot giữ chỗ,
 audit thời gian và generated guards; migration cũng điều chỉnh trigger giữ leader để chỉ áp
-dụng cho nhóm đang hoạt động, không sửa lịch sử V1. Các quyết định nghiệp vụ còn mở khác
-phải đi qua migration tiếp theo.
+dụng cho nhóm đang hoạt động, không sửa lịch sử V1. Mọi thay đổi nghiệp vụ sau này phải đi
+qua migration tiếp theo.
 Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra
@@ -203,4 +207,5 @@ hai bộ môn, một dean, ba GV, tối thiểu bảy SV, nhóm 1/2/3 người, 
 topic ở mỗi trạng thái và các loại đợt. Mật khẩu được cấp qua môi trường rồi hash;
 không lưu mật khẩu sử dụng được trong SQL/docs. Không tự xóa dữ liệu có sẵn hoặc dời
 thời gian đợt mỗi lần restart. Seed là dụng cụ demo, không phải chính sách cấp tài khoản.
-Retention lịch sử chưa chốt: không tạo job purge/cascade xóa lịch sử.
+Giữ lịch sử registration REJECTED/WITHDRAWN không thời hạn; không tạo job purge hoặc
+cascade xóa lịch sử trong phiên bản đầu.

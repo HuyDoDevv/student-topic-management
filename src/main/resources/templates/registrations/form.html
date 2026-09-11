@@ -1,11 +1,76 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Đăng ký đề tài', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Đăng ký đề tài', ~{::section})}">
 <body>
 <section>
-  <div class="page-header"><div><div class="page-pretitle">NHÓM <span th:text="${groupCode}">N01</span></div><h1 class="page-title">Đăng ký đề tài</h1><p class="text-secondary mt-2 mb-0" th:text="${period.name}">Đợt đăng ký</p></div></div>
-  <form class="card content-form" th:action="@{/groups/1/registrations}" method="post" data-prevent-double-submit>
-    <div class="card-body"><div class="alert alert-info" role="status">Chỉ trưởng nhóm được gửi đăng ký. Khi đăng ký đang chờ duyệt, danh sách thành viên và trưởng nhóm sẽ được khóa.</div><fieldset><legend class="h3">Chọn đề tài đã công bố</legend><label class="topic-option" th:each="topic : ${topics}"><input class="form-check-input" type="radio" name="topicId" th:value="${topic.id}" required><span><strong th:text="${topic.title}">Tên đề tài</strong><small><span th:text="${topic.supervisors}">Giảng viên hướng dẫn</span> · <span th:text="${topic.department}">Bộ môn</span></small></span></label></fieldset><input type="hidden" name="version" value="0"></div>
-    <div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-ghost-secondary" th:href="@{/groups/1}">Hủy</a><button class="btn btn-primary" type="submit">Gửi đăng ký</button></div>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">NHÓM <span th:text="${groupCode}">N001</span></div>
+      <h1 class="page-title">Đăng ký đề tài</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Chọn một đề tài đã được Trưởng khoa công bố trong
+        <strong th:text="${period.name}">đợt đăng ký</strong>.
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary" th:href="@{/groups/{id}(id=${groupId})}">Về trang nhóm</a>
+  </div>
+
+  <div class="alert alert-warning" role="alert" th:if="${pendingInvitation}">
+    <div class="fw-bold">Nhóm còn lời mời đang chờ</div>
+    <div class="mt-1">Hãy chờ sinh viên phản hồi hoặc hủy lời mời trước khi gửi đăng ký đề tài.</div>
+  </div>
+
+  <form class="card content-form registration-form"
+        th:action="@{/groups/{id}/registrations(id=${groupId})}"
+        th:object="${registrationForm}" method="post" data-prevent-double-submit>
+    <div class="card-body">
+      <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary
+           th:if="${#fields.hasAnyErrors()}">
+        <strong>Chưa thể gửi đăng ký.</strong>
+        <span th:errors="*{topicId}">Vui lòng kiểm tra đề tài đã chọn.</span>
+        <span class="d-block" th:errors="*{version}">Phiên bản dữ liệu không hợp lệ.</span>
+      </div>
+
+      <div class="registration-rule mb-4">
+        <span class="registration-rule-icon" aria-hidden="true">i</span>
+        <div>
+          <strong>Chỉ Trưởng nhóm được gửi đăng ký</strong>
+          <p class="mb-0 text-secondary">Sau khi gửi, thành viên và Trưởng nhóm được giữ nguyên đến khi đăng ký bị rút hoặc từ chối.</p>
+        </div>
+      </div>
+
+      <fieldset th:disabled="${pendingInvitation}">
+        <legend class="h3">Đề tài còn nhận đăng ký</legend>
+        <p class="text-secondary mb-3">Danh sách không bao gồm đề tài đã nhận một nhóm khác.</p>
+
+        <div class="registration-topic-list" th:if="${!#lists.isEmpty(topics)}">
+          <label class="topic-option" th:each="topic : ${topics}">
+            <input class="form-check-input" type="radio" th:field="*{topicId}"
+                   th:value="${topic.id}" required>
+            <span class="min-w-0">
+              <strong class="d-block" th:text="${topic.title}">Tên đề tài</strong>
+              <small>
+                <span th:text="${topic.supervisors}">Giảng viên hướng dẫn</span>
+                <span aria-hidden="true"> · </span>
+                <span th:text="${topic.department}">Bộ môn</span>
+              </small>
+            </span>
+          </label>
+        </div>
+
+        <div class="empty py-4" th:if="${#lists.isEmpty(topics)}">
+          <div class="empty-icon" aria-hidden="true">▤</div>
+          <p class="empty-title">Chưa có đề tài có thể đăng ký</p>
+          <p class="empty-subtitle text-secondary">Danh sách sẽ xuất hiện sau khi Trưởng khoa công bố đề tài.</p>
+        </div>
+      </fieldset>
+      <input type="hidden" th:field="*{version}">
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <a class="btn btn-ghost-secondary" th:href="@{/groups/{id}(id=${groupId})}">Hủy</a>
+      <button class="btn btn-primary" type="submit"
+              th:disabled="${pendingInvitation or #lists.isEmpty(topics)}">Gửi đăng ký</button>
+    </div>
   </form>
 </section>
 </body>

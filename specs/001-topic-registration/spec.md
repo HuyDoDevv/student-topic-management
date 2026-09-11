@@ -6,7 +6,7 @@
 
 **Created**: 2026-09-08
 
-**Status**: Draft — chờ xác nhận nghiệp vụ, chưa sẵn sàng lập kế hoạch triển khai.
+**Status**: Ready for implementation — các quyết định nghiệp vụ hiện tại đã được xác nhận.
 
 **Input**: Quản lý đợt đăng ký, đề tài và đăng ký đề tài của nhóm sinh viên; nhận diện và
 phân quyền cần thiết; duyệt/công bố đề tài; chấp nhận hoặc từ chối đăng ký theo nghiệp vụ
@@ -63,7 +63,7 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 - Q: ADMIN có được phép can thiệp trực tiếp vào các nghiệp vụ học vụ như tạo đợt, duyệt đề tài và xét đăng ký không? → A: ADMIN chỉ xử lý sự cố khẩn cấp như nội dung do kẻ gian đăng; không quản lý nghiệp vụ học tập, đăng ký, role, khoa/bộ môn hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên chưa có trong phiên bản đầu và nếu bổ sung sau sẽ thuộc trưởng khoa. Xác nhận U, thay thế phạm vi ADMIN đề xuất trước đó và làm rõ một phần Q-18; liên quan REQ-28, REQ-31–32.
 - Q: Khi trưởng khoa chuyển một giảng viên đang có đề tài hoặc phân công GVHD sang bộ môn/khoa khác, các trách nhiệm đang hoạt động phải được xử lý thế nào? → A: Bỏ qua trong phiên bản đầu vì là chức năng mở rộng, mức độ không quan trọng. Phiên bản đầu không cung cấp thao tác chuyển giảng viên và giả định thông tin bộ môn/khoa ổn định trong các luồng đang hoạt động; nếu có thời gian sẽ đặc tả và triển khai sau. Xác nhận U, đóng phần chuyển bộ môn của Q-18 bằng quyết định ngoài phạm vi hiện tại.
 - Q: Khi có kẻ gian đăng nội dung, ADMIN nên “xóa” theo cách nào? → A: A — ADMIN ẩn nội dung khỏi website nhưng giữ dữ liệu để kiểm tra hoặc khôi phục; lưu ADMIN thực hiện, thời gian và lý do, đồng thời khóa tài khoản gây sự cố. Đây là quyền xử lý khẩn cấp, không cấp quyền sửa nội dung hoặc thực hiện nghiệp vụ học vụ/đăng ký. Xác nhận U, giải quyết phần còn lại của Q-18; liên quan REQ-28, REQ-31–32.
-- Q: Phiên bản local đầu tiên được nghiệm thu theo mức chất lượng nào? → A: A — Dùng toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; kiểm tra chức năng, phân quyền backend, CSRF, mật khẩu băm, validation, không lộ secret, responsive trên desktop/tablet/mobile và các xung đột dữ liệu chính. Không đặt SLA định lượng cho thời gian phản hồi, số người dùng đồng thời, uptime hoặc backup ở phiên bản local. Xác nhận U, giải quyết Q-20 và G-Acceptance; các kết quả phụ thuộc Q nghiệp vụ còn lại tiếp tục ở trạng thái blocked cho tới khi từng Q được chốt.
+- Q: Phiên bản local đầu tiên được nghiệm thu theo mức chất lượng nào? → A: A — Dùng toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; kiểm tra chức năng, phân quyền backend, CSRF, mật khẩu băm, validation, không lộ secret, responsive trên desktop/tablet/mobile và các xung đột dữ liệu chính. Không đặt SLA định lượng cho thời gian phản hồi, số người dùng đồng thời, uptime hoặc backup ở phiên bản local. Xác nhận U, giải quyết Q-20 và G-Acceptance; các Q nghiệp vụ khi đó còn mở đã được chốt trong các phiên sau.
 
 ### Session 2026-09-10
 
@@ -88,6 +88,9 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 - Q: Lời mời đang chờ có giữ chỗ và một SV được nhận bao nhiêu lời mời trong cùng đợt? → A: A — Lời mời PENDING giữ một chỗ trong giới hạn ba người; tổng số thành viên và lời mời PENDING của nhóm không vượt quá ba. Mỗi SV chỉ có tối đa một lời mời PENDING trong một đợt. Khi SV từ chối hoặc trưởng nhóm hủy, chỗ được giải phóng. Xác nhận U ngày 2026-09-11; liên quan FR-08–09 và AS-4.2–4.3/4.12.
 - Q: Sinh viên được chấp nhận lời mời hoặc rời nhóm vào thời điểm nào? → A: A — Gửi/chấp nhận/hủy lời mời, rời hoặc giải tán nhóm chỉ thực hiện trong hạn SV và khi nhóm chưa có đăng ký PENDING/ACCEPTED. SV được từ chối lời mời bất cứ lúc nào; lời mời chưa trả lời tự hết hiệu lực khi hết hạn SV. Xác nhận U ngày 2026-09-11; liên quan FR-03/FR-08 và AS-4.4/4.10–4.12.
 - Q: Nhóm còn lời mời đang chờ có được đăng ký đề tài không? → A: A — Không. Trước khi gửi đăng ký đề tài, mọi lời mời PENDING của nhóm phải được SV phản hồi hoặc trưởng nhóm hủy. Hệ thống không tự hủy lời mời khi gửi đăng ký. Xác nhận U ngày 2026-09-11; liên quan FR-08/FR-10 và AS-4.15/AS-5.1.
+- Q: Khi Trưởng khoa từ chối thủ công một đăng ký đề tài, lý do từ chối có bắt buộc không? → A: A — Bắt buộc nhập lý do có nội dung sau khi loại bỏ khoảng trắng đầu/cuối. Thiếu hoặc chỉ nhập khoảng trắng thì từ chối toàn bộ thao tác và giữ đăng ký ở trạng thái Chờ xét. Xác nhận U ngày 2026-09-11; làm rõ phần lý do thủ công của Q-09, liên quan FR-12 và AS-5.5.
+- Q: Khi trưởng nhóm rút đăng ký đồng thời với lúc Trưởng khoa chấp nhận chính đăng ký đó, thao tác nào được ưu tiên? → A: A — Giao dịch lấy khóa đợt trước được hoàn tất; giao dịch sau phải đọc lại trạng thái và bị từ chối vì đăng ký không còn Chờ xét. Nếu rút lấy khóa trước thì kết quả là Đã rút; nếu chấp nhận lấy khóa trước thì kết quả là Đã chấp nhận. Xác nhận U ngày 2026-09-11; làm rõ phần tranh chấp của Q-09, phù hợp protocol khóa period hiện tại và liên quan FR-11/FR-13, AS-5.15.
+- Q: Các đăng ký đã bị từ chối hoặc đã rút được lưu trong database bao lâu? → A: A — Giữ toàn bộ lịch sử không thời hạn trong phiên bản đầu. Mỗi lần đăng ký lại tạo một bản ghi mới; bản ghi REJECTED/WITHDRAWN cũ không bị sửa, ghi đè hoặc xóa và không có tác vụ tự động dọn lịch sử. Xác nhận U ngày 2026-09-11; giải quyết phần retention cuối cùng của Q-09, liên quan FR-10–13 và AS-5.10.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -353,8 +356,9 @@ thử gửi đăng ký bằng trưởng nhóm và thử từng quyết định b
    **Then** kết quả là chấp nhận và nhóm được gắn với đề tài cùng GVHD được phân công (AS-5.4).
 5. **Given** đăng ký đủ điều kiện xét, **When** trưởng khoa từ chối,
    **Then** kết quả là từ chối, không coi nhóm đã được chấp thuận thực hiện đề tài (AS-5.5).
-   Nhóm được đăng ký lại đề tài cũ hoặc khác còn nhận đăng ký trong hạn SV;
-   tính bắt buộc của lý do từ chối vẫn chưa xác nhận.
+   Trưởng khoa phải nhập lý do có nội dung sau khi loại bỏ khoảng trắng đầu/cuối; nếu thiếu
+   hoặc chỉ có khoảng trắng thì toàn bộ thao tác bị từ chối và đăng ký vẫn Chờ xét. Nhóm được
+   đăng ký lại đề tài cũ hoặc khác còn nhận đăng ký trong hạn SV sau khi bị từ chối hợp lệ.
 6. **Given** người không có quyền gửi hoặc quyết định đăng ký,
    **When** thực hiện thao tác tương ứng, **Then** bị từ chối, dữ liệu nghiệp vụ không đổi (AS-5.6).
    Với quyết định chấp nhận/từ chối, người không có vai trò trưởng khoa phải bị từ chối,
@@ -374,7 +378,8 @@ thử gửi đăng ký bằng trưởng nhóm và thử từng quyết định b
 10. **Given** đăng ký trước đã bị từ chối hoặc đã rút, nhóm không có đăng ký chờ xét/được
     chấp nhận khác trong đợt, thời điểm trong hạn SV,
     **When** trưởng nhóm đăng ký đề tài cũ hoặc đề tài khác đã công bố còn nhận đăng ký,
-    **Then** tạo được đăng ký chờ xét mới nếu thỏa các điều kiện còn lại (AS-5.10).
+    **Then** tạo được đăng ký chờ xét mới với ID mới nếu thỏa các điều kiện còn lại; đăng ký
+    đã rút/từ chối trước đó được giữ nguyên trong lịch sử (AS-5.10).
 11. **Given** đăng ký đã được chấp nhận, hoặc đã ngoài hạn SV,
     **When** trưởng nhóm yêu cầu rút, **Then** bị từ chối và đăng ký không đổi (AS-5.11).
 12. **Given** đăng ký đang chờ xét trong hạn SV và người gọi không phải trưởng nhóm của nhóm,
@@ -407,8 +412,7 @@ Quy tắc biên ngày tương tự áp dụng cho đăng đề tài của GV, đ
 đăng ký đã rút/bị từ chối không ngăn đăng ký mới hợp lệ. Không cho đổi đề tài trực tiếp
 trên đăng ký đã được chấp nhận bằng luồng rút/đăng ký lại này.
 Q-07 về điều kiện nhóm đã được chốt lại theo luồng lời mời có xác nhận và tự rời/giải tán.
-Còn Q-09 về lý do từ chối thủ công
-và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết cho luồng hiện tại.
+Q-09 và Q-10 đã được giải quyết cho luồng hiện tại.
 
 ### Edge Cases
 
@@ -448,12 +452,17 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
   cho đề tài đã nhận nhóm: nếu đăng ký được ghi nhận trước thì thuộc diện tự động từ chối,
   nếu đề tài đã nhận nhóm trước thì từ chối tạo đăng ký mới.
 - Duyệt/công bố hoặc quyết định đăng ký đồng thời với thay đổi dữ liệu liên quan:
-  không được bỏ qua quyền/ràng buộc; quy tắc sửa và ưu tiên quyết định còn mở.
+  không được bỏ qua quyền/ràng buộc; giao dịch lấy khóa đợt trước được xử lý trước và
+  giao dịch sau phải đọc lại trạng thái trước khi quyết định.
 - Trong hạn SV, trưởng nhóm được rút đăng ký chờ xét và đăng ký lại đề tài cũ/khác còn
   nhận đăng ký sau rút hoặc từ chối; ngoài hạn không được rút/đăng ký lại.
-- Đăng ký đã chấp nhận không được rút. Rút đồng thời với chấp nhận phải bảo toàn trạng thái:
-  không chấp nhận đăng ký đã rút, không rút đăng ký đã chấp nhận; thứ tự ưu tiên chưa chốt.
+- Đăng ký đã chấp nhận không được rút. Khi rút đồng thời với chấp nhận, giao dịch lấy khóa
+  đợt trước quyết định trạng thái cuối; giao dịch sau đọc lại trạng thái và bị từ chối.
+- Từ chối thủ công mà thiếu lý do hoặc lý do chỉ gồm khoảng trắng: không thay đổi trạng thái
+  đăng ký và hiển thị lỗi validation cho Trưởng khoa.
 - Hai yêu cầu đăng ký lại đồng thời không được tạo hai đăng ký có hiệu lực cho một nhóm.
+- Đăng ký lại luôn tạo hàng mới; mọi hàng đã rút hoặc bị từ chối được giữ không thời hạn
+  trong phiên bản đầu và không bị tác vụ tự động xóa.
 - Gửi lại thao tác hoặc giả mạo danh tính/nhóm/role: không được tạo dữ liệu trái ràng buộc
   hoặc cấp quyền chỉ vì thông tin bên gọi tự khai.
 - Tài khoản STUDENT đồng thời có vai trò LECTURER hoặc DEAN là cấu hình không hợp lệ.
@@ -478,10 +487,10 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 | FR-07 | Chỉ trưởng khoa được duyệt/từ chối từng đề tài và công bố danh sách trước khi nhóm chọn đề tài từ danh sách đó. Một thao tác công bố chuyển toàn bộ đề tài đang Đã duyệt của đúng đợt sang Đã công bố trong cùng giao dịch; đề tài Nháp/Chờ duyệt không đổi. Trang chi tiết đợt hiển thị các đề tài và nhắc hoàn tất trước ngày bắt đầu SV. Đây là lời nhắc, không phải SLA hoặc khóa cứng: nếu trễ nhưng còn trong hạn SV, trưởng khoa vẫn có thể công bố. Đến ngày bắt đầu SV không tự thay thế việc công bố; công bố không bỏ qua ngày kết thúc SV. | E: REQ-02, 08, 15; quyền/lịch xác nhận U ngày 2026-09-08, granularity/UI xác nhận U ngày 2026-09-11 | AS-3.1–3.5, 5.17–5.18 |
 | FR-08 | SV chỉ được tạo nhóm trong hạn SV và trở thành trưởng nhóm. Trong hạn SV và khi nhóm không có đăng ký PENDING/ACCEPTED, trưởng nhóm được gửi/hủy lời mời, xóa thành viên và chuyển quyền cho thành viên khác; SV được mời tự chấp nhận và chỉ trở thành thành viên sau khi chấp nhận hợp lệ. SV được từ chối lời mời bất cứ lúc nào; lời mời chưa trả lời tự hết hiệu lực khi hết hạn SV. Lời mời PENDING giữ chỗ: tổng thành viên và lời mời PENDING của nhóm không vượt quá ba, mỗi SV chỉ có một lời mời PENDING trong một đợt; từ chối/hủy giải phóng chỗ. Thành viên thường được tự rời trong cùng điều kiện thời gian/trạng thái. Trưởng nhóm có thành viên khác phải chuyển quyền trước khi rời; trưởng nhóm một người được giải tán nhóm, hệ thống không tự chọn người thay thế. Sau rút/từ chối được sửa nếu còn hạn và không có đăng ký có hiệu lực khác. Nhóm từ 1 đến 3 SV, đúng một trưởng nhóm là thành viên; nhóm một người được gửi đăng ký nếu thỏa điều kiện khác. | E: REQ-12–13; quyền/thời điểm xác nhận U ngày 2026-09-08; luồng lời mời, giữ chỗ, thời gian phản hồi và tự rời thay thế quyết định thêm trực tiếp ngày 2026-09-11 | AS-4.1–4.2, 4.4, 4.6–4.15 |
 | FR-09 | Mỗi SV chỉ thuộc một nhóm trong từng đợt đăng ký. Không từ chối tư cách thành viên ở đợt khác chỉ vì SV đã thuộc nhóm trong một đợt. | E: REQ-13; phạm vi được xác nhận U, Session 2026-09-08, giải quyết Q-08 | AS-4.3, 4.5 |
-| FR-10 | Chỉ trưởng nhóm được gửi đăng ký cho nhóm mình; nhóm chỉ có một đăng ký có hiệu lực (chờ xét hoặc đã chấp nhận) cho đề tài đã công bố trong đợt và chỉ gửi đăng ký trong hạn SV. Nhóm không được gửi khi còn lời mời PENDING; hệ thống không tự hủy lời mời, trưởng nhóm phải chờ phản hồi hoặc hủy trước. Nhiều nhóm được đăng ký chờ xét cùng đề tài; một đăng ký chờ xét không giữ chỗ độc quyền. | E: REQ-03, 14–15; Q-07/Q-10 được xác nhận U, các phiên ngày 2026-09-08 và 2026-09-11; còn Q-09 | AS-4.15, 5.1–5.3 |
-| FR-11 | Chỉ trưởng khoa được chấp nhận đăng ký trước khi nhóm thực hiện đề tài với GVHD được phân công. Mỗi đề tài trong một đợt chỉ được chấp nhận tối đa một nhóm, kể cả khi thao tác đồng thời. Khi chấp nhận, tự động từ chối các đăng ký còn chờ xét khác cùng đề tài/đợt với lý do “Đề tài đã nhận nhóm” và ngừng nhận đăng ký mới trong đợt. | E: REQ-16; quyền và giới hạn xác nhận U, các phiên ngày 2026-09-08 (Q-01, Q-10); còn Q-09 về ưu tiên thao tác | AS-5.4, 5.6–5.8, 5.14–5.16 |
-| FR-12 | Chỉ trưởng khoa được quyết định từ chối thủ công; hệ thống tự động từ chối theo FR-11 khi đề tài nhận nhóm khác. Không coi đăng ký bị từ chối là đã chấp thuận. Sau từ chối, trưởng nhóm được đăng ký lại đề tài cũ hoặc khác còn nhận đăng ký trong hạn SV theo FR-13. | U: phạm vi và các phiên ngày 2026-09-08; liên quan REQ-16, Q-09–10; PDF không mô tả nhánh từ chối | AS-5.5–5.6, 5.14–5.16 |
-| FR-13 | Trong hạn SV, chỉ trưởng nhóm của nhóm được rút đăng ký đang chờ xét. Sau khi rút hoặc bị từ chối, trưởng nhóm được đăng ký lại đề tài cũ hoặc đề tài khác đã công bố còn nhận đăng ký, nếu không có đăng ký có hiệu lực khác trong đợt. Không cho rút đăng ký đã chấp nhận; không cho rút hoặc đăng ký lại ngoài hạn SV. | U: Session 2026-09-08, Q-09; liên quan REQ-03, REQ-14–16, REQ-31 | AS-5.9–5.13 |
+| FR-10 | Chỉ trưởng nhóm được gửi đăng ký cho nhóm mình; nhóm chỉ có một đăng ký có hiệu lực (chờ xét hoặc đã chấp nhận) cho đề tài đã công bố trong đợt và chỉ gửi đăng ký trong hạn SV. Nhóm không được gửi khi còn lời mời PENDING; hệ thống không tự hủy lời mời, trưởng nhóm phải chờ phản hồi hoặc hủy trước. Nhiều nhóm được đăng ký chờ xét cùng đề tài; một đăng ký chờ xét không giữ chỗ độc quyền. | E: REQ-03, 14–15; Q-07/Q-09/Q-10 được xác nhận U, các phiên ngày 2026-09-08 và 2026-09-11 | AS-4.15, 5.1–5.3 |
+| FR-11 | Chỉ trưởng khoa được chấp nhận đăng ký trước khi nhóm thực hiện đề tài với GVHD được phân công. Mỗi đề tài trong một đợt chỉ được chấp nhận tối đa một nhóm, kể cả khi thao tác đồng thời. Khi chấp nhận, tự động từ chối các đăng ký còn chờ xét khác cùng đề tài/đợt với lý do “Đề tài đã nhận nhóm” và ngừng nhận đăng ký mới trong đợt. Khi chấp nhận tranh chấp với rút, giao dịch lấy khóa đợt trước quyết định trạng thái; giao dịch sau đọc lại và bị từ chối. | E: REQ-16; quyền và giới hạn xác nhận U, các phiên ngày 2026-09-08 (Q-01, Q-10), ưu tiên tranh chấp xác nhận ngày 2026-09-11 | AS-5.4, 5.6–5.8, 5.14–5.16 |
+| FR-12 | Chỉ trưởng khoa được quyết định từ chối thủ công và phải nhập lý do có nội dung sau khi trim; thiếu lý do thì không đổi trạng thái. Hệ thống tự động từ chối theo FR-11 khi đề tài nhận nhóm khác với lý do cố định. Không coi đăng ký bị từ chối là đã chấp thuận. Sau từ chối, trưởng nhóm được đăng ký lại đề tài cũ hoặc khác còn nhận đăng ký trong hạn SV theo FR-13. | U: phạm vi và các phiên ngày 2026-09-08, lý do thủ công xác nhận ngày 2026-09-11; liên quan REQ-16, Q-09–10; PDF không mô tả nhánh từ chối | AS-5.5–5.6, 5.14–5.16 |
+| FR-13 | Trong hạn SV, chỉ trưởng nhóm của nhóm được rút đăng ký đang chờ xét. Sau khi rút hoặc bị từ chối, trưởng nhóm được đăng ký lại đề tài cũ hoặc đề tài khác đã công bố còn nhận đăng ký, nếu không có đăng ký có hiệu lực khác trong đợt. Mỗi lần đăng ký lại tạo hàng mới; giữ không thời hạn các hàng REJECTED/WITHDRAWN cũ và không tự động xóa. Không cho rút đăng ký đã chấp nhận; không cho rút hoặc đăng ký lại ngoài hạn SV. Khi rút tranh chấp với chấp nhận, giao dịch lấy khóa đợt trước quyết định trạng thái; giao dịch sau đọc lại và bị từ chối. | U: Session 2026-09-08; ưu tiên tranh chấp và retention Q-09 xác nhận ngày 2026-09-11; liên quan REQ-03, REQ-14–16, REQ-31 | AS-5.9–5.15 |
 | FR-14 | Vòng đời đề tài: Nháp → Chờ duyệt → Đã duyệt → Đã công bố. GV chỉ sửa nội dung và GVHD của bản nháp mình tạo, rồi gửi duyệt trong hạn GV. Trưởng khoa duyệt/từ chối đề tài Chờ duyệt; từ chối đưa về Nháp để tác giả sửa/gửi lại trong hạn GV. Chỉ đề tài Đã duyệt được công bố; nội dung và GVHD bị khóa khi Chờ duyệt, Đã duyệt hoặc Đã công bố. Phiên bản đầu không hỗ trợ thay GVHD trong quá trình thực hiện. | U: các phiên ngày 2026-09-08 và 2026-09-10, Q-05–06 đã giải quyết; liên quan REQ-02–03, REQ-08–11, REQ-15, REQ-31 | AS-2.1–2.3, 2.7–2.9, 3.1, 3.4–3.5 |
 
 | FR-15 | Trước đầu ngày bắt đầu GV, trưởng khoa được sửa tên, loại và bốn ngày đăng ký khi cấu hình vẫn hợp lệ và không đưa ngày bắt đầu GV về trước ngày hiện tại; đổi loại tự xóa ngày không còn áp dụng và yêu cầu đủ ngày của loại mới. Từ đầu ngày bắt đầu GV, khóa tên, loại và các ngày bắt đầu. Chỉ được kéo dài ngày kết thúc của giai đoạn chưa hết hạn; không rút ngắn, không mở lại giai đoạn đã đóng và lịch sau sửa vẫn phải đúng thứ tự. Mỗi ngày phụ đang áp dụng chỉ được dời muộn hơn trước ngày đang lưu. | U: Q-02 được người dùng giải quyết ngày 2026-09-10, thay thế quyết định khóa toàn bộ bốn mốc ở phiên 3; liên quan REQ-03–07, REQ-31 | AS-1.11–1.13 |
@@ -527,9 +536,9 @@ Không chỉ định giao thức, framework, database hay công cụ kiểm th�
 | AT-02 | Ca trước/trong/sau từng ngày biên GV/SV theo Asia/Ho_Chi_Minh: mở từ đầu ngày bắt đầu và đóng sau cuối ngày kết thúc. Kiểm tra ngày đã qua, giá trị có giờ, lịch chồng lấn, sai thứ tự hoặc ngày kết thúc GV trùng ngày bắt đầu SV bị từ chối; ngày SV kế tiếp hợp lệ; chưa công bố không nhận đăng ký SV. Áp dụng biên SV cho đăng ký lại và rút chờ xét. | FR-03, 05, 07, 10, 13; AS-1.4, 1.9–1.10, 5.17–5.18; Q-03–04 đã xác nhận và điều chỉnh ngày 2026-09-10 |
 | AT-03 | Tác giả luôn được lưu ở slot 1; ca không có/có một GVHD phối hợp cùng bộ môn hợp lệ. Từ chối giả mạo tác giả, chọn lại tác giả, chọn quá một người phối hợp hoặc chọn người khác bộ môn. Lần lượt bỏ hoặc để trống từng trường tên đề tài, mô tả, mục tiêu, yêu cầu đối với SV, kết quả dự kiến: không chuyển khỏi Nháp. Đủ cả năm trường và điều kiện khác: chuyển Chờ duyệt, giữ đúng nội dung. | FR-05–06; AS-2.1–2.6, 2.10–2.11 |
 | AT-04 | Ca tạo nhóm trong hạn SV với người tạo là trưởng nhóm và từ chối tạo ngoài hạn; gửi/chấp nhận/từ chối/hủy lời mời; xóa hoặc tự rời; chuyển quyền cho thành viên cùng nhóm; từ chối người nhận ngoài nhóm; giải tán nhóm một người; giữ từ 1 đến 3 thành viên và đúng một trưởng nhóm. Từ chối SV thuộc hai nhóm cùng đợt, không xung đột với nhóm ở đợt khác. Từ chối sửa nhóm khi chờ xét/đã chấp nhận hoặc ngoài hạn SV; cho phép sau rút/từ chối trong hạn nếu không có đăng ký có hiệu lực. Kiểm tra cả hai biên thời gian SV và xác nhận lời mời không tự tạo membership. Kiểm tra nhóm 1/2/3 người đăng ký hợp lệ, nhóm không thành viên/không trưởng nhóm bị từ chối. | FR-08–09; AS-4.1–4.15 |
-| AT-05 | Ca đề tài công bố/chưa công bố, từ chối gửi khi còn lời mời PENDING mà không tự hủy lời mời, đăng ký đầu/thứ hai của nhóm, nhiều nhóm chờ xét cùng đề tài, trưởng khoa chấp nhận/từ chối; từ chối chấp nhận nhóm thứ hai cho cùng đề tài/đợt. Kiểm tra rút chờ xét trong hạn; đăng ký lại đề tài cũ/khác sau từ chối/rút; từ chối rút đã chấp nhận, rút/đăng ký lại ngoài hạn và rút sai quyền. | FR-07, 10–13; AS-4.15, 5.7, 5.9–5.13 |
+| AT-05 | Ca đề tài công bố/chưa công bố, từ chối gửi khi còn lời mời PENDING mà không tự hủy lời mời, đăng ký đầu/thứ hai của nhóm, nhiều nhóm chờ xét cùng đề tài, trưởng khoa chấp nhận/từ chối; từ chối chấp nhận nhóm thứ hai cho cùng đề tài/đợt. Kiểm tra rút chờ xét trong hạn; đăng ký lại đề tài cũ/khác sau từ chối/rút bằng ID mới và giữ hàng lịch sử; từ chối rút đã chấp nhận, rút/đăng ký lại ngoài hạn và rút sai quyền. | FR-07, 10–13; AS-4.15, 5.7, 5.9–5.13 |
 | AT-06 | Mỗi thao tác được bảo vệ có ca quyền hợp lệ và bị từ chối, kể cả gọi trực tiếp backend và giả mạo role/quan hệ; xác nhận không thay đổi trái phép. Duyệt/công bố đề tài và chấp nhận/từ chối đăng ký: cho phép trưởng khoa; từ chối tài khoản không có vai trò trưởng khoa, gồm GV đăng đề tài và GVHD. Quản lý thành viên/chuyển quyền/gửi hoặc rút đăng ký: chỉ trưởng nhóm của nhóm đó; từ chối thành viên thường, trưởng nhóm khác và người đã chuyển quyền. | FR-01–13; constitution III, VIII; Session 2026-09-08 |
-| AT-07 | Ca đồng thời thêm thành viên, cùng SV tham gia hai nhóm trong cùng đợt và nhóm đăng ký đề tài; kết quả không vi phạm REQ-12–14. Kiểm tra nhóm ở hai đợt khác nhau không xung đột vì REQ-13. Hai thao tác chấp nhận nhóm khác nhau cho cùng đề tài/đợt không được tạo hai nhóm được chấp nhận. Không mặc định cách chọn người thắng. | FR-08–11, 13; AS-5.8; constitution VI; Q-08, Q-10 đã xác nhận; còn Q-09 |
+| AT-07 | Ca đồng thời thêm thành viên, cùng SV tham gia hai nhóm trong cùng đợt và nhóm đăng ký đề tài; kết quả không vi phạm REQ-12–14. Kiểm tra nhóm ở hai đợt khác nhau không xung đột vì REQ-13. Hai thao tác chấp nhận nhóm khác nhau cho cùng đề tài/đợt không được tạo hai nhóm được chấp nhận. Không gán ưu tiên nghiệp vụ cho nhóm nào; khóa đợt tuần tự hóa kết quả. | FR-08–11, 13; AS-5.8; constitution VI; Q-08–10 đã xác nhận |
 | AT-08 | Ca quyền hoặc dữ liệu liên quan thay đổi trong lúc xử lý quyết định; kết quả vẫn tuân thủ chính sách đã chốt, không ghi trạng thái trái phép. Ca chuyển trưởng nhóm đồng thời với quản lý thành viên/gửi đăng ký phải giữ đúng một trưởng nhóm và không dùng quyền đã mất để thực hiện thao tác trái phép.  Rút và chấp nhận đồng thời không được tạo trạng thái vừa rút vừa chấp nhận; đăng ký lại đồng thời không tạo hai đăng ký có hiệu lực. | FR-01, 07–08, 10–13 |
 | AT-09 | Đầu vào sai tại ranh giới hệ thống bị từ chối và không lưu thay đổi dở dang. | constitution IV; các FR liên quan |
 | AT-10 | Đăng nhập đúng thông tin tài khoản cấp sẵn; từ chối sai mật khẩu/tài khoản không tồn tại và thao tác được bảo vệ khi chưa đăng nhập. Cho phép LECTURER kết hợp DEAN; từ chối STUDENT kết hợp ADMIN, LECTURER hoặc DEAN. Vai trò/khoa/bộ môn đúng dữ liệu được cấp, không thể tự khai để nâng quyền; kiểm tra từ chối truy cập chéo phạm vi và không cung cấp tự đăng ký. Tài khoản ADMIN bị từ chối mọi thao tác học vụ, đăng ký, quản lý role/khoa/bộ môn và chuyển giảng viên. | FR-01; AS-1.5–1.8, 1.14–1.15; REQ-31–32 |
@@ -598,7 +607,9 @@ dùng được bằng bàn phím và trạng thái không chỉ thể hiện b�
   khi chấp nhận một nhóm, hệ thống tự động từ chối các đăng ký khác còn chờ xét cùng
   đề tài/đợt với lý do “Đề tài đã nhận nhóm”.
   trưởng nhóm rút chờ xét trong hạn. Sau từ chối/rút có thể tạo đăng ký mới trong hạn.
-  Lịch sử lưu trữ, lý do bắt buộc và thứ tự ưu tiên thao tác đồng thời còn chưa xác định.
+  Từ chối thủ công bắt buộc có lý do. Khi rút/chấp nhận đồng thời, giao dịch lấy khóa đợt
+  trước quyết định trạng thái và giao dịch sau bị từ chối. Mọi lần rút/từ chối được giữ
+  không thời hạn; đăng ký lại tạo hàng mới và không ghi đè lịch sử.
 
 ## Success Criteria *(mandatory)*
 
@@ -643,7 +654,7 @@ chỉ xử lý sự cố khẩn cấp và không có quyền học vụ hoặc �
 Trưởng khoa đã được xác nhận có quyền
 duyệt/công bố và chấp nhận/từ chối đăng ký. Trưởng nhóm đã được xác nhận quản lý thành viên,
 chuyển quyền trong nhóm, gửi đăng ký và rút đăng ký chờ xét trong hạn SV.
-Các quyền khác chưa chốt không được suy rộng.
+Không suy rộng thêm quyền ngoài những vai trò và quan hệ tài nguyên đã được chốt.
 
 ### Clarifications
 
@@ -651,20 +662,14 @@ Trạng thái ba nhóm làm rõ ban đầu được cập nhật dưới đây; 
 không bị thay bằng giả định để giới hạn số câu hỏi.
 
 - **CL-01**: Đã giải quyết thẩm quyền: trưởng khoa duyệt/công bố và chấp nhận/từ chối; trưởng nhóm quản lý thành viên, chuyển quyền cho thành viên cùng nhóm và gửi đăng ký; SV tạo nhóm là trưởng nhóm ban đầu.
-- **CL-02**: Đã xác nhận một nhóm/SV theo từng đợt (Q-08); nhiều nhóm chờ xét nhưng tối đa một nhóm được chấp nhận/đề tài/đợt (Q-10). Đã xác nhận trong hạn SV được rút chờ xét, đăng ký lại đề tài cũ/khác còn nhận đăng ký sau rút/từ chối; không rút đăng ký đã chấp nhận (Q-09).
+- **CL-02**: Đã xác nhận một nhóm/SV theo từng đợt (Q-08); nhiều nhóm chờ xét nhưng tối đa một nhóm được chấp nhận/đề tài/đợt (Q-10). Đã xác nhận trong hạn SV được rút chờ xét, đăng ký lại đề tài cũ/khác còn nhận đăng ký sau rút/từ chối; không rút đăng ký đã chấp nhận. Lý do từ chối thủ công là bắt buộc. Nếu rút/chấp nhận đồng thời, giao dịch lấy khóa đợt trước quyết định kết quả và giao dịch sau bị từ chối sau khi đọc lại trạng thái. Mỗi lần đăng ký lại tạo hàng mới và giữ không thời hạn các hàng REJECTED/WITHDRAWN cũ; không có tác vụ tự động xóa lịch sử trong phiên bản đầu (Q-09).
 - **CL-03**: Đã giải quyết Q-02. Dùng ngày lịch Asia/Ho_Chi_Minh cho cả bốn ngày GV/SV và hai ngày phụ; không nhập giờ/phút/giây hoặc ngày đã qua. Mở từ đầu ngày bắt đầu và đóng sau cuối ngày kết thúc; ngày bắt đầu SV phải sau ngày kết thúc GV. SV chỉ đăng ký sau công bố và còn hạn. Từ đầu ngày bắt đầu GV, khóa tên, loại và các ngày bắt đầu; chỉ kéo dài ngày kết thúc trước khi giai đoạn hết hạn, không rút ngắn hoặc mở lại. TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc ngày hội đồng; từng ngày phụ chỉ được dời muộn hơn trước ngày đang lưu. Đổi loại trước ngày mở GV tự xóa ngày không còn áp dụng và yêu cầu đủ ngày của loại mới.
 - **CL-04**: Đã chọn seed/import local; LECTURER có thể kết hợp DEAN, STUDENT không kết hợp ADMIN/vai trò nhân sự; quyền trưởng khoa/giảng viên/sinh viên giới hạn theo khoa, bộ môn và quan hệ dữ liệu. ADMIN chỉ xử lý sự cố bằng cách ẩn nội dung, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng, sửa nội dung hoặc quản lý nghiệp vụ/role/cơ cấu tổ chức. Chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Q-18 đã giải quyết cho phạm vi hiện tại.
-- **CL-05**: Đã xác nhận toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; bảo mật nền tảng, responsive và xung đột dữ liệu chính phải được kiểm tra. Không đặt SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup cho phiên bản local. Q-20 và G-Acceptance đã giải quyết; tiêu chí phụ thuộc Q nghiệp vụ khác vẫn blocked theo gate tương ứng.
+- **CL-05**: Đã xác nhận toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; bảo mật nền tảng, responsive và xung đột dữ liệu chính phải được kiểm tra. Không đặt SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup cho phiên bản local. Q-20 và G-Acceptance đã giải quyết; các Q nghiệp vụ còn lại cũng đã được đóng trong các phiên sau.
 - **CL-06**: Đã giải quyết Q-05 cho phạm vi hiện tại. Mỗi đề tài chỉ thuộc một đợt và không có chức năng dùng lại hoặc sao chép sang đợt khác; GV tự tạo đề tài mới ở đợt mới. Bộ môn và tài khoản GV được seed/import; biểu mẫu chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn. Không có màn hình quản lý danh mục hoặc luồng SV đề xuất đề tài trong phiên bản đầu.
 - **CL-07**: Đã giải quyết Q-06 cho phạm vi hiện tại. Chỉ tác giả được thay đổi GVHD khi đề tài ở Nháp; từ Chờ duyệt trở đi danh sách bị khóa. Nếu trưởng khoa từ chối đề tài về Nháp thì tác giả được sửa và gửi lại trong hạn GV. Phiên bản đầu không hỗ trợ thay GVHD trong quá trình thực hiện.
 - **CL-08**: Đã giải quyết G-Publish. Trưởng khoa duyệt/từ chối từng đề tài; công bố toàn bộ đề tài Đã duyệt của một đợt trong một giao dịch. Trang chi tiết đợt là nơi hiển thị và thao tác; UI nhắc hoàn tất trước ngày bắt đầu SV nhưng không đặt SLA, tự động công bố hoặc khóa thao tác trễ.
 - **CL-09**: Q-07 được mở lại và thay đổi ngày 2026-09-11. Chỉ tạo nhóm trong hạn SV; trưởng nhóm gửi lời mời và SV chỉ thành thành viên sau khi đồng ý. Lời mời PENDING giữ chỗ, tổng thành viên và lời mời PENDING của nhóm không vượt ba; mỗi SV chỉ có một lời mời PENDING trong một đợt. Gửi/chấp nhận/hủy, rời/giải tán chỉ trong hạn SV và khi nhóm không có đăng ký PENDING/ACCEPTED; từ chối được phép bất cứ lúc nào, lời mời chờ tự hết hiệu lực khi hết hạn. Thành viên thường được tự rời. Trưởng nhóm có thành viên khác phải chuyển quyền trước; trưởng nhóm một người được giải tán nhóm.
 
-Các quyết định khác vẫn mở:
-
-| Câu hỏi nguồn | Phần cần xác nhận trong đợt này | Ảnh hưởng |
-|---|---|---|
-| Q-09 (phần còn lại) | Tính bắt buộc của lý do từ chối, thứ tự ưu tiên khi rút/chấp nhận đồng thời, chính sách lưu lịch sử. Quyền rút và đăng ký lại đã chốt. | FR-10–13 |
-
-Chưa sẵn sàng triển khai toàn bộ vì Q-09 vẫn còn phần cần xác nhận.
-Q-02, Q-05, Q-06, Q-07, Q-18 và Q-20 đã đóng; câu hỏi còn lại tiếp tục được xử lý tuần tự.
+Không còn quyết định nghiệp vụ đang mở trong phạm vi hiện tại. Q-02, Q-05, Q-06, Q-07,
+Q-09, Q-18 và Q-20 đã đóng; G-Registration được giải phóng để triển khai US5.

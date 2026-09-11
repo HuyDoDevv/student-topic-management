@@ -25,6 +25,9 @@ import vn.edu.topicregistration.periods.application.PeriodService;
 import vn.edu.topicregistration.periods.application.PeriodService.PeriodView;
 import vn.edu.topicregistration.periods.domain.PeriodRules.RegistrationState;
 import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
+import vn.edu.topicregistration.registrations.application.RegistrationService;
+import vn.edu.topicregistration.registrations.application.RegistrationService.RegistrationSummaryView;
+import vn.edu.topicregistration.registrations.persistence.RegistrationStatus;
 import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
 import vn.edu.topicregistration.shared.error.ApplicationException;
 import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
@@ -41,19 +44,24 @@ import vn.edu.topicregistration.topics.domain.TopicRules.TopicStatus;
 public class PeriodController {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy", Locale.forLanguageTag("vi-VN"));
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
+            "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));
 
     private final PeriodService periodService;
     private final TopicReviewService topicReviewService;
+    private final RegistrationService registrationService;
     private final AuthorizationPolicy authorization;
     private final ProjectTime projectTime;
 
     public PeriodController(
             PeriodService periodService,
             TopicReviewService topicReviewService,
+            RegistrationService registrationService,
             AuthorizationPolicy authorization,
             ProjectTime projectTime) {
         this.periodService = periodService;
         this.topicReviewService = topicReviewService;
+        this.registrationService = registrationService;
         this.authorization = authorization;
         this.projectTime = projectTime;
     }
@@ -114,6 +122,14 @@ public class PeriodController {
                 .toList());
         model.addAttribute("reviewSummary", summary);
         model.addAttribute("reviewNotice", reviewNotice(period, summary));
+        List<RegistrationRequestPageView> registrationRequests = registrationService
+                .listForDeanPeriod(id).stream()
+                .map(this::display)
+                .toList();
+        model.addAttribute("registrationRequests", registrationRequests);
+        model.addAttribute("pendingRegistrationCount", registrationRequests.stream()
+                .filter(RegistrationRequestPageView::pending)
+                .count());
         return "periods/detail";
     }
 
@@ -232,6 +248,38 @@ public class PeriodController {
         return DATE.format(projectTime.toBusinessDate(instant));
     }
 
+    private RegistrationRequestPageView display(RegistrationSummaryView registration) {
+        return new RegistrationRequestPageView(
+                registration.id(),
+                "N" + String.format("%03d", registration.groupId()),
+                registration.leaderName(),
+                registration.memberCount(),
+                registration.topicTitle(),
+                DATE_TIME.format(projectTime.toBusinessTime(registration.submittedAt())),
+                registrationStatusLabel(registration.status()),
+                registrationStatusClass(registration.status()),
+                registration.rejectionReason(),
+                registration.status() == RegistrationStatus.PENDING);
+    }
+
+    private static String registrationStatusLabel(RegistrationStatus status) {
+        return switch (status) {
+            case PENDING -> "Chờ xét";
+            case ACCEPTED -> "Đã chấp nhận";
+            case REJECTED -> "Đã từ chối";
+            case WITHDRAWN -> "Đã rút";
+        };
+    }
+
+    private static String registrationStatusClass(RegistrationStatus status) {
+        return switch (status) {
+            case PENDING -> "bg-yellow-lt";
+            case ACCEPTED -> "bg-green-lt";
+            case REJECTED -> "bg-red-lt";
+            case WITHDRAWN -> "bg-secondary-lt";
+        };
+    }
+
     private ReviewNotice reviewNotice(PeriodView period, ReviewSummary summary) {
         String studentStart = format(period.studentStart());
         long unfinished = summary.pendingCount() + summary.approvedCount();
@@ -320,6 +368,19 @@ public class PeriodController {
             boolean warning,
             String title,
             String message) {
+    }
+
+    public record RegistrationRequestPageView(
+            long id,
+            String groupCode,
+            String leaderName,
+            int memberCount,
+            String topicTitle,
+            String submittedAt,
+            String status,
+            String statusClass,
+            String rejectionReason,
+            boolean pending) {
     }
 
     public record ReviewTopicPageView(

@@ -8,7 +8,7 @@
 
 **Feature identifier**: `001-topic-registration` (kết quả setup-plan; không tạo nhánh Git).
 **Date**: 2026-09-08 | **Spec**: [spec.md](spec.md)
-**Status**: Thiết kế có điều kiện — nền tảng đã chốt, chưa đạt gate nghiệp vụ để triển khai toàn bộ.
+**Status**: Ready for implementation — các gate nghiệp vụ hiện tại đã được giải phóng.
 
 **Implementation update 2026-09-09:** đã có khung ứng dụng, UI và migration MySQL V1
 cho 20 bảng; chưa có entity/service/repository hoặc tài khoản nghiệp vụ thật. Profile
@@ -54,27 +54,25 @@ không dùng H2 thay MySQL cho kiểm thử ràng buộc và đồng thời.
 
 | Nguyên tắc | Trước nghiên cứu | Sau thiết kế / bằng chứng |
 |---|---|---|
-| I. Nguồn nghiệp vụ | BLOCKED một phần do Q | Giữ gate bên dưới; thiết kế không xác nhận các Q |
+| I. Nguồn nghiệp vụ | PASS | Các Q trong phạm vi hiện tại đã được khách hàng xác nhận và truy vết trong spec |
 | II. Truy vết | PASS về phương pháp | Bảng FR/REQ/AT và contracts giữ ID |
-| III. Backend quyền | PASS về thiết kế | Ma trận quyền và policy scope chưa chốt được đánh dấu, không mặc định cấp quyền |
+| III. Backend quyền | PASS về thiết kế | Ma trận quyền và scope khoa/bộ môn/quan hệ tài nguyên đã được xác nhận |
 | IV. Boundary validation | PASS về thiết kế | DTO whitelist, kiểm tra service, lỗi không ghi dở dang |
 | V. Tách nghiệp vụ | PASS về thiết kế | web → application/domain → persistence; Thymeleaf chỉ trình bày |
 | VI. Đồng thời | PASS về thiết kế, chưa kiểm thử | Khóa đợt + unique/FK/check; ma trận tranh chấp |
 | VII. Migration | PASS về thiết kế | SQL V1, V2… quản lý thay đổi; Hibernate validate khi boot |
 | VIII. Tests | PASS về kế hoạch, chưa chạy | Unit, HTTP, DB, concurrency, browser |
 | IX. Secrets | PASS về thiết kế | Biến môi trường; mật khẩu mẫu do người chạy cung cấp |
-| X. Nghiệm thu | PASS về chuẩn nền | AS/SC và mức bảo mật/responsive đã xác nhận; các kết quả phụ thuộc Q nghiệp vụ giữ blocked theo gate tương ứng |
+| X. Nghiệm thu | PASS về chuẩn nền | AS/SC, bảo mật, responsive và các quyết định nghiệp vụ đã được xác nhận; test chạy theo từng task |
 
-**Gate tổng: ERROR / chưa đạt**, không phải miễn trừ constitution. Theo yêu cầu tiếp tục
-lập kế hoạch, các tài liệu Phase 1 được cung cấp dưới dạng **draft có điều kiện**.
-Không coi Phase 0 đã giải quyết mọi clarification, không dùng bộ tài liệu này làm
-lệnh triển khai đầy đủ. Chỉ công việc độc lập với Q mới có thể được phân rã sau này.
+**Gate tổng về đặc tả và thiết kế: PASS.** Các task triển khai vẫn phải đáp ứng dependency,
+kiểm thử và bằng chứng nghiệm thu riêng trước khi được đánh dấu hoàn thành.
 
 ### Các quyết định còn chặn
 
-| ID | Chưa chốt | Phần bị chặn |
-|---|---|---|
-| Q-09 | Lý do từ chối thủ công bắt buộc; ưu tiên rút/chấp nhận; lưu lịch sử | Validation rejection, kỳ vọng tranh chấp, retention |
+Không còn quyết định nghiệp vụ đang chặn trong phạm vi hiện tại. Q-09 đã đóng ngày
+2026-09-11: từ chối thủ công bắt buộc có lý do; giao dịch lấy khóa period trước thắng khi
+rút/chấp nhận đồng thời; mỗi lần đăng ký lại tạo hàng mới và giữ lịch sử không thời hạn.
 
 G-Topic/Q-05–06 đã được giải quyết ngày 2026-09-10: mỗi topic thuộc đúng một đợt,
 không có reuse/copy; bộ môn và tài khoản GV được seed/import, form chỉ chọn LECTURER
@@ -87,9 +85,8 @@ sau khi chấp nhận, mỗi SV tối đa một lời mời PENDING/đợt. Thà
 leader có thành viên khác phải chuyển quyền trước, leader một người được giải tán nhóm.
 Nhóm còn lời mời PENDING chưa được gửi đăng ký đề tài.
 
-Việc người dùng bỏ qua clarify không xác nhận bất kỳ phương án nghiệp vụ nào.
-Hạn xử lý duyệt/công bố và quyết định của trưởng khoa chưa được quy định riêng:
-không áp hạn GV/SV cho các thao tác này một cách suy diễn; cần rà soát khi chốt AC.
+Hạn xử lý duyệt/công bố không phải SLA hoặc khóa cứng; giao diện nhắc Trưởng khoa hoàn tất
+trước ngày bắt đầu SV và vẫn cho công bố trong phần thời gian SV còn lại theo FR-07.
 
 G-Period/Q-02 đã được giải quyết ngày 2026-09-10: ngày bắt buộc/null theo loại và độ
 chính xác `DATE` đã chốt; đổi loại trước giờ mở GV tự xóa ngày không còn áp dụng và yêu
@@ -154,7 +151,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 2 | Đợt và thời gian, khóa cấu hình | FR-02–04,15; REQ-01–07,31 | AT-01–02,13; G-Period đã giải phóng |
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
 | 4 | Nhóm, lời mời có xác nhận, thành viên, tự rời/giải tán và chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã chốt lại ngày 2026-09-11 |
-| 5 | Gửi/rút/đăng ký lại, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-05–08,11; Q-09/18 gate |
+| 5 | Gửi/rút/đăng ký lại, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-05–08,11; G-Registration đã giải phóng ngày 2026-09-11 |
 | 6 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 
 Đây là trình tự kế hoạch, không phải tasks.md và không cho phép bỏ qua gate ở mỗi phần.
