@@ -41,9 +41,32 @@ public final class RegistrationRules {
         }
     }
 
+    public static void validateAccept(State status, boolean topicAlreadyAccepted) {
+        requirePending(status);
+        if (topicAlreadyAccepted) {
+            throw failure(Failure.TOPIC_TAKEN);
+        }
+    }
+
+    public static String validateManualReject(State status, String reason) {
+        requirePending(status);
+        String normalized = reason == null ? null : reason.strip();
+        if (normalized == null || normalized.isEmpty()) {
+            throw failure(Failure.VALIDATION_FAILED);
+        }
+        return normalized;
+    }
+
     private static void requireLeader(long actorId, long leaderId) {
         if (actorId != leaderId) {
             throw failure(Failure.ACCESS_DENIED);
+        }
+    }
+
+    private static void requirePending(State status) {
+        Objects.requireNonNull(status, "status");
+        if (status != State.PENDING) {
+            throw failure(Failure.INVALID_REGISTRATION_STATE);
         }
     }
 
@@ -78,7 +101,8 @@ public final class RegistrationRules {
         ACTIVE_REGISTRATION,
         INVALID_TOPIC_STATE,
         TOPIC_TAKEN,
-        INVALID_REGISTRATION_STATE
+        INVALID_REGISTRATION_STATE,
+        VALIDATION_FAILED
     }
 
     public record SubmissionContext(

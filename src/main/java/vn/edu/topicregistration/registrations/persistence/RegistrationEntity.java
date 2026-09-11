@@ -23,6 +23,8 @@ import vn.edu.topicregistration.topics.persistence.TopicEntity;
 @Entity
 @Table(name = "registrations")
 public class RegistrationEntity {
+    public static final String TOPIC_TAKEN_REASON = "Đề tài đã nhận nhóm";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -88,6 +90,57 @@ public class RegistrationEntity {
         }
         this.status = RegistrationStatus.WITHDRAWN;
         this.withdrawnAt = Objects.requireNonNull(withdrawnAt, "withdrawnAt");
+    }
+
+    public void accept(UserAccountEntity decisionActor, Instant decidedAt) {
+        requirePending();
+        this.status = RegistrationStatus.ACCEPTED;
+        this.decisionActor = Objects.requireNonNull(decisionActor, "decisionActor");
+        this.decidedAt = Objects.requireNonNull(decidedAt, "decidedAt");
+    }
+
+    public void rejectManually(
+            UserAccountEntity decisionActor,
+            String rejectionReason,
+            Instant decidedAt) {
+        String normalizedReason = rejectionReason == null ? null : rejectionReason.strip();
+        if (normalizedReason == null || normalizedReason.isEmpty()) {
+            throw new IllegalArgumentException("Manual rejection reason is required");
+        }
+        reject(
+                decisionActor,
+                RegistrationRejectionKind.MANUAL,
+                normalizedReason,
+                decidedAt);
+    }
+
+    public void rejectBecauseTopicTaken(
+            UserAccountEntity decisionActor,
+            Instant decidedAt) {
+        reject(
+                decisionActor,
+                RegistrationRejectionKind.TOPIC_TAKEN,
+                TOPIC_TAKEN_REASON,
+                decidedAt);
+    }
+
+    private void reject(
+            UserAccountEntity decisionActor,
+            RegistrationRejectionKind rejectionKind,
+            String rejectionReason,
+            Instant decidedAt) {
+        requirePending();
+        this.status = RegistrationStatus.REJECTED;
+        this.decisionActor = Objects.requireNonNull(decisionActor, "decisionActor");
+        this.rejectionKind = Objects.requireNonNull(rejectionKind, "rejectionKind");
+        this.rejectionReason = Objects.requireNonNull(rejectionReason, "rejectionReason");
+        this.decidedAt = Objects.requireNonNull(decidedAt, "decidedAt");
+    }
+
+    private void requirePending() {
+        if (status != RegistrationStatus.PENDING) {
+            throw new IllegalStateException("Only a pending registration can be decided");
+        }
     }
 
     public Long getId() {
