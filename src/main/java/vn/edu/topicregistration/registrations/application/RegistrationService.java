@@ -221,6 +221,28 @@ public class RegistrationService {
         return toDetail(registration, dean);
     }
 
+    @Transactional(readOnly = true)
+    public List<RegistrationSummaryView> listForDeanPeriod(long periodId) {
+        RegistrationPeriodEntity period = periods.findById(periodId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        authorization.requireDeanOfFaculty(period.getFaculty().getId());
+        return registrations.findAllByPeriodIdOrderBySubmittedAtDescIdDesc(periodId)
+                .stream()
+                .map(registration -> new RegistrationSummaryView(
+                        registration.getId(),
+                        registration.getGroup().getId(),
+                        displayName(registration.getGroup().getLeader()),
+                        registration.getGroup().getMembers().size(),
+                        registration.getTopic().getId(),
+                        registration.getTopic().getTitle(),
+                        registration.getStatus(),
+                        registration.getRejectionReason(),
+                        registration.getSubmittedAt(),
+                        registration.getVersion()))
+                .toList();
+    }
+
     private RegistrationEntity detailedRegistration(long registrationId) {
         return registrations.findDetailedById(registrationId)
                 .orElseThrow(() -> new ApplicationException(
@@ -332,7 +354,8 @@ public class RegistrationService {
                 registration.getWithdrawnAt(),
                 registration.getVersion(),
                 leader && pending && withinStudentWindow,
-                dean && pending);
+                dean && pending,
+                dean);
     }
 
     private static TopicOption toTopicOption(TopicEntity topic) {
@@ -440,7 +463,8 @@ public class RegistrationService {
             Instant withdrawnAt,
             long version,
             boolean canWithdraw,
-            boolean canDecide) {
+            boolean canDecide,
+            boolean deanViewer) {
         public RegistrationDetailView {
             supervisors = List.copyOf(supervisors);
             members = List.copyOf(members);
@@ -452,5 +476,18 @@ public class RegistrationService {
             String fullName,
             String username,
             boolean leader) {
+    }
+
+    public record RegistrationSummaryView(
+            long id,
+            long groupId,
+            String leaderName,
+            int memberCount,
+            long topicId,
+            String topicTitle,
+            RegistrationStatus status,
+            String rejectionReason,
+            Instant submittedAt,
+            long version) {
     }
 }

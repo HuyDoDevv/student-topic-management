@@ -214,7 +214,7 @@ US3, US4 component và T047 đã giải phóng dependency; T048–T050 có thể
 
 - [X] T055 [US5] Cài registration controller/DTO tại `src/main/java/vn/edu/topicregistration/registrations/web/RegistrationController.java`, `RegistrationForm.java`, `RegistrationDecisionForm.java`; redirect/409/422 theo contract, không nhận actor/status từ client.
 
-- [ ] T056 [US5] Tạo Tabler form/detail/decision tại `src/main/resources/templates/registrations/form.html`, `detail.html`, `decision.html`; nối danh sách topic còn nhận đăng ký và nhóm; hiển thị reason auto-reject, không thêm notification.
+- [X] T056 [US5] Tạo Tabler form/detail/decision tại `src/main/resources/templates/registrations/form.html`, `detail.html`, `decision.html`; nối danh sách topic còn nhận đăng ký và nhóm; hiển thị reason auto-reject, không thêm notification.
 
 - [ ] T057 [US5] Viết/chạy race hai gửi cùng nhóm, hai accept cùng topic, accept/gửi mới, rút/accept theo T047, hai reapply, sửa nhóm/gửi, chuyển leader/gửi tại `src/test/java/vn/edu/topicregistration/concurrency/RegistrationConcurrencyIT.java`; nhiều connection/barrier, dữ liệu cuối không vi phạm và rollback lỗi giữa auto-reject (AT-07–08,11).
 

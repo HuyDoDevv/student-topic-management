@@ -51,6 +51,55 @@
   </div>
 
   <th:block th:replace="~{topics/review :: reviewPanel}"></th:block>
+
+  <section class="card mt-4 registration-request-card" aria-labelledby="registration-requests-title">
+    <div class="card-header review-card-header">
+      <div>
+        <h2 class="card-title mb-1" id="registration-requests-title">Đăng ký đề tài của sinh viên</h2>
+        <p class="text-secondary small mb-0">Xét các nhóm đã gửi đăng ký trong đợt này.</p>
+      </div>
+      <span class="badge bg-yellow-lt"
+            th:text="${pendingRegistrationCount} + ' chờ xét'">0 chờ xét</span>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(registrationRequests)}">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead>
+        <tr><th>Nhóm</th><th>Đề tài</th><th>Gửi lúc</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="request : ${registrationRequests}">
+          <td data-label="Nhóm">
+            <strong class="d-block" th:text="${request.groupCode}">N001</strong>
+            <span class="small text-secondary"
+                  th:text="|${request.leaderName} · ${request.memberCount} thành viên|">Trưởng nhóm · 3 thành viên</span>
+          </td>
+          <td data-label="Đề tài">
+            <strong class="d-block" th:text="${request.topicTitle}">Tên đề tài</strong>
+            <span class="small text-danger" th:if="${request.rejectionReason != null}"
+                  th:text="${request.rejectionReason}">Lý do từ chối</span>
+          </td>
+          <td data-label="Gửi lúc" th:text="${request.submittedAt}">11/09/2026 10:30</td>
+          <td data-label="Trạng thái">
+            <span class="badge" th:classappend="${request.statusClass}"
+                  th:text="${request.status}">Chờ xét</span>
+          </td>
+          <td data-label="Thao tác" class="text-end">
+            <a class="btn btn-sm" th:classappend="${request.pending} ? 'btn-primary' : 'btn-outline-secondary'"
+               th:href="${request.pending} ? @{/registrations/{id}/decision(id=${request.id})} : @{/registrations/{id}(id=${request.id})}"
+               th:text="${request.pending ? 'Xét duyệt' : 'Xem kết quả'}">Xét duyệt</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-body py-5 text-center" th:if="${#lists.isEmpty(registrationRequests)}">
+      <div class="empty-icon" aria-hidden="true">◇</div>
+      <h3 class="h3 mb-2">Chưa có nhóm gửi đăng ký</h3>
+      <p class="text-secondary mb-0">Các yêu cầu sẽ xuất hiện tại đây sau khi Trưởng nhóm chọn đề tài.</p>
+    </div>
+  </section>
 </section>
 </body>
 </html>

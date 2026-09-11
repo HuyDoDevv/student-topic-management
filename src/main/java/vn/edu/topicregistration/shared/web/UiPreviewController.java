@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import vn.edu.topicregistration.groups.web.GroupMemberForm;
 import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
 import vn.edu.topicregistration.periods.web.PeriodForm;
+import vn.edu.topicregistration.registrations.persistence.RegistrationStatus;
+import vn.edu.topicregistration.registrations.web.RegistrationDecisionForm;
+import vn.edu.topicregistration.registrations.web.RegistrationForm;
 import vn.edu.topicregistration.shared.time.TimeConfig;
 import vn.edu.topicregistration.topics.web.TopicDraftForm;
 
@@ -142,7 +145,34 @@ public class UiPreviewController {
     String periodDetail(@PathVariable long id, Model model) {
         common(model, "periods", "Quản lý học vụ");
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("topics", TOPICS);
+        model.addAttribute("reviewTopics", List.of(Map.ofEntries(
+                Map.entry("id", 102),
+                Map.entry("title", TOPICS.get(1).title()),
+                Map.entry("author", TOPICS.get(1).author()),
+                Map.entry("department", TOPICS.get(1).department()),
+                Map.entry("supervisorNames", TOPICS.get(1).supervisors()),
+                Map.entry("description", TOPICS.get(1).description()),
+                Map.entry("objectives", TOPICS.get(1).objectives()),
+                Map.entry("studentRequirements", TOPICS.get(1).studentRequirements()),
+                Map.entry("expectedResults", TOPICS.get(1).expectedResults()),
+                Map.entry("status", "Chờ duyệt"),
+                Map.entry("statusClass", "bg-yellow-lt"),
+                Map.entry("version", 1L),
+                Map.entry("pending", true),
+                Map.entry("approved", false),
+                Map.entry("published", false))));
+        model.addAttribute("reviewSummary", Map.of(
+                "pendingCount", 1,
+                "approvedCount", 0,
+                "publishedCount", 1));
+        model.addAttribute("reviewNotice", Map.of(
+                "warning", false,
+                "title", "Hoàn tất trước ngày 20/09/2026",
+                "message", "Trưởng khoa cần duyệt và công bố đề tài trước khi sinh viên bắt đầu đăng ký."));
+        model.addAttribute("registrationRequests", List.of(new PreviewRegistrationRequest(
+                1L, "N001", "Nguyễn Minh Anh", 3, TOPICS.getFirst().title(),
+                "11/09/2026 10:30", "Chờ xét", "bg-yellow-lt", null, true)));
+        model.addAttribute("pendingRegistrationCount", 1);
         return "periods/detail";
     }
 
@@ -244,19 +274,25 @@ public class UiPreviewController {
     @GetMapping("/groups/{groupId}/registrations/new")
     String registrationCreate(@PathVariable long groupId, Model model) {
         common(model, "registrations", "Đăng ký đề tài");
-        model.addAttribute("groupCode", "N01");
+        RegistrationForm form = new RegistrationForm();
+        form.setVersion(0L);
+        model.addAttribute("registrationForm", form);
+        model.addAttribute("groupId", groupId);
+        model.addAttribute("groupCode", "N001");
         model.addAttribute("period", PERIODS.getFirst());
         model.addAttribute("topics", TOPICS.subList(0, 1));
+        model.addAttribute("pendingInvitation", false);
         return "registrations/form";
     }
 
     @GetMapping("/registrations/{id}")
     String registrationDetail(@PathVariable long id, Model model) {
         common(model, "registrations", "Đăng ký đề tài");
-        model.addAttribute("registrationId", id);
-        model.addAttribute("registrationStatus", "PENDING");
-        model.addAttribute("groupCode", "N01");
-        model.addAttribute("topic", TOPICS.getFirst());
+        RegistrationDecisionForm form = new RegistrationDecisionForm();
+        form.setVersion(0L);
+        model.addAttribute("withdrawForm", form);
+        model.addAttribute("registration", previewRegistration(id, false));
+        model.addAttribute("groupCode", "N001");
         model.addAttribute("members", MEMBERS);
         return "registrations/detail";
     }
@@ -264,11 +300,40 @@ public class UiPreviewController {
     @GetMapping("/registrations/{id}/decision")
     String registrationDecision(@PathVariable long id, Model model) {
         common(model, "decisions", "Xét duyệt đăng ký");
-        model.addAttribute("registrationId", id);
-        model.addAttribute("groupCode", "N01");
-        model.addAttribute("topic", TOPICS.getFirst());
+        RegistrationDecisionForm acceptForm = new RegistrationDecisionForm();
+        acceptForm.setVersion(0L);
+        RegistrationDecisionForm rejectForm = new RegistrationDecisionForm();
+        rejectForm.setVersion(0L);
+        model.addAttribute("acceptForm", acceptForm);
+        model.addAttribute("rejectForm", rejectForm);
+        model.addAttribute("registration", previewRegistration(id, true));
+        model.addAttribute("groupCode", "N001");
         model.addAttribute("members", MEMBERS);
         return "registrations/decision";
+    }
+
+    private PreviewRegistration previewRegistration(long id, boolean deanViewer) {
+        return new PreviewRegistration(
+                id,
+                1L,
+                PERIODS.getFirst().name(),
+                1L,
+                101L,
+                TOPICS.getFirst().title(),
+                TOPICS.getFirst().author(),
+                TOPICS.getFirst().department(),
+                TOPICS.getFirst().supervisors(),
+                RegistrationStatus.PENDING,
+                "Chờ xét",
+                "bg-yellow-lt",
+                null,
+                "11/09/2026 10:30",
+                null,
+                null,
+                0L,
+                !deanViewer,
+                deanViewer,
+                deanViewer);
     }
 
     private void common(Model model, String activeNav, String pageSection) {
@@ -432,5 +497,41 @@ public class UiPreviewController {
             boolean canAccept,
             boolean canReject,
             boolean canCancel) {
+    }
+
+    public record PreviewRegistration(
+            long id,
+            long periodId,
+            String periodName,
+            long groupId,
+            long topicId,
+            String topicTitle,
+            String topicAuthor,
+            String topicDepartment,
+            String supervisors,
+            RegistrationStatus status,
+            String statusLabel,
+            String statusClass,
+            String rejectionReason,
+            String submittedAt,
+            String decidedAt,
+            String withdrawnAt,
+            long version,
+            boolean canWithdraw,
+            boolean canDecide,
+            boolean deanViewer) {
+    }
+
+    public record PreviewRegistrationRequest(
+            long id,
+            String groupCode,
+            String leaderName,
+            int memberCount,
+            String topicTitle,
+            String submittedAt,
+            String status,
+            String statusClass,
+            String rejectionReason,
+            boolean pending) {
     }
 }

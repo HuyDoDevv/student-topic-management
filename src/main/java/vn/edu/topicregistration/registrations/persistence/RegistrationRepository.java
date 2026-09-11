@@ -36,6 +36,12 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
     @EntityGraph(attributePaths = {"topic", "topic.department", "decisionActor"})
     List<RegistrationEntity> findAllByGroupIdOrderBySubmittedAtDescIdDesc(long groupId);
 
+    @EntityGraph(attributePaths = {
+            "period", "period.faculty", "group", "group.leader",
+            "topic", "topic.department", "topic.author", "decisionActor"
+    })
+    List<RegistrationEntity> findAllByPeriodIdOrderBySubmittedAtDescIdDesc(long periodId);
+
     @EntityGraph(attributePaths = {"topic", "topic.department", "decisionActor"})
     Optional<RegistrationEntity>
             findFirstByPeriodIdAndGroupIdAndStatusInOrderBySubmittedAtDescIdDesc(

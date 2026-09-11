@@ -197,6 +197,18 @@ textarea.form-control { min-height: auto; }
 .topic-text { color: #3f4b59; white-space: pre-line; overflow-wrap: anywhere; }
 .timeline-note { display: flex; gap: .85rem; }
 .timeline-dot { width: .8rem; height: .8rem; margin-top: .3rem; flex: 0 0 auto; border-radius: 50%; background: var(--tblr-primary); box-shadow: 0 0 0 .3rem var(--tblr-primary-lt); }
+.timeline-dot.is-success { background: #2fb344; box-shadow: 0 0 0 .3rem rgba(47, 179, 68, .13); }
+.timeline-dot.is-danger { background: #d63939; box-shadow: 0 0 0 .3rem rgba(214, 57, 57, .12); }
+.timeline-dot.is-muted { background: #86909c; box-shadow: 0 0 0 .3rem rgba(134, 144, 156, .12); }
+.registration-timeline { display: grid; gap: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--tblr-border-color); }
+.registration-rule { display: flex; align-items: flex-start; gap: .9rem; padding: 1rem; border: 1px solid rgba(6, 111, 209, .16); border-radius: .7rem; background: rgba(6, 111, 209, .045); }
+.registration-rule-icon { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #dceeff; color: #1769aa; font-weight: 800; }
+.registration-topic-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.registration-topic-list .topic-option { height: 100%; margin-top: 0; }
+.registration-member-list { display: grid; gap: .6rem; padding: 0; list-style: none; }
+.registration-member-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .65rem; }
+.registration-accept-card { border-color: rgba(47, 179, 68, .22); }
+.registration-reject-card { border-color: rgba(214, 57, 57, .2); }
 .period-window { display: grid; gap: .9rem; }
 .period-window > div { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid var(--tblr-border-color); }
 .period-window > div:last-child { padding-bottom: 0; border-bottom: 0; }
@@ -263,6 +275,7 @@ input[readonly] { background-color: var(--tblr-bg-surface-secondary, #f1f3f5); c
   .table-toolbar { align-items: stretch; flex-direction: column; }
   .table-toolbar > *, .table-toolbar .form-select, .topic-search { width: 100%; max-width: none; }
   .supervisor-grid { grid-template-columns: 1fr; }
+  .registration-topic-list { grid-template-columns: 1fr; }
   .group-add-card { position: static; }
   .review-card-header, .review-topic-heading, .publish-bar { align-items: stretch; flex-direction: column; }
   .review-summary, .review-topic-actions { justify-content: flex-start; }

@@ -252,7 +252,8 @@ public class RegistrationController {
                 format(registration.withdrawnAt()),
                 registration.version(),
                 registration.canWithdraw(),
-                registration.canDecide());
+                registration.canDecide(),
+                registration.deanViewer());
     }
 
     private TopicPageView display(TopicOption topic) {
@@ -357,7 +358,8 @@ public class RegistrationController {
             String withdrawnAt,
             long version,
             boolean canWithdraw,
-            boolean canDecide) {
+            boolean canDecide,
+            boolean deanViewer) {
         public RegistrationPageView {
             members = List.copyOf(members);
         }
