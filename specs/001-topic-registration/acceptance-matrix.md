@@ -19,7 +19,7 @@ chứng test; không được hiểu là đạt.
 | FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: DB-02, required/null theo loại và chỉ dời muộn hơn |
 | FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | CONFIRMED | T025: topic thuộc một đợt, không reuse/copy; danh mục seed/import; tests NOT RUN |
 | FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | CONFIRMED | T025: chỉ tác giả đổi GVHD khi DRAFT, khóa từ PENDING_APPROVAL; tests NOT RUN |
-| FR-07 Duyệt và công bố | REQ-02,08,15 + U | AS-3.1–3.3,5.17–5.18; AT-05,06,12; SC-002–004 | TopicReviewContractTest, TopicPublicationIT | BLOCKED G-Publish | NOT RUN |
+| FR-07 Duyệt và công bố | REQ-02,08,15 + U | AS-3.1–3.5,5.17–5.18; AT-05,06,12; SC-002–004 | TopicReviewContractTest, TopicPublicationIT | CONFIRMED | T033: duyệt/từ chối từng topic, publish mọi APPROVED trong đợt nguyên tử, UI nhắc trước ngày SV; tests NOT RUN |
 | FR-08 Nhóm và trưởng nhóm | REQ-12–13 + U | AS-4.1–4.2,4.4,4.6–4.14; AT-04,06–08; SC-003–005 | GroupRulesTest, GroupContractTest, GroupMembershipIT | BLOCKED Q-07 | NOT RUN |
 | FR-09 Một nhóm/SV/đợt | REQ-13 + U | AS-4.3,4.5; AT-04,07; SC-003,005 | GroupRulesTest, GroupMembershipIT | CONFIRMED | NOT RUN |
 | FR-10 Gửi đăng ký | REQ-03,14–15 + U | AS-5.1–5.3; AT-05–09,11; SC-002–005 | RegistrationRulesTest, RegistrationContractTest | BLOCKED Q-09 | NOT RUN |
@@ -39,7 +39,7 @@ chứng test; không được hiểu là đạt.
 | G-Acceptance / T007 | CONFIRMED | Không còn; các hàng phụ thuộc Q khác vẫn BLOCKED |
 | G-Period / T017 | PASS | Q-02 đã giải quyết; US1 T018–T024 đã triển khai và nghiệm thu |
 | G-Topic / T025 | CONFIRMED | Q-05/Q-06 đã giải quyết ngày 2026-09-10; US2 T026–T032 được phép triển khai |
-| G-Publish / T033 | BLOCKED | Granularity và thời điểm xử lý |
+| G-Publish / T033 | CONFIRMED | Không còn; triển khai review trên chi tiết đợt, không auto-publish |
 | G-Group / T039 | BLOCKED | Q-07 |
 | G-Registration / T047 | BLOCKED | Q-09 |
 

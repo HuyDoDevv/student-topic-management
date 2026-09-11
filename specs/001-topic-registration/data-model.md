@@ -99,9 +99,11 @@ trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không 
 Không sửa nội dung hoặc GVHD từ PENDING_APPROVAL trở đi; khi bị từ chối về DRAFT,
 tác giả có thể sửa và gửi lại trong hạn GV. Không có thay GVHD trong quá trình thực hiện,
 hủy công bố hoặc xóa topic trong phạm vi đã chốt.
-Công bố danh sách thể hiện bằng tập đề tài PUBLISHED; granularity công bố cần đối chiếu
-AC nếu yêu cầu công bố toàn danh sách một lần. Contract giữ thao tác tập hợp nguyên tử
-là đề xuất kỹ thuật, không cho công bố DRAFT/PENDING.
+Công bố danh sách thể hiện bằng tập đề tài PUBLISHED. Một lệnh công bố khóa đợt rồi
+chuyển toàn bộ topic APPROVED của đúng đợt sang PUBLISHED trong cùng giao dịch; topic
+DRAFT/PENDING_APPROVAL không đổi. Nếu không còn topic APPROVED thì lệnh không tạo thay đổi.
+Không lưu cờ công bố riêng ở registration_periods và không tự động công bố theo đồng hồ.
+Ngày bắt đầu SV là mốc UI nhắc trưởng khoa hoàn tất, không phải khóa cứng thao tác.
 
 ### Đăng ký
 

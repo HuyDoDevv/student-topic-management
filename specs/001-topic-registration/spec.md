@@ -77,6 +77,11 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 - Q: Danh sách bộ môn và giảng viên hướng dẫn trên biểu mẫu đề tài sẽ được lấy và quản lý theo cách nào? → A: A — Bộ môn và tài khoản giảng viên được seed/import sẵn vào database. Biểu mẫu chỉ hiển thị tài khoản đang hoạt động, có role LECTURER và cùng bộ môn với người đăng; phiên bản đầu không có màn hình quản lý danh mục. Xác nhận U ngày 2026-09-10, giải quyết phần còn lại của Q-05; liên quan REQ-08–11, REQ-28 và FR-01/FR-05–06.
 - Q: Sau khi giảng viên đã gửi đề tài chờ duyệt, hệ thống có cho phép thay đổi danh sách GVHD không? → A: A — Chỉ tác giả được thay đổi GVHD khi đề tài ở Nháp. Từ Chờ duyệt trở đi danh sách GVHD bị khóa; nếu trưởng khoa từ chối đưa đề tài về Nháp thì tác giả được sửa và gửi lại trong hạn GV. Phiên bản đầu không hỗ trợ thay GVHD trong quá trình thực hiện. Xác nhận U ngày 2026-09-10, giải quyết phần còn lại của Q-06; liên quan REQ-10–11 và FR-06/FR-14.
 
+### Session 2026-09-11
+
+- Q: Trưởng khoa công bố đề tài theo từng mục hay theo danh sách và có hạn xử lý riêng không? → A: Trưởng khoa duyệt hoặc từ chối từng đề tài; một thao tác công bố chuyển toàn bộ đề tài đang ở trạng thái Đã duyệt trong một đợt sang Đã công bố trong cùng giao dịch. Không đặt SLA hoặc khóa cứng thời điểm duyệt/công bố; giao diện phải nhắc trưởng khoa hoàn tất trước ngày bắt đầu đăng ký sinh viên. Nếu xử lý trễ nhưng vẫn trong hạn SV, hệ thống vẫn cho công bố để sinh viên sử dụng phần thời gian còn lại. Xác nhận U ngày 2026-09-11, giải quyết G-Publish; liên quan FR-07/FR-14 và AS-3.1–3.5.
+- Q: Trưởng khoa thao tác các đề tài được đề xuất ở đâu? → A: Hiển thị danh sách đề tài của đợt ngay trên trang chi tiết đợt; tại đó trưởng khoa xem nội dung, duyệt/từ chối từng đề tài và công bố toàn bộ các đề tài đã duyệt. Xác nhận U ngày 2026-09-11; đây là bố trí UI, không thay kiểm tra quyền/scope ở backend.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Các story P1 tạo thành luồng bàn giao đầu tiên; thứ tự trình bày phản ánh phụ thuộc
@@ -219,7 +224,8 @@ thực hiện duyệt/công bố, không cần chạy lại thao tác tạo đ�
 
 1. **Given** đề tài Chờ duyệt đủ thông tin, **When** trưởng khoa duyệt,
    **Then** đề tài thành Đã duyệt; **When** trưởng khoa công bố đề tài đã duyệt,
-   **Then** đề tài thành Đã công bố và có trong danh sách công bố của đợt (AS-3.1).
+   **Then** toàn bộ đề tài đang Đã duyệt trong đợt thành Đã công bố trong một giao dịch
+   và có trong danh sách công bố của đợt (AS-3.1).
 2. **Given** đề tài chưa công bố, **When** nhóm cố đăng ký đề tài đó,
    **Then** không tạo đăng ký hợp lệ (AS-3.2).
 3. **Given** người không có vai trò trưởng khoa, kể cả GV đăng đề tài hoặc GVHD,
@@ -233,6 +239,8 @@ thực hiện duyệt/công bố, không cần chạy lại thao tác tạo đ�
 Quyền, thứ tự duyệt/công bố và năm trường nội dung bắt buộc đã chốt.
 Điều kiện lịch và công bố đã chốt:
 đăng ký SV chỉ mở khi vừa trong hạn SV vừa có danh sách do trưởng khoa công bố.
+Trang chi tiết đợt hiển thị đề tài được đề xuất và nhắc hoàn tất duyệt/công bố trước
+ngày bắt đầu SV. Lời nhắc không tự duyệt, tự công bố hoặc tạo một SLA/khóa cứng mới.
 
 ### User Story 4 - Quản lý nhóm và trưởng nhóm (Priority: P1)
 
@@ -441,7 +449,7 @@ và ưu tiên quyết định đồng thời. Q-10 đã được giải quyết 
 | FR-04 | Hạn nộp điểm GVPB chỉ cấu hình và bắt buộc cho TLCN/KLTN; ngày báo cáo hội đồng chỉ cấu hình và bắt buộc cho KLTN. Cả hai là ngày lịch theo Asia/Ho_Chi_Minh, không có giờ/phút/giây và khi tạo không được trước ngày hiện tại. Khi đổi loại trước ngày mở GV, tự xóa ngày không còn áp dụng và chỉ lưu nếu đã nhập đủ ngày bắt buộc của loại mới. Khi sửa trực tiếp một ngày đang áp dụng, chỉ được dời sang ngày muộn hơn nếu ngày hiện tại còn trước ngày đang lưu; từ đầu ngày đang lưu thì khóa và không mở lại. | E: REQ-06–07; Q-02 được người dùng giải quyết ngày 2026-09-10 | AS-1.2, 1.4, 1.11–1.12 |
 | FR-05 | GV chỉ được gửi duyệt đề tài thuộc bộ môn mình trong hạn GV. Khi gửi duyệt bắt buộc có tên đề tài, mô tả, mục tiêu, yêu cầu đối với SV và kết quả dự kiến; không chấp nhận trường thiếu hoặc trống. Bộ môn người đăng phải được kiểm chứng từ dữ liệu đáng tin cậy. Mỗi đề tài chỉ thuộc một đợt; phiên bản đầu không có chức năng dùng lại hoặc sao chép đề tài sang đợt khác, nên GV phải tạo đề tài mới trong đợt mới. | E: REQ-08–09; giới hạn bộ môn và năm trường xác nhận U, phiên 2–3 ngày 2026-09-08; quan hệ theo đợt xác nhận U ngày 2026-09-10, Q-05/Q-18 | AS-2.1–2.2, 2.5, 2.10–2.11 |
 | FR-06 | Đề tài được phân công 1–2 GVHD, tất cả cùng bộ môn của đề tài và người đăng. Gửi duyệt bắt buộc có nội dung, bộ môn và 1–2 GVHD hợp lệ; bản nháp có thể chưa đủ. GV đăng lựa chọn GVHD khi sửa bản nháp của mình. Danh sách lựa chọn chỉ lấy từ tài khoản seed/import đang hoạt động, có role LECTURER và cùng bộ môn; phiên bản đầu không có màn hình quản lý danh mục. Chỉ tác giả được thay đổi GVHD khi đề tài ở Nháp; từ Chờ duyệt trở đi danh sách bị khóa. Nếu đề tài bị từ chối về Nháp, tác giả được sửa GVHD và gửi lại trong hạn; không hỗ trợ thay GVHD trong quá trình thực hiện. | E: REQ-10; REQ-11 phần GVHD; giới hạn bộ môn xác nhận U, phiên 2 ngày 2026-09-08; nguồn danh mục và phạm vi thay đổi xác nhận U ngày 2026-09-10, giải quyết Q-06 | AS-2.1, 2.3, 2.6–2.9 |
-| FR-07 | Chỉ trưởng khoa được duyệt đề tài và công bố danh sách trước khi nhóm chọn đề tài từ danh sách đó. Đến ngày bắt đầu SV không thay thế việc công bố; công bố không bỏ qua ngày kết thúc SV. | E: REQ-02, 08, 15; quyền/lịch xác nhận U, các phiên ngày 2026-09-08 | AS-3.1–3.3, 5.17–5.18 |
+| FR-07 | Chỉ trưởng khoa được duyệt/từ chối từng đề tài và công bố danh sách trước khi nhóm chọn đề tài từ danh sách đó. Một thao tác công bố chuyển toàn bộ đề tài đang Đã duyệt của đúng đợt sang Đã công bố trong cùng giao dịch; đề tài Nháp/Chờ duyệt không đổi. Trang chi tiết đợt hiển thị các đề tài và nhắc hoàn tất trước ngày bắt đầu SV. Đây là lời nhắc, không phải SLA hoặc khóa cứng: nếu trễ nhưng còn trong hạn SV, trưởng khoa vẫn có thể công bố. Đến ngày bắt đầu SV không tự thay thế việc công bố; công bố không bỏ qua ngày kết thúc SV. | E: REQ-02, 08, 15; quyền/lịch xác nhận U ngày 2026-09-08, granularity/UI xác nhận U ngày 2026-09-11 | AS-3.1–3.5, 5.17–5.18 |
 | FR-08 | SV tạo nhóm trở thành trưởng nhóm. Chỉ trưởng nhóm được thêm/xóa thành viên và chuyển quyền cho thành viên khác cùng nhóm, trong hạn SV và khi nhóm không có đăng ký chờ xét hoặc đã chấp nhận. Thêm trực tiếp, không qua lời mời/xác nhận; SV là thành viên ngay nếu nhóm còn chỗ và SV chưa thuộc nhóm khác trong đợt. Sau rút/từ chối được sửa nếu còn hạn và không có đăng ký có hiệu lực khác. Nhóm từ 1 đến 3 SV, đúng một trưởng nhóm là thành viên; nhóm một người được gửi đăng ký nếu thỏa điều kiện khác. | E: REQ-12–13; quyền, thời điểm và thêm trực tiếp xác nhận U, các phiên ngày 2026-09-08; còn Q-07 về điều kiện nhóm | AS-4.1–4.2, 4.4, 4.6–4.14 |
 | FR-09 | Mỗi SV chỉ thuộc một nhóm trong từng đợt đăng ký. Không từ chối tư cách thành viên ở đợt khác chỉ vì SV đã thuộc nhóm trong một đợt. | E: REQ-13; phạm vi được xác nhận U, Session 2026-09-08, giải quyết Q-08 | AS-4.3, 4.5 |
 | FR-10 | Chỉ trưởng nhóm được gửi đăng ký cho nhóm mình; nhóm chỉ có một đăng ký có hiệu lực (chờ xét hoặc đã chấp nhận) cho đề tài đã công bố trong đợt và chỉ gửi đăng ký trong hạn SV. Nhiều nhóm được đăng ký chờ xét cùng đề tài; một đăng ký chờ xét không giữ chỗ độc quyền. | E: REQ-03, 14–15; Q-10 được xác nhận U, Session 2026-09-08; còn Q-07, Q-09 | AS-5.1–5.3 |
@@ -622,6 +630,7 @@ không bị thay bằng giả định để giới hạn số câu hỏi.
 - **CL-05**: Đã xác nhận toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; bảo mật nền tảng, responsive và xung đột dữ liệu chính phải được kiểm tra. Không đặt SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup cho phiên bản local. Q-20 và G-Acceptance đã giải quyết; tiêu chí phụ thuộc Q nghiệp vụ khác vẫn blocked theo gate tương ứng.
 - **CL-06**: Đã giải quyết Q-05 cho phạm vi hiện tại. Mỗi đề tài chỉ thuộc một đợt và không có chức năng dùng lại hoặc sao chép sang đợt khác; GV tự tạo đề tài mới ở đợt mới. Bộ môn và tài khoản GV được seed/import; biểu mẫu chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn. Không có màn hình quản lý danh mục hoặc luồng SV đề xuất đề tài trong phiên bản đầu.
 - **CL-07**: Đã giải quyết Q-06 cho phạm vi hiện tại. Chỉ tác giả được thay đổi GVHD khi đề tài ở Nháp; từ Chờ duyệt trở đi danh sách bị khóa. Nếu trưởng khoa từ chối đề tài về Nháp thì tác giả được sửa và gửi lại trong hạn GV. Phiên bản đầu không hỗ trợ thay GVHD trong quá trình thực hiện.
+- **CL-08**: Đã giải quyết G-Publish. Trưởng khoa duyệt/từ chối từng đề tài; công bố toàn bộ đề tài Đã duyệt của một đợt trong một giao dịch. Trang chi tiết đợt là nơi hiển thị và thao tác; UI nhắc hoàn tất trước ngày bắt đầu SV nhưng không đặt SLA, tự động công bố hoặc khóa thao tác trễ.
 
 Các quyết định khác vẫn mở:
 

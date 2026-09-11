@@ -32,7 +32,7 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | G-Identity | T006 | Đã giải phóng: seed/import, tổ hợp role, scope; chuyển GV ngoài phiên bản đầu; ADMIN ẩn mềm nội dung vi phạm, ghi audit và khóa tài khoản nguồn |
 | G-Period | T017 | Đã giải phóng: ngày bắt buộc/null theo loại, độ chính xác DATE, đổi loại, gia hạn mốc đăng ký và ngày phụ đã chốt |
 | G-Topic | T025 | Đã giải phóng: mỗi topic thuộc một đợt, không reuse/copy; danh mục seed/import; chỉ tác giả đổi GVHD khi DRAFT, không thay trong quá trình thực hiện |
-| G-Publish | T033 | Chốt granularity công bố và chính sách thời hạn cho quyết định dean nếu có |
+| G-Publish | T033 | Đã giải phóng: duyệt/từ chối từng topic; publish toàn bộ APPROVED trong đợt; UI nhắc trước ngày SV, không SLA |
 | G-Group | T039 | Q-07: thời điểm tạo nhóm và phạm vi rời/chuyển nhóm |
 | G-Registration | T047 | Q-09: reason thủ công, ưu tiên rút/accept, lưu lịch sử |
 | G-Acceptance | T007 | Đã giải phóng: AS/SC hiện tại được chấp nhận; kiểm tra bảo mật, responsive và xung đột chính; phiên bản local không có SLA định lượng |
@@ -140,7 +140,7 @@ tích hợp ở US5, không yêu cầu implement registration trong US3.
 **Trace:** FR-07,14; REQ-02,08,15,31; AS-3.1–3.5; AT-06,12.
 Chờ US2/T033; T034–T035 song song.
 
-- [ ] T033 [US3] Chốt G-Publish: đối chiếu AS-3.1 và xác nhận công bố từng/tập/toàn danh sách, thời hạn xử lý dean nếu có trong `specs/001-topic-registration/spec.md`; cập nhật `contracts/web.md`, `data-model.md`, `acceptance-matrix.md` trước áp route publish tập hợp đề xuất.
+- [X] T033 [US3] Chốt G-Publish: đối chiếu AS-3.1 và xác nhận công bố từng/tập/toàn danh sách, thời hạn xử lý dean nếu có trong `specs/001-topic-registration/spec.md`; cập nhật `contracts/web.md`, `data-model.md`, `acceptance-matrix.md` trước áp route publish tập hợp đề xuất.
 
 - [ ] T034 [P] [US3] Viết state test approve/reject/publish, không nhảy duyệt, reject về DRAFT và gửi lại đúng hạn tại `src/test/java/vn/edu/topicregistration/unit/TopicReviewRulesTest.java` (AT-12).
 

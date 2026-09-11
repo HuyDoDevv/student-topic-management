@@ -16,8 +16,8 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
 | Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; GVHD chọn từ tài khoản LECTURER đang hoạt động cùng bộ môn | 05–06,14 |
 | Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, 1–2 GVHD cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 05–06,14 |
-| Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; scope B | 07,14 |
-| Công bố | DEAN | APPROVED; scope B | 07,14 |
+| Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; đúng khoa của DEAN | 07,14 |
+| Công bố | DEAN | Toàn bộ APPROVED trong đúng đợt/khoa, nguyên tử; không đổi DRAFT/PENDING_APPROVAL | 07,14 |
 | Tạo nhóm | STUDENT người tạo | Trở thành leader, chưa nhóm khác cùng đợt; thời điểm B Q-07 | 08–09 |
 | Thêm/xóa thành viên | STUDENT leader hiện tại của đúng nhóm | Hạn SV, không active, 1–3 thành viên, một leader | 08–09 |
 | Chuyển leader | Leader hiện tại | Người nhận đã là thành viên; hạn SV, không active | 08 |
@@ -48,7 +48,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | GET /login | — | 200 form Tabler | 01 |
 | POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
-| GET /periods; GET /periods/{id} | — | 200 danh sách/chi tiết theo scope | 01–04 |
+| GET /periods; GET /periods/{id} | — | 200 danh sách/chi tiết theo scope; chi tiết đợt của DEAN kèm danh sách topic và thao tác review/publish | 01–04,07 |
 | POST /periods | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate | 303 tới period mới; từ chối giá trị có giờ hoặc ngày đã qua; ngày bắt buộc/null đúng theo loại | 02–04 |
 | POST /periods/{id} | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |
 | GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt | 05,07 |
@@ -58,7 +58,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /topics/{id}/submit | version | DRAFT → PENDING_APPROVAL | 05–06,14 |
 | POST /topics/{id}/approve | version | PENDING_APPROVAL → APPROVED | 07,14 |
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |
-| POST /periods/{id}/topics/publish | topicIds,versions | Đề xuất tập APPROVED → PUBLISHED nguyên tử; chốt granularity trong AC | 07,14 |
+| POST /periods/{id}/topics/publish | — | Khóa đợt; toàn bộ APPROVED của đợt → PUBLISHED nguyên tử; không đổi DRAFT/PENDING_APPROVAL; không có APPROVED thì không ghi | 07,14 |
 | POST /periods/{id}/groups | CSRF | Nhóm mới, người tạo leader; Q-07 gate | 08–09 |
 | GET /groups/{id} | — | Chi tiết nhóm; chỉ trường policy cho phép | 01,08 |
 | POST /groups/{id}/members | studentId,version | Thêm trực tiếp, không invitation | 08–09 |
@@ -101,7 +101,7 @@ phép triển khai.
 | Trang | Component tái sử dụng | Kiểm tra |
 |---|---|---|
 | Đăng nhập | Auth card, labels, error alert | AT-10, không tự đăng ký |
-| Đợt | Table, form inputs, badges thời gian | AS-1.*, AT-01–02,13 |
+| Đợt | Table, form inputs, badges thời gian; chi tiết có danh sách topic và lời nhắc trước ngày SV | AS-1.*, AS-3.*, AT-01–02,06,12–13 |
 | Đề tài | Table, detail card, form, status badge | AS-2.*, AS-3.*, AT-03,12 |
 | Nhóm | Member table, select, action modal | AS-4.*, AT-04,06 |
 | Đăng ký | Topic list, form confirmation, result badge | AS-5.*, AT-05,11 |
