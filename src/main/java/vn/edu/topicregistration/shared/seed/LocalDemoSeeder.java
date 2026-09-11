@@ -65,6 +65,15 @@ public class LocalDemoSeeder implements ApplicationRunner {
                     "DEMO_SEED_PASSWORD is required when DEMO_SEED_ENABLED=true");
         }
 
+        if (exists(
+                "SELECT COUNT(*) FROM user_accounts WHERE username = ?",
+                "dean.demo")) {
+            log.info(
+                    "Local demo fixture already exists; preserving its current dates, "
+                            + "memberships, and workflow states.");
+            return;
+        }
+
         String passwordHash = passwordEncoder.encode(password);
         long facultyId = faculty(FACULTY_NAME);
         long softwareDepartmentId = department(SOFTWARE_DEPARTMENT, facultyId);
@@ -374,8 +383,8 @@ public class LocalDemoSeeder implements ApplicationRunner {
             String rejectionReason) {
         if (exists(
                 "SELECT COUNT(*) FROM registrations "
-                        + "WHERE group_id = ? AND topic_id = ? AND status = ?",
-                groupId, topicId, status)) {
+                        + "WHERE group_id = ? AND topic_id = ?",
+                groupId, topicId)) {
             return;
         }
         Instant submittedAt = period.studentStart().plus(1, ChronoUnit.HOURS);
