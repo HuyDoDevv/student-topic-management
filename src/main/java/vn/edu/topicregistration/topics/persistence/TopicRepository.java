@@ -46,4 +46,12 @@ public interface TopicRepository extends JpaRepository<TopicEntity, Long> {
             + "left join fetch topic.supervisors "
             + "where topic.id = :id and topic.hiddenAt is null")
     Optional<TopicEntity> findByIdForUpdate(@Param("id") long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select topic from TopicEntity topic "
+            + "where topic.period.id = :periodId "
+            + "and topic.status = 'APPROVED' "
+            + "and topic.hiddenAt is null "
+            + "order by topic.id")
+    List<TopicEntity> findAllApprovedByPeriodIdForUpdate(@Param("periodId") long periodId);
 }
