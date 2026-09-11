@@ -1,7 +1,8 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
 > `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt,
 > V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu. Thay đổi Q-07 ngày
-> 2026-09-11 sẽ thêm bảng lời mời bằng migration mới, không sửa V1 đã dùng.
+> 2026-09-11 thêm bảng lời mời bằng V5; V6 bắt buộc metadata từ chối registration,
+> không sửa các migration đã dùng.
 
 # Data Model — Thiết kế triển khai
 
