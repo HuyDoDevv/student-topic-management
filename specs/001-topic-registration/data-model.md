@@ -19,7 +19,7 @@ thực hiện bằng migration mới.
 | UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
-| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc; chỉ thay đổi khi topic DRAFT |
+| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng bộ môn; chỉ thay đổi khi topic DRAFT |
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
 | GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Một tư cách SV/đợt; slot 1–3 chỉ bảo vệ sức chứa |
 | Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | rejected/withdrawn không tái dùng ID khi đăng ký lại; tạo hàng mới; retention còn Q-09 |
@@ -90,8 +90,8 @@ trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không 
 
 | Từ → đến | Actor | Điều kiện |
 |---|---|---|
-| DRAFT → DRAFT | GV tác giả | Chỉ sửa nội dung/GVHD của nháp mình tạo; danh mục GVHD lấy từ tài khoản LECTURER đang hoạt động cùng bộ môn |
-| DRAFT → PENDING_APPROVAL | GV tác giả | Trong hạn GV, đủ 5 nội dung, 1–2 GVHD cùng bộ môn |
+| DRAFT → DRAFT | GV tác giả | Chỉ sửa nội dung/GVHD phối hợp của nháp mình tạo; tác giả luôn là GVHD chính, danh mục phối hợp lấy từ tài khoản LECTURER đang hoạt động cùng bộ môn |
+| DRAFT → PENDING_APPROVAL | GV tác giả | Trong hạn GV, đủ 5 nội dung, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn |
 | PENDING_APPROVAL → APPROVED | Trưởng khoa | Chỉ đề tài thuộc khoa của trưởng khoa |
 | PENDING_APPROVAL → DRAFT | Trưởng khoa | Từ chối; gửi lại vẫn phải trong hạn GV |
 | APPROVED → PUBLISHED | Trưởng khoa | Công bố; không nhảy qua duyệt |

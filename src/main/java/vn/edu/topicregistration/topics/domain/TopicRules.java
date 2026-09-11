@@ -13,7 +13,10 @@ public final class TopicRules {
     public static TopicDraft validateForSave(TopicDraft request, TopicAccess access) {
         requireDraftAuthor(access);
         TopicDraft normalized = normalize(request);
-        validateSupervisors(normalized.supervisors(), access.topicDepartmentId());
+        validateSupervisors(
+                normalized.supervisors(),
+                access.authorId(),
+                access.topicDepartmentId());
         return normalized;
     }
 
@@ -35,8 +38,7 @@ public final class TopicRules {
                 || isBlank(normalized.description())
                 || isBlank(normalized.objectives())
                 || isBlank(normalized.studentRequirements())
-                || isBlank(normalized.expectedResults())
-                || normalized.supervisors().isEmpty()) {
+                || isBlank(normalized.expectedResults())) {
             throw failure(Failure.VALIDATION_FAILED);
         }
         return normalized;
@@ -66,8 +68,11 @@ public final class TopicRules {
 
     private static void validateSupervisors(
             List<SupervisorCandidate> supervisors,
+            long authorId,
             long topicDepartmentId) {
-        if (supervisors.size() > 2) {
+        if (supervisors.isEmpty()
+                || supervisors.size() > 2
+                || supervisors.getFirst().accountId() != authorId) {
             throw failure(Failure.VALIDATION_FAILED);
         }
         Set<Long> uniqueIds = new HashSet<>();
