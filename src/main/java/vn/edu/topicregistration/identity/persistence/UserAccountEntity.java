@@ -79,4 +79,8 @@ public class UserAccountEntity {
                 .map(RoleEntity::getCode)
                 .collect(Collectors.toUnmodifiableSet());
     }
+
+    public void disable() {
+        this.enabled = false;
+    }
 }

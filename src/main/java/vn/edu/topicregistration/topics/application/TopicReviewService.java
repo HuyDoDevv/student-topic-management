@@ -5,10 +5,13 @@ import java.util.Objects;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
 import vn.edu.topicregistration.periods.persistence.RegistrationPeriodEntity;
 import vn.edu.topicregistration.periods.persistence.RegistrationPeriodRepository;
 import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
@@ -20,6 +23,7 @@ import vn.edu.topicregistration.topics.domain.TopicReviewRules.ReviewDecision;
 import vn.edu.topicregistration.topics.domain.TopicRules.TopicStatus;
 import vn.edu.topicregistration.topics.persistence.TopicEntity;
 import vn.edu.topicregistration.topics.persistence.TopicRepository;
+import vn.edu.topicregistration.topics.persistence.TopicSupervisorEntity;
 
 @Service
 @Profile("!preview & !test")
@@ -61,6 +65,31 @@ public class TopicReviewService {
             topics.flush();
         }
         return new PublicationResult(period.getId(), approved.size());
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewWorkspace reviewWorkspace(long periodId) {
+        var actor = authorization.requireRole(RoleCode.DEAN);
+        if (actor.facultyId() == null) {
+            throw new AccessDeniedException("Dean faculty scope is missing");
+        }
+        RegistrationPeriodEntity period = periods
+                .findByIdAndFacultyId(periodId, actor.facultyId())
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        authorization.requireDeanOfFaculty(period.getFaculty().getId());
+
+        List<ReviewTopicView> visibleTopics = topics
+                .findAllVisibleByPeriodIdAndStatusIn(
+                        periodId,
+                        List.of(
+                                TopicStatus.PENDING_APPROVAL.name(),
+                                TopicStatus.APPROVED.name(),
+                                TopicStatus.PUBLISHED.name()))
+                .stream()
+                .map(this::toReviewView)
+                .toList();
+        return new ReviewWorkspace(period.getId(), visibleTopics);
     }
 
     private ReviewResult review(
@@ -112,6 +141,30 @@ public class TopicReviewService {
         }
     }
 
+    private ReviewTopicView toReviewView(TopicEntity topic) {
+        return new ReviewTopicView(
+                topic.getId(),
+                topic.getDepartment().getName(),
+                displayName(topic.getAuthor()),
+                topic.getTitle(),
+                topic.getDescription(),
+                topic.getObjectives(),
+                topic.getStudentRequirements(),
+                topic.getExpectedResults(),
+                statusOf(topic),
+                topic.getVersion(),
+                topic.getSupervisors().stream()
+                        .map(TopicSupervisorEntity::getLecturer)
+                        .map(TopicReviewService::displayName)
+                        .toList());
+    }
+
+    private static String displayName(UserAccountEntity account) {
+        return account.getFullName() == null || account.getFullName().isBlank()
+                ? account.getUsername()
+                : account.getFullName();
+    }
+
     private <T> T applyRule(RuleOperation<T> operation) {
         try {
             return operation.run();
@@ -142,5 +195,48 @@ public class TopicReviewService {
     public record PublicationResult(
             long periodId,
             int publishedCount) {
+    }
+
+    public record ReviewWorkspace(
+            long periodId,
+            List<ReviewTopicView> topics) {
+        public ReviewWorkspace {
+            topics = List.copyOf(topics);
+        }
+
+        public long pendingCount() {
+            return topics.stream()
+                    .filter(topic -> topic.status() == TopicStatus.PENDING_APPROVAL)
+                    .count();
+        }
+
+        public long approvedCount() {
+            return topics.stream()
+                    .filter(topic -> topic.status() == TopicStatus.APPROVED)
+                    .count();
+        }
+
+        public long publishedCount() {
+            return topics.stream()
+                    .filter(topic -> topic.status() == TopicStatus.PUBLISHED)
+                    .count();
+        }
+    }
+
+    public record ReviewTopicView(
+            long id,
+            String department,
+            String author,
+            String title,
+            String description,
+            String objectives,
+            String studentRequirements,
+            String expectedResults,
+            TopicStatus status,
+            long version,
+            List<String> supervisors) {
+        public ReviewTopicView {
+            supervisors = List.copyOf(supervisors);
+        }
     }
 }
