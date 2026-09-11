@@ -175,7 +175,7 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [X] T065 [US4] Ghi thay đổi Q-07 ngày 2026-09-11 trong `spec.md`: leader gửi lời mời giữ chỗ, SV accept/reject, member tự rời, leader một người giải tán và chặn đăng ký khi còn PENDING; đồng bộ `data-model.md`, `contracts/web.md`, `plan.md`, `acceptance-matrix.md`, `quickstart.md`, `research.md`, checklist và tasks.
 
-- [ ] T066 [US4] Tạo migration Flyway mới cho `group_invitations` với status/audit/slot/version, generated guards một PENDING/SV/đợt và một PENDING/slot/nhóm; thêm `student_groups.dissolved_at`, điều chỉnh trigger leader cho soft dissolve; tạo `GroupInvitationEntity.java`, `GroupInvitationRepository.java`, không sửa V1 đã chia sẻ.
+- [X] T066 [US4] Tạo migration Flyway mới cho `group_invitations` với status/audit/slot/version, generated guards một PENDING/SV/đợt và một PENDING/slot/nhóm; thêm `student_groups.dissolved_at`, điều chỉnh trigger leader cho soft dissolve; tạo `GroupInvitationEntity.java`, `GroupInvitationRepository.java`, không sửa V1 đã chia sẻ.
 
 - [ ] T067 [US4] Thay thêm trực tiếp bằng invite/accept/reject/cancel trong group application/domain; giữ chỗ theo tổng membership + PENDING dưới khóa period, cài tự rời và giải tán theo T065, hiển thị hết hiệu lực theo clock và cung cấp truy vấn lời mời của chính SV.
 

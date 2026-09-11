@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.groups.persistence;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,6 +44,9 @@ public class StudentGroupEntity {
     @Column(nullable = false)
     private long version;
 
+    @Column(name = "dissolved_at", columnDefinition = "TIMESTAMP(6)")
+    private Instant dissolvedAt;
+
     protected StudentGroupEntity() {
     }
 
@@ -75,5 +79,9 @@ public class StudentGroupEntity {
 
     public long getVersion() {
         return version;
+    }
+
+    public Instant getDissolvedAt() {
+        return dissolvedAt;
     }
 }
