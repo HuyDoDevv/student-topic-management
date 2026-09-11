@@ -88,6 +88,12 @@ Nhóm còn lời mời PENDING chưa được gửi đăng ký đề tài.
 Hạn xử lý duyệt/công bố không phải SLA hoặc khóa cứng; giao diện nhắc Trưởng khoa hoàn tất
 trước ngày bắt đầu SV và vẫn cho công bố trong phần thời gian SV còn lại theo FR-07.
 
+Quyền tác giả của Trưởng khoa được chốt ngày 2026-09-12: mỗi khoa có một trưởng khoa
+trong phạm vi hiện tại, nên tài khoản có role DEAN không được tạo, sửa hoặc gửi duyệt
+đề tài dù đồng thời có role LECTURER. Trong vòng đời đề tài, Trưởng khoa thực hiện luồng duyệt/công bố;
+backend chặn route tác giả và UI ẩn chức năng tương ứng. Role LECTURER vẫn được giữ
+để Trưởng khoa có thể được chọn làm GVHD phối hợp cho đề tài của giảng viên khác.
+
 G-Period/Q-02 đã được giải quyết ngày 2026-09-10: ngày bắt buộc/null theo loại và độ
 chính xác `DATE` đã chốt; đổi loại trước giờ mở GV tự xóa ngày không còn áp dụng và yêu
 cầu đủ ngày của loại mới. Từ giờ mở GV, khóa tên/loại/mốc bắt đầu, chỉ tăng mốc kết thúc

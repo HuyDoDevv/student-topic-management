@@ -131,8 +131,8 @@ Nếu chưa có biến DB test, fail cấu hình thay vì skip rồi báo thành
 | Bước | Thao tác | Kết quả cần kiểm tra |
 |---|---|---|
 | 1 | Dean tạo đợt với lịch hợp lệ | Đúng 4 mốc và loại; lịch sai bị từ chối; ngày phụ chờ Q-02 |
-| 2 | GV tạo draft, nhập đủ nội dung, có thể chọn một GVHD phối hợp cùng bộ môn, gửi trong hạn | Tác giả tự ở slot 1; PENDING_APPROVAL; thiếu trường/khác bộ môn không gửi được |
-| 3 | Dean duyệt và công bố | APPROVED → PUBLISHED; GV không tự duyệt được |
+| 2 | GV không có role DEAN tạo draft, nhập đủ nội dung, có thể chọn một GVHD phối hợp cùng bộ môn, gửi trong hạn | Tác giả tự ở slot 1; PENDING_APPROVAL; thiếu trường/khác bộ môn không gửi được; tài khoản có DEAN bị chặn |
+| 3 | Dean duyệt và công bố | APPROVED → PUBLISHED; Trưởng khoa không có luồng tự đề xuất để tự duyệt |
 | 4 | SV tạo nhóm, leader gửi lời mời, SV accept/reject; thành viên tự rời | Membership chỉ sinh sau accept; tổng member + PENDING tối đa 3; một PENDING/SV/đợt; leader một người được giải tán |
 | 5 | Hai nhóm gửi cùng topic trong hạn SV | Hai PENDING được phép; một nhóm gửi thêm bị từ chối |
 | 6 | Dean accept một đăng ký | Một ACCEPTED; mọi PENDING cạnh tranh thành REJECTED với reason chuẩn |

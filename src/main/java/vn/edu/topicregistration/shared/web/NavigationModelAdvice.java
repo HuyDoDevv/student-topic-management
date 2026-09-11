@@ -39,7 +39,8 @@ public class NavigationModelAdvice {
         model.addAttribute("currentUserInitials", initials(displayName));
         model.addAttribute("currentRoleLabel", roleLabel(roles));
         model.addAttribute("canManagePeriods", roles.contains(RoleCode.DEAN));
-        model.addAttribute("canAuthorTopics", roles.contains(RoleCode.LECTURER));
+        model.addAttribute("canAuthorTopics",
+                roles.contains(RoleCode.LECTURER) && !roles.contains(RoleCode.DEAN));
         model.addAttribute("canManageGroups", roles.contains(RoleCode.STUDENT));
         model.addAttribute("previewMode", false);
     }

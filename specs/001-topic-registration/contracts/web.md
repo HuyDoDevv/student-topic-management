@@ -13,8 +13,8 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 |---|---|---|---|
 | Tạo đợt | DEAN | Tên/loại/lịch ngày hợp lệ, không có ngày đã qua; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
-| Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn | 05–06,14 |
-| Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 05–06,14 |
+| Tạo/sửa nháp | LECTURER tác giả, không có DEAN | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn; tài khoản có DEAN bị từ chối dù đồng thời có LECTURER | 01,05–06,14 |
+| Gửi duyệt | LECTURER tác giả, không có DEAN | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi; tài khoản có DEAN bị từ chối | 01,05–06,14 |
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; đúng khoa của DEAN | 07,14 |
 | Công bố | DEAN | Toàn bộ APPROVED trong đúng đợt/khoa, nguyên tử; không đổi DRAFT/PENDING_APPROVAL | 07,14 |
 | Tạo nhóm | STUDENT người tạo | Trong hạn SV; trở thành leader, chưa nhóm khác cùng đợt | 08–09 |

@@ -119,7 +119,7 @@ US1 và T025 đã hoàn tất; T026–T027 có thể thực hiện song song.
 
 - [ ] T026 [P] [US2] Viết test nội dung 5 trường, 0/1/2/3 GVHD đầu vào, same department, actor tác giả, gửi lại/biên hạn và khóa ngoài DRAFT tại `src/test/java/vn/edu/topicregistration/unit/TopicRulesTest.java` (AT-03,12).
 
-- [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
+- [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, tài khoản DEAN+LECTURER bị chặn, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
 - [X] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V4 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite. Quyết định slot kỹ thuật ban đầu được T069 thay thế.
 
@@ -130,6 +130,8 @@ US1 và T025 đã hoàn tất; T026–T027 có thể thực hiện song song.
 - [X] T031 [US2] Tạo form/list/detail Tabler tại `src/main/resources/templates/topics/form.html`, `list.html`, `detail.html`; hiển thị trạng thái và 5 trường, chọn GVHD dữ liệu đáng tin cậy; nút ẩn không thay kiểm tra backend.
 
 - [X] T069 [US2] Tự động gán tác giả làm GVHD chính ở slot 1 trong backend; form chỉ hiển thị tác giả và cho chọn tối đa một GVHD phối hợp cùng bộ môn, đồng thời cập nhật đặc tả/contract/data-model theo quyết định ngày 2026-09-11.
+
+- [X] T070 [US2] Chốt mỗi khoa có một trưởng khoa và tài khoản có role DEAN không được tạo/xem danh sách tác giả/sửa/gửi duyệt đề tài dù đồng thời có LECTURER; đồng bộ đặc tả/contract/data-model, chặn ở backend và ẩn menu tác giả trong UI. Trưởng khoa vẫn được chọn làm GVHD phối hợp cho đề tài của giảng viên khác; test contract được giữ tại T027 theo yêu cầu hoãn test.
 
 - [ ] T032 [US2] Viết race sửa nháp/gửi duyệt với MySQL tại `src/test/java/vn/edu/topicregistration/concurrency/TopicSubmissionIT.java`; chạy tests US2, cập nhật `specs/001-topic-registration/acceptance-matrix.md` (AT-03,12, SC-003–005).
 
@@ -287,12 +289,12 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 
 | Requirement | Tasks chính | Tests / nguồn |
 |---|---|---|
-| FR-01 | T006,T008–T011,T016,T061 | REQ-28,31–32; AT-06,09–10,14 |
+| FR-01 | T006,T008–T011,T016,T061,T070 | REQ-28,31–32; AT-06,09–10,14 |
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
 | FR-03 | T018–T024,T026,T029,T048,T052 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
-| FR-05 | T025–T032 | REQ-08–09; AT-03,12 |
-| FR-06 | T025–T032 | REQ-10–11 phần GVHD; AT-03 |
+| FR-05 | T025–T032,T070 | REQ-08–09; AT-03,06,12 |
+| FR-06 | T025–T032,T069–T070 | REQ-10–11 phần GVHD; AT-03,06 |
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
 | FR-08 | T039–T046,T054,T057–T058,T065–T068 | REQ-12–13; AT-04,06–08 |
 | FR-09 | T040–T046,T050,T057,T065–T068 | REQ-13; AT-04,07 |
@@ -334,5 +336,5 @@ cách gọi `$speckit-implement`.
 
 ## Generation summary
 
-68 tasks: setup 5; foundation 11; US1 8; US2 8; US3 6; US4 12; US5 12; final 6.
+70 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12; final 6.
 Tất cả user stories P1 như spec. 16 task có [P], chỉ trong nhóm dependency đã mô tả.

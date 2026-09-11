@@ -77,6 +77,8 @@ giao diện, bật `DEMO_SEED_ENABLED=true` và đặt `DEMO_SEED_PASSWORD` tron
 dụng một lần rồi tắt cờ. Các tài khoản được tạo là `dean.demo`, `lecturer1.demo` đến
 `lecturer3.demo` và `student1.demo` đến `student7.demo`, cùng dùng mật khẩu đã nhập.
 Seeder chỉ thêm fixture còn thiếu và không reset dữ liệu hoặc lịch đã tồn tại khi khởi động lại.
+`dean.demo` quản lý đợt, duyệt và công bố; tài khoản này không được tạo/sửa/gửi duyệt đề tài.
+Các thao tác tác giả đề tài dùng `lecturer1.demo` đến `lecturer3.demo`.
 
 ## Kiểm thử và cấu trúc
 

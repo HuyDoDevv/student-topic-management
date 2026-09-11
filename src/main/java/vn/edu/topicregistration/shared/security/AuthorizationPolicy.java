@@ -79,6 +79,14 @@ public class AuthorizationPolicy {
         return actor;
     }
 
+    public ActorIdentity requireTopicAuthoringLecturer() {
+        ActorIdentity actor = requireRole(RoleCode.LECTURER);
+        if (actor.roles().contains(RoleCode.DEAN)) {
+            throw denied();
+        }
+        return actor;
+    }
+
     public ActorIdentity requireStudentOfFaculty(long resourceFacultyId) {
         ActorIdentity actor = requireRole(RoleCode.STUDENT);
         if (!Objects.equals(actor.facultyId(), resourceFacultyId)) {
@@ -88,8 +96,9 @@ public class AuthorizationPolicy {
     }
 
     public ActorIdentity requireTopicAuthor(long persistedAuthorId, long resourceDepartmentId) {
-        ActorIdentity actor = requireLecturerOfDepartment(resourceDepartmentId);
-        if (!Objects.equals(actor.accountId(), persistedAuthorId)) {
+        ActorIdentity actor = requireTopicAuthoringLecturer();
+        if (!Objects.equals(actor.departmentId(), resourceDepartmentId)
+                || !Objects.equals(actor.accountId(), persistedAuthorId)) {
             throw denied();
         }
         return actor;
