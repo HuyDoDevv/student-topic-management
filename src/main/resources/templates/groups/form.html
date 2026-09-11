@@ -1,14 +1,51 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Tạo nhóm sinh viên', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Tạo nhóm sinh viên', ~{::section})}">
 <body>
 <section>
-  <div class="page-header"><div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title">Tạo nhóm sinh viên</h1><p class="text-secondary mt-2 mb-0">Bạn sẽ trở thành trưởng nhóm ngay khi nhóm được tạo.</p></div></div>
-  <form class="card content-form" th:action="@{/periods/{id}/groups(id=${period.id})}" method="post" data-prevent-double-submit>
-    <div class="card-body">
-      <div class="alert alert-info" role="status"><strong>Quy tắc nhóm:</strong> mỗi nhóm có từ 1 đến 3 sinh viên; một sinh viên chỉ thuộc một nhóm trong cùng đợt.</div>
-      <h2 class="h3">Trưởng nhóm</h2><div class="member-preview"><span class="avatar bg-blue-lt">SV</span><div><strong>Sinh viên đang đăng nhập</strong><div class="text-secondary">Được thêm tự động vào vị trí thành viên thứ nhất</div></div></div>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div>
+      <h1 class="page-title">Tạo nhóm sinh viên</h1>
+      <p class="text-secondary mt-2 mb-0">Bạn sẽ trở thành trưởng nhóm và thành viên đầu tiên ngay khi nhóm được tạo.</p>
     </div>
-    <div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-ghost-secondary" th:href="@{/periods/{id}(id=${period.id})}">Hủy</a><button class="btn btn-primary" type="submit">Tạo nhóm</button></div>
+  </div>
+
+  <form class="card content-form" th:action="@{/periods/{id}/groups(id=${period.id})}"
+        method="post" data-prevent-double-submit>
+    <div class="card-body">
+      <div class="group-rule-panel mb-4">
+        <span class="group-rule-icon" aria-hidden="true">✓</span>
+        <div>
+          <strong>Nhóm gồm từ 1 đến 3 sinh viên</strong>
+          <p class="text-secondary mb-0">Mỗi sinh viên chỉ được tham gia một nhóm trong cùng đợt.</p>
+        </div>
+      </div>
+
+      <dl class="detail-list mb-4">
+        <dt>Thời gian tạo nhóm</dt>
+        <dd th:text="${period.studentWindow}">01/09/2026 – 10/09/2026</dd>
+        <dt>Trạng thái</dt>
+        <dd><span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Đang mở</span></dd>
+      </dl>
+
+      <h2 class="h3 mb-3">Trưởng nhóm</h2>
+      <div class="member-preview">
+        <span class="avatar bg-blue-lt" th:text="${currentUserInitials ?: 'SV'}">SV</span>
+        <div>
+          <strong th:text="${currentUserName ?: 'Sinh viên đang đăng nhập'}">Sinh viên đang đăng nhập</strong>
+          <div class="text-secondary">Được thêm tự động vào vị trí thành viên số 1.</div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning mt-4 mb-0" role="status" th:if="${!period.studentOpen}">
+        Chưa thể tạo nhóm vì hiện không nằm trong thời gian sinh viên đăng ký.
+      </div>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <a class="btn btn-ghost-secondary" th:href="@{/groups}">Quay lại</a>
+      <button class="btn btn-primary" type="submit" th:disabled="${!period.studentOpen}">Tạo nhóm</button>
+    </div>
   </form>
 </section>
 </body>

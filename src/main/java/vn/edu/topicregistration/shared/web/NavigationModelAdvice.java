@@ -24,6 +24,7 @@ public class NavigationModelAdvice {
         if (!signedIn) {
             model.addAttribute("canManagePeriods", false);
             model.addAttribute("canAuthorTopics", false);
+            model.addAttribute("canManageGroups", false);
             model.addAttribute("previewMode", false);
             return;
         }
@@ -39,6 +40,7 @@ public class NavigationModelAdvice {
         model.addAttribute("currentRoleLabel", roleLabel(roles));
         model.addAttribute("canManagePeriods", roles.contains(RoleCode.DEAN));
         model.addAttribute("canAuthorTopics", roles.contains(RoleCode.LECTURER));
+        model.addAttribute("canManageGroups", roles.contains(RoleCode.STUDENT));
         model.addAttribute("previewMode", false);
     }
 

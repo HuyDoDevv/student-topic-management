@@ -12,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import vn.edu.topicregistration.groups.web.GroupMemberForm;
 import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
 import vn.edu.topicregistration.periods.web.PeriodForm;
 import vn.edu.topicregistration.shared.time.TimeConfig;
@@ -69,6 +70,20 @@ public class UiPreviewController {
             Map.of("id", 201, "code", "23110001", "name", "Nguyễn Minh Anh", "role", "Trưởng nhóm"),
             Map.of("id", 202, "code", "23110018", "name", "Trần Gia Huy", "role", "Thành viên"),
             Map.of("id", 203, "code", "23110102", "name", "Lê Hoàng Nam", "role", "Thành viên"));
+
+    private static final PreviewGroupPeriod GROUP_PERIOD = new PreviewGroupPeriod(
+            1, "Đồ án chuyên ngành HK1 2026–2027", "20/09/2026", "30/09/2026", true, true);
+
+    private static final List<PreviewGroupMember> GROUP_MEMBERS = List.of(
+            new PreviewGroupMember(201, "Nguyễn Minh Anh", "23110001", 1, true),
+            new PreviewGroupMember(202, "Trần Gia Huy", "23110018", 2, false));
+
+    private static final PreviewGroup GROUP = new PreviewGroup(
+            1, 1, 201, 0, GROUP_MEMBERS, true, true, true, false);
+
+    private static final List<PreviewStudent> GROUP_CANDIDATES = List.of(
+            new PreviewStudent(203, "Lê Hoàng Nam", "23110102"),
+            new PreviewStudent(204, "Võ Khánh Linh", "23110125"));
 
     @GetMapping("/login")
     String login() {
@@ -178,19 +193,30 @@ public class UiPreviewController {
         return "topics/review";
     }
 
+    @GetMapping("/groups")
+    String groupPeriods(Model model) {
+        common(model, "groups", "Nhóm sinh viên");
+        model.addAttribute("periods", List.of(GROUP_PERIOD));
+        return "groups/list";
+    }
+
     @GetMapping("/periods/{periodId}/groups/new")
     String groupCreate(@PathVariable long periodId, Model model) {
         common(model, "groups", "Nhóm sinh viên");
-        model.addAttribute("period", PERIODS.getFirst());
+        model.addAttribute("period", GROUP_PERIOD);
         return "groups/form";
     }
 
     @GetMapping("/groups/{id}")
     String groupDetail(@PathVariable long id, Model model) {
         common(model, "groups", "Nhóm sinh viên");
-        model.addAttribute("groupCode", "N01");
-        model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("members", MEMBERS);
+        GroupMemberForm form = new GroupMemberForm();
+        form.setVersion(GROUP.version());
+        model.addAttribute("groupCode", "N001");
+        model.addAttribute("period", GROUP_PERIOD);
+        model.addAttribute("group", GROUP);
+        model.addAttribute("candidates", GROUP_CANDIDATES);
+        model.addAttribute("form", form);
         return "groups/detail";
     }
 
@@ -232,6 +258,7 @@ public class UiPreviewController {
         model.addAttribute("currentUserInitials", "NA");
         model.addAttribute("canManagePeriods", true);
         model.addAttribute("canAuthorTopics", true);
+        model.addAttribute("canManageGroups", true);
         model.addAttribute("previewMode", true);
     }
 
@@ -314,5 +341,48 @@ public class UiPreviewController {
     }
 
     public record PreviewLecturer(long id, String fullName, String username) {
+    }
+
+    public record PreviewGroupPeriod(
+            long id,
+            String name,
+            String studentStart,
+            String studentEnd,
+            boolean studentOpen,
+            boolean hasGroup) {
+        public String studentWindow() {
+            return studentStart + " – " + studentEnd;
+        }
+
+        public String status() {
+            return studentOpen ? "Đang mở đăng ký" : "Ngoài thời gian đăng ký";
+        }
+
+        public String statusClass() {
+            return studentOpen ? "bg-green-lt" : "bg-secondary-lt";
+        }
+    }
+
+    public record PreviewGroup(
+            long id,
+            long periodId,
+            long leaderId,
+            long version,
+            List<PreviewGroupMember> members,
+            boolean canManage,
+            boolean canEdit,
+            boolean studentOpen,
+            boolean activeRegistration) {
+    }
+
+    public record PreviewGroupMember(
+            long id,
+            String fullName,
+            String username,
+            int slot,
+            boolean leader) {
+    }
+
+    public record PreviewStudent(long id, String fullName, String username) {
     }
 }

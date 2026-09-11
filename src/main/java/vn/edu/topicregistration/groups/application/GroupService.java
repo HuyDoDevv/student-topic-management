@@ -76,7 +76,7 @@ public class GroupService {
 
         UserAccountEntity leader = requiredAccount(student.accountId());
         StudentGroupEntity saved = groups.saveAndFlush(new StudentGroupEntity(period, leader));
-        return toView(saved);
+        return toView(saved, student.accountId());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -131,7 +131,7 @@ public class GroupService {
         UserAccountEntity newLeader = requiredAccount(newLeaderId);
         locked.group().transferLeadership(newLeader);
         groups.flush();
-        return toView(locked.group());
+        return toView(locked.group(), locked.actor().accountId());
     }
 
     @Transactional(readOnly = true)
@@ -160,8 +160,10 @@ public class GroupService {
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         Optional<StudentGroupEntity> current = groups
                 .findByPeriodIdAndMemberStudentId(periodId, student.accountId());
-        List<StudentOption> candidates = current
-                .filter(group -> Objects.equals(group.getLeader().getId(), student.accountId()))
+        Optional<GroupView> currentView = current.map(group -> toView(group, student.accountId()));
+        List<StudentOption> candidates = currentView
+                .filter(GroupView::canEdit)
+                .filter(group -> group.members().size() < 3)
                 .map(group -> accounts.findEligibleGroupMembers(
                                 student.facultyId(), periodId, RoleCode.STUDENT)
                         .stream()
@@ -180,7 +182,7 @@ public class GroupService {
                 current.isPresent());
         return new GroupWorkspace(
                 periodView,
-                current.map(this::toView),
+                currentView,
                 candidates);
     }
 
@@ -237,10 +239,10 @@ public class GroupService {
         StudentGroupEntity group = groups.findByIdVisibleToStudent(groupId, studentId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        return toView(group);
+        return toView(group, studentId);
     }
 
-    private GroupView toView(StudentGroupEntity group) {
+    private GroupView toView(StudentGroupEntity group, long viewerId) {
         List<MemberView> memberViews = memberships.findAllByGroupIdOrderBySlot(group.getId())
                 .stream()
                 .map(membership -> new MemberView(
@@ -252,12 +254,22 @@ public class GroupService {
                                 membership.getStudent().getId(),
                                 group.getLeader().getId())))
                 .toList();
+        boolean canManage = Objects.equals(group.getLeader().getId(), viewerId);
+        Instant now = clock.instant();
+        boolean studentOpen = !now.isBefore(group.getPeriod().getStudentStart())
+                && !now.isAfter(group.getPeriod().getStudentEnd());
+        boolean activeRegistration = activeRegistrations.existsForGroup(
+                group.getPeriod().getId(), group.getId());
         return new GroupView(
                 group.getId(),
                 group.getPeriod().getId(),
                 group.getLeader().getId(),
                 group.getVersion(),
-                memberViews);
+                memberViews,
+                canManage,
+                canManage && studentOpen && !activeRegistration,
+                studentOpen,
+                activeRegistration);
     }
 
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
@@ -362,7 +374,11 @@ public class GroupService {
             long periodId,
             long leaderId,
             long version,
-            List<MemberView> members) {
+            List<MemberView> members,
+            boolean canManage,
+            boolean canEdit,
+            boolean studentOpen,
+            boolean activeRegistration) {
         public GroupView {
             members = List.copyOf(members);
         }

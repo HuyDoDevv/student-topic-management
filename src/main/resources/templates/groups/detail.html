@@ -1,13 +1,124 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Chi tiết nhóm', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chi tiết nhóm', ~{::section})}">
 <body>
 <section>
-  <div class="page-header page-header-actions"><div><div class="page-pretitle">NHÓM SINH VIÊN</div><h1 class="page-title">Nhóm <span th:text="${groupCode}">N01</span></h1><p class="text-secondary mt-2 mb-0" th:text="${period.name}">Đợt đăng ký</p></div><a class="btn btn-primary" th:href="@{/groups/1/registrations/new}">Đăng ký đề tài</a></div>
-  <div class="row row-cards">
-    <div class="col-lg-8"><div class="card data-card"><div class="card-header"><h2 class="card-title">Thành viên</h2><span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(members)} + '/3 thành viên'">3/3 thành viên</span></div><div class="table-responsive"><table class="table table-vcenter card-table responsive-table"><thead><tr><th>Sinh viên</th><th>Mã số</th><th>Vai trò</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead><tbody><tr th:each="member : ${members}"><td data-label="Sinh viên"><div class="d-flex align-items-center gap-2"><span class="avatar avatar-sm bg-blue-lt" th:text="${#strings.substring(member.name, 0, 1)}">N</span><strong th:text="${member.name}">Nguyễn Minh Anh</strong></div></td><td data-label="Mã số" th:text="${member.code}">23110001</td><td data-label="Vai trò"><span class="badge bg-teal-lt" th:text="${member.role}">Thành viên</span></td><td data-label="Thao tác" class="text-end"><button class="btn btn-sm btn-ghost-secondary" type="button" data-bs-toggle="modal" data-bs-target="#member-actions">Thao tác</button></td></tr></tbody></table></div></div></div>
-    <div class="col-lg-4"><aside class="card"><div class="card-header"><h2 class="card-title">Thêm thành viên</h2></div><form th:action="@{/groups/1/members}" method="post" data-prevent-double-submit><div class="card-body"><label class="form-label required" for="student-id">Sinh viên</label><select class="form-select" id="student-id" name="studentId" required><option value="">Tìm theo mã số hoặc họ tên</option><option value="204">23110125 · Võ Khánh Linh</option></select><input type="hidden" name="version" value="0"></div><div class="card-footer"><button class="btn btn-primary w-100" type="submit">Thêm vào nhóm</button></div></form></aside></div>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">NHÓM SINH VIÊN</div>
+      <h1 class="page-title">Nhóm <span th:text="${groupCode}">N001</span></h1>
+      <p class="text-secondary mt-2 mb-0">
+        <span th:text="${period.name}">Đợt đăng ký</span>
+        <span aria-hidden="true"> · </span>
+        <span th:text="${period.studentWindow}">01/09/2026 – 10/09/2026</span>
+      </p>
+    </div>
+    <a class="btn btn-outline-primary" th:href="@{/groups}">Đổi đợt</a>
   </div>
-  <div class="modal modal-blur fade" id="member-actions" tabindex="-1" aria-labelledby="member-actions-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="member-actions-title">Thao tác thành viên</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body"><p>Chỉ trưởng nhóm hiện tại được chuyển quyền trưởng nhóm hoặc xóa thành viên khi nhóm chưa có đăng ký đang hoạt động.</p></div><div class="modal-footer"><button class="btn btn-outline-danger" type="button">Xóa khỏi nhóm</button><button class="btn btn-primary" type="button">Chuyển trưởng nhóm</button></div></div></div></div>
+
+  <div class="alert alert-info" role="status" th:if="${!group.canManage}">
+    Bạn là thành viên của nhóm. Chỉ trưởng nhóm hiện tại được thay đổi thành viên và chuyển quyền trưởng nhóm.
+  </div>
+  <div class="alert alert-warning" role="status" th:if="${group.canManage and !group.canEdit and group.activeRegistration}">
+    Nhóm đã có đăng ký đề tài đang xử lý nên danh sách thành viên tạm thời bị khóa.
+  </div>
+  <div class="alert alert-warning" role="status" th:if="${group.canManage and !group.canEdit and !group.activeRegistration}">
+    Danh sách thành viên chỉ được thay đổi trong thời gian sinh viên đăng ký.
+  </div>
+
+  <div class="row row-cards">
+    <div th:class="${group.canManage ? 'col-xl-8' : 'col-12'}">
+      <div class="card data-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title mb-1">Thành viên</h2>
+            <span class="small text-secondary">Trưởng nhóm được đánh dấu ở vị trí hiện tại.</span>
+          </div>
+          <span class="badge bg-blue-lt ms-auto" th:text="${group.members.size()} + '/3 thành viên'">1/3 thành viên</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table responsive-table">
+            <thead>
+            <tr><th>Vị trí</th><th>Sinh viên</th><th>Mã sinh viên</th><th>Vai trò</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="member : ${group.members}">
+              <td data-label="Vị trí"><span class="slot-pill" th:text="${member.slot}">1</span></td>
+              <td data-label="Sinh viên">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="avatar avatar-sm bg-blue-lt" th:text="${#strings.substring(member.fullName, 0, 1)}">N</span>
+                  <strong th:text="${member.fullName}">Nguyễn Minh Anh</strong>
+                </div>
+              </td>
+              <td data-label="Mã sinh viên" th:text="${member.username}">23110001</td>
+              <td data-label="Vai trò">
+                <span class="badge" th:classappend="${member.leader ? 'bg-teal-lt' : 'bg-secondary-lt'}"
+                      th:text="${member.leader ? 'Trưởng nhóm' : 'Thành viên'}">Thành viên</span>
+              </td>
+              <td data-label="Thao tác" class="text-end">
+                <div class="member-actions" th:if="${group.canEdit and !member.leader}">
+                  <form th:action="@{/groups/{id}/leader(id=${group.id})}" method="post" data-prevent-double-submit>
+                    <input type="hidden" name="studentId" th:value="${member.id}">
+                    <input type="hidden" name="version" th:value="${group.version}">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">Chuyển trưởng nhóm</button>
+                  </form>
+                  <form th:action="@{/groups/{id}/members/{studentId}/remove(id=${group.id},studentId=${member.id})}"
+                        method="post" data-prevent-double-submit>
+                    <input type="hidden" name="version" th:value="${group.version}">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+                  </form>
+                </div>
+                <span class="text-secondary small" th:if="${!group.canEdit or member.leader}">—</span>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4" th:if="${group.canManage}">
+      <aside class="card group-add-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title mb-1">Thêm thành viên</h2>
+            <span class="small text-secondary">Sinh viên cùng khoa và chưa có nhóm trong đợt.</span>
+          </div>
+        </div>
+        <form th:action="@{/groups/{id}/members(id=${group.id})}" th:object="${form}"
+              method="post" data-prevent-double-submit>
+          <div class="card-body">
+            <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary
+                 th:if="${#fields.hasAnyErrors()}">
+              <strong>Chưa thể thêm thành viên.</strong>
+              <span th:errors="*{studentId}">Vui lòng kiểm tra sinh viên đã chọn.</span>
+            </div>
+            <label class="form-label required" for="student-id">Sinh viên</label>
+            <select class="form-select" id="student-id" th:field="*{studentId}"
+                    th:classappend="${#fields.hasErrors('studentId')} ? 'is-invalid'"
+                    th:disabled="${!group.canEdit or group.members.size() >= 3}" required>
+              <option value="">Chọn theo mã số hoặc họ tên</option>
+              <option th:each="candidate : ${candidates}" th:value="${candidate.id}"
+                      th:text="${candidate.username + ' · ' + candidate.fullName}">23110125 · Võ Khánh Linh</option>
+            </select>
+            <div class="invalid-feedback" th:errors="*{studentId}">Sinh viên không hợp lệ.</div>
+            <input type="hidden" th:field="*{version}">
+            <p class="form-hint mt-2 mb-0" th:if="${group.members.size() >= 3}">Nhóm đã đủ ba thành viên.</p>
+            <p class="form-hint mt-2 mb-0" th:if="${group.canEdit and group.members.size() < 3 and candidates.isEmpty()}">Không còn sinh viên phù hợp để thêm.</p>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-primary w-100" type="submit"
+                    th:disabled="${!group.canEdit or group.members.size() >= 3 or candidates.isEmpty()}">Thêm vào nhóm</button>
+          </div>
+        </form>
+      </aside>
+
+      <div class="group-help mt-3">
+        <strong>Cần rời nhóm?</strong>
+        <p class="mb-0">Hãy chuyển quyền cho một thành viên hiện có. Trưởng nhóm mới có thể xóa bạn khỏi nhóm.</p>
+      </div>
+    </div>
+  </div>
 </section>
 </body>
 </html>

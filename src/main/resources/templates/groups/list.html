@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Nhóm sinh viên', ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle">NHÓM SINH VIÊN</div>
+      <h1 class="page-title">Nhóm của tôi theo đợt</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Chọn đợt để tạo nhóm hoặc tiếp tục quản lý nhóm hiện tại. Mỗi nhóm có tối đa ba sinh viên.
+      </p>
+    </div>
+  </div>
+
+  <div class="row row-cards" th:if="${!periods.isEmpty()}">
+    <div class="col-md-6 col-xl-4" th:each="period : ${periods}">
+      <article class="card group-period-card h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+            <span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Trạng thái</span>
+            <span class="group-period-icon" aria-hidden="true">👥</span>
+          </div>
+          <h2 class="h3 mb-2" th:text="${period.name}">Tên đợt</h2>
+          <p class="text-secondary mb-4">
+            Thời gian sinh viên: <strong class="text-body" th:text="${period.studentWindow}">01/09/2026 – 10/09/2026</strong>
+          </p>
+          <a class="btn mt-auto"
+             th:classappend="${(period.hasGroup ? 'btn-outline-primary' : 'btn-primary') + ((!period.hasGroup and !period.studentOpen) ? ' disabled' : '')}"
+             th:href="${period.hasGroup
+                 ? '/periods/' + period.id + '/groups'
+                 : '/periods/' + period.id + '/groups/new'}"
+             th:attr="aria-disabled=${!period.hasGroup and !period.studentOpen}"
+             th:text="${period.hasGroup ? 'Xem nhóm của tôi' : 'Tạo nhóm'}">Mở nhóm</a>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="card" th:if="${periods.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Nhóm sẽ được tạo khi trưởng khoa mở đợt đăng ký cho sinh viên.')}" ></div>
+</section>
+</body>
+</html>
