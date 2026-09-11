@@ -18,7 +18,7 @@ chứng test; không được hiểu là đạt.
 | FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.4,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024; kiểm tra bổ sung ngày-only/ngày đã qua trong fix T017 |
 | FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: DB-02, required/null theo loại và chỉ dời muộn hơn |
 | FR-05 Nội dung và hạn gửi đề tài | REQ-08–09 + U | AS-2.1–2.2,2.5,2.10–2.11; AT-02,03,12; SC-002,003 | TopicRulesTest, TopicAuthorContractTest | CONFIRMED | T025: topic thuộc một đợt, không reuse/copy; danh mục seed/import; tests NOT RUN |
-| FR-06 1–2 GVHD cùng bộ môn | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | CONFIRMED | T025: chỉ tác giả đổi GVHD khi DRAFT, khóa từ PENDING_APPROVAL; tests NOT RUN |
+| FR-06 Tác giả là GVHD chính, tối đa một GVHD phối hợp | REQ-10–11 + U | AS-2.1,2.3,2.6–2.9; AT-03,12; SC-002 | TopicRulesTest, TopicSubmissionIT | CONFIRMED | T069: backend tự gán tác giả slot 1, form chỉ chọn tối đa một người phối hợp; tests deferred theo yêu cầu người dùng |
 | FR-07 Duyệt và công bố | REQ-02,08,15 + U | AS-3.1–3.3,5.17–5.18; AT-05,06,12; SC-002–004 | TopicReviewContractTest, TopicPublicationIT | BLOCKED G-Publish | NOT RUN |
 | FR-08 Nhóm và trưởng nhóm | REQ-12–13 + U | AS-4.1–4.2,4.4,4.6–4.14; AT-04,06–08; SC-003–005 | GroupRulesTest, GroupContractTest, GroupMembershipIT | BLOCKED Q-07 | NOT RUN |
 | FR-09 Một nhóm/SV/đợt | REQ-13 + U | AS-4.3,4.5; AT-04,07; SC-003,005 | GroupRulesTest, GroupMembershipIT | CONFIRMED | NOT RUN |

@@ -9,7 +9,7 @@
       <h1 class="page-title"
           th:text="${editing ? 'Sửa nội dung đề tài' : 'Đề xuất đề tài mới'}">Đề xuất đề tài mới</h1>
       <p class="text-secondary mt-2 mb-0">
-        Có thể lưu nội dung chưa hoàn chỉnh. Trước khi gửi duyệt, cần điền đủ 5 trường và chọn từ 1 đến 2 giảng viên hướng dẫn.
+        Có thể lưu nội dung chưa hoàn chỉnh. Người tạo đề tài là GVHD chính; trước khi gửi duyệt cần điền đủ 5 trường.
       </p>
     </div>
   </div>
@@ -64,18 +64,34 @@
       <fieldset>
         <legend class="h3 mb-1">Giảng viên hướng dẫn</legend>
         <p class="text-secondary mb-1">
-          Danh sách gồm các tài khoản giảng viên đang hoạt động thuộc bộ môn
+          Người tạo đề tài được tự động phân công làm GVHD chính thuộc bộ môn
           <strong th:text="${departmentName}">Công nghệ phần mềm</strong>.
         </p>
-        <p class="form-hint mb-3">Có thể chưa chọn khi lưu nháp; cần chọn 1–2 người trước khi gửi duyệt.</p>
-
-        <div class="alert alert-warning mb-0" th:if="${lecturers.isEmpty()}">
-          Bộ môn chưa có tài khoản giảng viên phù hợp. Vui lòng liên hệ trưởng khoa để kiểm tra dữ liệu tài khoản.
+        <div class="topic-option supervisor-option supervisor-primary mt-3">
+          <span class="supervisor-primary-mark" aria-hidden="true">1</span>
+          <span>
+            <strong th:text="${primarySupervisor.fullName}">Giảng viên đăng đề tài</strong>
+            <small>
+              <span th:text="${primarySupervisor.username}">tên đăng nhập</span>
+              <span aria-hidden="true"> · </span>
+              GVHD chính
+            </small>
+          </span>
         </div>
 
-        <div class="supervisor-grid" th:if="${!lecturers.isEmpty()}" data-supervisor-group>
-          <label class="topic-option supervisor-option" th:each="lecturer : ${lecturers}">
-            <input class="form-check-input" type="checkbox" th:field="*{supervisorIds}"
+        <div class="mt-4">
+          <div class="fw-bold">GVHD phối hợp <span class="text-secondary fw-normal">(không bắt buộc)</span></div>
+          <p class="form-hint mb-3">Có thể chọn thêm tối đa một giảng viên đang hoạt động cùng bộ môn.</p>
+        </div>
+
+        <div class="alert alert-info mb-0" th:if="${coSupervisors.isEmpty()}">
+          Bộ môn hiện không có giảng viên khác phù hợp để làm GVHD phối hợp.
+        </div>
+
+        <div class="supervisor-grid" th:if="${!coSupervisors.isEmpty()}"
+             data-supervisor-group data-supervisor-limit="1">
+          <label class="topic-option supervisor-option" th:each="lecturer : ${coSupervisors}">
+            <input class="form-check-input" type="checkbox" th:field="*{coSupervisorIds}"
                    th:value="${lecturer.id}">
             <span>
               <strong th:text="${lecturer.fullName}">Giảng viên</strong>
@@ -83,7 +99,7 @@
             </span>
           </label>
         </div>
-        <div class="text-danger small mt-2" th:errors="*{supervisorIds}">Giảng viên hướng dẫn chưa hợp lệ.</div>
+        <div class="text-danger small mt-2" th:errors="*{coSupervisorIds}">Giảng viên hướng dẫn phối hợp chưa hợp lệ.</div>
       </fieldset>
 
       <input th:if="${editing}" type="hidden" th:field="*{version}">

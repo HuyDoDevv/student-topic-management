@@ -14,8 +14,8 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 |---|---|---|---|
 | Tạo đợt | DEAN | Tên/loại/lịch ngày hợp lệ, không có ngày đã qua; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
-| Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; GVHD chọn từ tài khoản LECTURER đang hoạt động cùng bộ môn | 05–06,14 |
-| Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, 1–2 GVHD cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 05–06,14 |
+| Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn | 05–06,14 |
+| Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 05–06,14 |
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; scope B | 07,14 |
 | Công bố | DEAN | APPROVED; scope B | 07,14 |
 | Tạo nhóm | STUDENT người tạo | Trở thành leader, chưa nhóm khác cùng đợt; thời điểm B Q-07 | 08–09 |
@@ -52,9 +52,9 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /periods | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate | 303 tới period mới; từ chối giá trị có giờ hoặc ngày đã qua; ngày bắt buộc/null đúng theo loại | 02–04 |
 | POST /periods/{id} | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |
 | GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt | 05,07 |
-| POST /periods/{id}/topics | 5 nội dung,supervisorIds | Tạo DRAFT thuộc riêng đợt trong path; author/department từ identity, GVHD từ danh mục seed/import đã lọc | 05–06,14 |
+| POST /periods/{id}/topics | 5 nội dung,coSupervisorIds | Tạo DRAFT thuộc riêng đợt trong path; author/department từ identity, tác giả tự động là GVHD chính, tối đa một GVHD phối hợp lấy từ danh mục đã lọc | 05–06,14 |
 | GET /topics/{id}; GET /topics/{id}/edit | — | Chỉ dữ liệu/view được policy cho phép | 01,05 |
-| POST /topics/{id}/draft | 5 nội dung,supervisorIds,version | 303; chỉ tác giả và DRAFT; nếu bị từ chối về DRAFT thì được sửa/gửi lại trong hạn GV | 05–06,14 |
+| POST /topics/{id}/draft | 5 nội dung,coSupervisorIds,version | 303; chỉ tác giả và DRAFT; tác giả luôn là GVHD chính; nếu bị từ chối về DRAFT thì được sửa người phối hợp/gửi lại trong hạn GV | 05–06,14 |
 | POST /topics/{id}/submit | version | DRAFT → PENDING_APPROVAL | 05–06,14 |
 | POST /topics/{id}/approve | version | PENDING_APPROVAL → APPROVED | 07,14 |
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |

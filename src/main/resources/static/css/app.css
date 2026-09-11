@@ -175,6 +175,9 @@ textarea.form-control { min-height: auto; }
 .supervisor-option { margin-top: 0; }
 .supervisor-option .form-check-input { flex: 0 0 auto; margin-top: .2rem; }
 .supervisor-option:has(input:disabled) { cursor: not-allowed; opacity: .58; transform: none; }
+.supervisor-primary { align-items: center; cursor: default; border-color: rgba(47, 179, 68, .28); background: rgba(47, 179, 68, .07); }
+.supervisor-primary:hover { border-color: rgba(47, 179, 68, .28); transform: none; }
+.supervisor-primary-mark { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: 50%; background: #2fb344; color: #fff; font-size: .8rem; font-weight: 800; }
 .topic-text { color: #3f4b59; white-space: pre-line; overflow-wrap: anywhere; }
 .timeline-note { display: flex; gap: .85rem; }
 .timeline-dot { width: .8rem; height: .8rem; margin-top: .3rem; flex: 0 0 auto; border-radius: 50%; background: var(--tblr-primary); box-shadow: 0 0 0 .3rem var(--tblr-primary-lt); }
