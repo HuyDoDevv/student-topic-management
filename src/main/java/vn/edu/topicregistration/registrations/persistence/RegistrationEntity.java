@@ -82,6 +82,14 @@ public class RegistrationEntity {
         this.status = RegistrationStatus.PENDING;
     }
 
+    public void withdraw(Instant withdrawnAt) {
+        if (status != RegistrationStatus.PENDING) {
+            throw new IllegalStateException("Only a pending registration can be withdrawn");
+        }
+        this.status = RegistrationStatus.WITHDRAWN;
+        this.withdrawnAt = Objects.requireNonNull(withdrawnAt, "withdrawnAt");
+    }
+
     public Long getId() {
         return id;
     }
