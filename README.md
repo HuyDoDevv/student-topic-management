@@ -71,9 +71,12 @@ Spring Security bằng tài khoản được cấp, policy role/scope, clock ngh
 và hạ tầng unit/integration/E2E. Profile `local` dùng MySQL và Hibernate validate;
 profile `preview` chỉ hiển thị catalogue UI mà không truy cập database.
 
-US1 quản lý đợt đã có create/read/update thật trên profile `local`; các route còn lại trong
-profile `preview` vẫn là mẫu giao diện. Dự án không tự tạo tài khoản mặc định. Dữ liệu seed
-local và các user story tiếp theo được làm sau khi gate tương ứng được chốt.
+Các luồng đợt đăng ký, đề xuất/duyệt đề tài, nhóm sinh viên và đăng ký đề tài đã kết nối
+MySQL trên profile `local`. Dự án không tự tạo tài khoản mặc định. Khi cần dữ liệu để xem
+giao diện, bật `DEMO_SEED_ENABLED=true` và đặt `DEMO_SEED_PASSWORD` trong `.env`, chạy ứng
+dụng một lần rồi tắt cờ. Các tài khoản được tạo là `dean.demo`, `lecturer1.demo` đến
+`lecturer3.demo` và `student1.demo` đến `student7.demo`, cùng dùng mật khẩu đã nhập.
+Seeder chỉ thêm fixture còn thiếu và không reset dữ liệu hoặc lịch đã tồn tại khi khởi động lại.
 
 ## Kiểm thử và cấu trúc
 

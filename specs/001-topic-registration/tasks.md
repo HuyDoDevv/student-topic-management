@@ -224,7 +224,7 @@ US3, US4 component và T047 đã giải phóng dependency; T048–T050 có thể
 
 Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thiếu.
 
-- [ ] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
+- [X] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
 
 - [ ] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
 
