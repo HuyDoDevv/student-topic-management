@@ -179,7 +179,7 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [X] T067 [US4] Thay thêm trực tiếp bằng invite/accept/reject/cancel trong group application/domain; giữ chỗ theo tổng membership + PENDING dưới khóa period, cài tự rời và giải tán theo T065, hiển thị hết hiệu lực theo clock và cung cấp truy vấn lời mời của chính SV.
 
-- [ ] T068 [US4] Đổi group controller/form/templates sang routes invitation, màn hình lời mời đến và các thao tác accept/reject/cancel/leave/dissolve responsive; bỏ POST thêm trực tiếp và chỉ hiển thị dữ liệu theo policy T006.
+- [X] T068 [US4] Đổi group controller/form/templates sang routes invitation, màn hình lời mời đến và các thao tác accept/reject/cancel/leave/dissolve responsive; bỏ POST thêm trực tiếp và chỉ hiển thị dữ liệu theo policy T006.
 
 - [ ] T045 [US4] Viết MySQL race lời mời/accept khi còn một chỗ, hai nhóm mời cùng SV, accept đồng thời rời/chuyển leader tại `src/test/java/vn/edu/topicregistration/concurrency/GroupMembershipIT.java`; kiểm tra trigger leader và DB-05/DB-11 (AT-04,07–08).
 

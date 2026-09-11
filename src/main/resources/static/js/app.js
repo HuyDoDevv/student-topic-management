@@ -14,7 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.querySelectorAll("form[data-prevent-double-submit]").forEach((form) => {
-    form.addEventListener("submit", () => {
+    form.addEventListener("submit", (event) => {
+      const confirmation = form.dataset.confirm;
+      if (confirmation && !window.confirm(confirmation)) {
+        event.preventDefault();
+        return;
+      }
       form.querySelectorAll("button[type='submit']").forEach((button) => {
         button.disabled = true;
         button.setAttribute("aria-busy", "true");

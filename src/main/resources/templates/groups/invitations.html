@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Lời mời vào nhóm', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">NHÓM SINH VIÊN</div>
+      <h1 class="page-title">Lời mời của tôi</h1>
+      <p class="text-secondary mt-2 mb-0">Bạn chỉ trở thành thành viên sau khi tự chấp nhận lời mời còn hiệu lực.</p>
+    </div>
+    <a class="btn btn-outline-primary" th:href="@{/groups}">Danh sách đợt</a>
+  </div>
+
+  <div class="card data-card" th:if="${!invitations.isEmpty()}">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title mb-1">Lịch sử lời mời</h2>
+        <span class="small text-secondary">Lời mời chưa trả lời sẽ hết hiệu lực khi thời gian sinh viên đăng ký kết thúc.</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table responsive-table invitation-table">
+        <thead>
+        <tr><th>Đợt đăng ký</th><th>Người mời</th><th>Gửi lúc</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="invitation : ${invitations}">
+          <td data-label="Đợt đăng ký">
+            <strong class="d-block" th:text="${invitation.periodName}">Tên đợt</strong>
+            <span class="small text-secondary" th:text="${'Nhóm N' + #numbers.formatInteger(invitation.groupId, 3)}">Nhóm N001</span>
+          </td>
+          <td data-label="Người mời" th:text="${invitation.invitedByName}">Trưởng nhóm</td>
+          <td data-label="Gửi lúc" th:text="${invitation.createdAt}">11/09/2026 09:30</td>
+          <td data-label="Trạng thái">
+            <span class="badge" th:classappend="${invitation.statusClass}" th:text="${invitation.status}">Đang chờ</span>
+          </td>
+          <td data-label="Thao tác" class="text-end">
+            <div class="invitation-actions" th:if="${invitation.canAccept or invitation.canReject}">
+              <form th:if="${invitation.canAccept}" th:action="@{/group-invitations/{id}/accept(id=${invitation.id})}"
+                    method="post" data-prevent-double-submit>
+                <input type="hidden" name="version" th:value="${invitation.version}">
+                <button class="btn btn-sm btn-success" type="submit">Chấp nhận</button>
+              </form>
+              <form th:if="${invitation.canReject}" th:action="@{/group-invitations/{id}/reject(id=${invitation.id})}"
+                    method="post" data-prevent-double-submit data-confirm="Bạn muốn từ chối lời mời này?">
+                <input type="hidden" name="version" th:value="${invitation.version}">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Từ chối</button>
+              </form>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" th:if="${invitation.groupActive and invitation.status == 'Đã chấp nhận'}"
+               th:href="@{/groups/{id}(id=${invitation.groupId})}">Xem nhóm</a>
+            <span class="text-secondary small" th:if="${!invitation.canAccept and !invitation.canReject and !(invitation.groupActive and invitation.status == 'Đã chấp nhận')}">Đã xử lý</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:if="${invitations.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có lời mời', 'Khi trưởng nhóm mời bạn, lời mời sẽ xuất hiện tại đây để bạn quyết định.')}" ></div>
+</section>
+</body>
+</html>

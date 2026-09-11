@@ -32,6 +32,9 @@
         <li class="nav-item" th:if="${canManageGroups or previewMode}" th:classappend="${activeNav == 'groups'} ? ' active'">
           <a class="nav-link" th:href="${previewMode ? '/groups/1' : '/groups'}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 11a3 3 0 1 0 0-6M3 21v-2a6 6 0 0 1 12 0v2M16 15a5 5 0 0 1 5 5v1"/></svg></span><span class="nav-link-title">Nhóm sinh viên</span></a>
         </li>
+        <li class="nav-item" th:if="${canManageGroups or previewMode}" th:classappend="${activeNav == 'group-invitations'} ? ' active'">
+          <a class="nav-link" th:href="@{/group-invitations}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v12H4zM4 7l8 6 8-6"/></svg></span><span class="nav-link-title">Lời mời nhóm</span></a>
+        </li>
         <li class="nav-item" th:if="${previewMode}" th:classappend="${activeNav == 'registrations'} ? ' active'">
           <a class="nav-link" th:href="@{/registrations/1}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 5h6M9 3h6v4H9zM6 5H5a2 2 0 0 0-2 2v13h18V7a2 2 0 0 0-2-2h-1M8 13h8M8 17h5"/></svg></span><span class="nav-link-title">Đăng ký đề tài</span></a>
         </li>

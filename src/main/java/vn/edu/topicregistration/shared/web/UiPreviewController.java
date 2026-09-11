@@ -72,18 +72,25 @@ public class UiPreviewController {
             Map.of("id", 203, "code", "23110102", "name", "Lê Hoàng Nam", "role", "Thành viên"));
 
     private static final PreviewGroupPeriod GROUP_PERIOD = new PreviewGroupPeriod(
-            1, "Đồ án chuyên ngành HK1 2026–2027", "20/09/2026", "30/09/2026", true, true);
+            1, "Đồ án chuyên ngành HK1 2026–2027", "20/09/2026", "30/09/2026", true, true, false);
 
     private static final List<PreviewGroupMember> GROUP_MEMBERS = List.of(
             new PreviewGroupMember(201, "Nguyễn Minh Anh", "23110001", 1, true),
             new PreviewGroupMember(202, "Trần Gia Huy", "23110018", 2, false));
 
     private static final PreviewGroup GROUP = new PreviewGroup(
-            1, 1, 201, 0, GROUP_MEMBERS, true, true, true, false);
+            1, 1, 201, 0, GROUP_MEMBERS, true, true, false, false, true, false, 1);
 
     private static final List<PreviewStudent> GROUP_CANDIDATES = List.of(
             new PreviewStudent(203, "Lê Hoàng Nam", "23110102"),
             new PreviewStudent(204, "Võ Khánh Linh", "23110125"));
+
+    private static final List<PreviewInvitation> GROUP_INVITATIONS = List.of(
+            new PreviewInvitation(
+                    1, 1, 1, "Đồ án chuyên ngành HK1 2026–2027",
+                    "Lê Hoàng Nam", "23110102", "Nguyễn Minh Anh", 3,
+                    "Đang chờ phản hồi", "bg-yellow-lt", "11/09/2026 09:30", null,
+                    0, true, true, true, true));
 
     @GetMapping("/login")
     String login() {
@@ -197,6 +204,7 @@ public class UiPreviewController {
     String groupPeriods(Model model) {
         common(model, "groups", "Nhóm sinh viên");
         model.addAttribute("periods", List.of(GROUP_PERIOD));
+        model.addAttribute("pendingInvitationCount", 1);
         return "groups/list";
     }
 
@@ -210,14 +218,25 @@ public class UiPreviewController {
     @GetMapping("/groups/{id}")
     String groupDetail(@PathVariable long id, Model model) {
         common(model, "groups", "Nhóm sinh viên");
-        GroupMemberForm form = new GroupMemberForm();
-        form.setVersion(GROUP.version());
+        GroupMemberForm invitationForm = new GroupMemberForm();
+        invitationForm.setVersion(GROUP.version());
+        GroupMemberForm leadershipForm = new GroupMemberForm();
+        leadershipForm.setVersion(GROUP.version());
         model.addAttribute("groupCode", "N001");
         model.addAttribute("period", GROUP_PERIOD);
         model.addAttribute("group", GROUP);
         model.addAttribute("candidates", GROUP_CANDIDATES);
-        model.addAttribute("form", form);
+        model.addAttribute("invitations", GROUP_INVITATIONS);
+        model.addAttribute("invitationForm", invitationForm);
+        model.addAttribute("leadershipForm", leadershipForm);
         return "groups/detail";
+    }
+
+    @GetMapping("/group-invitations")
+    String groupInvitations(Model model) {
+        common(model, "group-invitations", "Nhóm sinh viên");
+        model.addAttribute("invitations", GROUP_INVITATIONS);
+        return "groups/invitations";
     }
 
     @GetMapping("/groups/{groupId}/registrations/new")
@@ -349,7 +368,8 @@ public class UiPreviewController {
             String studentStart,
             String studentEnd,
             boolean studentOpen,
-            boolean hasGroup) {
+            boolean hasGroup,
+            boolean hasPendingInvitation) {
         public String studentWindow() {
             return studentStart + " – " + studentEnd;
         }
@@ -371,8 +391,14 @@ public class UiPreviewController {
             List<PreviewGroupMember> members,
             boolean canManage,
             boolean canEdit,
+            boolean canLeave,
+            boolean canDissolve,
             boolean studentOpen,
-            boolean activeRegistration) {
+            boolean activeRegistration,
+            int pendingInvitationCount) {
+        public int reservedSlots() {
+            return members.size() + pendingInvitationCount;
+        }
     }
 
     public record PreviewGroupMember(
@@ -384,5 +410,25 @@ public class UiPreviewController {
     }
 
     public record PreviewStudent(long id, String fullName, String username) {
+    }
+
+    public record PreviewInvitation(
+            long id,
+            long groupId,
+            long periodId,
+            String periodName,
+            String studentName,
+            String studentUsername,
+            String invitedByName,
+            int slot,
+            String status,
+            String statusClass,
+            String createdAt,
+            String respondedAt,
+            long version,
+            boolean groupActive,
+            boolean canAccept,
+            boolean canReject,
+            boolean canCancel) {
     }
 }

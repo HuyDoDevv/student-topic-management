@@ -3,14 +3,19 @@
       th:replace="~{layouts/main :: page('Nhóm sinh viên', ~{::section})}">
 <body>
 <section>
-  <div class="page-header">
+  <div class="page-header page-header-actions">
     <div>
       <div class="page-pretitle">NHÓM SINH VIÊN</div>
       <h1 class="page-title">Nhóm của tôi theo đợt</h1>
       <p class="text-secondary mt-2 mb-0">
-        Chọn đợt để tạo nhóm hoặc tiếp tục quản lý nhóm hiện tại. Mỗi nhóm có tối đa ba sinh viên.
+        Chọn đợt để tạo nhóm hoặc tiếp tục quản lý nhóm hiện tại. Thành viên chỉ được thêm sau khi chấp nhận lời mời.
       </p>
     </div>
+    <a class="btn btn-outline-primary invitation-link" th:href="@{/group-invitations}">
+      Lời mời của tôi
+      <span class="badge bg-primary text-primary-fg ms-1" th:if="${pendingInvitationCount > 0}"
+            th:text="${pendingInvitationCount}">1</span>
+    </a>
   </div>
 
   <div class="row row-cards" th:if="${!periods.isEmpty()}">
@@ -18,7 +23,10 @@
       <article class="card group-period-card h-100">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
-            <span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Trạng thái</span>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Trạng thái</span>
+              <span class="badge bg-yellow-lt" th:if="${period.hasPendingInvitation}">Có lời mời đang chờ</span>
+            </div>
             <span class="group-period-icon" aria-hidden="true">👥</span>
           </div>
           <h2 class="h3 mb-2" th:text="${period.name}">Tên đợt</h2>
@@ -26,12 +34,12 @@
             Thời gian sinh viên: <strong class="text-body" th:text="${period.studentWindow}">01/09/2026 – 10/09/2026</strong>
           </p>
           <a class="btn mt-auto"
-             th:classappend="${(period.hasGroup ? 'btn-outline-primary' : 'btn-primary') + ((!period.hasGroup and !period.studentOpen) ? ' disabled' : '')}"
+             th:classappend="${(period.hasGroup ? 'btn-outline-primary' : (period.hasPendingInvitation ? 'btn-warning' : 'btn-primary')) + ((!period.hasGroup and !period.hasPendingInvitation and !period.studentOpen) ? ' disabled' : '')}"
              th:href="${period.hasGroup
                  ? '/periods/' + period.id + '/groups'
-                 : '/periods/' + period.id + '/groups/new'}"
-             th:attr="aria-disabled=${!period.hasGroup and !period.studentOpen}"
-             th:text="${period.hasGroup ? 'Xem nhóm của tôi' : 'Tạo nhóm'}">Mở nhóm</a>
+                 : (period.hasPendingInvitation ? '/group-invitations' : '/periods/' + period.id + '/groups/new')}"
+             th:attr="aria-disabled=${!period.hasGroup and !period.hasPendingInvitation and !period.studentOpen}"
+             th:text="${period.hasGroup ? 'Xem nhóm của tôi' : (period.hasPendingInvitation ? 'Phản hồi lời mời' : 'Tạo nhóm')}">Mở nhóm</a>
         </div>
       </article>
     </div>

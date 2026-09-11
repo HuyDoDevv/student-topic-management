@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.groups.web;
 
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +25,7 @@ import vn.edu.topicregistration.groups.application.GroupService;
 import vn.edu.topicregistration.groups.application.GroupService.GroupPeriodView;
 import vn.edu.topicregistration.groups.application.GroupService.GroupView;
 import vn.edu.topicregistration.groups.application.GroupService.GroupWorkspace;
+import vn.edu.topicregistration.groups.application.GroupService.InvitationView;
 import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
 import vn.edu.topicregistration.shared.error.ApplicationException;
 import vn.edu.topicregistration.shared.time.ProjectTime;
@@ -32,8 +34,11 @@ import vn.edu.topicregistration.shared.web.WebRedirects;
 @Controller
 @Profile("!preview & !test")
 public class GroupController {
+    private static final Locale VIETNAMESE = Locale.forLanguageTag("vi-VN");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(
-            "dd/MM/yyyy", Locale.forLanguageTag("vi-VN"));
+            "dd/MM/yyyy", VIETNAMESE);
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
+            "dd/MM/yyyy HH:mm", VIETNAMESE);
 
     private final GroupService groups;
     private final ProjectTime projectTime;
@@ -43,7 +48,7 @@ public class GroupController {
         this.projectTime = projectTime;
     }
 
-    @InitBinder("form")
+    @InitBinder({"invitationForm", "leadershipForm"})
     void whitelistMemberFields(WebDataBinder binder) {
         binder.setAllowedFields("studentId", "version");
     }
@@ -51,10 +56,24 @@ public class GroupController {
     @GetMapping("/groups")
     String periods(Model model) {
         common(model);
-        model.addAttribute("periods", groups.listPeriodsForCurrentStudent().stream()
+        List<GroupPeriodPageView> periodViews = groups.listPeriodsForCurrentStudent().stream()
+                .map(this::display)
+                .toList();
+        model.addAttribute("periods", periodViews);
+        model.addAttribute("pendingInvitationCount", periodViews.stream()
+                .filter(GroupPeriodPageView::hasPendingInvitation)
+                .count());
+        return "groups/list";
+    }
+
+    @GetMapping("/group-invitations")
+    String invitations(Model model) {
+        common(model);
+        model.addAttribute("activeNav", "group-invitations");
+        model.addAttribute("invitations", groups.listInvitationsForCurrentStudent().stream()
                 .map(this::display)
                 .toList());
-        return "groups/list";
+        return "groups/invitations";
     }
 
     @GetMapping("/periods/{periodId}/groups")
@@ -63,14 +82,15 @@ public class GroupController {
         if (workspace.group().isEmpty()) {
             return WebRedirects.seeOther("/periods/" + periodId + "/groups/new");
         }
-        return renderDetail(model, workspace, new GroupMemberForm());
+        return renderDetail(
+                model, workspace, new GroupMemberForm(), new GroupMemberForm());
     }
 
     @GetMapping("/periods/{periodId}/groups/new")
     Object createForm(@PathVariable long periodId, Model model) {
         GroupWorkspace workspace = groups.workspace(periodId);
         if (workspace.group().isPresent()) {
-            return redirectTo(workspace.group().orElseThrow().id());
+            return redirectToGroup(workspace.group().orElseThrow().id());
         }
         common(model);
         model.addAttribute("period", display(workspace.period()));
@@ -79,28 +99,51 @@ public class GroupController {
 
     @PostMapping("/periods/{periodId}/groups")
     RedirectView create(@PathVariable long periodId) {
-        return redirectTo(groups.create(periodId).id());
+        return redirectToGroup(groups.create(periodId).id());
     }
 
     @GetMapping("/groups/{id}")
     String detail(@PathVariable long id, Model model) {
         GroupView group = groups.getVisible(id);
-        return renderDetail(model, workspaceFor(group), new GroupMemberForm());
+        return renderDetail(
+                model, workspaceFor(group), new GroupMemberForm(), new GroupMemberForm());
     }
 
-    @PostMapping("/groups/{id}/members")
-    Object addMember(
+    @PostMapping("/groups/{id}/invitations")
+    Object invite(
             @PathVariable long id,
-            @Valid @ModelAttribute("form") GroupMemberForm form,
+            @Valid @ModelAttribute("invitationForm") GroupMemberForm form,
             BindingResult bindingResult,
             HttpServletResponse response,
             Model model) {
         if (bindingResult.hasErrors()) {
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return renderCurrentDetail(id, model, form);
+            return renderCurrentDetail(id, model, form, new GroupMemberForm());
         }
-        groups.addMember(id, form.getVersion(), form.getStudentId());
-        return redirectTo(id);
+        groups.inviteMember(id, form.getVersion(), form.getStudentId());
+        return redirectToGroup(id);
+    }
+
+    @PostMapping("/group-invitations/{id}/accept")
+    RedirectView acceptInvitation(
+            @PathVariable long id,
+            @RequestParam(name = "version", required = false) Long version) {
+        return redirectToGroup(groups.acceptInvitation(id, requiredVersion(version)));
+    }
+
+    @PostMapping("/group-invitations/{id}/reject")
+    RedirectView rejectInvitation(
+            @PathVariable long id,
+            @RequestParam(name = "version", required = false) Long version) {
+        groups.rejectInvitation(id, requiredVersion(version));
+        return WebRedirects.seeOther("/group-invitations");
+    }
+
+    @PostMapping("/group-invitations/{id}/cancel")
+    RedirectView cancelInvitation(
+            @PathVariable long id,
+            @RequestParam(name = "version", required = false) Long version) {
+        return redirectToGroup(groups.cancelInvitation(id, requiredVersion(version)));
     }
 
     @PostMapping("/groups/{id}/members/{studentId}/remove")
@@ -109,27 +152,47 @@ public class GroupController {
             @PathVariable long studentId,
             @RequestParam(name = "version", required = false) Long version) {
         groups.removeMember(id, requiredVersion(version), studentId);
-        return redirectTo(id);
+        return redirectToGroup(id);
     }
 
     @PostMapping("/groups/{id}/leader")
     Object transferLeadership(
             @PathVariable long id,
-            @Valid @ModelAttribute("form") GroupMemberForm form,
+            @Valid @ModelAttribute("leadershipForm") GroupMemberForm form,
             BindingResult bindingResult,
             HttpServletResponse response,
             Model model) {
         if (bindingResult.hasErrors()) {
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return renderCurrentDetail(id, model, form);
+            return renderCurrentDetail(id, model, new GroupMemberForm(), form);
         }
         groups.transferLeadership(id, form.getVersion(), form.getStudentId());
-        return redirectTo(id);
+        return redirectToGroup(id);
     }
 
-    private String renderCurrentDetail(long groupId, Model model, GroupMemberForm form) {
+    @PostMapping("/groups/{id}/leave")
+    RedirectView leave(
+            @PathVariable long id,
+            @RequestParam(name = "version", required = false) Long version) {
+        groups.leave(id, requiredVersion(version));
+        return WebRedirects.seeOther("/groups");
+    }
+
+    @PostMapping("/groups/{id}/dissolve")
+    RedirectView dissolve(
+            @PathVariable long id,
+            @RequestParam(name = "version", required = false) Long version) {
+        groups.dissolve(id, requiredVersion(version));
+        return WebRedirects.seeOther("/groups");
+    }
+
+    private String renderCurrentDetail(
+            long groupId,
+            Model model,
+            GroupMemberForm invitationForm,
+            GroupMemberForm leadershipForm) {
         GroupView group = groups.getVisible(groupId);
-        return renderDetail(model, workspaceFor(group), form);
+        return renderDetail(model, workspaceFor(group), invitationForm, leadershipForm);
     }
 
     private GroupWorkspace workspaceFor(GroupView group) {
@@ -144,19 +207,27 @@ public class GroupController {
     private String renderDetail(
             Model model,
             GroupWorkspace workspace,
-            GroupMemberForm form) {
+            GroupMemberForm invitationForm,
+            GroupMemberForm leadershipForm) {
         common(model);
         GroupView group = workspace.group()
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        if (!model.containsAttribute("form")) {
-            form.setVersion(group.version());
-            model.addAttribute("form", form);
+        if (!model.containsAttribute("invitationForm")) {
+            invitationForm.setVersion(group.version());
+            model.addAttribute("invitationForm", invitationForm);
+        }
+        if (!model.containsAttribute("leadershipForm")) {
+            leadershipForm.setVersion(group.version());
+            model.addAttribute("leadershipForm", leadershipForm);
         }
         model.addAttribute("period", display(workspace.period()));
         model.addAttribute("group", group);
         model.addAttribute("groupCode", "N" + String.format("%03d", group.id()));
         model.addAttribute("candidates", workspace.candidates());
+        model.addAttribute("invitations", workspace.invitations().stream()
+                .map(this::display)
+                .toList());
         return "groups/detail";
     }
 
@@ -172,7 +243,54 @@ public class GroupController {
                 DATE.format(projectTime.toBusinessDate(period.studentStart())),
                 DATE.format(projectTime.toBusinessDate(period.studentEnd())),
                 period.studentOpen(),
-                period.hasGroup());
+                period.hasGroup(),
+                period.hasPendingInvitation());
+    }
+
+    private InvitationPageView display(InvitationView invitation) {
+        return new InvitationPageView(
+                invitation.id(),
+                invitation.groupId(),
+                invitation.periodId(),
+                invitation.periodName(),
+                invitation.studentName(),
+                invitation.studentUsername(),
+                invitation.invitedByName(),
+                invitation.slot(),
+                statusLabel(invitation.status()),
+                statusClass(invitation.status()),
+                format(invitation.createdAt()),
+                invitation.respondedAt() == null ? null : format(invitation.respondedAt()),
+                invitation.version(),
+                invitation.groupActive(),
+                invitation.canAccept(),
+                invitation.canReject(),
+                invitation.canCancel());
+    }
+
+    private String format(Instant instant) {
+        return DATE_TIME.format(projectTime.toBusinessTime(instant));
+    }
+
+    private static String statusLabel(String status) {
+        return switch (status) {
+            case "PENDING" -> "Đang chờ phản hồi";
+            case "ACCEPTED" -> "Đã chấp nhận";
+            case "REJECTED" -> "Đã từ chối";
+            case "CANCELLED" -> "Đã hủy";
+            case "EXPIRED" -> "Đã hết hiệu lực";
+            default -> status;
+        };
+    }
+
+    private static String statusClass(String status) {
+        return switch (status) {
+            case "PENDING" -> "bg-yellow-lt";
+            case "ACCEPTED" -> "bg-green-lt";
+            case "REJECTED" -> "bg-red-lt";
+            case "EXPIRED", "CANCELLED" -> "bg-secondary-lt";
+            default -> "bg-secondary-lt";
+        };
     }
 
     private static long requiredVersion(Long version) {
@@ -182,7 +300,7 @@ public class GroupController {
         return version;
     }
 
-    private static RedirectView redirectTo(long groupId) {
+    private static RedirectView redirectToGroup(long groupId) {
         return WebRedirects.seeOther("/groups/" + groupId);
     }
 
@@ -192,7 +310,8 @@ public class GroupController {
             String studentStart,
             String studentEnd,
             boolean studentOpen,
-            boolean hasGroup) {
+            boolean hasGroup,
+            boolean hasPendingInvitation) {
         public String studentWindow() {
             return studentStart + " – " + studentEnd;
         }
@@ -204,5 +323,25 @@ public class GroupController {
         public String statusClass() {
             return studentOpen ? "bg-green-lt" : "bg-secondary-lt";
         }
+    }
+
+    public record InvitationPageView(
+            long id,
+            long groupId,
+            long periodId,
+            String periodName,
+            String studentName,
+            String studentUsername,
+            String invitedByName,
+            int slot,
+            String status,
+            String statusClass,
+            String createdAt,
+            String respondedAt,
+            long version,
+            boolean groupActive,
+            boolean canAccept,
+            boolean canReject,
+            boolean canCancel) {
     }
 }

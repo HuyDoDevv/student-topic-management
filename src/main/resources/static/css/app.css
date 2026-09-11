@@ -175,9 +175,14 @@ textarea.form-control { min-height: auto; }
 .group-rule-icon { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #dff7ed; color: #087f5b; font-weight: 800; }
 .slot-pill { display: inline-grid; width: 1.9rem; height: 1.9rem; place-items: center; border-radius: 50%; background: #edf4fb; color: #315f82; font-size: .78rem; font-weight: 800; }
 .member-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
+.invitation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
+.invitation-link { display: inline-flex; align-items: center; }
+.invitation-table td { min-width: 8rem; }
+.invitation-table td:first-child { min-width: 13rem; }
 .group-add-card { position: sticky; top: 5.5rem; }
 .group-help { padding: 1rem; border: 1px dashed rgba(82, 119, 154, .35); border-radius: .7rem; background: rgba(255, 255, 255, .56); color: #536273; }
 .group-help p { margin-top: .3rem; font-size: .84rem; line-height: 1.55; }
+.group-exit-card { border-color: rgba(214, 57, 57, .18); background: rgba(255, 250, 250, .7); }
 .topic-option { display: flex; align-items: flex-start; gap: .8rem; margin-top: .75rem; padding: 1rem; border: 1px solid var(--tblr-border-color); border-radius: .7rem; cursor: pointer; transition: border-color .15s ease, background-color .15s ease, transform .15s ease; }
 .topic-option:hover { border-color: rgba(6, 111, 209, .45); transform: translateY(-1px); }
 .topic-option:has(input:checked) { border-color: var(--tblr-primary); background: var(--tblr-primary-lt); box-shadow: 0 0 0 2px rgba(6, 111, 209, .08); }
@@ -282,6 +287,10 @@ input[readonly] { background-color: var(--tblr-bg-surface-secondary, #f1f3f5); c
   .member-preview { align-items: flex-start; }
   .member-actions { justify-content: flex-start; }
   .member-actions, .member-actions form, .member-actions .btn { width: 100%; }
+  .invitation-actions { justify-content: flex-start; }
+  .invitation-actions, .invitation-actions form, .invitation-actions .btn { width: 100%; }
+  .group-exit-card .card-body { align-items: stretch !important; flex-direction: column; }
+  .group-exit-card form, .group-exit-card .btn { width: 100%; }
   .topic-option { padding: .85rem; }
   .responsive-table tbody td { grid-template-columns: minmax(6.2rem, .42fr) minmax(0, 1fr); }
   .modal-dialog { margin: .75rem; }

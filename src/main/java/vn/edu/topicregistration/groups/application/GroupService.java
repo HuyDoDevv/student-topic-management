@@ -117,16 +117,6 @@ public class GroupService {
         return reloadVisibleGroup(groupId, locked.actor().accountId());
     }
 
-    /**
-     * Compatibility bridge for the old controller until T068 replaces its route.
-     * The operation creates an invitation and never creates a membership directly.
-     */
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Deprecated(forRemoval = true)
-    public GroupView addMember(long groupId, long expectedVersion, long studentId) {
-        return inviteMember(groupId, expectedVersion, studentId);
-    }
-
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public long acceptInvitation(long invitationId, long expectedVersion) {
         InvitationRoute route = invitationRoute(invitationId);
@@ -540,6 +530,7 @@ public class GroupService {
                 invitation.getCreatedAt(),
                 invitation.getRespondedAt(),
                 invitation.getVersion(),
+                groupActive,
                 pending
                         && !expired
                         && groupActive
@@ -718,6 +709,7 @@ public class GroupService {
             Instant createdAt,
             Instant respondedAt,
             long version,
+            boolean groupActive,
             boolean canAccept,
             boolean canReject,
             boolean canCancel) {
