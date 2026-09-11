@@ -191,6 +191,9 @@ textarea.form-control { min-height: auto; }
 .supervisor-option { margin-top: 0; }
 .supervisor-option .form-check-input { flex: 0 0 auto; margin-top: .2rem; }
 .supervisor-option:has(input:disabled) { cursor: not-allowed; opacity: .58; transform: none; }
+.supervisor-primary { align-items: center; cursor: default; border-color: rgba(47, 179, 68, .28); background: rgba(47, 179, 68, .07); }
+.supervisor-primary:hover { border-color: rgba(47, 179, 68, .28); transform: none; }
+.supervisor-primary-mark { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: 50%; background: #2fb344; color: #fff; font-size: .8rem; font-weight: 800; }
 .topic-text { color: #3f4b59; white-space: pre-line; overflow-wrap: anywhere; }
 .timeline-note { display: flex; gap: .85rem; }
 .timeline-dot { width: .8rem; height: .8rem; margin-top: .3rem; flex: 0 0 auto; border-radius: 50%; background: var(--tblr-primary); box-shadow: 0 0 0 .3rem var(--tblr-primary-lt); }
@@ -199,6 +202,20 @@ textarea.form-control { min-height: auto; }
 .period-window > div:last-child { padding-bottom: 0; border-bottom: 0; }
 .period-window dt { color: var(--tblr-secondary); font-weight: 500; }
 .period-window dd { margin: 0; font-weight: 700; text-align: right; }
+.review-card-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.review-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
+.review-list { display: grid; gap: 1rem; }
+.review-topic { padding: 1.1rem; border: 1px solid rgba(98, 105, 118, .16); border-radius: .75rem; background: #fff; }
+.review-topic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.review-topic-heading > div:first-child { min-width: 0; }
+.review-topic-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.review-topic-details { border-top: 1px solid var(--tblr-border-color); padding-top: .9rem; }
+.review-topic-details summary { width: fit-content; color: var(--tblr-primary); font-weight: 650; cursor: pointer; }
+.review-topic-content { display: grid; gap: 1rem; margin-top: 1rem; }
+.review-topic-content > div { display: grid; grid-template-columns: minmax(10rem, .35fr) minmax(0, 1fr); gap: 1rem; }
+.review-topic-content dt { color: var(--tblr-secondary); font-weight: 600; }
+.review-topic-content dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.publish-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 fieldset { min-width: 0; }
 fieldset legend { float: none; width: auto; margin-bottom: 1rem; }
 input[readonly] { background-color: var(--tblr-bg-surface-secondary, #f1f3f5); cursor: not-allowed; }
@@ -247,6 +264,9 @@ input[readonly] { background-color: var(--tblr-bg-surface-secondary, #f1f3f5); c
   .table-toolbar > *, .table-toolbar .form-select, .topic-search { width: 100%; max-width: none; }
   .supervisor-grid { grid-template-columns: 1fr; }
   .group-add-card { position: static; }
+  .review-card-header, .review-topic-heading, .publish-bar { align-items: stretch; flex-direction: column; }
+  .review-summary, .review-topic-actions { justify-content: flex-start; }
+  .review-topic-content > div { grid-template-columns: 1fr; gap: .25rem; }
 
   .data-card { overflow: visible; border: 0; background: transparent; box-shadow: none; }
   .data-card > .card-header { margin-bottom: .75rem; border: 1px solid rgba(98, 105, 118, .14); border-radius: var(--app-card-radius); background: white; box-shadow: var(--app-shadow); }
@@ -282,6 +302,8 @@ input[readonly] { background-color: var(--tblr-bg-surface-secondary, #f1f3f5); c
   .card-header, .card-body, .card-footer { padding-inline: 1rem; }
   .card-footer.d-flex { align-items: stretch; flex-direction: column; }
   .card-footer.d-flex > .btn, .card-footer.d-flex > form, .card-footer.d-flex > form .btn { width: 100%; }
+  .review-topic-actions, .review-topic-actions form, .review-topic-actions .btn,
+  .publish-bar form, .publish-bar .btn { width: 100%; }
   .welcome-panel { padding: 1.35rem; }
   .welcome-panel h2 { font-size: 1.8rem; }
   .member-preview { align-items: flex-start; }

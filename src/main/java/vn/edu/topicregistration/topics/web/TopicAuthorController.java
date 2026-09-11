@@ -44,7 +44,7 @@ public class TopicAuthorController {
                 "objectives",
                 "studentRequirements",
                 "expectedResults",
-                "supervisorIds",
+                "coSupervisorIds",
                 "version");
     }
 
@@ -167,7 +167,8 @@ public class TopicAuthorController {
         model.addAttribute("editing", editing);
         model.addAttribute("period", context.period());
         model.addAttribute("departmentName", context.departmentName());
-        model.addAttribute("lecturers", context.lecturers());
+        model.addAttribute("primarySupervisor", context.primarySupervisor());
+        model.addAttribute("coSupervisors", context.coSupervisors());
         model.addAttribute("topic", topic);
         return "topics/form";
     }

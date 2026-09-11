@@ -114,6 +114,12 @@ public class TopicEntity {
         this.status = status;
     }
 
+    public void hide(UserAccountEntity moderator, String reason, Instant hiddenAt) {
+        this.hiddenBy = moderator;
+        this.hiddenReason = reason;
+        this.hiddenAt = hiddenAt;
+    }
+
     public Long getId() {
         return id;
     }

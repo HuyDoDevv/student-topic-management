@@ -21,8 +21,9 @@ public class TopicDraftForm {
 
     private String expectedResults;
 
-    @Size(max = 2, message = "Một đề tài chỉ được chọn tối đa hai giảng viên hướng dẫn.")
-    private List<@Positive(message = "Giảng viên hướng dẫn không hợp lệ.") Long> supervisorIds =
+    @Size(max = 1, message = "Chỉ được chọn tối đa một giảng viên hướng dẫn phối hợp.")
+    private List<@Positive(message = "Giảng viên hướng dẫn phối hợp không hợp lệ.") Long>
+            coSupervisorIds =
             new ArrayList<>();
 
     @PositiveOrZero(message = "Phiên bản dữ liệu không hợp lệ.")
@@ -35,8 +36,10 @@ public class TopicDraftForm {
         form.objectives = topic.objectives();
         form.studentRequirements = topic.studentRequirements();
         form.expectedResults = topic.expectedResults();
-        form.supervisorIds = topic.supervisors().stream()
+        form.coSupervisorIds = topic.supervisors().stream()
+                .filter(supervisor -> !supervisor.id().equals(topic.authorId()))
                 .map(supervisor -> supervisor.id())
+                .limit(1)
                 .toList();
         form.version = topic.version();
         return form;
@@ -49,7 +52,7 @@ public class TopicDraftForm {
                 objectives,
                 studentRequirements,
                 expectedResults,
-                supervisorIds);
+                coSupervisorIds);
     }
 
     public String getTitle() {
@@ -92,12 +95,14 @@ public class TopicDraftForm {
         this.expectedResults = expectedResults;
     }
 
-    public List<Long> getSupervisorIds() {
-        return supervisorIds;
+    public List<Long> getCoSupervisorIds() {
+        return coSupervisorIds;
     }
 
-    public void setSupervisorIds(List<Long> supervisorIds) {
-        this.supervisorIds = supervisorIds == null ? new ArrayList<>() : new ArrayList<>(supervisorIds);
+    public void setCoSupervisorIds(List<Long> coSupervisorIds) {
+        this.coSupervisorIds = coSupervisorIds == null
+                ? new ArrayList<>()
+                : new ArrayList<>(coSupervisorIds);
     }
 
     public Long getVersion() {

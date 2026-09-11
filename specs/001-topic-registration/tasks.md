@@ -32,8 +32,8 @@ Không dùng công cụ tự động triển khai để vượt các gate này.
 | G-Identity | T006 | Đã giải phóng: seed/import, tổ hợp role, scope; chuyển GV ngoài phiên bản đầu; ADMIN ẩn mềm nội dung vi phạm, ghi audit và khóa tài khoản nguồn |
 | G-Period | T017 | Đã giải phóng: ngày bắt buộc/null theo loại, độ chính xác DATE, đổi loại, gia hạn mốc đăng ký và ngày phụ đã chốt |
 | G-Topic | T025 | Đã giải phóng: mỗi topic thuộc một đợt, không reuse/copy; danh mục seed/import; chỉ tác giả đổi GVHD khi DRAFT, không thay trong quá trình thực hiện |
-| G-Publish | T033 | Chốt granularity công bố và chính sách thời hạn cho quyết định dean nếu có |
-| G-Group | T039,T065 | Đã chốt lại: lời mời cần xác nhận và giữ chỗ; tự rời/giải tán; chặn đăng ký khi còn lời mời PENDING |
+| G-Publish | T033 | Đã giải phóng: duyệt/từ chối từng topic; publish toàn bộ APPROVED trong đợt; UI nhắc trước ngày SV, không SLA |
+| G-Group | T039,T065 | Đã giải phóng và chốt lại: lời mời cần xác nhận và giữ chỗ; tự rời/giải tán; chặn đăng ký khi còn lời mời PENDING |
 | G-Registration | T047 | Q-09: reason thủ công, ưu tiên rút/accept, lưu lịch sử |
 | G-Acceptance | T007 | Đã giải phóng: AS/SC hiện tại được chấp nhận; kiểm tra bảo mật, responsive và xung đột chính; phiên bản local không có SLA định lượng |
 
@@ -110,7 +110,7 @@ Sau T017, nhóm test T018–T019 có thể viết song song. T020 trở đi ch�
 ## Phase 4: US2 — Giảng viên đăng đề tài có hướng dẫn (P1)
 
 **Goal:** tác giả soạn nháp và gửi đủ nội dung/GVHD đúng bộ môn trong hạn.
-**Independent test:** fixture đợt/GV; 1–2 GVHD hợp lệ, thiếu từng trường/ngoài hạn/sai
+**Independent test:** fixture đợt/GV; tác giả tự ở slot 1 và 0/1 GVHD phối hợp hợp lệ, thiếu từng trường/ngoài hạn/sai
 department/tác giả bị từ chối. Không cần UI công bố.
 **Trace:** FR-05–06,14; REQ-03,08–11,31–32; AS-2.1–2.11; AT-02–03,06,09,12.
 US1 và T025 đã hoàn tất; T026–T027 có thể thực hiện song song.
@@ -121,13 +121,15 @@ US1 và T025 đã hoàn tất; T026–T027 có thể thực hiện song song.
 
 - [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
-- [X] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V4 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite, supervisor slot là kỹ thuật không phải vai trò chính/phụ.
+- [X] T028 [US2] Đối chiếu topics/topic_supervisors trong `src/main/resources/db/migration/V1__full_system.sql`; tạo migration V4 thêm `hidden_at`, `hidden_by`, `hidden_reason` cho topics và tạo entity/repositories `src/main/java/vn/edu/topicregistration/topics/persistence/TopicEntity.java`, `TopicSupervisorEntity.java`, `TopicRepository.java`; DB-03–04, topic/period unique composite. Quyết định slot kỹ thuật ban đầu được T069 thay thế.
 
 - [X] T029 [US2] Cài draft/save/submit dưới khóa period tại `src/main/java/vn/edu/topicregistration/topics/application/TopicAuthorService.java`, `topics/domain/TopicRules.java`; validate tối thiểu GVHD khi gửi, không CHECK cross-table; không cho người khác sửa hoặc sửa sau DRAFT.
 
 - [X] T030 [US2] Cài controller/DTO tác giả tại `src/main/java/vn/edu/topicregistration/topics/web/TopicAuthorController.java`, `TopicDraftForm.java`; kiểm tra quyền trước truy vấn protected list/detail và bind whitelist, trạng thái do service quyết định.
 
 - [X] T031 [US2] Tạo form/list/detail Tabler tại `src/main/resources/templates/topics/form.html`, `list.html`, `detail.html`; hiển thị trạng thái và 5 trường, chọn GVHD dữ liệu đáng tin cậy; nút ẩn không thay kiểm tra backend.
+
+- [X] T069 [US2] Tự động gán tác giả làm GVHD chính ở slot 1 trong backend; form chỉ hiển thị tác giả và cho chọn tối đa một GVHD phối hợp cùng bộ môn, đồng thời cập nhật đặc tả/contract/data-model theo quyết định ngày 2026-09-11.
 
 - [ ] T032 [US2] Viết race sửa nháp/gửi duyệt với MySQL tại `src/test/java/vn/edu/topicregistration/concurrency/TopicSubmissionIT.java`; chạy tests US2, cập nhật `specs/001-topic-registration/acceptance-matrix.md` (AT-03,12, SC-003–005).
 
@@ -140,15 +142,15 @@ tích hợp ở US5, không yêu cầu implement registration trong US3.
 **Trace:** FR-07,14; REQ-02,08,15,31; AS-3.1–3.5; AT-06,12.
 Chờ US2/T033; T034–T035 song song.
 
-- [ ] T033 [US3] Chốt G-Publish: đối chiếu AS-3.1 và xác nhận công bố từng/tập/toàn danh sách, thời hạn xử lý dean nếu có trong `specs/001-topic-registration/spec.md`; cập nhật `contracts/web.md`, `data-model.md`, `acceptance-matrix.md` trước áp route publish tập hợp đề xuất.
+- [X] T033 [US3] Chốt G-Publish: đối chiếu AS-3.1 và xác nhận công bố từng/tập/toàn danh sách, thời hạn xử lý dean nếu có trong `specs/001-topic-registration/spec.md`; cập nhật `contracts/web.md`, `data-model.md`, `acceptance-matrix.md` trước áp route publish tập hợp đề xuất.
 
 - [ ] T034 [P] [US3] Viết state test approve/reject/publish, không nhảy duyệt, reject về DRAFT và gửi lại đúng hạn tại `src/test/java/vn/edu/topicregistration/unit/TopicReviewRulesTest.java` (AT-12).
 
 - [ ] T035 [P] [US3] Viết test HTTP scope dean, GV/tác giả/GVHD bị từ chối, publish input sai không đổi một phần tại `src/test/java/vn/edu/topicregistration/web/TopicReviewContractTest.java`; viết `TopicModerationContractTest.java` cho ADMIN ẩn mềm đề tài, audit, khóa tác giả và từ chối sửa/xóa cứng (AT-06,09,14; AS-1.15–1.16, AS-3.*).
 
-- [ ] T036 [US3] Cài review/publish transaction theo T033 tại `src/main/java/vn/edu/topicregistration/topics/application/TopicReviewService.java`, `topics/web/TopicReviewController.java`; khóa period trước, kiểm tra lại trạng thái/quyền/version, không auto-publish theo đồng hồ.
+- [X] T036 [US3] Cài review/publish transaction theo T033 tại `src/main/java/vn/edu/topicregistration/topics/application/TopicReviewService.java`, `topics/web/TopicReviewController.java`; khóa period trước, kiểm tra lại trạng thái/quyền/version, không auto-publish theo đồng hồ.
 
-- [ ] T037 [US3] Tạo giao diện duyệt/công bố tại `src/main/resources/templates/topics/review.html`; tích hợp trạng thái công bố với truy vấn danh sách tại `src/main/java/vn/edu/topicregistration/topics/application/PublishedTopicQueryService.java`, không hiển thị dữ liệu ngoài scope; cài `TopicModerationService.java` và route ADMIN `/admin/moderation/topics/{id}/hide` theo contract mà không cấp quyền học vụ.
+- [X] T037 [US3] Tạo giao diện duyệt/công bố tại `src/main/resources/templates/topics/review.html`; tích hợp trạng thái công bố với truy vấn danh sách tại `src/main/java/vn/edu/topicregistration/topics/application/PublishedTopicQueryService.java`, không hiển thị dữ liệu ngoài scope; cài `TopicModerationService.java` và route ADMIN `/admin/moderation/topics/{id}/hide` theo contract mà không cấp quyền học vụ.
 
 - [ ] T038 [US3] Chạy fixture review/publication trong `src/test/java/vn/edu/topicregistration/integration/TopicPublicationIT.java`; ghi kết quả US3 và phần AS-3.2 còn chờ US5 tại `specs/001-topic-registration/acceptance-matrix.md`.
 

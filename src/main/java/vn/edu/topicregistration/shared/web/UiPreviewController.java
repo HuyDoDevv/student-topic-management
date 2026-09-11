@@ -168,7 +168,8 @@ public class UiPreviewController {
         model.addAttribute("period", PERIODS.getFirst());
         model.addAttribute("form", new TopicDraftForm());
         model.addAttribute("departmentName", "Công nghệ phần mềm");
-        model.addAttribute("lecturers", LECTURERS);
+        model.addAttribute("primarySupervisor", LECTURERS.getFirst());
+        model.addAttribute("coSupervisors", LECTURERS.subList(1, LECTURERS.size()));
         return "topics/form";
     }
 
@@ -180,7 +181,8 @@ public class UiPreviewController {
         model.addAttribute("topic", TOPICS.getLast());
         model.addAttribute("form", previewTopicForm());
         model.addAttribute("departmentName", "Công nghệ phần mềm");
-        model.addAttribute("lecturers", LECTURERS);
+        model.addAttribute("primarySupervisor", LECTURERS.getFirst());
+        model.addAttribute("coSupervisors", LECTURERS.subList(1, LECTURERS.size()));
         return "topics/form";
     }
 
@@ -301,7 +303,7 @@ public class UiPreviewController {
         form.setObjectives(topic.objectives());
         form.setStudentRequirements(topic.studentRequirements());
         form.setExpectedResults(topic.expectedResults());
-        form.setSupervisorIds(List.of(12L));
+        form.setCoSupervisorIds(List.of(12L));
         form.setVersion(topic.version());
         return form;
     }

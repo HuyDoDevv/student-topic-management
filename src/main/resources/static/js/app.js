@@ -29,10 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("[data-supervisor-group]").forEach((group) => {
     const choices = [...group.querySelectorAll("input[type='checkbox']")];
+    const selectionLimit = Number.parseInt(group.dataset.supervisorLimit ?? "2", 10);
     const updateChoices = () => {
       const selectedCount = choices.filter((choice) => choice.checked).length;
       choices.forEach((choice) => {
-        choice.disabled = selectedCount >= 2 && !choice.checked;
+        choice.disabled = selectedCount >= selectionLimit && !choice.checked;
       });
     };
     choices.forEach((choice) => choice.addEventListener("change", updateChoices));

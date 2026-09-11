@@ -66,7 +66,7 @@ public class TopicAuthorService {
         ActorIdentity actor = currentLecturerFor(period);
         DepartmentEntity department = requiredEntity(DepartmentEntity.class, actor.departmentId());
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
-        LoadedDraft loaded = loadDraft(command);
+        LoadedDraft loaded = loadDraft(command, author);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, actor.accountId(), actor.departmentId(), "DRAFT")));
 
@@ -80,7 +80,7 @@ public class TopicAuthorService {
         Objects.requireNonNull(command, "command");
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         ActorIdentity actor = requireAuthor(locked.topic());
-        LoadedDraft loaded = loadDraft(command);
+        LoadedDraft loaded = loadDraft(command, locked.topic().getAuthor());
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, locked.topic())));
 
@@ -170,9 +170,11 @@ public class TopicAuthorService {
                 .findByIdAndFacultyId(periodId, actor.facultyId())
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
         DepartmentEntity department = requiredEntity(DepartmentEntity.class, actor.departmentId());
-        List<LecturerOption> lecturers = accounts
+        UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
+        List<LecturerOption> coSupervisors = accounts
                 .findEnabledByDepartmentAndRole(actor.departmentId(), RoleCode.LECTURER)
                 .stream()
+                .filter(account -> !Objects.equals(account.getId(), actor.accountId()))
                 .map(account -> new LecturerOption(
                         account.getId(), displayName(account), account.getUsername()))
                 .toList();
@@ -187,7 +189,8 @@ public class TopicAuthorService {
                                 && !now.isAfter(period.getLecturerEnd())),
                 department.getId(),
                 department.getName(),
-                lecturers);
+                new LecturerOption(author.getId(), displayName(author), author.getUsername()),
+                coSupervisors);
     }
 
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
@@ -237,28 +240,23 @@ public class TopicAuthorService {
         return actor;
     }
 
-    private LoadedDraft loadDraft(TopicDraftCommand command) {
-        if (command.supervisorIds().size() > 2) {
+    private LoadedDraft loadDraft(
+            TopicDraftCommand command,
+            UserAccountEntity author) {
+        if (command.coSupervisorIds().size() > 1) {
             throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
         }
-        List<UserAccountEntity> lecturers = new ArrayList<>();
-        List<SupervisorCandidate> candidates = new ArrayList<>();
-        for (Long lecturerId : command.supervisorIds()) {
-            if (lecturerId == null) {
+        List<UserAccountEntity> lecturers = new ArrayList<>(List.of(author));
+        List<SupervisorCandidate> candidates = new ArrayList<>(List.of(candidateFrom(author)));
+        for (Long lecturerId : command.coSupervisorIds()) {
+            if (lecturerId == null || Objects.equals(lecturerId, author.getId())) {
                 throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
             }
             UserAccountEntity lecturer = entityManager.find(UserAccountEntity.class, lecturerId);
             if (lecturer == null) {
                 throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
             }
-            Long departmentId = lecturer.getDepartment() == null
-                    ? null
-                    : lecturer.getDepartment().getId();
-            candidates.add(new SupervisorCandidate(
-                    lecturer.getId(),
-                    departmentId == null ? Long.MIN_VALUE : departmentId,
-                    lecturer.isEnabled(),
-                    lecturer.getRoleCodes().contains(RoleCode.LECTURER)));
+            candidates.add(candidateFrom(lecturer));
             lecturers.add(lecturer);
         }
         TopicDraft draft = new TopicDraft(
@@ -269,6 +267,17 @@ public class TopicAuthorService {
                 command.expectedResults(),
                 candidates);
         return new LoadedDraft(draft, List.copyOf(lecturers));
+    }
+
+    private SupervisorCandidate candidateFrom(UserAccountEntity lecturer) {
+        Long departmentId = lecturer.getDepartment() == null
+                ? null
+                : lecturer.getDepartment().getId();
+        return new SupervisorCandidate(
+                lecturer.getId(),
+                departmentId == null ? Long.MIN_VALUE : departmentId,
+                lecturer.isEnabled(),
+                lecturer.getRoleCodes().contains(RoleCode.LECTURER));
     }
 
     private TopicAccess access(ActorIdentity actor, TopicEntity topic) {
@@ -409,9 +418,9 @@ public class TopicAuthorService {
             String objectives,
             String studentRequirements,
             String expectedResults,
-            List<Long> supervisorIds) {
+            List<Long> coSupervisorIds) {
         public TopicDraftCommand {
-            supervisorIds = supervisorIds == null ? List.of() : List.copyOf(supervisorIds);
+            coSupervisorIds = coSupervisorIds == null ? List.of() : List.copyOf(coSupervisorIds);
         }
     }
 
@@ -433,9 +442,11 @@ public class TopicAuthorService {
             TopicPeriodView period,
             Long departmentId,
             String departmentName,
-            List<LecturerOption> lecturers) {
+            LecturerOption primarySupervisor,
+            List<LecturerOption> coSupervisors) {
         public TopicFormContext {
-            lecturers = List.copyOf(lecturers);
+            Objects.requireNonNull(primarySupervisor, "primarySupervisor");
+            coSupervisors = List.copyOf(coSupervisors);
         }
     }
 
