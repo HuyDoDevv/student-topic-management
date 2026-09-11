@@ -18,7 +18,7 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 | Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, 1–2 GVHD cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 05–06,14 |
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; scope B | 07,14 |
 | Công bố | DEAN | APPROVED; scope B | 07,14 |
-| Tạo nhóm | STUDENT người tạo | Trở thành leader, chưa nhóm khác cùng đợt; thời điểm B Q-07 | 08–09 |
+| Tạo nhóm | STUDENT người tạo | Trong hạn SV; trở thành leader, chưa nhóm khác cùng đợt | 08–09 |
 | Thêm/xóa thành viên | STUDENT leader hiện tại của đúng nhóm | Hạn SV, không active, 1–3 thành viên, một leader | 08–09 |
 | Chuyển leader | Leader hiện tại | Người nhận đã là thành viên; hạn SV, không active | 08 |
 | Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt, chưa accepted, không active; scope SV B | 10,13 |
@@ -30,6 +30,9 @@ Ký hiệu B: scope hoặc điều kiện còn BLOCKED; không cấp toàn quy�
 Với từng dòng, người không có role/quan hệ phải bị từ chối: GVHD không tự có quyền
 duyệt/accept; thành viên thường không gửi/rút/sửa; leader nhóm khác không thao tác nhóm này;
 leader cũ mất quyền sau chuyển. Kiểm tra cả truy vấn danh sách và chi tiết, không chỉ POST.
+Thành viên không tự rời/chuyển nhóm. Muốn chuyển, leader nhóm cũ xóa thành viên trước khi
+leader nhóm mới thêm; leader muốn rời phải chuyển quyền cho thành viên hiện có rồi mới được
+leader mới xóa. Không có thao tác làm nhóm trở thành rỗng.
 ADMIN chỉ xử lý khẩn cấp khi có nội dung do kẻ gian đăng: ẩn nội dung khỏi website nhưng
 giữ dữ liệu, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung. ADMIN không được
 sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý role/khoa/bộ môn hoặc chuyển
@@ -59,7 +62,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /topics/{id}/approve | version | PENDING_APPROVAL → APPROVED | 07,14 |
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |
 | POST /periods/{id}/topics/publish | topicIds,versions | Đề xuất tập APPROVED → PUBLISHED nguyên tử; chốt granularity trong AC | 07,14 |
-| POST /periods/{id}/groups | CSRF | Nhóm mới, người tạo leader; Q-07 gate | 08–09 |
+| POST /periods/{id}/groups | CSRF | Trong hạn SV; nhóm mới, người tạo là leader và thành viên đầu tiên | 08–09 |
 | GET /groups/{id} | — | Chi tiết nhóm; chỉ trường policy cho phép | 01,08 |
 | POST /groups/{id}/members | studentId,version | Thêm trực tiếp, không invitation | 08–09 |
 | POST /groups/{id}/members/{studentId}/remove | version | Xóa thành viên, giữ leader hợp lệ và tối thiểu 1 | 08 |
@@ -71,7 +74,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/reject | reason,version | REJECTED; required reason Q-09 | 12 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
-Không có GET gây mutation. Không route tự rời nhóm, tái dùng/sao chép topic hoặc đổi GVHD
+Không có GET gây mutation. Không route tự rời/chuyển nhóm hoặc xóa nhóm, tái dùng/sao chép topic hoặc đổi GVHD
 từ PENDING_APPROVAL trở đi,
 xóa lịch sử hoặc tự đăng ký tài khoản. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 quy tắc FR-04/FR-15. URI route là thiết kế đề xuất, không khẳng định các phần B đã được

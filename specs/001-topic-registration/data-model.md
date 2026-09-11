@@ -20,8 +20,8 @@ thực hiện bằng migration mới.
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc; chỉ thay đổi khi topic DRAFT |
-| StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
-| GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Một tư cách SV/đợt; slot 1–3 chỉ bảo vệ sức chứa |
+| StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Tạo trong hạn SV; trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc hoặc trạng thái nhóm nháp |
+| GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Một tư cách SV/đợt; slot 1–3 chỉ bảo vệ sức chứa; không có thao tác tự rời/chuyển nhóm |
 | Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | rejected/withdrawn không tái dùng ID khi đăng ký lại; tạo hàng mới; retention còn Q-09 |
 
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
@@ -115,8 +115,10 @@ là đề xuất kỹ thuật, không cho công bố DRAFT/PENDING.
 | REJECTED/WITHDRAWN → đăng ký mới PENDING | Trưởng nhóm | Tạo ID mới, đầy đủ điều kiện gửi; hàng cũ không đổi |
 
 Không chuyển ACCEPTED sang WITHDRAWN. Không tự chọn FIFO hoặc ưu tiên rút/accept.
-Nhóm không cần trạng thái dư thừa: quyền sửa suy ra từ thời gian và không tồn tại
-đăng ký PENDING/ACCEPTED. Tạo nhóm/rời nhóm vẫn Q-07, không thêm trạng thái “nhóm nháp”.
+Nhóm không cần trạng thái dư thừa: chỉ tạo trong hạn SV; quyền sửa suy ra từ thời gian và
+không tồn tại đăng ký PENDING/ACCEPTED. Không có trạng thái “nhóm nháp” hoặc thao tác tự
+rời/chuyển. Trưởng nhóm cũ xóa thành viên trước khi trưởng nhóm mới thêm; trưởng nhóm muốn
+rời phải chuyển quyền cho thành viên hiện có trước, nên nhóm không trở thành rỗng.
 
 ## Transaction protocol and concurrency
 
