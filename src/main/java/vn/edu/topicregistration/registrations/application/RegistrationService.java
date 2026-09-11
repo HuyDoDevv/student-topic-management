@@ -17,6 +17,8 @@ import vn.edu.topicregistration.groups.persistence.GroupInvitationStatus;
 import vn.edu.topicregistration.groups.persistence.GroupMembershipEntity;
 import vn.edu.topicregistration.groups.persistence.StudentGroupEntity;
 import vn.edu.topicregistration.groups.persistence.StudentGroupRepository;
+import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
 import vn.edu.topicregistration.periods.persistence.RegistrationPeriodEntity;
 import vn.edu.topicregistration.periods.persistence.RegistrationPeriodRepository;
 import vn.edu.topicregistration.registrations.domain.RegistrationRules;
@@ -33,6 +35,7 @@ import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
 import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.topics.persistence.TopicEntity;
 import vn.edu.topicregistration.topics.persistence.TopicRepository;
+import vn.edu.topicregistration.topics.persistence.TopicSupervisorEntity;
 
 @Service
 @Profile("!preview & !test")
@@ -156,6 +159,74 @@ public class RegistrationService {
         return toView(registration);
     }
 
+    @Transactional(readOnly = true)
+    public SubmissionWorkspace submissionWorkspace(long groupId) {
+        StudentGroupEntity group = groups.findById(groupId)
+                .filter(StudentGroupEntity::isActive)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        RegistrationPeriodEntity period = group.getPeriod();
+        ActorIdentity student = authorization.requireStudentOfFaculty(
+                period.getFaculty().getId());
+        authorization.requireGroupLeader(group.getLeader().getId());
+
+        Long activeRegistrationId = registrations
+                .findFirstByPeriodIdAndGroupIdAndStatusInOrderBySubmittedAtDescIdDesc(
+                        period.getId(), groupId, ACTIVE_STATUSES)
+                .map(RegistrationEntity::getId)
+                .orElse(null);
+        List<TopicOption> availableTopics = topics.findAllVisibleByPeriodIdAndStatusIn(
+                        period.getId(), List.of("PUBLISHED"))
+                .stream()
+                .filter(topic -> !registrations.existsByPeriodIdAndTopicIdAndStatus(
+                        period.getId(), topic.getId(), RegistrationStatus.ACCEPTED))
+                .map(RegistrationService::toTopicOption)
+                .toList();
+
+        return new SubmissionWorkspace(
+                group.getId(),
+                group.getVersion(),
+                period.getId(),
+                period.getName(),
+                Objects.equals(student.accountId(), group.getLeader().getId()),
+                invitations.existsByGroupIdAndStatus(groupId, GroupInvitationStatus.PENDING),
+                activeRegistrationId,
+                availableTopics);
+    }
+
+    @Transactional(readOnly = true)
+    public RegistrationDetailView getVisible(long registrationId) {
+        RegistrationEntity registration = detailedRegistration(registrationId);
+        ActorIdentity actor = authorization.currentActor();
+        long facultyId = registration.getPeriod().getFaculty().getId();
+        boolean sameFaculty = Objects.equals(actor.facultyId(), facultyId);
+        boolean studentMember = actor.roles().contains(RoleCode.STUDENT)
+                && sameFaculty
+                && registration.getGroup().getMembers().stream()
+                        .map(GroupMembershipEntity::getStudent)
+                        .map(UserAccountEntity::getId)
+                        .anyMatch(memberId -> Objects.equals(memberId, actor.accountId()));
+        boolean dean = actor.roles().contains(RoleCode.DEAN) && sameFaculty;
+        if (!studentMember && !dean) {
+            throw new AccessDeniedException("Registration is outside the actor scope");
+        }
+        return toDetail(registration, actor);
+    }
+
+    @Transactional(readOnly = true)
+    public RegistrationDetailView getForDecision(long registrationId) {
+        RegistrationEntity registration = detailedRegistration(registrationId);
+        ActorIdentity dean = authorization.requireDeanOfFaculty(
+                registration.getPeriod().getFaculty().getId());
+        return toDetail(registration, dean);
+    }
+
+    private RegistrationEntity detailedRegistration(long registrationId) {
+        return registrations.findDetailedById(registrationId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+    }
+
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
         return periods.findByIdForUpdate(periodId)
                 .orElseThrow(() -> new ApplicationException(
@@ -217,6 +288,70 @@ public class RegistrationService {
                 registration.getVersion());
     }
 
+    private RegistrationDetailView toDetail(
+            RegistrationEntity registration,
+            ActorIdentity actor) {
+        RegistrationPeriodEntity period = registration.getPeriod();
+        StudentGroupEntity group = registration.getGroup();
+        TopicEntity topic = registration.getTopic();
+        boolean pending = registration.getStatus() == RegistrationStatus.PENDING;
+        boolean withinStudentWindow = !clock.instant().isBefore(period.getStudentStart())
+                && !clock.instant().isAfter(period.getStudentEnd());
+        boolean leader = actor.roles().contains(RoleCode.STUDENT)
+                && Objects.equals(actor.accountId(), group.getLeader().getId());
+        boolean dean = actor.roles().contains(RoleCode.DEAN)
+                && Objects.equals(actor.facultyId(), period.getFaculty().getId());
+
+        return new RegistrationDetailView(
+                registration.getId(),
+                period.getId(),
+                period.getName(),
+                group.getId(),
+                topic.getId(),
+                topic.getTitle(),
+                displayName(topic.getAuthor()),
+                topic.getDepartment().getName(),
+                topic.getSupervisors().stream()
+                        .map(TopicSupervisorEntity::getLecturer)
+                        .map(RegistrationService::displayName)
+                        .toList(),
+                group.getMembers().stream()
+                        .map(membership -> new RegistrationMemberView(
+                                membership.getStudent().getId(),
+                                displayName(membership.getStudent()),
+                                membership.getStudent().getUsername(),
+                                Objects.equals(
+                                        membership.getStudent().getId(),
+                                        group.getLeader().getId())))
+                        .toList(),
+                registration.getStatus(),
+                registration.getRejectionKind(),
+                registration.getRejectionReason(),
+                registration.getSubmittedAt(),
+                registration.getDecidedAt(),
+                registration.getWithdrawnAt(),
+                registration.getVersion(),
+                leader && pending && withinStudentWindow,
+                dean && pending);
+    }
+
+    private static TopicOption toTopicOption(TopicEntity topic) {
+        return new TopicOption(
+                topic.getId(),
+                topic.getTitle(),
+                topic.getDepartment().getName(),
+                topic.getSupervisors().stream()
+                        .map(TopicSupervisorEntity::getLecturer)
+                        .map(RegistrationService::displayName)
+                        .toList());
+    }
+
+    private static String displayName(UserAccountEntity account) {
+        return account.getFullName() == null || account.getFullName().isBlank()
+                ? account.getUsername()
+                : account.getFullName();
+    }
+
     private <T> T applyRules(RuleOperation<T> operation) {
         try {
             return operation.run();
@@ -237,6 +372,8 @@ public class RegistrationService {
                         ApplicationErrorCode.TOPIC_TAKEN);
                 case INVALID_REGISTRATION_STATE -> throw new ApplicationException(
                         ApplicationErrorCode.CONFLICT);
+                case VALIDATION_FAILED -> throw new ApplicationException(
+                        ApplicationErrorCode.VALIDATION_FAILED);
             }
             throw new IllegalStateException("Unknown registration rule failure", exception);
         } catch (IllegalArgumentException | NullPointerException exception) {
@@ -258,5 +395,62 @@ public class RegistrationService {
             Instant submittedAt,
             Instant withdrawnAt,
             long version) {
+    }
+
+    public record SubmissionWorkspace(
+            long groupId,
+            long groupVersion,
+            long periodId,
+            String periodName,
+            boolean leader,
+            boolean pendingInvitation,
+            Long activeRegistrationId,
+            List<TopicOption> topics) {
+        public SubmissionWorkspace {
+            topics = List.copyOf(topics);
+        }
+    }
+
+    public record TopicOption(
+            long id,
+            String title,
+            String department,
+            List<String> supervisors) {
+        public TopicOption {
+            supervisors = List.copyOf(supervisors);
+        }
+    }
+
+    public record RegistrationDetailView(
+            long id,
+            long periodId,
+            String periodName,
+            long groupId,
+            long topicId,
+            String topicTitle,
+            String topicAuthor,
+            String topicDepartment,
+            List<String> supervisors,
+            List<RegistrationMemberView> members,
+            RegistrationStatus status,
+            vn.edu.topicregistration.registrations.persistence.RegistrationRejectionKind rejectionKind,
+            String rejectionReason,
+            Instant submittedAt,
+            Instant decidedAt,
+            Instant withdrawnAt,
+            long version,
+            boolean canWithdraw,
+            boolean canDecide) {
+        public RegistrationDetailView {
+            supervisors = List.copyOf(supervisors);
+            members = List.copyOf(members);
+        }
+    }
+
+    public record RegistrationMemberView(
+            long id,
+            String fullName,
+            String username,
+            boolean leader) {
     }
 }

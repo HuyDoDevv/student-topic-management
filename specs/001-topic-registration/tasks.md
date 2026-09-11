@@ -212,7 +212,7 @@ US3, US4 component và T047 đã giải phóng dependency; T048–T050 có thể
 
 - [X] T054 [US5] Cài port active của US4 bằng truy vấn registrations tại `src/main/java/vn/edu/topicregistration/registrations/application/ActiveRegistrationQueryAdapter.java`; nối runtime GroupService, freeze membership/leader khi PENDING hoặc ACCEPTED và cho sửa sau reject/rút trong hạn; không phụ thuộc UI.
 
-- [ ] T055 [US5] Cài registration controller/DTO tại `src/main/java/vn/edu/topicregistration/registrations/web/RegistrationController.java`, `RegistrationForm.java`, `RegistrationDecisionForm.java`; redirect/409/422 theo contract, không nhận actor/status từ client.
+- [X] T055 [US5] Cài registration controller/DTO tại `src/main/java/vn/edu/topicregistration/registrations/web/RegistrationController.java`, `RegistrationForm.java`, `RegistrationDecisionForm.java`; redirect/409/422 theo contract, không nhận actor/status từ client.
 
 - [ ] T056 [US5] Tạo Tabler form/detail/decision tại `src/main/resources/templates/registrations/form.html`, `detail.html`, `decision.html`; nối danh sách topic còn nhận đăng ký và nhóm; hiển thị reason auto-reject, không thêm notification.
 

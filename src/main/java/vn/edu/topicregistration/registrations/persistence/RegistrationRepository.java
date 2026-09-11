@@ -36,6 +36,13 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
     @EntityGraph(attributePaths = {"topic", "topic.department", "decisionActor"})
     List<RegistrationEntity> findAllByGroupIdOrderBySubmittedAtDescIdDesc(long groupId);
 
+    @EntityGraph(attributePaths = {"topic", "topic.department", "decisionActor"})
+    Optional<RegistrationEntity>
+            findFirstByPeriodIdAndGroupIdAndStatusInOrderBySubmittedAtDescIdDesc(
+                    long periodId,
+                    long groupId,
+                    Collection<RegistrationStatus> statuses);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select registration from RegistrationEntity registration "
             + "where registration.period.id = :periodId "
