@@ -168,7 +168,7 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [X] T042 [US4] Đối chiếu group schema DB-05–07 trong `src/main/resources/db/migration/V1__full_system.sql`, slot 1–3, UNIQUE SV/đợt và trigger tự tạo membership trưởng nhóm; tạo entity/repository tại `src/main/java/vn/edu/topicregistration/groups/persistence/StudentGroupEntity.java`, `GroupMembershipEntity.java`, `StudentGroupRepository.java`; backend không insert lặp leader membership.
 
-- [ ] T043 [US4] Cài group rules/create/add/remove/transfer dưới khóa period tại `src/main/java/vn/edu/topicregistration/groups/application/GroupService.java`, `groups/domain/GroupRules.java`; khai báo `groups/application/ActiveRegistrationQuery.java` làm port bắt buộc, không dùng stub luôn false trong runtime; adapter thật ở T054.
+- [X] T043 [US4] Cài group rules/create/add/remove/transfer dưới khóa period tại `src/main/java/vn/edu/topicregistration/groups/application/GroupService.java`, `groups/domain/GroupRules.java`; khai báo `groups/application/ActiveRegistrationQuery.java` làm port bắt buộc, không dùng stub luôn false trong runtime; adapter thật ở T054.
 
 - [ ] T044 [US4] Cài routes/form nhóm tại `src/main/java/vn/edu/topicregistration/groups/web/GroupController.java`, `GroupMemberForm.java`; tạo `src/main/resources/templates/groups/detail.html`, `form.html` và kiểm soát trường SV được phép xem theo T006.
 

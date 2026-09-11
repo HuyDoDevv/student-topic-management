@@ -9,6 +9,8 @@ public enum ApplicationErrorCode {
     VALIDATION_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "Dữ liệu chưa hợp lệ", "Vui lòng kiểm tra các trường được đánh dấu."),
     WINDOW_CLOSED(HttpStatus.UNPROCESSABLE_CONTENT, "Đã hết thời gian thao tác", "Khoảng thời gian cho thao tác này đã đóng."),
     GROUP_FULL(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã đủ thành viên", "Một nhóm chỉ có tối đa ba sinh viên."),
+    GROUP_MEMBERSHIP_CONFLICT(HttpStatus.UNPROCESSABLE_CONTENT, "Sinh viên đã thuộc nhóm", "Mỗi sinh viên chỉ được thuộc một nhóm trong cùng đợt đăng ký."),
+    INVALID_GROUP_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái nhóm không hợp lệ", "Nhóm không thể thực hiện thao tác này ở trạng thái hiện tại."),
     ACTIVE_REGISTRATION_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã có đăng ký đang xử lý", "Hãy xử lý đăng ký hiện tại trước khi gửi đăng ký mới."),
     TOPIC_TAKEN(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài đã nhận nhóm", "Hãy chọn một đề tài khác."),
     INVALID_TOPIC_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái đề tài không hợp lệ", "Đề tài không thể thực hiện thao tác này ở trạng thái hiện tại.");

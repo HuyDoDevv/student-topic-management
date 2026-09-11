@@ -1,7 +1,9 @@
 package vn.edu.topicregistration.groups.persistence;
 
 import java.util.Optional;
+import java.util.List;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,4 +18,10 @@ public interface GroupMembershipRepository
     Optional<GroupMembershipEntity> findByGroupIdAndStudentId(
             @Param("groupId") long groupId,
             @Param("studentId") long studentId);
+
+    @EntityGraph(attributePaths = "student")
+    @Query("select membership from GroupMembershipEntity membership "
+            + "where membership.group.id = :groupId "
+            + "order by membership.slot")
+    List<GroupMembershipEntity> findAllByGroupIdOrderBySlot(@Param("groupId") long groupId);
 }

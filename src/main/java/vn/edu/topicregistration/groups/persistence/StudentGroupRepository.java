@@ -6,6 +6,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -44,4 +45,12 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
             + "left join studentGroup.members membership "
             + "where studentGroup.id = :id")
     Optional<StudentGroupEntity> findByIdForUpdate(@Param("id") long id);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update StudentGroupEntity studentGroup "
+            + "set studentGroup.version = studentGroup.version + 1 "
+            + "where studentGroup.id = :id and studentGroup.version = :expectedVersion")
+    int incrementVersion(
+            @Param("id") long id,
+            @Param("expectedVersion") long expectedVersion);
 }
