@@ -13,6 +13,9 @@
       </div>
     </div>
     <div class="btn-list">
+      <a class="btn btn-warning" href="#student-registration-requests"
+         th:if="${pendingRegistrationCount > 0}"
+         th:text="|${pendingRegistrationCount} đăng ký chờ xét|">1 đăng ký chờ xét</a>
       <a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa cấu hình</a>
       <a class="btn btn-primary" th:if="${canAuthorTopics}"
          th:href="@{/periods/{id}/topics(id=${period.id})}">Đề tài của tôi</a>
@@ -52,11 +55,13 @@
 
   <th:block th:replace="~{topics/review :: reviewPanel}"></th:block>
 
-  <section class="card mt-4 registration-request-card" aria-labelledby="registration-requests-title">
+  <section class="card mt-4 registration-request-card" id="student-registration-requests"
+           aria-labelledby="registration-requests-title">
     <div class="card-header review-card-header">
       <div>
-        <h2 class="card-title mb-1" id="registration-requests-title">Đăng ký đề tài của sinh viên</h2>
-        <p class="text-secondary small mb-0">Xét các nhóm đã gửi đăng ký trong đợt này.</p>
+        <div class="subheader mb-1">BƯỚC 2 · NHÓM SINH VIÊN</div>
+        <h2 class="card-title mb-1" id="registration-requests-title">Xét nhóm đăng ký đề tài</h2>
+        <p class="text-secondary small mb-0">Đây là yêu cầu của nhóm vào đề tài đã công bố, tách biệt với bước duyệt đề xuất của giảng viên.</p>
       </div>
       <span class="badge bg-yellow-lt"
             th:text="${pendingRegistrationCount} + ' chờ xét'">0 chờ xét</span>
@@ -87,7 +92,7 @@
           <td data-label="Thao tác" class="text-end">
             <a class="btn btn-sm" th:classappend="${request.pending} ? 'btn-primary' : 'btn-outline-secondary'"
                th:href="${request.pending} ? @{/registrations/{id}/decision(id=${request.id})} : @{/registrations/{id}(id=${request.id})}"
-               th:text="${request.pending ? 'Xét duyệt' : 'Xem kết quả'}">Xét duyệt</a>
+               th:text="${request.pending ? 'Xét đăng ký' : 'Xem kết quả'}">Xét đăng ký</a>
           </td>
         </tr>
         </tbody>

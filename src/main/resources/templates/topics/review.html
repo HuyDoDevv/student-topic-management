@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/main :: page('Duyệt đề tài', ~{::section})}">
+      th:replace="~{layouts/main :: page('Duyệt đề xuất giảng viên', ~{::section})}">
 <body>
 <section>
   <div class="review-panel" th:fragment="reviewPanel">
@@ -15,9 +15,10 @@
     <div class="card review-card">
       <div class="card-header review-card-header">
         <div>
-          <h2 class="card-title mb-1">Đề tài được đề xuất trong đợt</h2>
+          <div class="subheader mb-1">BƯỚC 1 · NỘI DUNG ĐỀ TÀI</div>
+          <h2 class="card-title mb-1">Duyệt đề xuất của giảng viên</h2>
           <p class="text-secondary small mb-0">
-            Duyệt từng đề tài, sau đó công bố các đề tài đã duyệt cho sinh viên.
+            Đề tài chưa công bố xuất hiện ở đây để được duyệt nội dung trước. Đây không phải yêu cầu đăng ký của nhóm sinh viên.
           </p>
         </div>
         <div class="review-summary" aria-label="Thống kê trạng thái đề tài">
@@ -55,7 +56,7 @@
               <form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${topic.version}">
-                <button class="btn btn-success" type="submit">Duyệt đề tài</button>
+                <button class="btn btn-success" type="submit">Duyệt đề xuất</button>
               </form>
             </div>
           </div>

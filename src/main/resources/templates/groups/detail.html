@@ -23,6 +23,9 @@
     </div>
   </div>
 
+  <div class="alert alert-success" role="status" th:if="${invitationResult}"
+       th:text="${invitationResult}">Kết quả xử lý lời mời.</div>
+
   <div class="alert alert-info" role="status" th:if="${!group.canManage}">
     Bạn là thành viên của nhóm. Bạn có thể tự rời khi còn trong hạn đăng ký và nhóm chưa gửi đăng ký đề tài.
   </div>
@@ -142,7 +145,7 @@
     <div class="table-responsive" th:if="${!invitations.isEmpty()}">
       <table class="table table-vcenter card-table responsive-table invitation-table">
         <thead>
-        <tr><th>Vị trí</th><th>Sinh viên</th><th>Gửi lúc</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        <tr><th>Vị trí</th><th>Sinh viên</th><th>Thời gian</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
         </thead>
         <tbody>
         <tr th:each="invitation : ${invitations}">
@@ -151,7 +154,11 @@
             <strong class="d-block" th:text="${invitation.studentName}">Lê Hoàng Nam</strong>
             <span class="small text-secondary" th:text="${invitation.studentUsername}">23110102</span>
           </td>
-          <td data-label="Gửi lúc" th:text="${invitation.createdAt}">11/09/2026 09:30</td>
+          <td data-label="Thời gian">
+            <span class="d-block" th:text="|Gửi: ${invitation.createdAt}|">Gửi: 11/09/2026 09:30</span>
+            <span class="small text-secondary" th:if="${invitation.respondedAt != null}"
+                  th:text="|Phản hồi: ${invitation.respondedAt}|">Phản hồi: 11/09/2026 09:35</span>
+          </td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${invitation.statusClass}" th:text="${invitation.status}">Đang chờ</span></td>
           <td data-label="Thao tác" class="text-end">
             <form th:if="${invitation.canCancel}" th:action="@{/group-invitations/{id}/cancel(id=${invitation.id})}"

@@ -12,6 +12,9 @@
     <a class="btn btn-outline-primary" th:href="@{/groups}">Danh sách đợt</a>
   </div>
 
+  <div class="alert alert-success" role="status" th:if="${invitationResult}"
+       th:text="${invitationResult}">Kết quả xử lý lời mời.</div>
+
   <div class="card data-card" th:if="${!invitations.isEmpty()}">
     <div class="card-header">
       <div>
@@ -38,12 +41,14 @@
           <td data-label="Thao tác" class="text-end">
             <div class="invitation-actions" th:if="${invitation.canAccept or invitation.canReject}">
               <form th:if="${invitation.canAccept}" th:action="@{/group-invitations/{id}/accept(id=${invitation.id})}"
-                    method="post" data-prevent-double-submit>
+                    method="post" data-prevent-double-submit
+                    data-confirm="Xác nhận CHẤP NHẬN lời mời? Bạn sẽ trở thành thành viên của nhóm này.">
                 <input type="hidden" name="version" th:value="${invitation.version}">
                 <button class="btn btn-sm btn-success" type="submit">Chấp nhận</button>
               </form>
               <form th:if="${invitation.canReject}" th:action="@{/group-invitations/{id}/reject(id=${invitation.id})}"
-                    method="post" data-prevent-double-submit data-confirm="Bạn muốn từ chối lời mời này?">
+                    method="post" data-prevent-double-submit
+                    data-confirm="Xác nhận TỪ CHỐI lời mời? Bạn sẽ không được thêm vào nhóm này.">
                 <input type="hidden" name="version" th:value="${invitation.version}">
                 <button class="btn btn-sm btn-outline-danger" type="submit">Từ chối</button>
               </form>
