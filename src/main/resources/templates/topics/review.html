@@ -1,15 +1,105 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Duyệt đề tài', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Duyệt đề tài', ~{::section})}">
 <body>
 <section>
-  <div class="page-header">
-    <div><div class="page-pretitle" th:text="${period.name}">ĐỢT ĐĂNG KÝ</div><h1 class="page-title">Duyệt và công bố đề tài</h1><p class="text-secondary mt-2 mb-0">Kiểm tra nội dung trước khi cho phép sinh viên đăng ký.</p></div>
+  <div class="review-panel" th:fragment="reviewPanel">
+    <div class="alert mt-4 mb-3" role="status"
+         th:classappend="${reviewNotice.warning} ? ' alert-warning' : ' alert-info'">
+      <div class="fw-bold" th:text="${reviewNotice.title}">Hoàn tất trước ngày sinh viên đăng ký</div>
+      <div class="mt-1" th:text="${reviewNotice.message}">
+        Trưởng khoa cần duyệt và công bố các đề tài trước khi sinh viên bắt đầu đăng ký.
+      </div>
+    </div>
+
+    <div class="card review-card">
+      <div class="card-header review-card-header">
+        <div>
+          <h2 class="card-title mb-1">Đề tài được đề xuất trong đợt</h2>
+          <p class="text-secondary small mb-0">
+            Duyệt từng đề tài, sau đó công bố các đề tài đã duyệt cho sinh viên.
+          </p>
+        </div>
+        <div class="review-summary" aria-label="Thống kê trạng thái đề tài">
+          <span class="badge bg-yellow-lt">
+            <span th:text="${reviewSummary.pendingCount}">0</span> chờ duyệt
+          </span>
+          <span class="badge bg-azure-lt">
+            <span th:text="${reviewSummary.approvedCount}">0</span> đã duyệt
+          </span>
+          <span class="badge bg-green-lt">
+            <span th:text="${reviewSummary.publishedCount}">0</span> đã công bố
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body review-list" th:if="${!#lists.isEmpty(reviewTopics)}">
+        <article class="review-topic" th:each="topic : ${reviewTopics}">
+          <div class="review-topic-heading">
+            <div>
+              <span class="badge mb-2" th:classappend="${topic.statusClass}"
+                    th:text="${topic.status}">Chờ duyệt</span>
+              <h3 class="h3 mb-1" th:text="${topic.title}">Tên đề tài</h3>
+              <p class="text-secondary mb-0">
+                <span th:text="${topic.author}">Giảng viên</span>
+                <span aria-hidden="true"> · </span>
+                <span th:text="${topic.department}">Bộ môn</span>
+              </p>
+            </div>
+            <div class="review-topic-actions" th:if="${topic.pending}">
+              <form th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post"
+                    data-prevent-double-submit>
+                <input type="hidden" name="version" th:value="${topic.version}">
+                <button class="btn btn-outline-danger" type="submit">Từ chối</button>
+              </form>
+              <form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
+                    data-prevent-double-submit>
+                <input type="hidden" name="version" th:value="${topic.version}">
+                <button class="btn btn-success" type="submit">Duyệt đề tài</button>
+              </form>
+            </div>
+          </div>
+
+          <details class="review-topic-details mt-3">
+            <summary>Xem nội dung đề xuất</summary>
+            <dl class="review-topic-content mb-0">
+              <div><dt>Giảng viên hướng dẫn</dt><dd th:text="${topic.supervisorNames}">Giảng viên A</dd></div>
+              <div><dt>Mô tả</dt><dd th:text="${topic.description}">Mô tả đề tài</dd></div>
+              <div><dt>Mục tiêu</dt><dd th:text="${topic.objectives}">Mục tiêu đề tài</dd></div>
+              <div><dt>Yêu cầu sinh viên</dt><dd th:text="${topic.studentRequirements}">Yêu cầu</dd></div>
+              <div><dt>Kết quả dự kiến</dt><dd th:text="${topic.expectedResults}">Kết quả</dd></div>
+            </dl>
+          </details>
+        </article>
+      </div>
+
+      <div class="card-body py-5 text-center" th:if="${#lists.isEmpty(reviewTopics)}">
+        <div class="empty-icon" aria-hidden="true">▤</div>
+        <h3 class="h3 mb-2">Chưa có đề tài được gửi duyệt</h3>
+        <p class="text-secondary mb-0">
+          Đề tài sẽ xuất hiện tại đây sau khi giảng viên hoàn tất và gửi đề xuất.
+        </p>
+      </div>
+
+      <div class="card-footer publish-bar">
+        <div>
+          <div class="fw-bold">Công bố danh sách đã duyệt</div>
+          <div class="text-secondary small">
+            Sinh viên chỉ nhìn thấy các đề tài sau khi trưởng khoa công bố.
+          </div>
+        </div>
+        <form th:action="@{/periods/{id}/topics/publish(id=${period.id})}" method="post"
+              data-prevent-double-submit>
+          <button class="btn btn-primary" type="submit"
+                  th:disabled="${reviewSummary.approvedCount == 0}">
+            <span th:if="${reviewSummary.approvedCount == 0}">Chưa có đề tài để công bố</span>
+            <span th:if="${reviewSummary.approvedCount > 0}"
+                  th:text="|Công bố ${reviewSummary.approvedCount} đề tài|">Công bố 1 đề tài</span>
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
-  <div class="card mb-3" th:each="topic : ${topics}">
-    <div class="card-body"><div class="d-flex flex-wrap justify-content-between gap-3"><div><span class="badge bg-yellow-lt mb-2" th:text="${topic.status}">PENDING_APPROVAL</span><h2 class="h3 mb-1" th:text="${topic.title}">Tên đề tài</h2><p class="text-secondary mb-0"><span th:text="${topic.author}">Giảng viên</span> · <span th:text="${topic.department}">Bộ môn</span></p></div><a class="btn btn-outline-secondary align-self-start" th:href="@{/topics/{id}(id=${topic.id})}">Xem nội dung</a></div></div>
-    <div class="card-footer d-flex flex-wrap justify-content-end gap-2"><form th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-outline-danger" type="submit">Từ chối</button></form><form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-success" type="submit">Duyệt đề tài</button></form></div>
-  </div>
-  <div class="card mt-4"><div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 class="h3 mb-1">Công bố các đề tài đã duyệt</h2><p class="text-secondary mb-0">Sinh viên chỉ nhìn thấy và đăng ký đề tài sau khi công bố.</p></div><form th:action="@{/periods/{id}/topics/publish(id=${period.id})}" method="post" data-prevent-double-submit><button class="btn btn-primary" type="submit">Công bố danh sách</button></form></div></div>
 </section>
 </body>
 </html>

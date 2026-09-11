@@ -39,7 +39,7 @@ chứng test; không được hiểu là đạt.
 | G-Acceptance / T007 | CONFIRMED | Không còn; các hàng phụ thuộc Q khác vẫn BLOCKED |
 | G-Period / T017 | PASS | Q-02 đã giải quyết; US1 T018–T024 đã triển khai và nghiệm thu |
 | G-Topic / T025 | CONFIRMED | Q-05/Q-06 đã giải quyết ngày 2026-09-10; US2 T026–T032 được phép triển khai |
-| G-Publish / T033 | BLOCKED | Granularity và thời điểm xử lý |
+| G-Publish / T033 | CONFIRMED | Không còn; triển khai review trên chi tiết đợt, không auto-publish |
 | G-Group / T039 | BLOCKED | Q-07 |
 | G-Registration / T047 | BLOCKED | Q-09 |
 

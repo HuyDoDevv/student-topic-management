@@ -30,6 +30,10 @@ import vn.edu.topicregistration.shared.error.ApplicationException;
 import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
 import vn.edu.topicregistration.shared.time.ProjectTime;
 import vn.edu.topicregistration.shared.web.WebRedirects;
+import vn.edu.topicregistration.topics.application.TopicReviewService;
+import vn.edu.topicregistration.topics.application.TopicReviewService.ReviewTopicView;
+import vn.edu.topicregistration.topics.application.TopicReviewService.ReviewWorkspace;
+import vn.edu.topicregistration.topics.domain.TopicRules.TopicStatus;
 
 @Controller
 @Profile("!preview & !test")
@@ -39,14 +43,17 @@ public class PeriodController {
             "dd/MM/yyyy", Locale.forLanguageTag("vi-VN"));
 
     private final PeriodService periodService;
+    private final TopicReviewService topicReviewService;
     private final AuthorizationPolicy authorization;
     private final ProjectTime projectTime;
 
     public PeriodController(
             PeriodService periodService,
+            TopicReviewService topicReviewService,
             AuthorizationPolicy authorization,
             ProjectTime projectTime) {
         this.periodService = periodService;
+        this.topicReviewService = topicReviewService;
         this.authorization = authorization;
         this.projectTime = projectTime;
     }
@@ -95,7 +102,18 @@ public class PeriodController {
     @GetMapping("/{id}")
     String detail(@PathVariable long id, Model model) {
         common(model);
-        model.addAttribute("period", display(periodService.getForCurrentDean(id)));
+        PeriodView period = periodService.getForCurrentDean(id);
+        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id);
+        ReviewSummary summary = new ReviewSummary(
+                workspace.pendingCount(),
+                workspace.approvedCount(),
+                workspace.publishedCount());
+        model.addAttribute("period", display(period));
+        model.addAttribute("reviewTopics", workspace.topics().stream()
+                .map(ReviewTopicPageView::from)
+                .toList());
+        model.addAttribute("reviewSummary", summary);
+        model.addAttribute("reviewNotice", reviewNotice(period, summary));
         return "periods/detail";
     }
 
@@ -214,6 +232,23 @@ public class PeriodController {
         return DATE.format(projectTime.toBusinessDate(instant));
     }
 
+    private ReviewNotice reviewNotice(PeriodView period, ReviewSummary summary) {
+        String studentStart = format(period.studentStart());
+        long unfinished = summary.pendingCount() + summary.approvedCount();
+        boolean studentWindowStarted = !projectTime.now().isBefore(period.studentStart());
+        if (studentWindowStarted && unfinished > 0) {
+            return new ReviewNotice(
+                    true,
+                    "Đã đến thời gian sinh viên đăng ký",
+                    "Còn " + unfinished
+                            + " đề tài chưa hoàn tất duyệt hoặc công bố. Hãy xử lý ngay để sinh viên có danh sách đăng ký.");
+        }
+        return new ReviewNotice(
+                false,
+                "Hoàn tất trước ngày " + studentStart,
+                "Trưởng khoa cần duyệt và công bố các đề tài trước khi sinh viên bắt đầu đăng ký.");
+    }
+
     private static String typeLabel(TopicType type) {
         return switch (type) {
             case COURSE -> "Đồ án môn học";
@@ -272,6 +307,76 @@ public class PeriodController {
             boolean councilReportDate) {
         static FieldLocks unlocked() {
             return new FieldLocks(false, false, false, false, false);
+        }
+    }
+
+    public record ReviewSummary(
+            long pendingCount,
+            long approvedCount,
+            long publishedCount) {
+    }
+
+    public record ReviewNotice(
+            boolean warning,
+            String title,
+            String message) {
+    }
+
+    public record ReviewTopicPageView(
+            long id,
+            String department,
+            String author,
+            String title,
+            String description,
+            String objectives,
+            String studentRequirements,
+            String expectedResults,
+            String status,
+            String statusClass,
+            long version,
+            List<String> supervisors,
+            boolean pending,
+            boolean approved,
+            boolean published) {
+        static ReviewTopicPageView from(ReviewTopicView topic) {
+            return new ReviewTopicPageView(
+                    topic.id(),
+                    topic.department(),
+                    topic.author(),
+                    topic.title(),
+                    topic.description(),
+                    topic.objectives(),
+                    topic.studentRequirements(),
+                    topic.expectedResults(),
+                    statusLabel(topic.status()),
+                    statusClass(topic.status()),
+                    topic.version(),
+                    topic.supervisors(),
+                    topic.status() == TopicStatus.PENDING_APPROVAL,
+                    topic.status() == TopicStatus.APPROVED,
+                    topic.status() == TopicStatus.PUBLISHED);
+        }
+
+        public String supervisorNames() {
+            return supervisors.isEmpty() ? "Chưa chọn" : String.join(", ", supervisors);
+        }
+
+        private static String statusLabel(TopicStatus status) {
+            return switch (status) {
+                case DRAFT -> "Nháp";
+                case PENDING_APPROVAL -> "Chờ duyệt";
+                case APPROVED -> "Đã duyệt";
+                case PUBLISHED -> "Đã công bố";
+            };
+        }
+
+        private static String statusClass(TopicStatus status) {
+            return switch (status) {
+                case DRAFT -> "bg-secondary-lt";
+                case PENDING_APPROVAL -> "bg-yellow-lt";
+                case APPROVED -> "bg-azure-lt";
+                case PUBLISHED -> "bg-green-lt";
+            };
         }
     }
 }
