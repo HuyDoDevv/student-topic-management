@@ -177,7 +177,7 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [X] T066 [US4] Tạo migration Flyway mới cho `group_invitations` với status/audit/slot/version, generated guards một PENDING/SV/đợt và một PENDING/slot/nhóm; thêm `student_groups.dissolved_at`, điều chỉnh trigger leader cho soft dissolve; tạo `GroupInvitationEntity.java`, `GroupInvitationRepository.java`, không sửa V1 đã chia sẻ.
 
-- [ ] T067 [US4] Thay thêm trực tiếp bằng invite/accept/reject/cancel trong group application/domain; giữ chỗ theo tổng membership + PENDING dưới khóa period, cài tự rời và giải tán theo T065, hiển thị hết hiệu lực theo clock và cung cấp truy vấn lời mời của chính SV.
+- [X] T067 [US4] Thay thêm trực tiếp bằng invite/accept/reject/cancel trong group application/domain; giữ chỗ theo tổng membership + PENDING dưới khóa period, cài tự rời và giải tán theo T065, hiển thị hết hiệu lực theo clock và cung cấp truy vấn lời mời của chính SV.
 
 - [ ] T068 [US4] Đổi group controller/form/templates sang routes invitation, màn hình lời mời đến và các thao tác accept/reject/cancel/leave/dissolve responsive; bỏ POST thêm trực tiếp và chỉ hiển thị dữ liệu theo policy T006.
 

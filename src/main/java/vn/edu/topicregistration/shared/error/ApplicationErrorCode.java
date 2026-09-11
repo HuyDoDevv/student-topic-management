@@ -10,6 +10,8 @@ public enum ApplicationErrorCode {
     WINDOW_CLOSED(HttpStatus.UNPROCESSABLE_CONTENT, "Đã hết thời gian thao tác", "Khoảng thời gian cho thao tác này đã đóng."),
     GROUP_FULL(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã đủ thành viên", "Một nhóm chỉ có tối đa ba sinh viên."),
     GROUP_MEMBERSHIP_CONFLICT(HttpStatus.UNPROCESSABLE_CONTENT, "Sinh viên đã thuộc nhóm", "Mỗi sinh viên chỉ được thuộc một nhóm trong cùng đợt đăng ký."),
+    GROUP_INVITATION_CONFLICT(HttpStatus.UNPROCESSABLE_CONTENT, "Đã có lời mời đang chờ", "Sinh viên cần phản hồi lời mời nhóm hiện tại trước khi thực hiện thao tác này."),
+    INVALID_INVITATION_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Lời mời không còn hợp lệ", "Lời mời đã được phản hồi, bị hủy hoặc đã hết hiệu lực."),
     INVALID_GROUP_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái nhóm không hợp lệ", "Nhóm không thể thực hiện thao tác này ở trạng thái hiện tại."),
     ACTIVE_REGISTRATION_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã có đăng ký đang xử lý", "Hãy xử lý đăng ký hiện tại trước khi gửi đăng ký mới."),
     TOPIC_TAKEN(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài đã nhận nhóm", "Hãy chọn một đề tài khác."),

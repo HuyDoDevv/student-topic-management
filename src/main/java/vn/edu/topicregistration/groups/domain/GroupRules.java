@@ -14,40 +14,103 @@ public final class GroupRules {
             Instant now,
             Instant studentStart,
             Instant studentEnd,
-            boolean alreadyMemberInPeriod) {
+            boolean alreadyMemberInPeriod,
+            boolean hasPendingInvitation) {
         requireStudentWindow(now, studentStart, studentEnd);
         if (alreadyMemberInPeriod) {
             throw failure(Failure.ALREADY_MEMBER);
         }
+        if (hasPendingInvitation) {
+            throw failure(Failure.INVITATION_CONFLICT);
+        }
     }
 
-    public static int validateAdd(
+    public static int validateInvite(
             MutationContext context,
             long candidateId,
             boolean eligibleStudent,
-            boolean alreadyMemberInPeriod) {
+            boolean memberOrPendingInPeriod) {
         validateMutableByLeader(context);
         if (!eligibleStudent || candidateId <= 0) {
             throw failure(Failure.INVALID_MEMBER);
         }
-        if (alreadyMemberInPeriod || context.memberIds().contains(candidateId)) {
-            throw failure(Failure.ALREADY_MEMBER);
+        if (memberOrPendingInPeriod || context.memberIds().contains(candidateId)) {
+            throw failure(Failure.INVITATION_CONFLICT);
         }
-        if (context.memberIds().size() >= 3) {
+        if (context.memberIds().size() + context.pendingSlots().size() >= 3) {
             throw failure(Failure.GROUP_FULL);
         }
         for (int slot = 1; slot <= 3; slot++) {
-            if (!context.occupiedSlots().contains(slot)) {
+            if (!context.memberSlots().contains(slot) && !context.pendingSlots().contains(slot)) {
                 return slot;
             }
         }
         throw failure(Failure.GROUP_FULL);
     }
 
+    public static void validateAccept(
+            MutationContext context,
+            long invitedStudentId,
+            int invitationSlot,
+            boolean pending,
+            boolean alreadyMemberInPeriod) {
+        validateGroupIntegrity(context);
+        requirePendingInvitation(pending);
+        if (context.actorId() != invitedStudentId) {
+            throw failure(Failure.ACCESS_DENIED);
+        }
+        requireStudentWindow(context.now(), context.studentStart(), context.studentEnd());
+        if (context.activeRegistration()) {
+            throw failure(Failure.ACTIVE_REGISTRATION);
+        }
+        if (alreadyMemberInPeriod) {
+            throw failure(Failure.ALREADY_MEMBER);
+        }
+        if (invitationSlot < 1
+                || invitationSlot > 3
+                || context.memberSlots().contains(invitationSlot)
+                || !context.pendingSlots().contains(invitationSlot)
+                || context.memberIds().size() + context.pendingSlots().size() > 3) {
+            throw failure(Failure.INVALID_STATE);
+        }
+    }
+
+    public static void validateReject(
+            long actorId,
+            long invitedStudentId,
+            boolean pending) {
+        requirePendingInvitation(pending);
+        if (actorId != invitedStudentId) {
+            throw failure(Failure.ACCESS_DENIED);
+        }
+    }
+
+    public static void validateCancel(MutationContext context, boolean pending) {
+        validateMutableByLeader(context);
+        requirePendingInvitation(pending);
+    }
+
     public static void validateRemove(MutationContext context, long memberId) {
         validateMutableByLeader(context);
         if (!context.memberIds().contains(memberId) || context.leaderId() == memberId) {
             throw failure(Failure.INVALID_MEMBER);
+        }
+    }
+
+    public static void validateLeave(MutationContext context) {
+        validateMutable(context);
+        if (!context.memberIds().contains(context.actorId())) {
+            throw failure(Failure.ACCESS_DENIED);
+        }
+        if (context.actorId() == context.leaderId()) {
+            throw failure(Failure.INVALID_STATE);
+        }
+    }
+
+    public static void validateDissolve(MutationContext context) {
+        validateMutableByLeader(context);
+        if (context.memberIds().size() != 1) {
+            throw failure(Failure.INVALID_STATE);
         }
     }
 
@@ -59,19 +122,34 @@ public final class GroupRules {
     }
 
     private static void validateMutableByLeader(MutationContext context) {
-        Objects.requireNonNull(context, "context");
-        requireStudentWindow(context.now(), context.studentStart(), context.studentEnd());
+        validateMutable(context);
         if (context.actorId() != context.leaderId()) {
             throw failure(Failure.ACCESS_DENIED);
         }
+    }
+
+    private static void validateMutable(MutationContext context) {
+        validateGroupIntegrity(context);
+        requireStudentWindow(context.now(), context.studentStart(), context.studentEnd());
         if (context.activeRegistration()) {
             throw failure(Failure.ACTIVE_REGISTRATION);
         }
+    }
+
+    private static void validateGroupIntegrity(MutationContext context) {
+        Objects.requireNonNull(context, "context");
         if (context.memberIds().isEmpty()
                 || !context.memberIds().contains(context.leaderId())
                 || context.memberIds().size() > 3
-                || context.memberIds().size() != context.occupiedSlots().size()) {
+                || context.memberIds().size() != context.memberSlots().size()
+                || context.memberIds().size() + context.pendingSlots().size() > 3) {
             throw failure(Failure.INVALID_STATE);
+        }
+    }
+
+    private static void requirePendingInvitation(boolean pending) {
+        if (!pending) {
+            throw failure(Failure.INVALID_INVITATION);
         }
     }
 
@@ -97,6 +175,8 @@ public final class GroupRules {
         ACTIVE_REGISTRATION,
         GROUP_FULL,
         ALREADY_MEMBER,
+        INVITATION_CONFLICT,
+        INVALID_INVITATION,
         INVALID_MEMBER,
         INVALID_STATE
     }
@@ -105,18 +185,25 @@ public final class GroupRules {
             long actorId,
             long leaderId,
             List<Long> memberIds,
-            List<Integer> occupiedSlots,
+            List<Integer> memberSlots,
+            List<Integer> pendingSlots,
             boolean activeRegistration,
             Instant now,
             Instant studentStart,
             Instant studentEnd) {
         public MutationContext {
             memberIds = memberIds == null ? List.of() : List.copyOf(memberIds);
-            occupiedSlots = occupiedSlots == null ? List.of() : List.copyOf(occupiedSlots);
+            memberSlots = memberSlots == null ? List.of() : List.copyOf(memberSlots);
+            pendingSlots = pendingSlots == null ? List.of() : List.copyOf(pendingSlots);
             Set<Long> uniqueMembers = new HashSet<>(memberIds);
-            Set<Integer> uniqueSlots = new HashSet<>(occupiedSlots);
+            Set<Integer> uniqueMemberSlots = new HashSet<>(memberSlots);
+            Set<Integer> uniquePendingSlots = new HashSet<>(pendingSlots);
+            Set<Integer> allSlots = new HashSet<>(memberSlots);
+            allSlots.addAll(pendingSlots);
             if (uniqueMembers.size() != memberIds.size()
-                    || uniqueSlots.size() != occupiedSlots.size()) {
+                    || uniqueMemberSlots.size() != memberSlots.size()
+                    || uniquePendingSlots.size() != pendingSlots.size()
+                    || allSlots.size() != memberSlots.size() + pendingSlots.size()) {
                 throw failure(Failure.INVALID_STATE);
             }
         }

@@ -118,4 +118,24 @@ public class GroupInvitationEntity {
     public long getVersion() {
         return version;
     }
+
+    public void accept(Instant respondedAt) {
+        respond(GroupInvitationStatus.ACCEPTED, respondedAt);
+    }
+
+    public void reject(Instant respondedAt) {
+        respond(GroupInvitationStatus.REJECTED, respondedAt);
+    }
+
+    public void cancel(Instant respondedAt) {
+        respond(GroupInvitationStatus.CANCELLED, respondedAt);
+    }
+
+    private void respond(GroupInvitationStatus newStatus, Instant responseTime) {
+        if (status != GroupInvitationStatus.PENDING) {
+            throw new IllegalStateException("Only a pending invitation can be answered");
+        }
+        status = Objects.requireNonNull(newStatus, "newStatus");
+        respondedAt = Objects.requireNonNull(responseTime, "responseTime");
+    }
 }

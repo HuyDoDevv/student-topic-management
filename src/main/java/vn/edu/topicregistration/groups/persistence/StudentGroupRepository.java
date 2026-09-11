@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity, Long> {
     @Query("select studentGroup.period.id from StudentGroupEntity studentGroup "
-            + "where studentGroup.id = :id")
+            + "where studentGroup.id = :id and studentGroup.dissolvedAt is null")
     Optional<Long> findPeriodIdByGroupId(@Param("id") long id);
 
     @EntityGraph(attributePaths = {
@@ -21,7 +21,8 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
     @Query("select distinct studentGroup from StudentGroupEntity studentGroup "
             + "join studentGroup.members membership "
             + "where studentGroup.period.id = :periodId "
-            + "and membership.student.id = :studentId")
+            + "and membership.student.id = :studentId "
+            + "and studentGroup.dissolvedAt is null")
     Optional<StudentGroupEntity> findByPeriodIdAndMemberStudentId(
             @Param("periodId") long periodId,
             @Param("studentId") long studentId);
@@ -32,7 +33,8 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
     @Query("select distinct studentGroup from StudentGroupEntity studentGroup "
             + "join studentGroup.members membership "
             + "where studentGroup.id = :id "
-            + "and membership.student.id = :studentId")
+            + "and membership.student.id = :studentId "
+            + "and studentGroup.dissolvedAt is null")
     Optional<StudentGroupEntity> findByIdVisibleToStudent(
             @Param("id") long id,
             @Param("studentId") long studentId);
@@ -43,13 +45,15 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
     })
     @Query("select distinct studentGroup from StudentGroupEntity studentGroup "
             + "left join studentGroup.members membership "
-            + "where studentGroup.id = :id")
+            + "where studentGroup.id = :id and studentGroup.dissolvedAt is null")
     Optional<StudentGroupEntity> findByIdForUpdate(@Param("id") long id);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update StudentGroupEntity studentGroup "
             + "set studentGroup.version = studentGroup.version + 1 "
-            + "where studentGroup.id = :id and studentGroup.version = :expectedVersion")
+            + "where studentGroup.id = :id "
+            + "and studentGroup.dissolvedAt is null "
+            + "and studentGroup.version = :expectedVersion")
     int incrementVersion(
             @Param("id") long id,
             @Param("expectedVersion") long expectedVersion);

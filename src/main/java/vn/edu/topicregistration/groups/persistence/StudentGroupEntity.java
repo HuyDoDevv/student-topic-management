@@ -61,6 +61,13 @@ public class StudentGroupEntity {
         this.leader = Objects.requireNonNull(newLeader, "newLeader");
     }
 
+    public void dissolve(Instant dissolvedAt) {
+        if (this.dissolvedAt != null) {
+            throw new IllegalStateException("Group is already dissolved");
+        }
+        this.dissolvedAt = Objects.requireNonNull(dissolvedAt, "dissolvedAt");
+    }
+
     public Long getId() {
         return id;
     }
@@ -83,5 +90,9 @@ public class StudentGroupEntity {
 
     public Instant getDissolvedAt() {
         return dissolvedAt;
+    }
+
+    public boolean isActive() {
+        return dissolvedAt == null;
     }
 }

@@ -41,10 +41,17 @@ public interface GroupInvitationRepository extends JpaRepository<GroupInvitation
             + "order by invitation.createdAt desc, invitation.id desc")
     List<GroupInvitationEntity> findAllByGroupId(@Param("groupId") long groupId);
 
+    @EntityGraph(attributePaths = {"student", "invitedBy"})
+    List<GroupInvitationEntity> findAllByGroupIdAndStatusOrderBySlotAsc(
+            long groupId,
+            GroupInvitationStatus status);
+
     long countByGroupIdAndStatus(long groupId, GroupInvitationStatus status);
 
     boolean existsByPeriodIdAndStudentIdAndStatus(
             long periodId,
             long studentId,
             GroupInvitationStatus status);
+
+    boolean existsByGroupIdAndStatus(long groupId, GroupInvitationStatus status);
 }
