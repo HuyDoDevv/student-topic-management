@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import vn.edu.topicregistration.groups.application.ActiveRegistrationQuery.ActiveRegistration;
+import vn.edu.topicregistration.groups.application.ActiveRegistrationQuery.ActiveRegistrationStatus;
 import vn.edu.topicregistration.groups.domain.GroupRules;
 import vn.edu.topicregistration.groups.domain.GroupRules.GroupRuleException;
 import vn.edu.topicregistration.groups.domain.GroupRules.MutationContext;
@@ -482,8 +484,9 @@ public class GroupService {
         boolean canManage = Objects.equals(group.getLeader().getId(), viewerId);
         Instant now = clock.instant();
         boolean studentOpen = isStudentWindowOpen(group.getPeriod(), now);
-        boolean activeRegistration = activeRegistrations.existsForGroup(
-                group.getPeriod().getId(), group.getId());
+        ActiveRegistration activeRegistration = activeRegistrations.findForGroup(
+                group.getPeriod().getId(), group.getId()).orElse(null);
+        boolean hasActiveRegistration = activeRegistration != null;
         int pendingCount = Math.toIntExact(invitations.countByGroupIdAndStatus(
                 group.getId(), GroupInvitationStatus.PENDING));
         return new GroupView(
@@ -493,12 +496,26 @@ public class GroupService {
                 group.getVersion(),
                 memberViews,
                 canManage,
-                canManage && studentOpen && !activeRegistration,
-                !canManage && studentOpen && !activeRegistration,
-                canManage && memberViews.size() == 1 && studentOpen && !activeRegistration,
+                canManage && studentOpen && !hasActiveRegistration,
+                !canManage && studentOpen && !hasActiveRegistration,
+                canManage && memberViews.size() == 1 && studentOpen && !hasActiveRegistration,
                 studentOpen,
-                activeRegistration,
+                display(activeRegistration),
                 pendingCount);
+    }
+
+    private static GroupRegistrationView display(ActiveRegistration registration) {
+        if (registration == null) {
+            return null;
+        }
+        boolean accepted = registration.status() == ActiveRegistrationStatus.ACCEPTED;
+        return new GroupRegistrationView(
+                registration.id(),
+                registration.topicTitle(),
+                registration.status().name(),
+                accepted ? "Đã chấp nhận" : "Chờ xét",
+                accepted ? "bg-green-lt" : "bg-yellow-lt",
+                accepted);
     }
 
     private InvitationView toInvitationView(
@@ -675,7 +692,7 @@ public class GroupService {
             boolean canLeave,
             boolean canDissolve,
             boolean studentOpen,
-            boolean activeRegistration,
+            GroupRegistrationView registration,
             int pendingInvitationCount) {
         public GroupView {
             members = List.copyOf(members);
@@ -684,6 +701,19 @@ public class GroupService {
         public int reservedSlots() {
             return members.size() + pendingInvitationCount;
         }
+
+        public boolean activeRegistration() {
+            return registration != null;
+        }
+    }
+
+    public record GroupRegistrationView(
+            long id,
+            String topicTitle,
+            String status,
+            String statusLabel,
+            String statusClass,
+            boolean accepted) {
     }
 
     public record MemberView(

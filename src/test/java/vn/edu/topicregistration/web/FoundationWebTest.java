@@ -70,6 +70,19 @@ class FoundationWebTest {
             .andExpect(content().string(containsString("Thành viên tại thời điểm gửi")));
     }
 
+    @Test void groupMemberSeesAcceptedRegistrationFeedback() throws Exception {
+        mvc.perform(get("/groups/1"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đăng ký đề tài đã được chấp nhận")))
+            .andExpect(content().string(containsString("Hệ thống quản lý đăng ký đề tài")))
+            .andExpect(content().string(containsString("href=\"/registrations/1\"")));
+
+        mvc.perform(get("/groups/2"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đăng ký đề tài đang chờ xét")))
+            .andExpect(content().string(containsString("href=\"/registrations/2\"")));
+    }
+
     @Test void previewStillRejectsUnknownOrMutatingRoutes() throws Exception {
         mvc.perform(get("/not-a-page")).andExpect(status().isNotFound());
         mvc.perform(post("/register")).andExpect(status().isForbidden());

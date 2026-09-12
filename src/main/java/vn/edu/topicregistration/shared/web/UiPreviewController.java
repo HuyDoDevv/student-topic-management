@@ -79,10 +79,30 @@ public class UiPreviewController {
 
     private static final List<PreviewGroupMember> GROUP_MEMBERS = List.of(
             new PreviewGroupMember(201, "Nguyễn Minh Anh", "23110001", 1, true),
-            new PreviewGroupMember(202, "Trần Gia Huy", "23110018", 2, false));
+            new PreviewGroupMember(202, "Trần Gia Huy", "23110018", 2, false),
+            new PreviewGroupMember(203, "Lê Hoàng Nam", "23110102", 3, false));
 
     private static final PreviewGroup GROUP = new PreviewGroup(
-            1, 1, 201, 0, GROUP_MEMBERS, true, true, false, false, true, false, 1);
+            1, 1, 201, 0, GROUP_MEMBERS, false, false, false, false, true,
+            new PreviewGroupRegistration(
+                    1,
+                    TOPICS.getFirst().title(),
+                    "ACCEPTED",
+                    "Đã chấp nhận",
+                    "bg-green-lt",
+                    true),
+            0);
+
+    private static final PreviewGroup PENDING_GROUP = new PreviewGroup(
+            2, 1, 201, 0, GROUP_MEMBERS, false, false, false, false, true,
+            new PreviewGroupRegistration(
+                    2,
+                    TOPICS.getFirst().title(),
+                    "PENDING",
+                    "Chờ xét",
+                    "bg-yellow-lt",
+                    false),
+            0);
 
     private static final List<PreviewStudent> GROUP_CANDIDATES = List.of(
             new PreviewStudent(203, "Lê Hoàng Nam", "23110102"),
@@ -254,13 +274,14 @@ public class UiPreviewController {
     @GetMapping("/groups/{id}")
     String groupDetail(@PathVariable long id, Model model) {
         common(model, "groups", "Nhóm sinh viên");
+        PreviewGroup group = id == PENDING_GROUP.id() ? PENDING_GROUP : GROUP;
         GroupMemberForm invitationForm = new GroupMemberForm();
-        invitationForm.setVersion(GROUP.version());
+        invitationForm.setVersion(group.version());
         GroupMemberForm leadershipForm = new GroupMemberForm();
-        leadershipForm.setVersion(GROUP.version());
-        model.addAttribute("groupCode", "N001");
+        leadershipForm.setVersion(group.version());
+        model.addAttribute("groupCode", "N" + String.format("%03d", group.id()));
         model.addAttribute("period", GROUP_PERIOD);
-        model.addAttribute("group", GROUP);
+        model.addAttribute("group", group);
         model.addAttribute("candidates", GROUP_CANDIDATES);
         model.addAttribute("invitations", GROUP_INVITATIONS);
         model.addAttribute("invitationForm", invitationForm);
@@ -466,11 +487,24 @@ public class UiPreviewController {
             boolean canLeave,
             boolean canDissolve,
             boolean studentOpen,
-            boolean activeRegistration,
+            PreviewGroupRegistration registration,
             int pendingInvitationCount) {
         public int reservedSlots() {
             return members.size() + pendingInvitationCount;
         }
+
+        public boolean activeRegistration() {
+            return registration != null;
+        }
+    }
+
+    public record PreviewGroupRegistration(
+            long id,
+            String topicTitle,
+            String status,
+            String statusLabel,
+            String statusClass,
+            boolean accepted) {
     }
 
     public record PreviewGroupMember(
