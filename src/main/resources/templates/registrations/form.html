@@ -20,6 +20,11 @@
     <div class="mt-1">Hãy chờ sinh viên phản hồi hoặc hủy lời mời trước khi gửi đăng ký đề tài.</div>
   </div>
 
+  <div class="alert alert-warning" role="alert" th:if="${memberCount != 3}">
+    <div class="fw-bold">Nhóm chưa đủ thành viên</div>
+    <div class="mt-1">Nhóm phải có đúng 3 thành viên chính thức mới được gửi đăng ký đề tài.</div>
+  </div>
+
   <form class="card content-form registration-form"
         th:action="@{/groups/{id}/registrations(id=${groupId})}"
         th:object="${registrationForm}" method="post" data-prevent-double-submit>
@@ -34,12 +39,12 @@
       <div class="registration-rule mb-4">
         <span class="registration-rule-icon" aria-hidden="true">i</span>
         <div>
-          <strong>Chỉ Trưởng nhóm được gửi đăng ký</strong>
-          <p class="mb-0 text-secondary">Sau khi gửi, thành viên và Trưởng nhóm được giữ nguyên đến khi đăng ký bị rút hoặc từ chối.</p>
+          <strong>Chỉ Trưởng nhóm của nhóm có đúng 3 thành viên được gửi đăng ký</strong>
+          <p class="mb-0 text-secondary">Hệ thống lưu thành viên và Trưởng nhóm tại thời điểm gửi để lịch sử đăng ký không thay đổi khi nhóm được sửa sau này.</p>
         </div>
       </div>
 
-      <fieldset th:disabled="${pendingInvitation}">
+      <fieldset th:disabled="${pendingInvitation or memberCount != 3}">
         <legend class="h3">Đề tài còn nhận đăng ký</legend>
         <p class="text-secondary mb-3">Danh sách không bao gồm đề tài đã nhận một nhóm khác.</p>
 
@@ -69,7 +74,7 @@
     <div class="card-footer d-flex justify-content-end gap-2">
       <a class="btn btn-ghost-secondary" th:href="@{/groups/{id}(id=${groupId})}">Hủy</a>
       <button class="btn btn-primary" type="submit"
-              th:disabled="${pendingInvitation or #lists.isEmpty(topics)}">Gửi đăng ký</button>
+              th:disabled="${pendingInvitation or memberCount != 3 or #lists.isEmpty(topics)}">Gửi đăng ký</button>
     </div>
   </form>
 </section>

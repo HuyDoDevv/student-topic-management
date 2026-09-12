@@ -55,10 +55,11 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
   `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
 - Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql)
   để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
-  đăng ký GV/SV. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ đầu ngày, ngày kết thúc
+  đăng ký GV/SV; các migration V4–V7 bổ sung moderation, lời mời nhóm, metadata từ chối
+  và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ đầu ngày, ngày kết thúc
   tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
   `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới `V4__...sql`, `V5__...sql`; không
+- Các thay đổi schema tiếp theo phải là migration mới sau `V7__...sql`; không
   sửa migration đã được dùng trên database chung.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway

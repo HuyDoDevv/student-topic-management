@@ -54,7 +54,8 @@ INSERT INTO topic_supervisors(topic_id, lecturer_id, slot) VALUES
 INSERT INTO student_groups(id, period_id, leader_student_id) VALUES
     (-1, -1, -3), (-2, -1, -6);
 INSERT INTO group_memberships(group_id, period_id, student_id, slot) VALUES
-    (-1, -1, -4, 2), (-1, -1, -5, 3);
+    (-1, -1, -4, 2), (-1, -1, -5, 3),
+    (-2, -1, -7, 2), (-2, -1, -8, 3);
 
 CALL expect_failure('INSERT INTO topic_supervisors(topic_id,lecturer_id,slot) VALUES (-1,-8,3)');
 CALL expect_failure('INSERT INTO group_memberships(group_id,period_id,student_id,slot) VALUES (-1,-1,-8,4)');
@@ -69,6 +70,8 @@ CALL expect_failure('INSERT INTO registrations(period_id,group_id,topic_id) VALU
 
 INSERT INTO registrations(id, period_id, group_id, topic_id) VALUES
     (-1, -1, -1, -1), (-2, -1, -2, -1);
+CALL expect_failure('UPDATE registration_members SET leader_at_submission=FALSE WHERE registration_id=-1 AND student_id=-3');
+CALL expect_failure('DELETE FROM registration_members WHERE registration_id=-1 AND student_id=-4');
 CALL expect_failure('INSERT INTO registrations(period_id,group_id,topic_id) VALUES (-1,-1,-2)');
 UPDATE registrations SET status='ACCEPTED', decided_at=CURRENT_TIMESTAMP(6) WHERE id=-1;
 CALL expect_failure('UPDATE registrations SET status=''ACCEPTED'', decided_at=CURRENT_TIMESTAMP(6) WHERE id=-2');

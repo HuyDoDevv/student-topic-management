@@ -15,7 +15,7 @@
     </div>
     <div class="btn-list">
       <a class="btn btn-primary"
-         th:if="${group.canManage and (group.activeRegistration or (group.studentOpen and group.pendingInvitationCount == 0))}"
+         th:if="${group.canManage and (group.activeRegistration or (group.studentOpen and group.pendingInvitationCount == 0 and group.members.size() == 3))}"
          th:href="@{/groups/{id}/registrations/new(id=${group.id})}"
          th:text="${group.activeRegistration ? 'Xem đăng ký đề tài' : 'Đăng ký đề tài'}">Đăng ký đề tài</a>
       <a class="btn btn-outline-primary" th:href="@{/group-invitations}">Lời mời của tôi</a>
@@ -37,6 +37,10 @@
   </div>
   <div class="alert alert-warning" role="status" th:if="${group.pendingInvitationCount > 0}">
     Nhóm còn <strong th:text="${group.pendingInvitationCount}">1</strong> lời mời chờ phản hồi. Hãy chờ sinh viên trả lời hoặc hủy lời mời trước khi đăng ký đề tài.
+  </div>
+  <div class="alert alert-warning" role="status"
+       th:if="${group.canManage and group.studentOpen and !group.activeRegistration and group.pendingInvitationCount == 0 and group.members.size() < 3}">
+    Nhóm phải có đúng 3 thành viên chính thức mới được đăng ký đề tài. Hãy mời thêm thành viên và chờ họ chấp nhận.
   </div>
 
   <div class="row row-cards">

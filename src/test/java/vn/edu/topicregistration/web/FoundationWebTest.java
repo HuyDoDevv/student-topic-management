@@ -60,6 +60,16 @@ class FoundationWebTest {
             .andExpect(content().string(containsString("Sinh viên chưa thể đăng ký")));
     }
 
+    @Test void registrationPreviewExplainsCompleteGroupAndSubmissionSnapshot() throws Exception {
+        mvc.perform(get("/groups/1/registrations/new"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("đúng 3 thành viên")));
+
+        mvc.perform(get("/registrations/1"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Thành viên tại thời điểm gửi")));
+    }
+
     @Test void previewStillRejectsUnknownOrMutatingRoutes() throws Exception {
         mvc.perform(get("/not-a-page")).andExpect(status().isNotFound());
         mvc.perform(post("/register")).andExpect(status().isForbidden());

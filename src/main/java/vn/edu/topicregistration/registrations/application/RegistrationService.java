@@ -3,7 +3,9 @@ package vn.edu.topicregistration.registrations.application;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -27,6 +29,8 @@ import vn.edu.topicregistration.registrations.domain.RegistrationRules.State;
 import vn.edu.topicregistration.registrations.domain.RegistrationRules.SubmissionContext;
 import vn.edu.topicregistration.registrations.domain.RegistrationRules.WithdrawalContext;
 import vn.edu.topicregistration.registrations.persistence.RegistrationEntity;
+import vn.edu.topicregistration.registrations.persistence.RegistrationMemberEntity;
+import vn.edu.topicregistration.registrations.persistence.RegistrationMemberRepository;
 import vn.edu.topicregistration.registrations.persistence.RegistrationRepository;
 import vn.edu.topicregistration.registrations.persistence.RegistrationStatus;
 import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
@@ -49,6 +53,7 @@ public class RegistrationService {
     private final GroupInvitationRepository invitations;
     private final TopicRepository topics;
     private final RegistrationRepository registrations;
+    private final RegistrationMemberRepository registrationMembers;
     private final AuthorizationPolicy authorization;
     private final Clock clock;
 
@@ -58,6 +63,7 @@ public class RegistrationService {
             GroupInvitationRepository invitations,
             TopicRepository topics,
             RegistrationRepository registrations,
+            RegistrationMemberRepository registrationMembers,
             AuthorizationPolicy authorization,
             Clock clock) {
         this.periods = periods;
@@ -65,6 +71,7 @@ public class RegistrationService {
         this.invitations = invitations;
         this.topics = topics;
         this.registrations = registrations;
+        this.registrationMembers = registrationMembers;
         this.authorization = authorization;
         this.clock = clock;
     }
@@ -189,6 +196,7 @@ public class RegistrationService {
                 period.getId(),
                 period.getName(),
                 Objects.equals(student.accountId(), group.getLeader().getId()),
+                group.getMembers().size(),
                 invitations.existsByGroupIdAndStatus(groupId, GroupInvitationStatus.PENDING),
                 activeRegistrationId,
                 availableTopics);
@@ -202,10 +210,8 @@ public class RegistrationService {
         boolean sameFaculty = Objects.equals(actor.facultyId(), facultyId);
         boolean studentMember = actor.roles().contains(RoleCode.STUDENT)
                 && sameFaculty
-                && registration.getGroup().getMembers().stream()
-                        .map(GroupMembershipEntity::getStudent)
-                        .map(UserAccountEntity::getId)
-                        .anyMatch(memberId -> Objects.equals(memberId, actor.accountId()));
+                && registrationMembers.existsByRegistrationIdAndStudentId(
+                        registrationId, actor.accountId());
         boolean dean = actor.roles().contains(RoleCode.DEAN) && sameFaculty;
         if (!studentMember && !dean) {
             throw new AccessDeniedException("Registration is outside the actor scope");
@@ -227,19 +233,16 @@ public class RegistrationService {
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         authorization.requireDeanOfFaculty(period.getFaculty().getId());
+        Map<Long, List<RegistrationMemberEntity>> snapshots = registrationMembers
+                .findAllByPeriodId(periodId)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        member -> member.getId().getRegistrationId()));
         return registrations.findAllByPeriodIdOrderBySubmittedAtDescIdDesc(periodId)
                 .stream()
-                .map(registration -> new RegistrationSummaryView(
-                        registration.getId(),
-                        registration.getGroup().getId(),
-                        displayName(registration.getGroup().getLeader()),
-                        registration.getGroup().getMembers().size(),
-                        registration.getTopic().getId(),
-                        registration.getTopic().getTitle(),
-                        registration.getStatus(),
-                        registration.getRejectionReason(),
-                        registration.getSubmittedAt(),
-                        registration.getVersion()))
+                .map(registration -> toSummary(
+                        registration,
+                        snapshots.getOrDefault(registration.getId(), List.of())))
                 .toList();
     }
 
@@ -323,6 +326,8 @@ public class RegistrationService {
                 && Objects.equals(actor.accountId(), group.getLeader().getId());
         boolean dean = actor.roles().contains(RoleCode.DEAN)
                 && Objects.equals(actor.facultyId(), period.getFaculty().getId());
+        List<RegistrationMemberEntity> snapshot = registrationMembers
+                .findAllByRegistrationId(registration.getId());
 
         return new RegistrationDetailView(
                 registration.getId(),
@@ -337,14 +342,12 @@ public class RegistrationService {
                         .map(TopicSupervisorEntity::getLecturer)
                         .map(RegistrationService::displayName)
                         .toList(),
-                group.getMembers().stream()
-                        .map(membership -> new RegistrationMemberView(
-                                membership.getStudent().getId(),
-                                displayName(membership.getStudent()),
-                                membership.getStudent().getUsername(),
-                                Objects.equals(
-                                        membership.getStudent().getId(),
-                                        group.getLeader().getId())))
+                snapshot.stream()
+                        .map(member -> new RegistrationMemberView(
+                                member.getStudent().getId(),
+                                displayName(member.getStudent()),
+                                member.getStudent().getUsername(),
+                                member.isLeaderAtSubmission()))
                         .toList(),
                 registration.getStatus(),
                 registration.getRejectionKind(),
@@ -356,6 +359,28 @@ public class RegistrationService {
                 leader && pending && withinStudentWindow,
                 dean && pending,
                 dean);
+    }
+
+    private RegistrationSummaryView toSummary(
+            RegistrationEntity registration,
+            List<RegistrationMemberEntity> snapshot) {
+        String leaderName = snapshot.stream()
+                .filter(RegistrationMemberEntity::isLeaderAtSubmission)
+                .map(RegistrationMemberEntity::getStudent)
+                .map(RegistrationService::displayName)
+                .findFirst()
+                .orElse("Không xác định");
+        return new RegistrationSummaryView(
+                registration.getId(),
+                registration.getGroup().getId(),
+                leaderName,
+                snapshot.size(),
+                registration.getTopic().getId(),
+                registration.getTopic().getTitle(),
+                registration.getStatus(),
+                registration.getRejectionReason(),
+                registration.getSubmittedAt(),
+                registration.getVersion());
     }
 
     private static TopicOption toTopicOption(TopicEntity topic) {
@@ -385,6 +410,8 @@ public class RegistrationService {
                         ApplicationErrorCode.WINDOW_CLOSED);
                 case INVALID_GROUP_STATE -> throw new ApplicationException(
                         ApplicationErrorCode.INVALID_GROUP_STATE);
+                case GROUP_INCOMPLETE -> throw new ApplicationException(
+                        ApplicationErrorCode.GROUP_INCOMPLETE);
                 case PENDING_INVITATION -> throw new ApplicationException(
                         ApplicationErrorCode.GROUP_INVITATION_CONFLICT);
                 case ACTIVE_REGISTRATION -> throw new ApplicationException(
@@ -426,6 +453,7 @@ public class RegistrationService {
             long periodId,
             String periodName,
             boolean leader,
+            int memberCount,
             boolean pendingInvitation,
             Long activeRegistrationId,
             List<TopicOption> topics) {

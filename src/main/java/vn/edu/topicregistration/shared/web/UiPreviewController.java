@@ -285,6 +285,7 @@ public class UiPreviewController {
         model.addAttribute("groupCode", "N001");
         model.addAttribute("period", PERIODS.getFirst());
         model.addAttribute("topics", TOPICS.subList(0, 1));
+        model.addAttribute("memberCount", 3);
         model.addAttribute("pendingInvitation", false);
         return "registrations/form";
     }

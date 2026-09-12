@@ -22,7 +22,7 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 | Chấp nhận/từ chối lời mời | STUDENT được mời | Chấp nhận trong hạn SV và nhóm không active; từ chối bất cứ lúc nào; chỉ accept mới tạo membership | 08–09 |
 | Xóa/tự rời/giải tán | Leader xóa thành viên thường; chính thành viên tự rời; leader nhóm một người giải tán | Rời/giải tán trong hạn SV, không active; leader có thành viên khác phải chuyển quyền trước | 08–09 |
 | Chuyển leader | Leader hiện tại | Người nhận đã là thành viên; hạn SV, không active | 08 |
-| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt và cùng khoa, chưa accepted, không active, không còn invitation PENDING | 10,13 |
+| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; nhóm có đúng 3 thành viên chính thức; PUBLISHED cùng đợt và cùng khoa, chưa accepted, không active, không còn invitation PENDING; lưu snapshot thành viên/vị trí/leader lúc gửi | 10,13 |
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
 | Chấp nhận/từ chối registration | DEAN | PENDING thuộc đợt trong khoa của DEAN; từ chối thủ công cần reason không rỗng sau khi trim; auto-reject khi accept | 11–12 |
 | Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
@@ -71,8 +71,8 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /groups/{id}/leader | studentId,version | Chuyển cho thành viên hiện hữu | 08 |
 | POST /groups/{id}/leave | version | Thành viên thường tự rời chính nhóm trong hạn SV, không active | 08–09 |
 | POST /groups/{id}/dissolve | version | Chỉ leader nhóm một người; giải tán mềm trong hạn SV, không active; giữ lịch sử và loại khỏi nhóm đang hoạt động | 08–09 |
-| POST /groups/{id}/registrations | topicId,version | Tạo PENDING mới | 10,13 |
-| GET /registrations/{id} | — | Trạng thái/kết quả theo policy | 01,10–13 |
+| POST /groups/{id}/registrations | topicId,version | Tạo PENDING mới chỉ khi nhóm đủ đúng 3 thành viên; snapshot được tạo nguyên tử | 10,13 |
+| GET /registrations/{id} | — | Trạng thái/kết quả theo policy; thành viên và leader lấy từ snapshot lúc gửi, không từ nhóm hiện tại | 01,10–13 |
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | PENDING → REJECTED khi reason không rỗng sau khi trim; thiếu reason trả lỗi validation và không đổi trạng thái | 12 |
@@ -99,7 +99,7 @@ hàng mới. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 - Với rút/chấp nhận đồng thời, request lấy khóa period trước được hoàn tất. Request sau đọc
   lại registration không còn PENDING, trả 409 và không thay đổi kết quả đã commit trước.
 - Hết hạn hoặc vượt ràng buộc nghiệp vụ: 422 với mã lỗi nội bộ ổn định
-  WINDOW_CLOSED, GROUP_FULL, ACTIVE_REGISTRATION_EXISTS, TOPIC_TAKEN,
+  WINDOW_CLOSED, GROUP_FULL, GROUP_INCOMPLETE, ACTIVE_REGISTRATION_EXISTS, TOPIC_TAKEN,
   INVALID_TOPIC_STATE. Không biến lỗi nghiệp vụ thành 500.
 - Chuỗi nội dung escape mặc định bởi Thymeleaf, không render HTML thô từ mô tả đề tài.
   Không tự đặt độ dài tối đa nghiệp vụ; giới hạn tài nguyên request kỹ thuật cần ghi

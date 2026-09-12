@@ -182,6 +182,7 @@ public class RegistrationController {
         model.addAttribute("groupCode", groupCode(workspace.groupId()));
         model.addAttribute("period", new PeriodPageView(
                 workspace.periodId(), workspace.periodName()));
+        model.addAttribute("memberCount", workspace.memberCount());
         model.addAttribute("pendingInvitation", workspace.pendingInvitation());
         model.addAttribute("topics", workspace.topics().stream()
                 .map(this::display)

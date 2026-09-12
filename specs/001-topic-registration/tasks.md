@@ -1,6 +1,6 @@
 > Cập nhật ngày 2026-09-09: mọi task DB dùng MySQL 8.4 LTS, Connector/J và Flyway.
-> Schema 20 bảng nằm tại V1; V2 bắt buộc ngày theo loại đợt; V3 bắt buộc khoảng GV
-> hoàn thành trước khi khoảng SV bắt đầu.
+> Schema nền 20 bảng nằm tại V1; V2–V6 bổ sung các ràng buộc đã chốt; V7 thêm bảng
+> snapshot thành viên/trưởng nhóm tại thời điểm gửi đăng ký.
 > Chạy bằng `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows.
 
 # Tasks: Quản lý đợt, đề tài và đăng ký nhóm
@@ -230,6 +230,8 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T072 Chặn mở màn hình quyết định cho đăng ký đã rút/đã xử lý, tách màn hình xét đăng ký sinh viên khỏi màn hình duyệt đề xuất giảng viên, và chỉ hiện liên kết xem nhóm từ lịch sử lời mời khi sinh viên vẫn thuộc đúng nhóm; giữ kiểm tra trạng thái/membership ở backend, automated tests tiếp tục thuộc T041/T049/T058 theo yêu cầu hoãn test.
 
+- [X] T073 [US5] Chỉ cho nhóm đủ đúng 3 thành viên chính thức gửi đăng ký; tạo migration V7 lưu snapshot bất biến thành viên/vị trí/trưởng nhóm trong cùng thao tác insert; dùng snapshot cho quyền xem, chi tiết và danh sách xét thay vì membership hiện tại; cập nhật UI/spec/contracts/data-model/seed và chạy test hồi quy riêng. Kiểm thử toàn migration trên MySQL 8.4 vẫn thuộc T060.
+
 - [X] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
 
 - [ ] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
@@ -253,7 +255,7 @@ flowchart TD
   U1 --> U4["T039–T046 US4 component"]
   U3 --> U5["T047–T058 US5"]
   U4 --> U5
-  U5 --> P["T059–T064,T071–T072 Verification"]
+  U5 --> P["T059–T064,T071–T073 Verification"]
 ```
 
 - T001 → T002 → (T003 || T004) → T005. T005 chờ tài nguyên T004.
@@ -300,12 +302,12 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 | FR-05 | T025–T032,T070 | REQ-08–09; AT-03,06,12 |
 | FR-06 | T025–T032,T069–T070 | REQ-10–11 phần GVHD; AT-03,06 |
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
-| FR-08 | T039–T046,T054,T057–T058,T065–T068 | REQ-12–13; AT-04,06–08 |
+| FR-08 | T039–T046,T054,T057–T058,T065–T068,T073 | REQ-12–13; AT-04,06–08 |
 | FR-09 | T040–T046,T050,T057,T065–T068 | REQ-13; AT-04,07 |
-| FR-10 | T047–T058 | REQ-03,14–15; AT-05–08,11 |
+| FR-10 | T047–T058,T073 | REQ-03,14–15; AT-04–08,11 |
 | FR-11 | T047–T058 | REQ-16 + U Q-10; AT-05–08,11 |
 | FR-12 | T047–T058 | U nhánh từ chối, liên quan REQ-16; AT-05–06,11 |
-| FR-13 | T047–T058 | REQ-03,14–16 + U rút/reapply; AT-02,05,07–08 |
+| FR-13 | T047–T058,T073 | REQ-03,14–16 + U rút/reapply/snapshot; AT-02,04–05,07–08 |
 | FR-14 | T026–T038 | REQ-02–03,08–11,15,31 + U lifecycle; AT-12 |
 | FR-15 | T017–T024 | REQ-03–05,31 + U khóa lịch; AT-13 |
 | SC-001 | T018–T024,T064 | Bốn loại và ngày theo xác nhận |
