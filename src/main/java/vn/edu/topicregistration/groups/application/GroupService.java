@@ -513,8 +513,12 @@ public class GroupService {
         boolean studentOpen = isStudentWindowOpen(period, now);
         boolean activeRegistration = groupActive && activeRegistrations.existsForGroup(
                 period.getId(), group.getId());
-        boolean alreadyMember = groups.findByPeriodIdAndMemberStudentId(
-                period.getId(), invitation.getStudent().getId()).isPresent();
+        Optional<StudentGroupEntity> currentGroup = groups.findByPeriodIdAndMemberStudentId(
+                period.getId(), invitation.getStudent().getId());
+        boolean alreadyMember = currentGroup.isPresent();
+        boolean canViewGroup = groupActive && currentGroup
+                .map(item -> Objects.equals(item.getId(), group.getId()))
+                .orElse(false);
         String effectiveStatus = expired ? "EXPIRED" : invitation.getStatus().name();
         return new InvitationView(
                 invitation.getId(),
@@ -531,6 +535,7 @@ public class GroupService {
                 invitation.getRespondedAt(),
                 invitation.getVersion(),
                 groupActive,
+                canViewGroup,
                 pending
                         && !expired
                         && groupActive
@@ -710,6 +715,7 @@ public class GroupService {
             Instant respondedAt,
             long version,
             boolean groupActive,
+            boolean canViewGroup,
             boolean canAccept,
             boolean canReject,
             boolean canCancel) {

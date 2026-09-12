@@ -274,6 +274,7 @@ public class GroupController {
                 invitation.respondedAt() == null ? null : format(invitation.respondedAt()),
                 invitation.version(),
                 invitation.groupActive(),
+                invitation.canViewGroup(),
                 invitation.canAccept(),
                 invitation.canReject(),
                 invitation.canCancel());
@@ -351,6 +352,7 @@ public class GroupController {
             String respondedAt,
             long version,
             boolean groupActive,
+            boolean canViewGroup,
             boolean canAccept,
             boolean canReject,
             boolean canCancel) {

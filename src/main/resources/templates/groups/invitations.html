@@ -53,9 +53,11 @@
                 <button class="btn btn-sm btn-outline-danger" type="submit">Từ chối</button>
               </form>
             </div>
-            <a class="btn btn-sm btn-outline-primary" th:if="${invitation.groupActive and invitation.status == 'Đã chấp nhận'}"
+            <a class="btn btn-sm btn-outline-primary" th:if="${invitation.canViewGroup}"
                th:href="@{/groups/{id}(id=${invitation.groupId})}">Xem nhóm</a>
-            <span class="text-secondary small" th:if="${!invitation.canAccept and !invitation.canReject and !(invitation.groupActive and invitation.status == 'Đã chấp nhận')}">Đã xử lý</span>
+            <span class="text-secondary small"
+                  th:if="${!invitation.canAccept and !invitation.canReject and !invitation.canViewGroup}"
+                  th:text="${invitation.status == 'Đã chấp nhận' ? 'Không còn trong nhóm' : 'Đã xử lý'}">Đã xử lý</span>
           </td>
         </tr>
         </tbody>

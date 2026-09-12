@@ -228,6 +228,8 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T071 Phân biệt rõ trên UI giữa duyệt đề xuất giảng viên và xét nhóm đăng ký; thêm lối tắt tới đăng ký chờ xét, xác nhận accept/reject lời mời bằng câu chữ rõ nghĩa, thông báo kết quả sau redirect và hiển thị thời gian phản hồi để tránh đọc sai lịch sử. Đã đối chiếu đăng ký/lời mời trực tiếp với MySQL local và tái hiện endpoint reject ghi `REJECTED`; automated tests tiếp tục thuộc T035/T041/T049/T058 theo yêu cầu hoãn test.
 
+- [X] T072 Chặn mở màn hình quyết định cho đăng ký đã rút/đã xử lý, tách màn hình xét đăng ký sinh viên khỏi màn hình duyệt đề xuất giảng viên, và chỉ hiện liên kết xem nhóm từ lịch sử lời mời khi sinh viên vẫn thuộc đúng nhóm; giữ kiểm tra trạng thái/membership ở backend, automated tests tiếp tục thuộc T041/T049/T058 theo yêu cầu hoãn test.
+
 - [X] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
 
 - [ ] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
@@ -251,7 +253,7 @@ flowchart TD
   U1 --> U4["T039–T046 US4 component"]
   U3 --> U5["T047–T058 US5"]
   U4 --> U5
-  U5 --> P["T059–T064,T071 Verification"]
+  U5 --> P["T059–T064,T071–T072 Verification"]
 ```
 
 - T001 → T002 → (T003 || T004) → T005. T005 chờ tài nguyên T004.
@@ -338,5 +340,5 @@ cách gọi `$speckit-implement`.
 
 ## Generation summary
 
-71 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12; final 7.
+72 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12; final 8.
 Tất cả user stories P1 như spec. 16 task có [P], chỉ trong nhóm dependency đã mô tả.

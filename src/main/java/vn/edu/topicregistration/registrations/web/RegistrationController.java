@@ -116,8 +116,11 @@ public class RegistrationController {
     }
 
     @GetMapping("/registrations/{id}/decision")
-    String decision(@PathVariable long id, Model model) {
+    Object decision(@PathVariable long id, Model model) {
         RegistrationDetailView registration = registrations.getForDecision(id);
+        if (!registration.canDecide()) {
+            return registrationDetail(id);
+        }
         RegistrationDecisionForm acceptForm = decisionForm(registration.version());
         RegistrationDecisionForm rejectForm = decisionForm(registration.version());
         return renderDecision(model, registration, acceptForm, rejectForm);

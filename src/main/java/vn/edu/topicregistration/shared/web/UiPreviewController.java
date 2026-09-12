@@ -145,30 +145,7 @@ public class UiPreviewController {
     String periodDetail(@PathVariable long id, Model model) {
         common(model, "periods", "Quản lý học vụ");
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("reviewTopics", List.of(Map.ofEntries(
-                Map.entry("id", 102),
-                Map.entry("title", TOPICS.get(1).title()),
-                Map.entry("author", TOPICS.get(1).author()),
-                Map.entry("department", TOPICS.get(1).department()),
-                Map.entry("supervisorNames", TOPICS.get(1).supervisors()),
-                Map.entry("description", TOPICS.get(1).description()),
-                Map.entry("objectives", TOPICS.get(1).objectives()),
-                Map.entry("studentRequirements", TOPICS.get(1).studentRequirements()),
-                Map.entry("expectedResults", TOPICS.get(1).expectedResults()),
-                Map.entry("status", "Chờ duyệt"),
-                Map.entry("statusClass", "bg-yellow-lt"),
-                Map.entry("version", 1L),
-                Map.entry("pending", true),
-                Map.entry("approved", false),
-                Map.entry("published", false))));
-        model.addAttribute("reviewSummary", Map.of(
-                "pendingCount", 1,
-                "approvedCount", 0,
-                "publishedCount", 1));
-        model.addAttribute("reviewNotice", Map.of(
-                "warning", false,
-                "title", "Hoàn tất trước ngày 20/09/2026",
-                "message", "Trưởng khoa cần duyệt và công bố đề tài trước khi sinh viên bắt đầu đăng ký."));
+        addReviewPreview(model);
         model.addAttribute("registrationRequests", List.of(new PreviewRegistrationRequest(
                 1L, "N001", "Nguyễn Minh Anh", 3, TOPICS.getFirst().title(),
                 "11/09/2026 10:30", "Chờ xét", "bg-yellow-lt", null, true)));
@@ -228,8 +205,35 @@ public class UiPreviewController {
     String topicReview(@PathVariable long periodId, Model model) {
         common(model, "reviews", "Duyệt đề tài");
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("topics", TOPICS.subList(1, 2));
+        addReviewPreview(model);
         return "topics/review";
+    }
+
+    private void addReviewPreview(Model model) {
+        model.addAttribute("reviewTopics", List.of(Map.ofEntries(
+                Map.entry("id", 102),
+                Map.entry("title", TOPICS.get(1).title()),
+                Map.entry("author", TOPICS.get(1).author()),
+                Map.entry("department", TOPICS.get(1).department()),
+                Map.entry("supervisorNames", TOPICS.get(1).supervisors()),
+                Map.entry("description", TOPICS.get(1).description()),
+                Map.entry("objectives", TOPICS.get(1).objectives()),
+                Map.entry("studentRequirements", TOPICS.get(1).studentRequirements()),
+                Map.entry("expectedResults", TOPICS.get(1).expectedResults()),
+                Map.entry("status", "Chờ duyệt"),
+                Map.entry("statusClass", "bg-yellow-lt"),
+                Map.entry("version", 1L),
+                Map.entry("pending", true),
+                Map.entry("approved", false),
+                Map.entry("published", false))));
+        model.addAttribute("reviewSummary", Map.of(
+                "pendingCount", 1,
+                "approvedCount", 0,
+                "publishedCount", 1));
+        model.addAttribute("reviewNotice", Map.of(
+                "warning", false,
+                "title", "Hoàn tất trước ngày 20/09/2026",
+                "message", "Trưởng khoa cần duyệt và công bố đề tài trước khi sinh viên bắt đầu đăng ký."));
     }
 
     @GetMapping("/groups")
