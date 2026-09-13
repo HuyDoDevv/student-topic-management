@@ -1,6 +1,6 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Flyway tự áp dụng
-> V1 để tạo 20 bảng, V2 để bắt buộc ngày theo loại đợt và V3 để tách hai khoảng
-> đăng ký GV/SV; DBeaver dùng để quản lý
+> V1 để tạo 20 bảng, V2–V6 bổ sung các ràng buộc đã chốt và V7 thêm bảng snapshot
+> thành viên/trưởng nhóm khi gửi đăng ký; DBeaver dùng để quản lý
 > và kiểm tra database. Chạy bằng `./run.sh` trên macOS/Linux hoặc
 > `run.cmd` trên Windows.
 
@@ -88,6 +88,12 @@ Nhóm còn lời mời PENDING chưa được gửi đăng ký đề tài.
 Hạn xử lý duyệt/công bố không phải SLA hoặc khóa cứng; giao diện nhắc Trưởng khoa hoàn tất
 trước ngày bắt đầu SV và vẫn cho công bố trong phần thời gian SV còn lại theo FR-07.
 
+Quyền tác giả của Trưởng khoa được chốt ngày 2026-09-12: mỗi khoa có một trưởng khoa
+trong phạm vi hiện tại, nên tài khoản có role DEAN không được tạo, sửa hoặc gửi duyệt
+đề tài dù đồng thời có role LECTURER. Trong vòng đời đề tài, Trưởng khoa thực hiện luồng duyệt/công bố;
+backend chặn route tác giả và UI ẩn chức năng tương ứng. Role LECTURER vẫn được giữ
+để Trưởng khoa có thể được chọn làm GVHD phối hợp cho đề tài của giảng viên khác.
+
 G-Period/Q-02 đã được giải quyết ngày 2026-09-10: ngày bắt buộc/null theo loại và độ
 chính xác `DATE` đã chốt; đổi loại trước giờ mở GV tự xóa ngày không còn áp dụng và yêu
 cầu đủ ngày của loại mới. Từ giờ mở GV, khóa tên/loại/mốc bắt đầu, chỉ tăng mốc kết thúc
@@ -151,7 +157,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 2 | Đợt và thời gian, khóa cấu hình | FR-02–04,15; REQ-01–07,31 | AT-01–02,13; G-Period đã giải phóng |
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
 | 4 | Nhóm, lời mời có xác nhận, thành viên, tự rời/giải tán và chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã chốt lại ngày 2026-09-11 |
-| 5 | Gửi/rút/đăng ký lại, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-05–08,11; G-Registration đã giải phóng ngày 2026-09-11 |
+| 5 | Gửi/rút/đăng ký lại, snapshot thành viên lúc gửi, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-04–08,11; G-Registration đã giải phóng ngày 2026-09-11, quy tắc đủ 3/snapshot cập nhật ngày 2026-09-12 |
 | 6 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 
 Đây là trình tự kế hoạch, không phải tasks.md và không cho phép bỏ qua gate ở mỗi phần.
