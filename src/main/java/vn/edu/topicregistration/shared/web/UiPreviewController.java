@@ -145,6 +145,15 @@ public class UiPreviewController {
     String periodDetail(@PathVariable long id, Model model) {
         common(model, "periods", "Quản lý học vụ");
         model.addAttribute("period", PERIODS.getFirst());
+        addReviewPreview(model);
+        model.addAttribute("registrationRequests", List.of(new PreviewRegistrationRequest(
+                1L, "N001", "Nguyễn Minh Anh", 3, TOPICS.getFirst().title(),
+                "11/09/2026 10:30", "Chờ xét", "bg-yellow-lt", null, true)));
+        model.addAttribute("pendingRegistrationCount", 1);
+        return "periods/detail";
+    }
+
+    private void addReviewPreview(Model model) {
         model.addAttribute("reviewTopics", List.of(Map.ofEntries(
                 Map.entry("id", 102),
                 Map.entry("title", TOPICS.get(1).title()),
@@ -169,11 +178,6 @@ public class UiPreviewController {
                 "warning", false,
                 "title", "Hoàn tất trước ngày 20/09/2026",
                 "message", "Trưởng khoa cần duyệt và công bố đề tài trước khi sinh viên bắt đầu đăng ký."));
-        model.addAttribute("registrationRequests", List.of(new PreviewRegistrationRequest(
-                1L, "N001", "Nguyễn Minh Anh", 3, TOPICS.getFirst().title(),
-                "11/09/2026 10:30", "Chờ xét", "bg-yellow-lt", null, true)));
-        model.addAttribute("pendingRegistrationCount", 1);
-        return "periods/detail";
     }
 
     @GetMapping("/periods/{periodId}/topics")
@@ -228,7 +232,7 @@ public class UiPreviewController {
     String topicReview(@PathVariable long periodId, Model model) {
         common(model, "reviews", "Duyệt đề tài");
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("topics", TOPICS.subList(1, 2));
+        addReviewPreview(model);
         return "topics/review";
     }
 
