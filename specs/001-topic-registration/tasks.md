@@ -167,7 +167,7 @@ Chờ US1/T039; có thể phát triển nhánh US4 song song nhánh US2→US3 sa
 
 - [X] T039 [US4] Giải quyết G-Group/Q-07 trong `specs/001-topic-registration/spec.md`: thời điểm tạo nhóm và phạm vi tự rời/chuyển; đồng bộ `data-model.md`, `contracts/web.md`, `acceptance-matrix.md` và task nếu phạm vi đổi, không suy ra lịch tạo từ lịch sửa.
 
-- [ ] T040 [P] [US4] Viết unit test sức chứa gồm membership + invitation PENDING, accept/reject/cancel, tự rời/giải tán, duy nhất leader, chỉ sửa trong hạn và không active tại `src/test/java/vn/edu/topicregistration/unit/GroupRulesTest.java` (AS-4.*, AT-04).
+- [X] T040 [P] [US4] Viết unit test sức chứa gồm membership + invitation PENDING, accept/reject/cancel, tự rời/giải tán, duy nhất leader, chỉ sửa trong hạn và không active tại `src/test/java/vn/edu/topicregistration/unit/GroupRulesTest.java` (AS-4.*, AT-04).
 
 - [ ] T041 [P] [US4] Viết contract test nhóm create/read/invite/accept/reject/cancel/remove/leave/dissolve/leader với role/scope, invitee/leader cũ/người ngoài và không ghi khi denied tại `src/test/java/vn/edu/topicregistration/web/GroupContractTest.java` (AT-06,09).
 
