@@ -116,8 +116,11 @@ public class RegistrationController {
     }
 
     @GetMapping("/registrations/{id}/decision")
-    String decision(@PathVariable long id, Model model) {
+    Object decision(@PathVariable long id, Model model) {
         RegistrationDetailView registration = registrations.getForDecision(id);
+        if (!registration.canDecide()) {
+            return registrationDetail(id);
+        }
         RegistrationDecisionForm acceptForm = decisionForm(registration.version());
         RegistrationDecisionForm rejectForm = decisionForm(registration.version());
         return renderDecision(model, registration, acceptForm, rejectForm);
@@ -179,6 +182,7 @@ public class RegistrationController {
         model.addAttribute("groupCode", groupCode(workspace.groupId()));
         model.addAttribute("period", new PeriodPageView(
                 workspace.periodId(), workspace.periodName()));
+        model.addAttribute("memberCount", workspace.memberCount());
         model.addAttribute("pendingInvitation", workspace.pendingInvitation());
         model.addAttribute("topics", workspace.topics().stream()
                 .map(this::display)

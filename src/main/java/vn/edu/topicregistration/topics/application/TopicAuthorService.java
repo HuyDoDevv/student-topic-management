@@ -223,7 +223,7 @@ public class TopicAuthorService {
     }
 
     private ActorIdentity currentLecturer() {
-        ActorIdentity actor = authorization.requireRole(RoleCode.LECTURER);
+        ActorIdentity actor = authorization.requireTopicAuthoringLecturer();
         if (actor.accountId() == null || actor.departmentId() == null || actor.facultyId() == null) {
             throw new AccessDeniedException("Lecturer organization scope is missing");
         }

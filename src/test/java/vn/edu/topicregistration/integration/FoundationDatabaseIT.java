@@ -30,14 +30,14 @@ class FoundationDatabaseIT {
 
     @Test
     void migrationCreatesTheExpectedFoundationSchema() throws Exception {
-        assertEquals(20, count("""
+        assertEquals(22, count("""
                 SELECT COUNT(*)
                 FROM information_schema.tables
                 WHERE table_schema = DATABASE()
                   AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(6, count("""
+        assertEquals(9, count("""
                 SELECT COUNT(*)
                 FROM information_schema.triggers
                 WHERE trigger_schema = DATABASE()

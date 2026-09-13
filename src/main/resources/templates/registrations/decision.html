@@ -42,7 +42,7 @@
             <dt>Giảng viên đề xuất</dt><dd th:text="${registration.topicAuthor}">Giảng viên</dd>
             <dt>Giảng viên hướng dẫn</dt><dd th:text="${registration.supervisors}">Giảng viên hướng dẫn</dd>
             <dt>Gửi đăng ký</dt><dd th:text="${registration.submittedAt}">11/09/2026 10:30</dd>
-            <dt>Nhóm sinh viên</dt>
+            <dt>Thành viên tại thời điểm gửi</dt>
             <dd>
               <ul class="registration-member-list mb-0">
                 <li th:each="member : ${members}">

@@ -185,9 +185,10 @@ public class LocalDemoSeeder implements ApplicationRunner {
             membership(groupOfThree.id(), studentOpen.id(), students[1], 2);
             membership(groupOfThree.id(), studentOpen.id(), students[2], 3);
         }
-        CreatedRow groupOfTwo = group(studentOpen.id(), students[3]);
-        if (groupOfTwo.created()) {
-            membership(groupOfTwo.id(), studentOpen.id(), students[4], 2);
+        CreatedRow alternativeGroupOfThree = group(studentOpen.id(), students[3]);
+        if (alternativeGroupOfThree.created()) {
+            membership(alternativeGroupOfThree.id(), studentOpen.id(), students[4], 2);
+            membership(alternativeGroupOfThree.id(), studentOpen.id(), students[6], 3);
         }
         group(studentOpen.id(), students[5]);
 
@@ -195,10 +196,14 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 studentOpen, groupOfThree.id(), sharedTopicId, "PENDING",
                 null, null, null, null, null);
         registration(
-                studentOpen, groupOfTwo.id(), sharedTopicId, "PENDING",
+                studentOpen, alternativeGroupOfThree.id(), sharedTopicId, "PENDING",
                 null, null, null, null, null);
 
         CreatedRow closedGroup = group(registrationClosed.id(), students[0]);
+        if (closedGroup.created()) {
+            membership(closedGroup.id(), registrationClosed.id(), students[1], 2);
+            membership(closedGroup.id(), registrationClosed.id(), students[2], 3);
+        }
         registration(
                 registrationClosed, closedGroup.id(), closedTopicId, "ACCEPTED",
                 deanId,

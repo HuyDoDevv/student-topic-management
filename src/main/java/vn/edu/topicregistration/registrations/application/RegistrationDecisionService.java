@@ -166,6 +166,8 @@ public class RegistrationDecisionService {
                         ApplicationErrorCode.WINDOW_CLOSED);
                 case INVALID_GROUP_STATE -> throw new ApplicationException(
                         ApplicationErrorCode.INVALID_GROUP_STATE);
+                case GROUP_INCOMPLETE -> throw new ApplicationException(
+                        ApplicationErrorCode.GROUP_INCOMPLETE);
                 case PENDING_INVITATION -> throw new ApplicationException(
                         ApplicationErrorCode.GROUP_INVITATION_CONFLICT);
                 case ACTIVE_REGISTRATION -> throw new ApplicationException(

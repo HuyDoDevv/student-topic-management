@@ -13,6 +13,15 @@
       </div>
     </div>
     <div class="btn-list">
+      <a class="btn btn-warning" href="#student-registration-requests"
+         th:if="${pendingRegistrationCount > 0}"
+         th:text="|${pendingRegistrationCount} đăng ký chờ xét|">1 đăng ký chờ xét</a>
+      <a class="btn btn-outline-primary"
+         th:href="@{/periods/{id}/topics/review(id=${period.id})}">
+        Duyệt đề xuất giảng viên
+        <span class="badge bg-yellow-lt ms-1" th:if="${reviewSummary.pendingCount > 0}"
+              th:text="${reviewSummary.pendingCount}">1</span>
+      </a>
       <a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa cấu hình</a>
       <a class="btn btn-primary" th:if="${canAuthorTopics}"
          th:href="@{/periods/{id}/topics(id=${period.id})}">Đề tài của tôi</a>
@@ -50,13 +59,13 @@
     </div>
   </div>
 
-  <th:block th:replace="~{topics/review :: reviewPanel}"></th:block>
-
-  <section class="card mt-4 registration-request-card" aria-labelledby="registration-requests-title">
+  <section class="card mt-4 registration-request-card" id="student-registration-requests"
+           aria-labelledby="registration-requests-title">
     <div class="card-header review-card-header">
       <div>
-        <h2 class="card-title mb-1" id="registration-requests-title">Đăng ký đề tài của sinh viên</h2>
-        <p class="text-secondary small mb-0">Xét các nhóm đã gửi đăng ký trong đợt này.</p>
+        <div class="subheader mb-1">ƯU TIÊN · ĐĂNG KÝ CỦA NHÓM SINH VIÊN</div>
+        <h2 class="card-title mb-1" id="registration-requests-title">Xét nhóm đăng ký đề tài</h2>
+        <p class="text-secondary small mb-0">Đây là yêu cầu của nhóm vào đề tài đã công bố, tách biệt với bước duyệt đề xuất của giảng viên.</p>
       </div>
       <span class="badge bg-yellow-lt"
             th:text="${pendingRegistrationCount} + ' chờ xét'">0 chờ xét</span>
@@ -87,7 +96,7 @@
           <td data-label="Thao tác" class="text-end">
             <a class="btn btn-sm" th:classappend="${request.pending} ? 'btn-primary' : 'btn-outline-secondary'"
                th:href="${request.pending} ? @{/registrations/{id}/decision(id=${request.id})} : @{/registrations/{id}(id=${request.id})}"
-               th:text="${request.pending ? 'Xét duyệt' : 'Xem kết quả'}">Xét duyệt</a>
+               th:text="${request.pending ? 'Xét đăng ký' : (request.status == 'Đã rút' ? 'Xem lịch sử' : 'Xem kết quả')}">Xét đăng ký</a>
           </td>
         </tr>
         </tbody>
@@ -98,6 +107,25 @@
       <div class="empty-icon" aria-hidden="true">◇</div>
       <h3 class="h3 mb-2">Chưa có nhóm gửi đăng ký</h3>
       <p class="text-secondary mb-0">Các yêu cầu sẽ xuất hiện tại đây sau khi Trưởng nhóm chọn đề tài.</p>
+    </div>
+  </section>
+
+  <section class="card mt-4" aria-labelledby="proposal-review-link-title">
+    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+      <div>
+        <div class="subheader mb-1">MÀN HÌNH RIÊNG · ĐỀ XUẤT CỦA GIẢNG VIÊN</div>
+        <h2 class="card-title mb-1" id="proposal-review-link-title">Duyệt nội dung đề tài trước khi công bố</h2>
+        <p class="text-secondary small mb-2">
+          Đây là quy trình duyệt đề xuất của giảng viên, không phải yêu cầu đăng ký đề tài của nhóm sinh viên.
+        </p>
+        <div class="d-flex flex-wrap gap-2" aria-label="Thống kê đề xuất giảng viên">
+          <span class="badge bg-yellow-lt" th:text="|${reviewSummary.pendingCount} chờ duyệt|">0 chờ duyệt</span>
+          <span class="badge bg-azure-lt" th:text="|${reviewSummary.approvedCount} đã duyệt|">0 đã duyệt</span>
+          <span class="badge bg-green-lt" th:text="|${reviewSummary.publishedCount} đã công bố|">0 đã công bố</span>
+        </div>
+      </div>
+      <a class="btn btn-outline-primary flex-shrink-0"
+         th:href="@{/periods/{id}/topics/review(id=${period.id})}">Mở danh sách đề xuất</a>
     </div>
   </section>
 </section>

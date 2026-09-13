@@ -28,7 +28,7 @@ public class TopicReviewController {
             @PathVariable long id,
             @RequestParam(name = "version", required = false) Long version) {
         ReviewResult result = topics.approve(id, requiredVersion(version));
-        return periodDetail(result.periodId());
+        return proposalReview(result.periodId());
     }
 
     @PostMapping("/topics/{id}/reject")
@@ -36,13 +36,13 @@ public class TopicReviewController {
             @PathVariable long id,
             @RequestParam(name = "version", required = false) Long version) {
         ReviewResult result = topics.reject(id, requiredVersion(version));
-        return periodDetail(result.periodId());
+        return proposalReview(result.periodId());
     }
 
     @PostMapping("/periods/{periodId}/topics/publish")
     RedirectView publish(@PathVariable long periodId) {
         PublicationResult result = topics.publishApproved(periodId);
-        return periodDetail(result.periodId());
+        return proposalReview(result.periodId());
     }
 
     private long requiredVersion(Long version) {
@@ -52,7 +52,7 @@ public class TopicReviewController {
         return version;
     }
 
-    private RedirectView periodDetail(long periodId) {
-        return WebRedirects.seeOther("/periods/" + periodId);
+    private RedirectView proposalReview(long periodId) {
+        return WebRedirects.seeOther("/periods/" + periodId + "/topics/review");
     }
 }

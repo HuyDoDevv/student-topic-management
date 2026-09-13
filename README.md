@@ -55,10 +55,11 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
   `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
 - Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql)
   để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
-  đăng ký GV/SV. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ đầu ngày, ngày kết thúc
+  đăng ký GV/SV; các migration V4–V7 bổ sung moderation, lời mời nhóm, metadata từ chối
+  và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ đầu ngày, ngày kết thúc
   tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
   `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới `V4__...sql`, `V5__...sql`; không
+- Các thay đổi schema tiếp theo phải là migration mới sau `V7__...sql`; không
   sửa migration đã được dùng trên database chung.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway
@@ -77,6 +78,8 @@ giao diện, bật `DEMO_SEED_ENABLED=true` và đặt `DEMO_SEED_PASSWORD` tron
 dụng một lần rồi tắt cờ. Các tài khoản được tạo là `dean.demo`, `lecturer1.demo` đến
 `lecturer3.demo` và `student1.demo` đến `student7.demo`, cùng dùng mật khẩu đã nhập.
 Seeder chỉ thêm fixture còn thiếu và không reset dữ liệu hoặc lịch đã tồn tại khi khởi động lại.
+`dean.demo` quản lý đợt, duyệt và công bố; tài khoản này không được tạo/sửa/gửi duyệt đề tài.
+Các thao tác tác giả đề tài dùng `lecturer1.demo` đến `lecturer3.demo`.
 
 ## Kiểm thử và cấu trúc
 

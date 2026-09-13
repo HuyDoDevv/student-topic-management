@@ -111,17 +111,9 @@ public class PeriodController {
     String detail(@PathVariable long id, Model model) {
         common(model);
         PeriodView period = periodService.getForCurrentDean(id);
-        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id);
-        ReviewSummary summary = new ReviewSummary(
-                workspace.pendingCount(),
-                workspace.approvedCount(),
-                workspace.publishedCount());
+        ReviewSummary summary = reviewSummary(topicReviewService.reviewWorkspace(id));
         model.addAttribute("period", display(period));
-        model.addAttribute("reviewTopics", workspace.topics().stream()
-                .map(ReviewTopicPageView::from)
-                .toList());
         model.addAttribute("reviewSummary", summary);
-        model.addAttribute("reviewNotice", reviewNotice(period, summary));
         List<RegistrationRequestPageView> registrationRequests = registrationService
                 .listForDeanPeriod(id).stream()
                 .map(this::display)
@@ -131,6 +123,21 @@ public class PeriodController {
                 .filter(RegistrationRequestPageView::pending)
                 .count());
         return "periods/detail";
+    }
+
+    @GetMapping("/{id}/topics/review")
+    String reviewTopics(@PathVariable long id, Model model) {
+        common(model);
+        PeriodView period = periodService.getForCurrentDean(id);
+        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id);
+        ReviewSummary summary = reviewSummary(workspace);
+        model.addAttribute("period", display(period));
+        model.addAttribute("reviewTopics", workspace.topics().stream()
+                .map(ReviewTopicPageView::from)
+                .toList());
+        model.addAttribute("reviewSummary", summary);
+        model.addAttribute("reviewNotice", reviewNotice(period, summary));
+        return "topics/review";
     }
 
     @GetMapping("/{id}/edit")
@@ -278,6 +285,13 @@ public class PeriodController {
             case REJECTED -> "bg-red-lt";
             case WITHDRAWN -> "bg-secondary-lt";
         };
+    }
+
+    private static ReviewSummary reviewSummary(ReviewWorkspace workspace) {
+        return new ReviewSummary(
+                workspace.pendingCount(),
+                workspace.approvedCount(),
+                workspace.publishedCount());
     }
 
     private ReviewNotice reviewNotice(PeriodView period, ReviewSummary summary) {

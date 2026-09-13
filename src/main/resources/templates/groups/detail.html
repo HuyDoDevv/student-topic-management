@@ -15,15 +15,20 @@
     </div>
     <div class="btn-list">
       <a class="btn btn-primary"
-         th:if="${group.canManage and (group.activeRegistration or (group.studentOpen and group.pendingInvitationCount == 0))}"
-         th:href="@{/groups/{id}/registrations/new(id=${group.id})}"
-         th:text="${group.activeRegistration ? 'Xem đăng ký đề tài' : 'Đăng ký đề tài'}">Đăng ký đề tài</a>
+         th:if="${group.activeRegistration}"
+         th:href="@{/registrations/{id}(id=${group.registration.id})}">Xem đăng ký đề tài</a>
+      <a class="btn btn-primary"
+         th:if="${group.canManage and !group.activeRegistration and group.studentOpen and group.pendingInvitationCount == 0 and group.members.size() == 3}"
+         th:href="@{/groups/{id}/registrations/new(id=${group.id})}">Đăng ký đề tài</a>
       <a class="btn btn-outline-primary" th:href="@{/group-invitations}">Lời mời của tôi</a>
       <a class="btn btn-outline-secondary" th:href="@{/groups}">Đổi đợt</a>
     </div>
   </div>
 
-  <div class="alert alert-info" role="status" th:if="${!group.canManage}">
+  <div class="alert alert-success" role="status" th:if="${invitationResult}"
+       th:text="${invitationResult}">Kết quả xử lý lời mời.</div>
+
+  <div class="alert alert-info" role="status" th:if="${!group.canManage and !group.activeRegistration}">
     Bạn là thành viên của nhóm. Bạn có thể tự rời khi còn trong hạn đăng ký và nhóm chưa gửi đăng ký đề tài.
   </div>
   <div class="alert alert-warning" role="status" th:if="${group.canManage and !group.canEdit and group.activeRegistration}">
@@ -34,6 +39,34 @@
   </div>
   <div class="alert alert-warning" role="status" th:if="${group.pendingInvitationCount > 0}">
     Nhóm còn <strong th:text="${group.pendingInvitationCount}">1</strong> lời mời chờ phản hồi. Hãy chờ sinh viên trả lời hoặc hủy lời mời trước khi đăng ký đề tài.
+  </div>
+  <div class="alert alert-warning" role="status"
+       th:if="${group.canManage and group.studentOpen and !group.activeRegistration and group.pendingInvitationCount == 0 and group.members.size() < 3}">
+    Nhóm phải có đúng 3 thành viên chính thức mới được đăng ký đề tài. Hãy mời thêm thành viên và chờ họ chấp nhận.
+  </div>
+
+  <div class="card mb-4" role="status"
+       th:if="${group.registration != null}"
+       th:classappend="${group.registration.accepted ? 'border-success' : 'border-warning'}">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <span class="badge mb-2" th:classappend="${group.registration.statusClass}"
+              th:text="${group.registration.statusLabel}">Đã chấp nhận</span>
+        <h2 class="h3 mb-1"
+            th:text="${group.registration.accepted ? 'Đăng ký đề tài đã được chấp nhận' : 'Đăng ký đề tài đang chờ xét'}">
+          Đăng ký đề tài đã được chấp nhận
+        </h2>
+        <p class="fw-semibold mb-1" th:text="${group.registration.topicTitle}">Tên đề tài</p>
+        <p class="text-secondary mb-0" th:if="${group.registration.accepted}">
+          Trưởng khoa đã xác nhận đăng ký thành công cho nhóm. Mọi thành viên có thể xem kết quả tại đây.
+        </p>
+        <p class="text-secondary mb-0" th:if="${!group.registration.accepted}">
+          Nhóm đã gửi đăng ký và đang chờ Trưởng khoa quyết định.
+        </p>
+      </div>
+      <a class="btn btn-outline-primary"
+         th:href="@{/registrations/{id}(id=${group.registration.id})}">Xem chi tiết đăng ký</a>
+    </div>
   </div>
 
   <div class="row row-cards">
@@ -142,7 +175,7 @@
     <div class="table-responsive" th:if="${!invitations.isEmpty()}">
       <table class="table table-vcenter card-table responsive-table invitation-table">
         <thead>
-        <tr><th>Vị trí</th><th>Sinh viên</th><th>Gửi lúc</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        <tr><th>Vị trí</th><th>Sinh viên</th><th>Thời gian</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
         </thead>
         <tbody>
         <tr th:each="invitation : ${invitations}">
@@ -151,7 +184,11 @@
             <strong class="d-block" th:text="${invitation.studentName}">Lê Hoàng Nam</strong>
             <span class="small text-secondary" th:text="${invitation.studentUsername}">23110102</span>
           </td>
-          <td data-label="Gửi lúc" th:text="${invitation.createdAt}">11/09/2026 09:30</td>
+          <td data-label="Thời gian">
+            <span class="d-block" th:text="|Gửi: ${invitation.createdAt}|">Gửi: 11/09/2026 09:30</span>
+            <span class="small text-secondary" th:if="${invitation.respondedAt != null}"
+                  th:text="|Phản hồi: ${invitation.respondedAt}|">Phản hồi: 11/09/2026 09:35</span>
+          </td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${invitation.statusClass}" th:text="${invitation.status}">Đang chờ</span></td>
           <td data-label="Thao tác" class="text-end">
             <form th:if="${invitation.canCancel}" th:action="@{/group-invitations/{id}/cancel(id=${invitation.id})}"

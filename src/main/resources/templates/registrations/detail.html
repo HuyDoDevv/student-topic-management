@@ -68,7 +68,10 @@
     <div class="col-lg-4">
       <aside class="card h-100">
         <div class="card-header">
-          <h2 class="card-title">Thành viên nhóm</h2>
+          <div>
+            <h2 class="card-title">Thành viên tại thời điểm gửi</h2>
+            <span class="small text-secondary">Danh sách này được giữ nguyên trong lịch sử đăng ký.</span>
+          </div>
           <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(members)} + '/3'">3/3</span>
         </div>
         <div class="list-group list-group-flush">
