@@ -144,7 +144,7 @@ Chờ US2/T033; T034–T035 song song.
 
 - [X] T033 [US3] Chốt G-Publish: đối chiếu AS-3.1 và xác nhận công bố từng/tập/toàn danh sách, thời hạn xử lý dean nếu có trong `specs/001-topic-registration/spec.md`; cập nhật `contracts/web.md`, `data-model.md`, `acceptance-matrix.md` trước áp route publish tập hợp đề xuất.
 
-- [ ] T034 [P] [US3] Viết state test approve/reject/publish, không nhảy duyệt, reject về DRAFT và gửi lại đúng hạn tại `src/test/java/vn/edu/topicregistration/unit/TopicReviewRulesTest.java` (AT-12).
+- [X] T034 [P] [US3] Viết state test approve/reject/publish, không nhảy duyệt, reject về DRAFT và gửi lại đúng hạn tại `src/test/java/vn/edu/topicregistration/unit/TopicReviewRulesTest.java` (AT-12).
 
 - [ ] T035 [P] [US3] Viết test HTTP scope dean, GV/tác giả/GVHD bị từ chối, publish input sai không đổi một phần tại `src/test/java/vn/edu/topicregistration/web/TopicReviewContractTest.java`; viết `TopicModerationContractTest.java` cho ADMIN ẩn mềm đề tài, audit, khóa tác giả và từ chối sửa/xóa cứng (AT-06,09,14; AS-1.15–1.16, AS-3.*).
 
