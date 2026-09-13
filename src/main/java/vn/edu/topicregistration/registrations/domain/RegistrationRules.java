@@ -18,6 +18,9 @@ public final class RegistrationRules {
                 || !context.leaderIsMember()) {
             throw failure(Failure.INVALID_GROUP_STATE);
         }
+        if (context.memberCount() != 3) {
+            throw failure(Failure.GROUP_INCOMPLETE);
+        }
         if (!context.samePeriod() || !context.topicPublished()) {
             throw failure(Failure.INVALID_TOPIC_STATE);
         }
@@ -97,6 +100,7 @@ public final class RegistrationRules {
         ACCESS_DENIED,
         WINDOW_CLOSED,
         INVALID_GROUP_STATE,
+        GROUP_INCOMPLETE,
         PENDING_INVITATION,
         ACTIVE_REGISTRATION,
         INVALID_TOPIC_STATE,

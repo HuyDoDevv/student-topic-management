@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import vn.edu.topicregistration.groups.application.GroupService;
 import vn.edu.topicregistration.groups.application.GroupService.GroupPeriodView;
@@ -127,15 +128,25 @@ public class GroupController {
     @PostMapping("/group-invitations/{id}/accept")
     RedirectView acceptInvitation(
             @PathVariable long id,
-            @RequestParam(name = "version", required = false) Long version) {
-        return redirectToGroup(groups.acceptInvitation(id, requiredVersion(version)));
+            @RequestParam(name = "version", required = false) Long version,
+            RedirectAttributes redirectAttributes) {
+        long groupId = groups.acceptInvitation(id, requiredVersion(version));
+        redirectAttributes.addFlashAttribute(
+                "invitationResult",
+                "Bạn đã chấp nhận lời mời và trở thành thành viên của nhóm N"
+                        + String.format("%03d", groupId) + ".");
+        return redirectToGroup(groupId);
     }
 
     @PostMapping("/group-invitations/{id}/reject")
     RedirectView rejectInvitation(
             @PathVariable long id,
-            @RequestParam(name = "version", required = false) Long version) {
+            @RequestParam(name = "version", required = false) Long version,
+            RedirectAttributes redirectAttributes) {
         groups.rejectInvitation(id, requiredVersion(version));
+        redirectAttributes.addFlashAttribute(
+                "invitationResult",
+                "Bạn đã từ chối lời mời. Bạn không được thêm vào nhóm.");
         return WebRedirects.seeOther("/group-invitations");
     }
 
@@ -263,6 +274,7 @@ public class GroupController {
                 invitation.respondedAt() == null ? null : format(invitation.respondedAt()),
                 invitation.version(),
                 invitation.groupActive(),
+                invitation.canViewGroup(),
                 invitation.canAccept(),
                 invitation.canReject(),
                 invitation.canCancel());
@@ -340,6 +352,7 @@ public class GroupController {
             String respondedAt,
             long version,
             boolean groupActive,
+            boolean canViewGroup,
             boolean canAccept,
             boolean canReject,
             boolean canCancel) {

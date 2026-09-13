@@ -48,6 +48,41 @@ class FoundationWebTest {
         }
     }
 
+    @Test void deanPreviewSeparatesStudentRegistrationsFromLecturerProposals() throws Exception {
+        mvc.perform(get("/periods/1"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Xét nhóm đăng ký đề tài")))
+            .andExpect(content().string(containsString("Mở danh sách đề xuất")));
+
+        mvc.perform(get("/periods/1/topics/review"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Danh sách đề xuất của giảng viên")))
+            .andExpect(content().string(containsString("Sinh viên chưa thể đăng ký")));
+    }
+
+    @Test void registrationPreviewExplainsCompleteGroupAndSubmissionSnapshot() throws Exception {
+        mvc.perform(get("/groups/1/registrations/new"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("đúng 3 thành viên")));
+
+        mvc.perform(get("/registrations/1"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Thành viên tại thời điểm gửi")));
+    }
+
+    @Test void groupMemberSeesAcceptedRegistrationFeedback() throws Exception {
+        mvc.perform(get("/groups/1"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đăng ký đề tài đã được chấp nhận")))
+            .andExpect(content().string(containsString("Hệ thống quản lý đăng ký đề tài")))
+            .andExpect(content().string(containsString("href=\"/registrations/1\"")));
+
+        mvc.perform(get("/groups/2"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đăng ký đề tài đang chờ xét")))
+            .andExpect(content().string(containsString("href=\"/registrations/2\"")));
+    }
+
     @Test void previewStillRejectsUnknownOrMutatingRoutes() throws Exception {
         mvc.perform(get("/not-a-page")).andExpect(status().isNotFound());
         mvc.perform(post("/register")).andExpect(status().isForbidden());
