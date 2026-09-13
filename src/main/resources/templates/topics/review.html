@@ -1,10 +1,22 @@
 <!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layouts/main :: page('Duyệt đề tài', ~{::section})}">
+      th:replace="~{layouts/main :: page('Duyệt đề xuất giảng viên', ~{::section})}">
 <body>
 <section>
-  <div class="review-panel" th:fragment="reviewPanel">
-    <div class="alert mt-4 mb-3" role="status"
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle" th:text="${period.name}">Đợt đăng ký</div>
+      <h1 class="page-title">Duyệt đề xuất giảng viên</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Xử lý nội dung đề tài do giảng viên gửi và công bố danh sách để sinh viên lựa chọn.
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary"
+       th:href="@{/periods/{id}(id=${period.id})}">Về xét đăng ký sinh viên</a>
+  </div>
+
+  <div class="review-panel">
+    <div class="alert mb-3" role="status"
          th:classappend="${reviewNotice.warning} ? ' alert-warning' : ' alert-info'">
       <div class="fw-bold" th:text="${reviewNotice.title}">Hoàn tất trước ngày sinh viên đăng ký</div>
       <div class="mt-1" th:text="${reviewNotice.message}">
@@ -15,9 +27,10 @@
     <div class="card review-card">
       <div class="card-header review-card-header">
         <div>
-          <h2 class="card-title mb-1">Đề tài được đề xuất trong đợt</h2>
+          <div class="subheader mb-1">ĐỀ XUẤT CỦA GIẢNG VIÊN</div>
+          <h2 class="card-title mb-1">Danh sách đề xuất của giảng viên</h2>
           <p class="text-secondary small mb-0">
-            Duyệt từng đề tài, sau đó công bố các đề tài đã duyệt cho sinh viên.
+            Danh sách này độc lập với đăng ký của từng nhóm. Đề tài chưa công bố xuất hiện ở đây để được duyệt nội dung trước khi sinh viên có thể chọn.
           </p>
         </div>
         <div class="review-summary" aria-label="Thống kê trạng thái đề tài">
@@ -39,6 +52,7 @@
             <div>
               <span class="badge mb-2" th:classappend="${topic.statusClass}"
                     th:text="${topic.status}">Chờ duyệt</span>
+              <span class="badge bg-secondary-lt mb-2" th:if="${topic.pending}">Sinh viên chưa thể đăng ký</span>
               <h3 class="h3 mb-1" th:text="${topic.title}">Tên đề tài</h3>
               <p class="text-secondary mb-0">
                 <span th:text="${topic.author}">Giảng viên</span>
@@ -55,7 +69,7 @@
               <form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${topic.version}">
-                <button class="btn btn-success" type="submit">Duyệt đề tài</button>
+                <button class="btn btn-success" type="submit">Duyệt đề xuất</button>
               </form>
             </div>
           </div>

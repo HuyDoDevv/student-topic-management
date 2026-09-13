@@ -13,8 +13,8 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 |---|---|---|---|
 | Tạo đợt | DEAN | Tên/loại/lịch ngày hợp lệ, không có ngày đã qua; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
-| Tạo/sửa nháp | LECTURER tác giả | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn | 05–06,14 |
-| Gửi duyệt | LECTURER tác giả | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 05–06,14 |
+| Tạo/sửa nháp | LECTURER tác giả, không có DEAN | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn; tài khoản có DEAN bị từ chối dù đồng thời có LECTURER | 01,05–06,14 |
+| Gửi duyệt | LECTURER tác giả, không có DEAN | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi; tài khoản có DEAN bị từ chối | 01,05–06,14 |
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; đúng khoa của DEAN | 07,14 |
 | Công bố | DEAN | Toàn bộ APPROVED trong đúng đợt/khoa, nguyên tử; không đổi DRAFT/PENDING_APPROVAL | 07,14 |
 | Tạo nhóm | STUDENT người tạo | Trong hạn SV; trở thành leader, chưa nhóm khác cùng đợt | 08–09 |
@@ -22,7 +22,7 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 | Chấp nhận/từ chối lời mời | STUDENT được mời | Chấp nhận trong hạn SV và nhóm không active; từ chối bất cứ lúc nào; chỉ accept mới tạo membership | 08–09 |
 | Xóa/tự rời/giải tán | Leader xóa thành viên thường; chính thành viên tự rời; leader nhóm một người giải tán | Rời/giải tán trong hạn SV, không active; leader có thành viên khác phải chuyển quyền trước | 08–09 |
 | Chuyển leader | Leader hiện tại | Người nhận đã là thành viên; hạn SV, không active | 08 |
-| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; PUBLISHED cùng đợt và cùng khoa, chưa accepted, không active, không còn invitation PENDING | 10,13 |
+| Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; nhóm có đúng 3 thành viên chính thức; PUBLISHED cùng đợt và cùng khoa, chưa accepted, không active, không còn invitation PENDING; lưu snapshot thành viên/vị trí/leader lúc gửi | 10,13 |
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
 | Chấp nhận/từ chối registration | DEAN | PENDING thuộc đợt trong khoa của DEAN; từ chối thủ công cần reason không rỗng sau khi trim; auto-reject khi accept | 11–12 |
 | Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
@@ -61,7 +61,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |
 | POST /periods/{id}/topics/publish | — | Khóa đợt; toàn bộ APPROVED của đợt → PUBLISHED nguyên tử; không đổi DRAFT/PENDING_APPROVAL; không có APPROVED thì không ghi | 07,14 |
 | POST /periods/{id}/groups | CSRF | Trong hạn SV; nhóm mới, người tạo là leader và thành viên đầu tiên | 08–09 |
-| GET /groups/{id} | — | Chi tiết nhóm; chỉ trường policy cho phép | 01,08 |
+| GET /groups/{id} | — | Chi tiết nhóm; mọi thành viên hiện tại thấy tên/trạng thái đăng ký PENDING hoặc ACCEPTED và liên kết chi tiết; ACCEPTED có xác nhận đăng ký thành công; các trường khác theo policy | 01,08,10–11 |
 | GET /group-invitations | — | SV chỉ thấy lời mời gửi cho chính mình; PENDING sau hạn hiển thị hết hiệu lực | 01,08 |
 | POST /groups/{id}/invitations | studentId,version | Leader gửi lời mời giữ slot; chưa tạo membership | 08–09 |
 | POST /group-invitations/{id}/accept | version | Chỉ SV được mời; PENDING → ACCEPTED và tạo membership nguyên tử | 08–09 |
@@ -71,8 +71,8 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /groups/{id}/leader | studentId,version | Chuyển cho thành viên hiện hữu | 08 |
 | POST /groups/{id}/leave | version | Thành viên thường tự rời chính nhóm trong hạn SV, không active | 08–09 |
 | POST /groups/{id}/dissolve | version | Chỉ leader nhóm một người; giải tán mềm trong hạn SV, không active; giữ lịch sử và loại khỏi nhóm đang hoạt động | 08–09 |
-| POST /groups/{id}/registrations | topicId,version | Tạo PENDING mới | 10,13 |
-| GET /registrations/{id} | — | Trạng thái/kết quả theo policy | 01,10–13 |
+| POST /groups/{id}/registrations | topicId,version | Tạo PENDING mới chỉ khi nhóm đủ đúng 3 thành viên; snapshot được tạo nguyên tử | 10,13 |
+| GET /registrations/{id} | — | Trạng thái/kết quả theo policy; thành viên và leader lấy từ snapshot lúc gửi, không từ nhóm hiện tại | 01,10–13 |
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | PENDING → REJECTED khi reason không rỗng sau khi trim; thiếu reason trả lỗi validation và không đổi trạng thái | 12 |
@@ -99,7 +99,7 @@ hàng mới. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 - Với rút/chấp nhận đồng thời, request lấy khóa period trước được hoàn tất. Request sau đọc
   lại registration không còn PENDING, trả 409 và không thay đổi kết quả đã commit trước.
 - Hết hạn hoặc vượt ràng buộc nghiệp vụ: 422 với mã lỗi nội bộ ổn định
-  WINDOW_CLOSED, GROUP_FULL, ACTIVE_REGISTRATION_EXISTS, TOPIC_TAKEN,
+  WINDOW_CLOSED, GROUP_FULL, GROUP_INCOMPLETE, ACTIVE_REGISTRATION_EXISTS, TOPIC_TAKEN,
   INVALID_TOPIC_STATE. Không biến lỗi nghiệp vụ thành 500.
 - Chuỗi nội dung escape mặc định bởi Thymeleaf, không render HTML thô từ mô tả đề tài.
   Không tự đặt độ dài tối đa nghiệp vụ; giới hạn tài nguyên request kỹ thuật cần ghi

@@ -79,10 +79,30 @@ public class UiPreviewController {
 
     private static final List<PreviewGroupMember> GROUP_MEMBERS = List.of(
             new PreviewGroupMember(201, "Nguyễn Minh Anh", "23110001", 1, true),
-            new PreviewGroupMember(202, "Trần Gia Huy", "23110018", 2, false));
+            new PreviewGroupMember(202, "Trần Gia Huy", "23110018", 2, false),
+            new PreviewGroupMember(203, "Lê Hoàng Nam", "23110102", 3, false));
 
     private static final PreviewGroup GROUP = new PreviewGroup(
-            1, 1, 201, 0, GROUP_MEMBERS, true, true, false, false, true, false, 1);
+            1, 1, 201, 0, GROUP_MEMBERS, false, false, false, false, true,
+            new PreviewGroupRegistration(
+                    1,
+                    TOPICS.getFirst().title(),
+                    "ACCEPTED",
+                    "Đã chấp nhận",
+                    "bg-green-lt",
+                    true),
+            0);
+
+    private static final PreviewGroup PENDING_GROUP = new PreviewGroup(
+            2, 1, 201, 0, GROUP_MEMBERS, false, false, false, false, true,
+            new PreviewGroupRegistration(
+                    2,
+                    TOPICS.getFirst().title(),
+                    "PENDING",
+                    "Chờ xét",
+                    "bg-yellow-lt",
+                    false),
+            0);
 
     private static final List<PreviewStudent> GROUP_CANDIDATES = List.of(
             new PreviewStudent(203, "Lê Hoàng Nam", "23110102"),
@@ -145,30 +165,7 @@ public class UiPreviewController {
     String periodDetail(@PathVariable long id, Model model) {
         common(model, "periods", "Quản lý học vụ");
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("reviewTopics", List.of(Map.ofEntries(
-                Map.entry("id", 102),
-                Map.entry("title", TOPICS.get(1).title()),
-                Map.entry("author", TOPICS.get(1).author()),
-                Map.entry("department", TOPICS.get(1).department()),
-                Map.entry("supervisorNames", TOPICS.get(1).supervisors()),
-                Map.entry("description", TOPICS.get(1).description()),
-                Map.entry("objectives", TOPICS.get(1).objectives()),
-                Map.entry("studentRequirements", TOPICS.get(1).studentRequirements()),
-                Map.entry("expectedResults", TOPICS.get(1).expectedResults()),
-                Map.entry("status", "Chờ duyệt"),
-                Map.entry("statusClass", "bg-yellow-lt"),
-                Map.entry("version", 1L),
-                Map.entry("pending", true),
-                Map.entry("approved", false),
-                Map.entry("published", false))));
-        model.addAttribute("reviewSummary", Map.of(
-                "pendingCount", 1,
-                "approvedCount", 0,
-                "publishedCount", 1));
-        model.addAttribute("reviewNotice", Map.of(
-                "warning", false,
-                "title", "Hoàn tất trước ngày 20/09/2026",
-                "message", "Trưởng khoa cần duyệt và công bố đề tài trước khi sinh viên bắt đầu đăng ký."));
+        addReviewPreview(model);
         model.addAttribute("registrationRequests", List.of(new PreviewRegistrationRequest(
                 1L, "N001", "Nguyễn Minh Anh", 3, TOPICS.getFirst().title(),
                 "11/09/2026 10:30", "Chờ xét", "bg-yellow-lt", null, true)));
@@ -228,8 +225,35 @@ public class UiPreviewController {
     String topicReview(@PathVariable long periodId, Model model) {
         common(model, "reviews", "Duyệt đề tài");
         model.addAttribute("period", PERIODS.getFirst());
-        model.addAttribute("topics", TOPICS.subList(1, 2));
+        addReviewPreview(model);
         return "topics/review";
+    }
+
+    private void addReviewPreview(Model model) {
+        model.addAttribute("reviewTopics", List.of(Map.ofEntries(
+                Map.entry("id", 102),
+                Map.entry("title", TOPICS.get(1).title()),
+                Map.entry("author", TOPICS.get(1).author()),
+                Map.entry("department", TOPICS.get(1).department()),
+                Map.entry("supervisorNames", TOPICS.get(1).supervisors()),
+                Map.entry("description", TOPICS.get(1).description()),
+                Map.entry("objectives", TOPICS.get(1).objectives()),
+                Map.entry("studentRequirements", TOPICS.get(1).studentRequirements()),
+                Map.entry("expectedResults", TOPICS.get(1).expectedResults()),
+                Map.entry("status", "Chờ duyệt"),
+                Map.entry("statusClass", "bg-yellow-lt"),
+                Map.entry("version", 1L),
+                Map.entry("pending", true),
+                Map.entry("approved", false),
+                Map.entry("published", false))));
+        model.addAttribute("reviewSummary", Map.of(
+                "pendingCount", 1,
+                "approvedCount", 0,
+                "publishedCount", 1));
+        model.addAttribute("reviewNotice", Map.of(
+                "warning", false,
+                "title", "Hoàn tất trước ngày 20/09/2026",
+                "message", "Trưởng khoa cần duyệt và công bố đề tài trước khi sinh viên bắt đầu đăng ký."));
     }
 
     @GetMapping("/groups")
@@ -250,13 +274,14 @@ public class UiPreviewController {
     @GetMapping("/groups/{id}")
     String groupDetail(@PathVariable long id, Model model) {
         common(model, "groups", "Nhóm sinh viên");
+        PreviewGroup group = id == PENDING_GROUP.id() ? PENDING_GROUP : GROUP;
         GroupMemberForm invitationForm = new GroupMemberForm();
-        invitationForm.setVersion(GROUP.version());
+        invitationForm.setVersion(group.version());
         GroupMemberForm leadershipForm = new GroupMemberForm();
-        leadershipForm.setVersion(GROUP.version());
-        model.addAttribute("groupCode", "N001");
+        leadershipForm.setVersion(group.version());
+        model.addAttribute("groupCode", "N" + String.format("%03d", group.id()));
         model.addAttribute("period", GROUP_PERIOD);
-        model.addAttribute("group", GROUP);
+        model.addAttribute("group", group);
         model.addAttribute("candidates", GROUP_CANDIDATES);
         model.addAttribute("invitations", GROUP_INVITATIONS);
         model.addAttribute("invitationForm", invitationForm);
@@ -281,6 +306,7 @@ public class UiPreviewController {
         model.addAttribute("groupCode", "N001");
         model.addAttribute("period", PERIODS.getFirst());
         model.addAttribute("topics", TOPICS.subList(0, 1));
+        model.addAttribute("memberCount", 3);
         model.addAttribute("pendingInvitation", false);
         return "registrations/form";
     }
@@ -461,11 +487,24 @@ public class UiPreviewController {
             boolean canLeave,
             boolean canDissolve,
             boolean studentOpen,
-            boolean activeRegistration,
+            PreviewGroupRegistration registration,
             int pendingInvitationCount) {
         public int reservedSlots() {
             return members.size() + pendingInvitationCount;
         }
+
+        public boolean activeRegistration() {
+            return registration != null;
+        }
+    }
+
+    public record PreviewGroupRegistration(
+            long id,
+            String topicTitle,
+            String status,
+            String statusLabel,
+            String statusClass,
+            boolean accepted) {
     }
 
     public record PreviewGroupMember(

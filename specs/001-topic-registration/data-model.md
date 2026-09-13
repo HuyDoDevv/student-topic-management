@@ -1,7 +1,8 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
 > `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt,
 > V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu. Thay đổi Q-07 ngày
-> 2026-09-11 thêm bảng lời mời bằng V5; V6 bắt buộc metadata từ chối registration,
+> 2026-09-11 thêm bảng lời mời bằng V5; V6 bắt buộc metadata từ chối registration;
+> V7 thêm snapshot thành viên/trưởng nhóm bất biến tại thời điểm gửi,
 > không sửa các migration đã dùng.
 
 # Data Model — Thiết kế triển khai
@@ -18,7 +19,7 @@ không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã đ
 | Department / departments | id bigint PK, name varchar(255), faculty_id FK | Bộ môn thuộc khoa, được seed/import sẵn; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
 | UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Tài khoản được seed/import; mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
-| UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
+| UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN nhưng tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng bộ môn; chỉ thay đổi khi topic DRAFT |
@@ -26,6 +27,7 @@ không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã đ
 | GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Thành viên đã chấp nhận; một tư cách SV/đợt, slot 1–3 bảo vệ sức chứa; thành viên thường được tự rời theo FR-08 |
 | GroupInvitation / group_invitations | id, group_id, period_id, student_id FK, invited_by FK, slot, status, created_at, responded_at, version, pending guards | Lời mời PENDING giữ slot nhưng chưa tạo membership; ACCEPTED/REJECTED/CANCELLED giữ lịch sử phản hồi; hết hiệu lực được suy ra từ student_end |
 | Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | REJECTED/WITHDRAWN không tái dùng ID khi đăng ký lại; tạo hàng mới; từ chối thủ công bắt buộc có reason sau khi trim; giữ toàn bộ lịch sử không thời hạn trong phiên bản đầu |
+| RegistrationMember / registration_members | registration_id, student_id, slot, leader_at_submission | Snapshot bất biến đúng ba thành viên, vị trí và trưởng nhóm tại lúc tạo registration; lịch sử không đọc lại group_memberships hiện tại |
 
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
 Trưởng khoa thao tác dữ liệu trong khoa mình; sinh viên xem đề tài công bố trong khoa và
@@ -57,6 +59,7 @@ version bigint là optimistic concurrency token kỹ thuật, không phải tr�
 | DB-09 | Generated column nullable `accepted_topic_guard` kết hợp UNIQUE(period_id,accepted_topic_guard) khi status ACCEPTED | Xác nhận U Q-10; FR-11 |
 | DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; manual rejection có rejection_kind=MANUAL và reason không rỗng sau khi trim; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
 | DB-11 | `group_invitations` có CHECK status PENDING/ACCEPTED/REJECTED/CANCELLED và slot 1–3; generated guard + UNIQUE bảo đảm một PENDING/SV/đợt và một PENDING/slot/nhóm; FK(group_id,period_id) giữ cùng đợt | U Q-07 ngày 2026-09-11; FR-08–10 |
+| DB-12 | Trigger tạo registration chỉ chấp nhận nhóm có đúng 3 membership và leader là thành viên, rồi chụp nguyên tử vào `registration_members`; PK(registration_id,student_id), UNIQUE slot và leader guard; trigger chặn update/delete snapshot | U ngày 2026-09-12; FR-08,10,13 |
 
 DB-06 dùng trigger vì MySQL không hỗ trợ deferred FK: insert nhóm tự tạo membership của
 trưởng nhóm; đổi leader chỉ nhận thành viên hiện hữu và không được xóa leader khi chưa
@@ -69,6 +72,10 @@ cho từng loại hàng; không dựa riêng vào kiểm tra trước transactio
 Không UNIQUE(group_id,topic_id) trên mọi trạng thái: phải cho đăng ký lại sau rút/từ chối.
 Mỗi lần đăng ký lại tạo một hàng mới. Không cascade hoặc job purge xóa registration
 REJECTED/WITHDRAWN; lịch sử được giữ không thời hạn trong phiên bản đầu.
+Mỗi hàng mới chỉ được tạo khi nhóm có đúng ba thành viên; trigger cùng thao tác insert lưu
+snapshot thành viên/vị trí/trưởng nhóm. Snapshot không cập nhật hoặc xóa khi nhóm hiện tại
+thay đổi sau rút/từ chối. Dữ liệu lịch sử có trước V7 chỉ được backfill tốt nhất từ membership
+còn tồn tại tại thời điểm migration vì schema cũ không lưu lịch sử membership.
 Không CHECK đọc bảng khác để kiểm tra số GVHD hay department. Service dưới khóa giao dịch
 kiểm tra tối thiểu 1 GVHD khi gửi duyệt, cùng bộ môn, quyền và trạng thái. Bản nháp có thể
 0 GVHD; giới hạn tối đa vẫn 2. Các đường ghi phải qua cùng service transaction.
@@ -99,8 +106,8 @@ trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không 
 
 | Từ → đến | Actor | Điều kiện |
 |---|---|---|
-| DRAFT → DRAFT | GV tác giả | Chỉ sửa nội dung/GVHD phối hợp của nháp mình tạo; tác giả luôn là GVHD chính, danh mục phối hợp lấy từ tài khoản LECTURER đang hoạt động cùng bộ môn |
-| DRAFT → PENDING_APPROVAL | GV tác giả | Trong hạn GV, đủ 5 nội dung, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn |
+| DRAFT → DRAFT | GV tác giả không có role DEAN | Chỉ sửa nội dung/GVHD phối hợp của nháp mình tạo; tác giả luôn là GVHD chính, danh mục phối hợp lấy từ tài khoản LECTURER đang hoạt động cùng bộ môn |
+| DRAFT → PENDING_APPROVAL | GV tác giả không có role DEAN | Trong hạn GV, đủ 5 nội dung, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn |
 | PENDING_APPROVAL → APPROVED | Trưởng khoa | Chỉ đề tài thuộc khoa của trưởng khoa |
 | PENDING_APPROVAL → DRAFT | Trưởng khoa | Từ chối; gửi lại vẫn phải trong hạn GV |
 | APPROVED → PUBLISHED | Trưởng khoa | Công bố; không nhảy qua duyệt |
@@ -118,7 +125,7 @@ Ngày bắt đầu SV là mốc UI nhắc trưởng khoa hoàn tất, không ph�
 
 | Từ → đến | Actor/trigger | Điều kiện |
 |---|---|---|
-| Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm 1–3 thành viên đã chấp nhận, không active khác và không còn lời mời PENDING |
+| Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm đúng 3 thành viên đã chấp nhận và đúng một leader; lưu snapshot bất biến, không active khác và không còn lời mời PENDING |
 | PENDING → ACCEPTED | Trưởng khoa | Chưa có accepted khác; đồng thời auto-reject pending khác cùng topic/đợt |
 | PENDING → REJECTED | Trưởng khoa | Lý do bắt buộc, không rỗng sau khi trim; validation lỗi giữ nguyên PENDING |
 | PENDING → REJECTED | Auto khi topic nhận nhóm khác | Lý do chính xác “Đề tài đã nhận nhóm” |
@@ -187,15 +194,14 @@ trong khi test không đại diện một luồng quản trị đã chốt.
 
 ## Migration and sample data
 
-V1 hiện tạo 20 bảng nền, khóa ngoại, chỉ mục và trigger đã được thiết kế. Q-05/Q-06
+V1 tạo 20 bảng nền, khóa ngoại, chỉ mục và trigger đã được thiết kế. Q-05/Q-06
 đã chốt giữ mô hình topic theo đợt và supervisors hiện tại, không cần tách catalog/offering
 hoặc bảng lịch sử thay GVHD. V2 thay hai
 CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. V3 siết hai giai đoạn đăng ký không được
-trùng mốc kết thúc GV/bắt đầu SV. Luồng lời mời đã xác nhận sẽ tạo `group_invitations` và
-thêm `student_groups.dissolved_at` bằng migration mới sau V4, gồm trạng thái, slot giữ chỗ,
-audit thời gian và generated guards; migration cũng điều chỉnh trigger giữ leader để chỉ áp
-dụng cho nhóm đang hoạt động, không sửa lịch sử V1. Mọi thay đổi nghiệp vụ sau này phải đi
-qua migration tiếp theo.
+trùng mốc kết thúc GV/bắt đầu SV. V4–V6 lần lượt bổ sung moderation, lời mời nhóm và
+metadata từ chối. V7 tạo `registration_members`, backfill dữ liệu lịch sử tốt nhất có thể,
+kiểm tra đủ đúng ba thành viên khi insert registration và chặn sửa/xóa snapshot. Mọi thay
+đổi nghiệp vụ sau này phải đi qua migration tiếp theo.
 Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra

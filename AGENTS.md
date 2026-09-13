@@ -6,6 +6,11 @@ File này áp dụng cho toàn bộ repository. Mọi AI hoặc thành viên tha
 ## Mô hình Git Flow
 
 - `main`: phiên bản ổn định. Không phát triển hoặc commit trực tiếp trên nhánh này.
+  **Bảo vệ tuyệt đối:** AI không được merge bất kỳ nhánh nào vào `main`, merge hoặc bật
+  auto-merge pull request có nhánh đích là `main`, hay thực hiện commit, rebase, cherry-pick,
+  push hoặc xóa làm thay đổi `main`. Chỉ chủ repository được tự thao tác thủ công. AI chỉ
+  được kiểm tra trạng thái, cảnh báo và đề xuất quy trình; phải dừng trước mọi thao tác ghi
+  lên `main`.
 - `develop`: nhánh tích hợp chung. Không phát triển feature trực tiếp trên nhánh này.
 - `feature/<feature-id>-<ten-ngan>`: tạo từ `develop`, dùng cho một feature hoặc một nhóm
   task liên quan chặt chẽ.
@@ -34,6 +39,8 @@ Dự án dùng lệnh Git chuẩn, không phụ thuộc chương trình mở r�
    `feat(periods): implement period rules (T018)`. Báo lại branch, commit, test đã chạy và
    phần còn lại; một pull request có thể chứa nhiều commit task theo đúng thứ tự phụ thuộc.
 10. Chỉ push, tạo/merge pull request, merge nhánh hoặc xóa nhánh khi người dùng yêu cầu.
+    Yêu cầu này không bao giờ cho phép AI thay đổi hoặc merge vào `main`; quy tắc bảo vệ
+    `main` phía trên luôn được ưu tiên và thao tác cuối cùng chỉ do chủ repository thực hiện.
 
 Không dùng `git reset --hard`, `git clean`, tự động stash hoặc xóa thay đổi chưa commit của
 người khác. Khi working tree đã có thay đổi, phải giữ nguyên và xác định chúng thuộc feature
