@@ -117,7 +117,7 @@ US1 và T025 đã hoàn tất; T026–T027 có thể thực hiện song song.
 
 - [X] T025 [US2] Xác nhận G-Topic/Q-05/06 trong `specs/001-topic-registration/spec.md`: topic theo đợt/reuse, nguồn danh mục, phạm vi thay GVHD; đồng bộ `data-model.md`, `contracts/web.md` và `tasks.md` trước khi schema dự kiến cần thay; không tự mở chức năng ngoài phạm vi.
 
-- [ ] T026 [P] [US2] Viết test nội dung 5 trường, 0/1/2/3 GVHD đầu vào, same department, actor tác giả, gửi lại/biên hạn và khóa ngoài DRAFT tại `src/test/java/vn/edu/topicregistration/unit/TopicRulesTest.java` (AT-03,12).
+- [X] T026 [P] [US2] Viết test nội dung 5 trường, 0/1/2/3 GVHD đầu vào, same department, actor tác giả, gửi lại/biên hạn và khóa ngoài DRAFT tại `src/test/java/vn/edu/topicregistration/unit/TopicRulesTest.java` (AT-03,12).
 
 - [ ] T027 [P] [US2] Viết contract test create/read/edit/submit với giả mạo author/department, scope, CSRF, escaping và dữ liệu không đổi tại `src/test/java/vn/edu/topicregistration/web/TopicAuthorContractTest.java` (AS-2.*, AT-06,09).
 
