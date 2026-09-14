@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.CouncilTopicEntity.CouncilTopicId;
+import vn.edu.topicregistration.entity.CouncilStatus;
 
 public interface CouncilTopicRepository
         extends JpaRepository<CouncilTopicEntity, CouncilTopicId> {
@@ -24,6 +25,28 @@ public interface CouncilTopicRepository
 
     @EntityGraph(attributePaths = {"council", "registration", "registration.topic"})
     Optional<CouncilTopicEntity> findByRegistrationId(long registrationId);
+
+    @EntityGraph(attributePaths = {
+            "council", "registration", "registration.group", "registration.topic",
+            "registration.topic.supervisors", "registration.topic.supervisors.lecturer"
+    })
+    @Query("select assignment from CouncilTopicEntity assignment "
+            + "where assignment.council.status = :status "
+            + "and exists (select member.id from CouncilMemberEntity member "
+            + "where member.council.id = assignment.council.id "
+            + "and member.lecturer.id = :lecturerId) "
+            + "order by assignment.scheduledAt, assignment.council.id, assignment.registration.id")
+    List<CouncilTopicEntity> findAllForLecturerByCouncilStatus(
+            @Param("lecturerId") long lecturerId,
+            @Param("status") CouncilStatus status);
+
+    @EntityGraph(attributePaths = {
+            "council", "registration", "registration.group", "registration.topic",
+            "registration.topic.supervisors", "registration.topic.supervisors.lecturer"
+    })
+    Optional<CouncilTopicEntity> findByCouncilIdAndRegistrationId(
+            long councilId,
+            long registrationId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {

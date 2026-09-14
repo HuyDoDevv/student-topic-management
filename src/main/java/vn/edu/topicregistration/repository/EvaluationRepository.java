@@ -20,6 +20,12 @@ public interface EvaluationRepository extends JpaRepository<EvaluationEntity, Lo
             long evaluatorId,
             long componentId);
 
+    @EntityGraph(attributePaths = {"registration", "evaluator", "component", "council"})
+    Optional<EvaluationEntity> findByCouncilIdAndRegistrationIdAndEvaluatorId(
+            long councilId,
+            long registrationId,
+            long evaluatorId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"registration", "evaluator", "component", "council"})
     @Query("select evaluation from EvaluationEntity evaluation "

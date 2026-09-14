@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chấm điểm', ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle">GIẢNG VIÊN</div>
+      <h1 class="page-title">Chấm điểm hội đồng</h1>
+      <p class="text-secondary mt-2 mb-0">Các nhóm thuộc hội đồng đang hoạt động mà bạn được phân công.</p>
+    </div>
+  </div>
+
+  <div class="row row-cards" th:if="${!assignments.isEmpty()}">
+    <div class="col-md-6 col-xl-4" th:each="assignment : ${assignments}">
+      <article class="card h-100">
+        <div class="card-body">
+          <span class="badge bg-yellow-lt mb-3" th:text="${assignment.councilName}">Hội đồng KLTN</span>
+          <h2 class="card-title" th:text="${assignment.topicTitle}">Đề tài</h2>
+          <dl class="detail-list mt-3 mb-0">
+            <dt>Nhóm</dt><dd th:text="${'N' + #numbers.formatInteger(assignment.groupId, 3)}">N001</dd>
+            <dt>Lịch</dt><dd th:text="${assignment.scheduledAt}">20/09/2026 09:00</dd>
+            <dt>Địa điểm</dt><dd th:text="${assignment.location}">Phòng A1-01</dd>
+          </dl>
+        </div>
+        <div class="card-footer text-end">
+          <a class="btn btn-primary" th:href="@{/lecturer/scoring/{councilId}/{registrationId}(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}">Mở phiếu chấm</a>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="card" th:if="${assignments.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có lượt chấm', 'Bạn không có đề tài thuộc hội đồng đang hoạt động.')}"></div>
+</section>
+</body>
+</html>

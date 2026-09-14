@@ -81,9 +81,34 @@ public class EvaluationEntity {
         this.component = Objects.requireNonNull(component, "component");
         this.council = Objects.requireNonNull(council, "council");
         this.score = Objects.requireNonNull(score, "score");
-        this.feedback = feedback;
+        this.feedback = normalizedFeedback(feedback);
         this.evaluatedAt = Objects.requireNonNull(evaluatedAt, "evaluatedAt");
         this.status = EvaluationStatus.DRAFT;
+    }
+
+    public void saveDraft(BigDecimal score, String feedback, Instant evaluatedAt) {
+        update(score, feedback, evaluatedAt);
+        this.status = EvaluationStatus.DRAFT;
+        this.submittedAt = null;
+    }
+
+    public void submit(BigDecimal score, String feedback, Instant submittedAt) {
+        update(score, feedback, submittedAt);
+        this.status = EvaluationStatus.SUBMITTED;
+        this.submittedAt = Objects.requireNonNull(submittedAt, "submittedAt");
+    }
+
+    private void update(BigDecimal score, String feedback, Instant evaluatedAt) {
+        this.score = Objects.requireNonNull(score, "score");
+        this.feedback = normalizedFeedback(feedback);
+        this.evaluatedAt = Objects.requireNonNull(evaluatedAt, "evaluatedAt");
+    }
+
+    private static String normalizedFeedback(String feedback) {
+        if (feedback == null || feedback.isBlank()) {
+            return null;
+        }
+        return feedback.strip();
     }
 
     public Long getId() {

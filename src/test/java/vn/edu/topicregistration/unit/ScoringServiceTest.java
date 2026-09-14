@@ -1,0 +1,315 @@
+package vn.edu.topicregistration.unit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+
+import vn.edu.topicregistration.entity.CouncilEntity;
+import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilStatus;
+import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.EvaluationEntity;
+import vn.edu.topicregistration.entity.EvaluationStatus;
+import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.ScoreComponentEntity;
+import vn.edu.topicregistration.entity.StudentGroupEntity;
+import vn.edu.topicregistration.entity.TopicEntity;
+import vn.edu.topicregistration.entity.TopicSupervisorEntity;
+import vn.edu.topicregistration.entity.UserAccountEntity;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.repository.CouncilMemberRepository;
+import vn.edu.topicregistration.repository.CouncilRepository;
+import vn.edu.topicregistration.repository.CouncilTopicRepository;
+import vn.edu.topicregistration.repository.EvaluationRepository;
+import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.ScoreComponentRepository;
+import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.service.ScoringService;
+import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
+
+class ScoringServiceTest {
+    private static final Instant NOW = Instant.parse("2026-09-20T02:00:00Z");
+
+    @Test
+    void createsDraftUnderPeriodCouncilAndChildLocks() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.evaluations().saveAndFlush(any())).thenAnswer(
+                invocation -> invocation.getArgument(0));
+
+        ScoringService.EvaluationView result = dependencies.service().saveDraft(
+                41L,
+                51L,
+                new ScoreCommand(new BigDecimal("8.50"), "Nhận xét", null));
+
+        InOrder order = inOrder(
+                dependencies.periods(),
+                dependencies.authorization(),
+                dependencies.councils(),
+                dependencies.councilTopics(),
+                dependencies.members(),
+                dependencies.evaluations());
+        order.verify(dependencies.periods()).findByIdForUpdate(7L);
+        order.verify(dependencies.authorization()).requireRole(RoleCode.LECTURER);
+        order.verify(dependencies.councils()).findByIdForUpdate(41L);
+        order.verify(dependencies.councilTopics()).findAllByCouncilIdForUpdate(41L);
+        order.verify(dependencies.members()).findAllByCouncilIdForUpdate(41L);
+        order.verify(dependencies.evaluations()).findAllByCouncilIdForUpdate(41L);
+
+        ArgumentCaptor<EvaluationEntity> saved = ArgumentCaptor.forClass(EvaluationEntity.class);
+        verify(dependencies.evaluations()).saveAndFlush(saved.capture());
+        assertEquals(fixture.evaluator(), saved.getValue().getEvaluator());
+        assertEquals(new BigDecimal("8.50"), saved.getValue().getScore());
+        assertEquals(EvaluationStatus.DRAFT, result.status());
+    }
+
+    @Test
+    void submitCreatesSystemComponentWhenPeriodHasNone() {
+        Dependencies dependencies = dependencies();
+        validFixture(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.components().findByPeriodIdAndName(
+                7L, ScoreComponentEntity.COUNCIL_SCORE_NAME)).thenReturn(Optional.empty());
+        when(dependencies.components().saveAndFlush(any())).thenAnswer(
+                invocation -> invocation.getArgument(0));
+        when(dependencies.evaluations().saveAndFlush(any())).thenAnswer(
+                invocation -> invocation.getArgument(0));
+
+        ScoringService.EvaluationView result = dependencies.service().submit(
+                41L,
+                51L,
+                new ScoreCommand(new BigDecimal("9.00"), "Đạt", null));
+
+        verify(dependencies.components()).saveAndFlush(any(ScoreComponentEntity.class));
+        assertEquals(EvaluationStatus.SUBMITTED, result.status());
+        assertEquals(NOW, result.submittedAt());
+    }
+
+    @Test
+    void submittedEvaluationCanBeChangedAndSubmittedAgainWhileActive() {
+        Dependencies dependencies = dependencies();
+        validFixture(dependencies, CouncilStatus.ACTIVE);
+        EvaluationEntity existing = mock(EvaluationEntity.class);
+        RegistrationEntity registration = registration(dependencies);
+        UserAccountEntity evaluator = evaluator(dependencies);
+        ScoreComponentEntity component = component(dependencies);
+        when(existing.getRegistration()).thenReturn(registration);
+        when(existing.getEvaluator()).thenReturn(evaluator);
+        when(existing.getComponent()).thenReturn(component);
+        when(existing.getVersion()).thenReturn(3L);
+        when(existing.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(existing.getScore()).thenReturn(new BigDecimal("8.00"));
+        when(existing.getFeedback()).thenReturn("Cũ");
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(existing));
+
+        dependencies.service().submit(
+                41L,
+                51L,
+                new ScoreCommand(new BigDecimal("9.25"), "Đã sửa", 3L));
+
+        verify(existing).submit(new BigDecimal("9.25"), "Đã sửa", NOW);
+        verify(dependencies.evaluations()).flush();
+    }
+
+    @Test
+    void staleEvaluationVersionCannotOverwriteExistingScore() {
+        Dependencies dependencies = dependencies();
+        validFixture(dependencies, CouncilStatus.ACTIVE);
+        EvaluationEntity existing = mock(EvaluationEntity.class);
+        RegistrationEntity registration = registration(dependencies);
+        UserAccountEntity evaluator = evaluator(dependencies);
+        ScoreComponentEntity component = component(dependencies);
+        when(existing.getRegistration()).thenReturn(registration);
+        when(existing.getEvaluator()).thenReturn(evaluator);
+        when(existing.getComponent()).thenReturn(component);
+        when(existing.getVersion()).thenReturn(4L);
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(existing));
+
+        assertThrows(OptimisticLockingFailureException.class,
+                () -> dependencies.service().saveDraft(
+                        41L,
+                        51L,
+                        new ScoreCommand(new BigDecimal("7.50"), null, 3L)));
+
+        verify(existing, never()).saveDraft(any(), any(), any());
+        verify(dependencies.evaluations(), never()).flush();
+    }
+
+    @Test
+    void outsiderAndSupervisorCannotWriteAnEvaluation() {
+        Dependencies outsiderDependencies = dependencies();
+        validFixture(outsiderDependencies, CouncilStatus.ACTIVE);
+        when(outsiderDependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
+                new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 4L, 2L));
+
+        assertThrows(AccessDeniedException.class,
+                () -> outsiderDependencies.service().submit(
+                        41L, 51L, new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(outsiderDependencies.evaluations(), never()).saveAndFlush(any());
+
+        Dependencies supervisorDependencies = dependencies();
+        Fixture fixture = validFixture(supervisorDependencies, CouncilStatus.ACTIVE);
+        TopicSupervisorEntity supervisor = mock(TopicSupervisorEntity.class);
+        when(supervisor.getLecturer()).thenReturn(fixture.evaluator());
+        when(fixture.topic().getSupervisors()).thenReturn(List.of(supervisor));
+
+        assertThrows(AccessDeniedException.class,
+                () -> supervisorDependencies.service().submit(
+                        41L, 51L, new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(supervisorDependencies.evaluations(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void completedCouncilRejectsChangesToSubmittedScore() {
+        Dependencies dependencies = dependencies();
+        validFixture(dependencies, CouncilStatus.COMPLETED);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().saveDraft(
+                        41L,
+                        51L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, exception.code());
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+    }
+
+    private static Fixture validFixture(Dependencies dependencies, CouncilStatus status) {
+        FacultyEntity faculty = mock(FacultyEntity.class);
+        when(faculty.getId()).thenReturn(2L);
+        RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
+        when(period.getId()).thenReturn(7L);
+        when(period.getFaculty()).thenReturn(faculty);
+
+        CouncilEntity council = mock(CouncilEntity.class);
+        when(council.getId()).thenReturn(41L);
+        when(council.getPeriod()).thenReturn(period);
+        when(council.getName()).thenReturn("Hội đồng KLTN");
+        when(council.getStatus()).thenReturn(status);
+
+        UserAccountEntity evaluator = mock(UserAccountEntity.class);
+        when(evaluator.getId()).thenReturn(11L);
+        when(evaluator.getFullName()).thenReturn("Giảng viên A");
+        CouncilMemberEntity member = mock(CouncilMemberEntity.class);
+        when(member.getLecturer()).thenReturn(evaluator);
+
+        TopicEntity topic = mock(TopicEntity.class);
+        when(topic.getTitle()).thenReturn("Đề tài thử nghiệm");
+        when(topic.getSupervisors()).thenReturn(List.of());
+        StudentGroupEntity group = mock(StudentGroupEntity.class);
+        when(group.getId()).thenReturn(21L);
+        RegistrationEntity registration = mock(RegistrationEntity.class);
+        when(registration.getId()).thenReturn(51L);
+        when(registration.getPeriod()).thenReturn(period);
+        when(registration.getTopic()).thenReturn(topic);
+        when(registration.getGroup()).thenReturn(group);
+        when(registration.getStatus()).thenReturn(RegistrationStatus.ACCEPTED);
+        CouncilTopicEntity assignment = mock(CouncilTopicEntity.class);
+        when(assignment.getCouncil()).thenReturn(council);
+        when(assignment.getRegistration()).thenReturn(registration);
+
+        ScoreComponentEntity component = mock(ScoreComponentEntity.class);
+        when(component.getId()).thenReturn(61L);
+        when(component.getPeriod()).thenReturn(period);
+
+        when(dependencies.councils().findPeriodIdByCouncilId(41L))
+                .thenReturn(Optional.of(7L));
+        when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
+        when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 4L, 2L));
+        when(dependencies.councils().findByIdForUpdate(41L)).thenReturn(Optional.of(council));
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(assignment));
+        when(dependencies.members().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(member));
+        when(dependencies.components().findByPeriodIdAndName(
+                7L, ScoreComponentEntity.COUNCIL_SCORE_NAME))
+                .thenReturn(Optional.of(component));
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of());
+
+        return new Fixture(period, council, evaluator, topic, registration, component);
+    }
+
+    private static RegistrationEntity registration(Dependencies dependencies) {
+        return dependencies.councilTopics().findAllByCouncilIdForUpdate(41L)
+                .getFirst().getRegistration();
+    }
+
+    private static UserAccountEntity evaluator(Dependencies dependencies) {
+        return dependencies.members().findAllByCouncilIdForUpdate(41L)
+                .getFirst().getLecturer();
+    }
+
+    private static ScoreComponentEntity component(Dependencies dependencies) {
+        return dependencies.components().findByPeriodIdAndName(
+                7L, ScoreComponentEntity.COUNCIL_SCORE_NAME).orElseThrow();
+    }
+
+    private static Dependencies dependencies() {
+        return new Dependencies(
+                mock(RegistrationPeriodRepository.class),
+                mock(CouncilRepository.class),
+                mock(CouncilTopicRepository.class),
+                mock(CouncilMemberRepository.class),
+                mock(ScoreComponentRepository.class),
+                mock(EvaluationRepository.class),
+                mock(AuthorizationPolicy.class));
+    }
+
+    private record Dependencies(
+            RegistrationPeriodRepository periods,
+            CouncilRepository councils,
+            CouncilTopicRepository councilTopics,
+            CouncilMemberRepository members,
+            ScoreComponentRepository components,
+            EvaluationRepository evaluations,
+            AuthorizationPolicy authorization) {
+        ScoringService service() {
+            return new ScoringService(
+                    periods,
+                    councils,
+                    councilTopics,
+                    members,
+                    components,
+                    evaluations,
+                    authorization,
+                    Clock.fixed(NOW, ZoneOffset.UTC));
+        }
+    }
+
+    private record Fixture(
+            RegistrationPeriodEntity period,
+            CouncilEntity council,
+            UserAccountEntity evaluator,
+            TopicEntity topic,
+            RegistrationEntity registration,
+            ScoreComponentEntity component) {
+    }
+}

@@ -70,9 +70,15 @@ lock period→council→children và report hiện hành khi activate. Regressio
 **Independent Test**: Fixture ACTIVE board; member, outsider, supervisor và evaluator khác;
 biên 0/10/10.01/scale 3, DRAFT/SUBMITTED/resubmit và state lock.
 
-- [ ] T005 [US3] Viết `ScoreRulesTest.java`, `ScoringServiceTest.java`, `ScoringControllerTest.java` trước; cài `ScoreForm`, `ScoringService`, `ScoringController` và templates `src/main/resources/templates/scoring/`; tự bảo đảm component `Điểm hội đồng`, kiểm tra assignment/supervisor/status/version và cho sửa SUBMITTED khi còn ACTIVE; chạy tests và commit riêng scoring. (FR-20,24–25; AS-8.1–8.5; SC-012)
+- [X] T005 [US3] Viết `ScoreRulesTest.java`, `ScoringServiceTest.java`, `ScoringControllerTest.java` trước; cài `ScoreForm`, `ScoringService`, `ScoringController` và templates `src/main/resources/templates/scoring/`; tự bảo đảm component `Điểm hội đồng`, kiểm tra assignment/supervisor/status/version và cho sửa SUBMITTED khi còn ACTIVE; chạy tests và commit riêng scoring. (FR-20,24–25; AS-8.1–8.5; SC-012)
 
 **Checkpoint**: Một evaluation/evaluator/registration; không actor trái phép hoặc score sai được lưu.
+
+**T005 evidence (2026-09-14)**: Rules/service/web tests được viết và chạy đỏ trước khi có
+API scoring. Sau implementation, 15/15 ca mục tiêu đạt: biên 0/10, scale tối đa 2, DRAFT/
+SUBMITTED/resubmit, stale version, tự tạo component hệ thống, outsider/supervisor/state lock,
+field whitelist và thứ tự khóa period→council→children/evaluations. Regression không cần
+MySQL/E2E đạt 123/123; schema và layered architecture checks đều đạt.
 
 ## Phase 6: User Story 4 — Tổng hợp và publish kết quả (P1)
 
