@@ -23,9 +23,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import vn.edu.topicregistration.shared.seed.DemoSeedProperties;
-import vn.edu.topicregistration.shared.seed.LocalDemoSeeder;
-import vn.edu.topicregistration.shared.time.ProjectTime;
+import vn.edu.topicregistration.seed.DemoSeedProperties;
+import vn.edu.topicregistration.seed.LocalDemoSeeder;
+import vn.edu.topicregistration.util.ProjectTime;
 
 /** T060: migrate only an explicitly configured, isolated MySQL test database. */
 class SchemaSeedMigrationIT {

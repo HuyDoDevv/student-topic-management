@@ -15,14 +15,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
-import vn.edu.topicregistration.shared.dashboard.DashboardQuery;
-import vn.edu.topicregistration.shared.dashboard.DashboardQuery.ActiveRegistration;
-import vn.edu.topicregistration.shared.dashboard.DashboardService;
-import vn.edu.topicregistration.shared.dashboard.DashboardView;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentity;
-import vn.edu.topicregistration.shared.time.ProjectTime;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.repository.DashboardQuery;
+import vn.edu.topicregistration.repository.DashboardQuery.ActiveRegistration;
+import vn.edu.topicregistration.service.DashboardService;
+import vn.edu.topicregistration.dto.DashboardView;
+import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.util.ProjectTime;
 
 class DashboardServiceTest {
     AuthorizationPolicy policy;

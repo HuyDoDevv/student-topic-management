@@ -222,7 +222,7 @@ class PeriodRulesTest {
      */
     private static final class RulesDriver {
         private static final String RULES_CLASS =
-                "vn.edu.topicregistration.periods.domain.PeriodRules";
+                "vn.edu.topicregistration.service.PeriodRules";
 
         TestConfig create(TestConfig request) {
             Object result = invoke(

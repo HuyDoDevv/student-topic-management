@@ -18,27 +18,27 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import vn.edu.topicregistration.groups.application.ActiveRegistrationQuery;
-import vn.edu.topicregistration.groups.application.ActiveRegistrationQuery.ActiveRegistration;
-import vn.edu.topicregistration.groups.application.ActiveRegistrationQuery.ActiveRegistrationStatus;
-import vn.edu.topicregistration.groups.application.GroupService;
-import vn.edu.topicregistration.groups.persistence.GroupInvitationRepository;
-import vn.edu.topicregistration.groups.persistence.GroupMembershipEntity;
-import vn.edu.topicregistration.groups.persistence.GroupMembershipRepository;
-import vn.edu.topicregistration.groups.persistence.StudentGroupEntity;
-import vn.edu.topicregistration.groups.persistence.StudentGroupRepository;
-import vn.edu.topicregistration.identity.domain.RoleCode;
-import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
-import vn.edu.topicregistration.identity.persistence.UserAccountRepository;
-import vn.edu.topicregistration.periods.persistence.RegistrationPeriodEntity;
-import vn.edu.topicregistration.periods.persistence.RegistrationPeriodRepository;
-import vn.edu.topicregistration.registrations.application.ActiveRegistrationQueryAdapter;
-import vn.edu.topicregistration.registrations.persistence.RegistrationEntity;
-import vn.edu.topicregistration.registrations.persistence.RegistrationRepository;
-import vn.edu.topicregistration.registrations.persistence.RegistrationStatus;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentity;
-import vn.edu.topicregistration.topics.persistence.TopicEntity;
+import vn.edu.topicregistration.service.ActiveRegistrationQuery;
+import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistration;
+import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistrationStatus;
+import vn.edu.topicregistration.service.GroupService;
+import vn.edu.topicregistration.repository.GroupInvitationRepository;
+import vn.edu.topicregistration.entity.GroupMembershipEntity;
+import vn.edu.topicregistration.repository.GroupMembershipRepository;
+import vn.edu.topicregistration.entity.StudentGroupEntity;
+import vn.edu.topicregistration.repository.StudentGroupRepository;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.UserAccountEntity;
+import vn.edu.topicregistration.repository.UserAccountRepository;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.service.ActiveRegistrationQueryAdapter;
+import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.repository.RegistrationRepository;
+import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.entity.TopicEntity;
 
 class GroupRegistrationFeedbackTest {
     private static final Instant NOW = Instant.parse("2026-09-13T01:00:00Z");
@@ -86,7 +86,7 @@ class GroupRegistrationFeedbackTest {
                         "Hệ thống quản lý đăng ký đề tài",
                         ActiveRegistrationStatus.ACCEPTED)));
         when(invitations.countByGroupIdAndStatus(
-                eq(21L), eq(vn.edu.topicregistration.groups.persistence.GroupInvitationStatus.PENDING)))
+                eq(21L), eq(vn.edu.topicregistration.entity.GroupInvitationStatus.PENDING)))
                 .thenReturn(0L);
 
         var view = service.getVisible(21L);

@@ -32,9 +32,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.web.context.WebApplicationContext;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
-import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
-import vn.edu.topicregistration.identity.persistence.UserAccountRepository;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.UserAccountEntity;
+import vn.edu.topicregistration.repository.UserAccountRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude="

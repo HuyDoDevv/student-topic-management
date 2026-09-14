@@ -1,0 +1,97 @@
+package vn.edu.topicregistration.entity;
+
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import jakarta.persistence.Column;
+
+@Entity
+@Table(name = "student_groups")
+public class StudentGroupEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "period_id", nullable = false)
+    private RegistrationPeriodEntity period;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "leader_student_id", nullable = false)
+    private UserAccountEntity leader;
+
+    @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)
+    @OrderBy("slot ASC")
+    private List<GroupMembershipEntity> members = new ArrayList<>();
+
+    @Version
+    @Column(nullable = false)
+    private long version;
+
+    @Column(name = "dissolved_at", columnDefinition = "TIMESTAMP(6)")
+    private Instant dissolvedAt;
+
+    protected StudentGroupEntity() {
+    }
+
+    public StudentGroupEntity(
+            RegistrationPeriodEntity period,
+            UserAccountEntity leader) {
+        this.period = Objects.requireNonNull(period, "period");
+        this.leader = Objects.requireNonNull(leader, "leader");
+    }
+
+    public void transferLeadership(UserAccountEntity newLeader) {
+        this.leader = Objects.requireNonNull(newLeader, "newLeader");
+    }
+
+    public void dissolve(Instant dissolvedAt) {
+        if (this.dissolvedAt != null) {
+            throw new IllegalStateException("Group is already dissolved");
+        }
+        this.dissolvedAt = Objects.requireNonNull(dissolvedAt, "dissolvedAt");
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public RegistrationPeriodEntity getPeriod() {
+        return period;
+    }
+
+    public UserAccountEntity getLeader() {
+        return leader;
+    }
+
+    public List<GroupMembershipEntity> getMembers() {
+        return Collections.unmodifiableList(members);
+    }
+
+    public long getVersion() {
+        return version;
+    }
+
+    public Instant getDissolvedAt() {
+        return dissolvedAt;
+    }
+
+    public boolean isActive() {
+        return dissolvedAt == null;
+    }
+}

@@ -10,7 +10,7 @@ import java.util.Set;
 
 import javax.sql.DataSource;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.entity.RoleCode;
 
 public final class FixtureSupport {
     private final DataSource dataSource;

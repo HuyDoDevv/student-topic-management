@@ -15,8 +15,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import vn.edu.topicregistration.concurrency.ConcurrentTestSupport;
-import vn.edu.topicregistration.identity.domain.RoleCode;
-import vn.edu.topicregistration.shared.time.TimeConfig;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.config.TimeConfig;
 
 class FoundationDatabaseIT {
     static DataSource dataSource;

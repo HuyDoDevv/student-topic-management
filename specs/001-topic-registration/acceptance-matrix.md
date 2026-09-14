@@ -92,3 +92,11 @@ database local của người dùng.
 | Seed chủ động | PASS | Thiếu secret không ghi dữ liệu; nhập secret sinh tại runtime tạo 11 tài khoản, 4 đợt, 3 đăng ký với 9 snapshot; hash khớp, seed lại không nhân đôi hoặc ghi đè trạng thái/ngày đã sửa. |
 | V6 có fixture → V7 | PASS | Giữ 3 đăng ký lịch sử; backfill 7 snapshot, gồm fallback một leader cho nhóm đã giải tán; checksum V1–V6 không đổi, chạy lại Flyway không áp thêm migration. Snapshot V7 chặn UPDATE/DELETE và trigger từ chối gửi từ nhóm một thành viên. |
 | Kiểm thử | PASS | MySQL 8.4.11 ở database `topic_registration_t060_test` cô lập; `./mvnw test` và `./mvnw verify -Pintegration` đạt, gồm 3/3 ca T060 và 13/13 ca integration/concurrency. Không dùng DB local cổng 3306 hay sửa migration V1–V7. |
+
+## Bằng chứng tái cấu trúc MVC T076 — 2026-09-14
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Cấu trúc production | PASS | 74 lớp production được gom theo các layer `config`, `controller`, `dto`, `entity`, `exception`, `repository`, `security`, `seed`, `service`, `util`; chỉ còn một lớp `TopicRegistrationApplication` mang `@SpringBootApplication`. |
+| Hành vi và hợp đồng | PASS | Không đổi route, template, migration hoặc logic nghiệp vụ; production và test compile sạch. Bộ regression không cần MySQL đạt 77/77 test, gồm 2/2 ca `LayeredArchitectureTest`. |
+| Full unit/web suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test` chạy 84 test: 77 đạt, 7 lỗi đều thuộc `PeriodContractTest` vì chưa cấu hình `TEST_DATABASE_URL`; baseline trước refactor có cùng 7 lỗi. Không dùng database local có dữ liệu thật và không bỏ qua test. |

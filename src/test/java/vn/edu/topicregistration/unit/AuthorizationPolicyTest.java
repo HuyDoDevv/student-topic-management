@@ -16,12 +16,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
-import vn.edu.topicregistration.identity.persistence.DepartmentEntity;
-import vn.edu.topicregistration.identity.persistence.FacultyEntity;
-import vn.edu.topicregistration.identity.persistence.UserAccountEntity;
-import vn.edu.topicregistration.identity.persistence.UserAccountRepository;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.UserAccountEntity;
+import vn.edu.topicregistration.repository.UserAccountRepository;
+import vn.edu.topicregistration.security.AuthorizationPolicy;
 
 class AuthorizationPolicyTest {
     UserAccountRepository accounts;
