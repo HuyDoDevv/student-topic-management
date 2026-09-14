@@ -70,6 +70,13 @@ ALTER TABLE evaluations
 UPDATE evaluations
 SET status = 'SUBMITTED', submitted_at = evaluated_at;
 
+-- MySQL does not allow changing the nullability of a column while a foreign key uses it.
+-- Keep the supporting indexes, replace the two constraints around the column change, then
+-- restore the same referential rules in the completed ALTER.
+ALTER TABLE evaluations
+    DROP FOREIGN KEY fk_evaluations_council_topic,
+    DROP FOREIGN KEY fk_evaluations_council_member;
+
 ALTER TABLE evaluations
     MODIFY COLUMN council_id BIGINT NOT NULL,
     ADD CONSTRAINT chk_evaluations_lifecycle CHECK (status IN ('DRAFT','SUBMITTED')),
@@ -80,7 +87,13 @@ ALTER TABLE evaluations
         (status = 'DRAFT' AND submitted_at IS NULL)
         OR (status = 'SUBMITTED' AND submitted_at IS NOT NULL)
     ),
-    ADD CONSTRAINT chk_evaluations_version CHECK (version >= 0);
+    ADD CONSTRAINT chk_evaluations_version CHECK (version >= 0),
+    ADD CONSTRAINT fk_evaluations_council_topic
+        FOREIGN KEY (council_id, registration_id)
+        REFERENCES council_topics(council_id, registration_id),
+    ADD CONSTRAINT fk_evaluations_council_member
+        FOREIGN KEY (council_id, evaluator_id)
+        REFERENCES council_members(council_id, lecturer_id);
 
 ALTER TABLE final_results
     ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'READY' AFTER registration_status,
@@ -88,6 +101,10 @@ ALTER TABLE final_results
 
 UPDATE final_results
 SET status = CASE WHEN published_at IS NULL THEN 'READY' ELSE 'PUBLISHED' END;
+
+ALTER TABLE final_results
+    DROP FOREIGN KEY fk_final_results_council_topic,
+    DROP FOREIGN KEY fk_final_results_consolidator;
 
 ALTER TABLE final_results
     MODIFY COLUMN council_id BIGINT NOT NULL,
@@ -113,4 +130,9 @@ ALTER TABLE final_results
     ADD CONSTRAINT chk_final_results_score CHECK (
         final_score BETWEEN 0.00 AND 10.00 AND final_score = ROUND(final_score, 2)
     ),
-    ADD CONSTRAINT chk_final_results_version CHECK (version >= 0);
+    ADD CONSTRAINT chk_final_results_version CHECK (version >= 0),
+    ADD CONSTRAINT fk_final_results_council_topic
+        FOREIGN KEY (council_id, registration_id)
+        REFERENCES council_topics(council_id, registration_id),
+    ADD CONSTRAINT fk_final_results_consolidator
+        FOREIGN KEY (consolidated_by) REFERENCES user_accounts(id);
