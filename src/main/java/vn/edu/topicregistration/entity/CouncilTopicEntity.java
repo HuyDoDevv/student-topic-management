@@ -54,6 +54,15 @@ public class CouncilTopicEntity {
         this.periodId = registration.getPeriod().getId();
     }
 
+    public void schedule(Instant scheduledAt, String location) {
+        String normalizedLocation = location == null ? null : location.strip();
+        if (scheduledAt == null || normalizedLocation == null || normalizedLocation.isEmpty()) {
+            throw new IllegalArgumentException("Council assignment schedule is incomplete");
+        }
+        this.scheduledAt = scheduledAt;
+        this.location = normalizedLocation;
+    }
+
     public CouncilTopicId getId() {
         return id;
     }

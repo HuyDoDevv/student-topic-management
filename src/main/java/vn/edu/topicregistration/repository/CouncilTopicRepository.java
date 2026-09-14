@@ -15,13 +15,22 @@ import vn.edu.topicregistration.entity.CouncilTopicEntity.CouncilTopicId;
 
 public interface CouncilTopicRepository
         extends JpaRepository<CouncilTopicEntity, CouncilTopicId> {
-    @EntityGraph(attributePaths = {"council", "registration", "registration.topic"})
+    @EntityGraph(attributePaths = {
+            "council", "registration", "registration.group", "registration.topic",
+            "registration.topic.department", "registration.topic.supervisors",
+            "registration.topic.supervisors.lecturer"
+    })
     List<CouncilTopicEntity> findAllByCouncilIdOrderByRegistrationId(long councilId);
 
     @EntityGraph(attributePaths = {"council", "registration", "registration.topic"})
     Optional<CouncilTopicEntity> findByRegistrationId(long registrationId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {
+            "registration", "registration.group", "registration.topic",
+            "registration.topic.department", "registration.topic.supervisors",
+            "registration.topic.supervisors.lecturer"
+    })
     @Query("select assignment from CouncilTopicEntity assignment "
             + "where assignment.council.id = :councilId order by assignment.registration.id")
     List<CouncilTopicEntity> findAllByCouncilIdForUpdate(@Param("councilId") long councilId);

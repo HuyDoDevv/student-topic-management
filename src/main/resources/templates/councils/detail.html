@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chi tiết hội đồng', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle" th:text="${board.periodName + ' · ' + board.departmentName}">Đợt · Bộ môn</div>
+      <h1 class="page-title" th:text="${board.name}">Hội đồng KLTN</h1>
+      <span class="badge mt-2" th:classappend="${board.statusClass}" th:text="${board.statusLabel}">Nháp</span>
+    </div>
+    <div class="btn-list">
+      <a class="btn btn-outline-secondary" th:href="@{/faculty/boards}">Quay lại</a>
+      <form th:if="${nextAction != null}" method="post" th:action="@{|/faculty/boards/${board.id}/${nextAction.route}|}" data-prevent-double-submit>
+        <input type="hidden" name="version" th:value="${board.version}">
+        <button class="btn btn-primary" type="submit" th:text="${nextAction.label}">Chuyển trạng thái</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-lg-5">
+      <article class="card h-100">
+        <div class="card-header">
+          <h2 class="card-title">Thành viên hội đồng</h2>
+          <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(members)} + '/5'">3/5</span>
+        </div>
+        <div class="list-group list-group-flush">
+          <div class="list-group-item" th:each="member : ${members}">
+            <div class="d-flex justify-content-between gap-3">
+              <div><strong th:text="${member.fullName}">Giảng viên</strong><div class="small text-secondary" th:text="${member.username}">lecturer</div></div>
+              <span class="badge bg-azure-lt align-self-start" th:text="${member.role}">Thành viên</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-lg-7">
+      <article class="card h-100">
+        <div class="card-header"><h2 class="card-title">Đăng ký được phân công</h2></div>
+        <div class="table-responsive" th:if="${!assignments.isEmpty()}">
+          <table class="table table-vcenter card-table responsive-table">
+            <thead><tr><th>Nhóm / đề tài</th><th>Lịch</th><th>Địa điểm</th></tr></thead>
+            <tbody>
+            <tr th:each="assignment : ${assignments}">
+              <td data-label="Nhóm / đề tài"><a th:href="@{/registrations/{id}(id=${assignment.registrationId})}" th:text="${'N' + #numbers.formatInteger(assignment.groupId, 3)}">N001</a><div class="small text-secondary" th:text="${assignment.topicTitle}">Đề tài</div></td>
+              <td data-label="Lịch" th:text="${assignment.scheduledAt}">20/09/2026 09:00</td>
+              <td data-label="Địa điểm" th:text="${assignment.location}">Phòng A1-01</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-body text-secondary" th:if="${assignments.isEmpty()}">Chưa có đăng ký nào được phân công.</div>
+      </article>
+    </div>
+  </div>
+
+  <form class="card mt-3" method="post" th:if="${canEditAssignments}"
+        th:action="@{/faculty/boards/{id}/assignments(id=${board.id})}"
+        th:object="${assignmentForm}" data-prevent-double-submit>
+    <input type="hidden" th:field="*{version}">
+    <div class="card-header"><h2 class="card-title">Gán đăng ký và lịch bảo vệ</h2></div>
+    <div class="card-body">
+      <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Phân công chưa hợp lệ.</div>
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <label class="form-label" for="registrationId">Đăng ký đã chấp nhận</label>
+          <select class="form-select" id="registrationId" th:field="*{registrationId}" required>
+            <option value="">Chọn đăng ký</option>
+            <option th:each="registration : ${availableRegistrations}" th:value="${registration.id}" th:text="${'N' + #numbers.formatInteger(registration.groupId, 3) + ' · ' + registration.topicTitle}">N001 · Đề tài</option>
+          </select>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('registrationId')}" th:errors="*{registrationId}"></div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <label class="form-label" for="scheduledAt">Thời gian</label>
+          <input class="form-control" id="scheduledAt" type="datetime-local" th:field="*{scheduledAt}" required>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('scheduledAt')}" th:errors="*{scheduledAt}"></div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+          <label class="form-label" for="location">Địa điểm</label>
+          <input class="form-control" id="location" type="text" th:field="*{location}" maxlength="500" required>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('location')}" th:errors="*{location}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-end"><button class="btn btn-outline-primary" type="submit">Lưu phân công</button></div>
+  </form>
+
+  <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'SCHEDULED'}">
+    Khi kích hoạt, hệ thống kiểm tra lại vai trò, bộ môn, xung đột giảng viên hướng dẫn và báo cáo hiện hành của mọi nhóm.
+  </div>
+</section>
+</body>
+</html>

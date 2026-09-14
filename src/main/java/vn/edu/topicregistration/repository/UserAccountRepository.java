@@ -18,6 +18,10 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
     @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
     Optional<UserAccountEntity> findByUsername(String username);
 
+    @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
+    @Query("select distinct account from UserAccountEntity account where account.id = :id")
+    Optional<UserAccountEntity> findDetailedById(@Param("id") long id);
+
     @EntityGraph(attributePaths = {"department", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account "
             + "join account.roles assignment "

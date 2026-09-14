@@ -21,7 +21,8 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
 
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "group", "group.leader",
-            "topic", "topic.department", "topic.author", "decisionActor"
+            "topic", "topic.department", "topic.author", "topic.supervisors",
+            "topic.supervisors.lecturer", "decisionActor"
     })
     @Query("select registration from RegistrationEntity registration "
             + "where registration.id = :id")
@@ -30,7 +31,8 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "group", "group.leader",
-            "topic", "topic.department", "topic.author", "decisionActor"
+            "topic", "topic.department", "topic.author", "topic.supervisors",
+            "topic.supervisors.lecturer", "decisionActor"
     })
     @Query("select registration from RegistrationEntity registration "
             + "where registration.id = :id")

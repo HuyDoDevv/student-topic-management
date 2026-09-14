@@ -5,6 +5,7 @@ import vn.edu.topicregistration.config.TimeConfig;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -35,6 +36,10 @@ public class ProjectTime {
                 .atStartOfDay(TimeConfig.BUSINESS_ZONE)
                 .toInstant()
                 .minus(1, ChronoUnit.MICROS);
+    }
+
+    public Instant toInstant(LocalDateTime localDateTime) {
+        return localDateTime.atZone(TimeConfig.BUSINESS_ZONE).toInstant();
     }
 
     public LocalDate toBusinessDate(Instant instant) {

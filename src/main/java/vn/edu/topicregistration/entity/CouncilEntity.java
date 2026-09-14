@@ -72,6 +72,21 @@ public class CouncilEntity {
         this.status = CouncilStatus.DRAFT;
     }
 
+    public void transitionTo(CouncilStatus target) {
+        CouncilStatus required = switch (status) {
+            case DRAFT -> CouncilStatus.ASSIGNED;
+            case ASSIGNED -> CouncilStatus.SCHEDULED;
+            case SCHEDULED -> CouncilStatus.ACTIVE;
+            case ACTIVE -> CouncilStatus.COMPLETED;
+            case COMPLETED -> CouncilStatus.PUBLISHED;
+            case PUBLISHED -> null;
+        };
+        if (target == null || target != required) {
+            throw new IllegalStateException("Council transition is not allowed");
+        }
+        this.status = target;
+    }
+
     public Long getId() {
         return id;
     }

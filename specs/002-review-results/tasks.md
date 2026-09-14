@@ -52,9 +52,16 @@ download headers và multipart vượt giới hạn trả 422.
 **Independent Test**: Fixture accepted registrations và lecturers; thử 3/5 hợp lệ, 2/6,
 trùng chức danh/member, khác department, supervisor, COURSE/NCKH và duplicate assignment.
 
-- [ ] T004 [US2] Viết `CouncilRulesTest.java`, `CouncilServiceTest.java`, `CouncilControllerTest.java` trước; cài `CouncilForm`, `CouncilAssignmentForm`, `CouncilService`, `CouncilController` và templates `src/main/resources/templates/councils/`; hỗ trợ DRAFT→ASSIGNED→SCHEDULED→ACTIVE, period-first locking, nhiều registration cùng department, backend scope và stale version; chạy tests và commit riêng council. (FR-18–19,24; AS-7.1–7.6; SC-011)
+- [X] T004 [US2] Viết `CouncilRulesTest.java`, `CouncilServiceTest.java`, `CouncilControllerTest.java` trước; cài `CouncilForm`, `CouncilAssignmentForm`, `CouncilService`, `CouncilController` và templates `src/main/resources/templates/councils/`; hỗ trợ DRAFT→ASSIGNED→SCHEDULED→ACTIVE, period-first locking, nhiều registration cùng department, backend scope và stale version; chạy tests và commit riêng council. (FR-18–19,24; AS-7.1–7.6; SC-011)
 
 **Checkpoint**: Không council ACTIVE nào vi phạm 3–5/member role/department/supervisor/report.
+
+**T004 evidence (2026-09-14)**: Ba lớp test council được viết và chạy đỏ trước vì API chưa
+có; ca revalidate lecturer sau đó cũng được chạy đỏ trước khi siết service. Rules/service/web
+đạt 18/18, gồm 3–5 member, role/bộ môn, supervisor, scope, stale version, field whitelist,
+lock period→council→children và report hiện hành khi activate. Regression không cần MySQL/E2E
+đạt 108/108. Suite mặc định chạy 115 test: 108 đạt, 7 lỗi môi trường cũ ở
+`PeriodContractTest` vì thiếu `TEST_DATABASE_URL`; không dùng database local có dữ liệu thật.
 
 ## Phase 5: User Story 3 — Thành viên hội đồng chấm điểm (P1)
 
