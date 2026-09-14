@@ -8,15 +8,18 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import vn.edu.topicregistration.shared.dashboard.DashboardService;
 import vn.edu.topicregistration.shared.time.ProjectTime;
 
 @Controller
-@Profile("!preview")
+@Profile("!preview & !test")
 public class FoundationController {
     private final ProjectTime projectTime;
+    private final DashboardService dashboard;
 
-    public FoundationController(ProjectTime projectTime) {
+    public FoundationController(ProjectTime projectTime, DashboardService dashboard) {
         this.projectTime = projectTime;
+        this.dashboard = dashboard;
     }
 
     @GetMapping({"/", "/dashboard"})
@@ -25,6 +28,7 @@ public class FoundationController {
                 DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))));
         model.addAttribute("activeNav", "dashboard");
         model.addAttribute("pageSection", "Không gian làm việc");
+        model.addAttribute("dashboard", dashboard.current());
         return "dashboard/index";
     }
 }

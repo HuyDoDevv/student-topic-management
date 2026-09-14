@@ -101,6 +101,10 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 
 - Q: Sau khi trưởng khoa chấp nhận đăng ký đề tài của nhóm, mọi thành viên nhận biết kết quả bằng cách nào? → A: Trang chi tiết nhóm phải hiển thị đăng ký có hiệu lực cho mọi thành viên hiện tại, gồm tên đề tài, trạng thái “Chờ xét” hoặc “Đã chấp nhận” và liên kết tới chi tiết đăng ký. Khi trạng thái là ACCEPTED, trang nhóm phải có xác nhận nổi bật rằng đăng ký đề tài đã thành công. Đây là phản hồi trực tiếp trên giao diện khi sinh viên truy cập, không mở rộng thành email, push hoặc mô-đun thông báo tự động. Xác nhận U ngày 2026-09-13; liên quan FR-10–11 và AS-5.4.
 
+### Session 2026-09-14
+
+- Q: Dashboard của giảng viên, trưởng khoa và sinh viên có nên dùng cùng thông số không? → A: Không. Trang tổng quan dùng cùng khung giao diện nhưng số liệu và việc tiếp theo theo vai trò: DEAN thấy đề tài chờ duyệt/chờ công bố, đăng ký chờ xét và đợt trong khoa; LECTURER (không có DEAN) chỉ thấy đề tài do mình đề xuất trong bộ môn/khoa; STUDENT thấy lời mời còn hiệu lực, nhóm hiện tại và đăng ký PENDING/ACCEPTED của chính mình qua snapshot khi gửi. Sinh viên phải nhìn thấy xác nhận ACCEPTED và liên kết đăng ký. Tài khoản DEAN+LECTURER dùng dashboard trưởng khoa, ADMIN không đọc số liệu học vụ. Số liệu 0 phải hiện 0, không dùng số mẫu hoặc dấu gạch; không đưa chấm điểm/kết quả ngoài phạm vi vào dashboard. Các liên kết vẫn phải được backend kiểm tra quyền. Xác nhận U ngày 2026-09-14; làm rõ FR-01/FR-10–11 và NFR-02.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Các story P1 tạo thành luồng bàn giao đầu tiên; thứ tự trình bày phản ánh phụ thuộc
