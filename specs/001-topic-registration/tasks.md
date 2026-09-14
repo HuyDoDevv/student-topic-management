@@ -234,6 +234,8 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T074 [US5] Hiển thị đăng ký PENDING/ACCEPTED cùng tên đề tài và trạng thái quyết định trên trang nhóm cho mọi thành viên hiện tại; khi ACCEPTED phải có xác nhận đăng ký thành công nổi bật và liên kết tới chi tiết đăng ký; lấy dữ liệu từ registration thật qua port backend, cập nhật spec/contract/ma trận và test hồi quy.
 
+- [X] T075 [FR-01] Dashboard theo vai trò lấy số liệu thật trong phạm vi được cấp: DEAN thấy đề tài và đăng ký cần xét của khoa, LECTURER thấy đề tài mình đề xuất, STUDENT thấy lời mời/nhóm/đăng ký của chính mình qua snapshot, ADMIN không thấy dữ liệu học vụ; hiển thị việc tiếp theo và trạng thái đăng ký thành công, bỏ chỉ số/kịch bản ngoài phạm vi; sửa khoảng cách nhóm menu sidebar; cập nhật spec/ma trận và test hồi quy. Phụ thuộc T060,T070,T074; mỗi task một commit.
+
 - [X] T059 Tạo seeder local chủ động/idempotent tại `src/main/java/vn/edu/topicregistration/shared/seed/LocalDemoSeeder.java`: DEMO_SEED_ENABLED false mặc định, DEMO_SEED_PASSWORD ngoài source; fixture 2 bộ môn/3 GV/7 SV/dean, 4 loại đợt và trạng thái theo data-model; không reset lịch hoặc dữ liệu mỗi restart, không coi seed là provisioning thật.
 
 - [X] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
@@ -257,7 +259,7 @@ flowchart TD
   U1 --> U4["T039–T046 US4 component"]
   U3 --> U5["T047–T058 US5"]
   U4 --> U5
-  U5 --> P["T059–T064,T071–T074 Verification"]
+  U5 --> P["T059–T064,T071–T075 Verification"]
 ```
 
 - T001 → T002 → (T003 || T004) → T005. T005 chờ tài nguyên T004.
@@ -297,7 +299,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 
 | Requirement | Tasks chính | Tests / nguồn |
 |---|---|---|
-| FR-01 | T006,T008–T011,T016,T061,T070 | REQ-28,31–32; AT-06,09–10,14 |
+| FR-01 | T006,T008–T011,T016,T061,T070,T075 | REQ-28,31–32; AT-06,09–10,14 |
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
 | FR-03 | T018–T024,T026,T029,T048,T052 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
@@ -306,8 +308,8 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
 | FR-08 | T039–T046,T054,T057–T058,T065–T068,T073 | REQ-12–13; AT-04,06–08 |
 | FR-09 | T040–T046,T050,T057,T065–T068 | REQ-13; AT-04,07 |
-| FR-10 | T047–T058,T073–T074 | REQ-03,14–15; AT-04–08,11 |
-| FR-11 | T047–T058,T074 | REQ-16 + U Q-10; AT-05–08,11 |
+| FR-10 | T047–T058,T073–T075 | REQ-03,14–15; AT-04–08,11 |
+| FR-11 | T047–T058,T074–T075 | REQ-16 + U Q-10; AT-05–08,11 |
 | FR-12 | T047–T058 | U nhánh từ chối, liên quan REQ-16; AT-05–06,11 |
 | FR-13 | T047–T058,T073 | REQ-03,14–16 + U rút/reapply/snapshot; AT-02,04–05,07–08 |
 | FR-14 | T026–T038 | REQ-02–03,08–11,15,31 + U lifecycle; AT-12 |

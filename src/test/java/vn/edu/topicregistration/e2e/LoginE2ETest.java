@@ -35,6 +35,7 @@ class LoginE2ETest extends BrowserTestSupport {
 
     @Test
     void provisionedAccountCanLoginThroughTheRealBrowser() {
+        page().setViewportSize(1280, 800);
         page().navigate(url("/"));
         assertTrue(page().url().endsWith("/login"));
 
@@ -45,6 +46,14 @@ class LoginE2ETest extends BrowserTestSupport {
 
         page().waitForURL(url("/"));
         assertTrue(page().getByText("Quản lý đề tài sinh viên").first().isVisible());
+        assertTrue(page().getByRole(com.microsoft.playwright.options.AriaRole.HEADING,
+                new Page.GetByRoleOptions().setName("Tổng quan đề tài của tôi")).isVisible());
+        assertEquals(0, page().getByText("Kết quả công bố").count());
+        var overview = page().locator("#sidebar-menu .nav-item").first().boundingBox();
+        var academicSection = page().locator("#sidebar-menu > .nav-section").nth(1).boundingBox();
+        assertTrue(overview != null && academicSection != null
+                && academicSection.y - (overview.y + overview.height) < 100,
+                "Sidebar menu sections should not be pushed apart");
         Cookie sessionCookie = page().context().cookies().stream()
                 .filter(cookie -> "JSESSIONID".equals(cookie.name))
                 .findFirst()

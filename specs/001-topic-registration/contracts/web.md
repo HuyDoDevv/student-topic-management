@@ -49,6 +49,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | GET /login | — | 200 form Tabler | 01 |
 | POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
+| GET /; GET /dashboard | — | 200 dashboard theo vai trò đã xác thực, số liệu truy vấn trong scope từ database: DEAN theo khoa, LECTURER theo tác giả/bộ môn/khoa, STUDENT theo tài khoản/khoa và snapshot registration; DEAN+LECTURER dùng DEAN, ADMIN không xem số liệu học vụ. Các lối tắt không cấp thêm quyền. | 01,10–11 |
 | GET /periods; GET /periods/{id} | — | 200 danh sách/chi tiết theo scope; chi tiết đợt của DEAN kèm danh sách topic và thao tác review/publish | 01–04,07 |
 | POST /periods | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate | 303 tới period mới; từ chối giá trị có giờ hoặc ngày đã qua; ngày bắt buộc/null đúng theo loại | 02–04 |
 | POST /periods/{id} | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |

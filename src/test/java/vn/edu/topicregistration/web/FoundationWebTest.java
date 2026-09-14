@@ -32,6 +32,26 @@ class FoundationWebTest {
         mvc.perform(get("/vendor/tabler/1.4.0/js/tabler.min.js")).andExpect(status().isOk());
     }
 
+    @Test void dashboardPreviewUsesRoleSpecificContentAndNoFutureResultMetric() throws Exception {
+        mvc.perform(get("/dashboard?role=dean"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đề tài chờ công bố")))
+            .andExpect(content().string(containsString("Đăng ký chờ xét")));
+        mvc.perform(get("/dashboard?role=lecturer"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Bản nháp")))
+            .andExpect(content().string(containsString("Tổng quan đề tài của tôi")));
+        mvc.perform(get("/dashboard?role=student"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("ĐĂNG KÝ THÀNH CÔNG")))
+            .andExpect(content().string(containsString("href=\"/registrations/1\"")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Kết quả công bố"))));
+        mvc.perform(get("/dashboard?role=admin"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Không có dữ liệu học vụ")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Đề tài chờ duyệt"))));
+    }
+
     @Test void previewCatalogueRendersEveryBusinessTemplate() throws Exception {
         String[] routes = {
             "/login", "/dashboard", "/periods", "/periods/new", "/periods/1",

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import vn.edu.topicregistration.groups.web.GroupMemberForm;
 import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
@@ -18,6 +19,9 @@ import vn.edu.topicregistration.periods.web.PeriodForm;
 import vn.edu.topicregistration.registrations.persistence.RegistrationStatus;
 import vn.edu.topicregistration.registrations.web.RegistrationDecisionForm;
 import vn.edu.topicregistration.registrations.web.RegistrationForm;
+import vn.edu.topicregistration.shared.dashboard.DashboardView;
+import vn.edu.topicregistration.shared.dashboard.DashboardView.Focus;
+import vn.edu.topicregistration.shared.dashboard.DashboardView.Metric;
 import vn.edu.topicregistration.shared.time.TimeConfig;
 import vn.edu.topicregistration.topics.web.TopicDraftForm;
 
@@ -121,16 +125,46 @@ public class UiPreviewController {
     }
 
     @GetMapping({"/", "/dashboard"})
-    String dashboard(Model model) {
+    String dashboard(@RequestParam(defaultValue = "student") String role, Model model) {
         common(model, "dashboard", "Không gian làm việc");
         model.addAttribute("today", LocalDate.now(TimeConfig.BUSINESS_ZONE).format(
                 DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))));
-        model.addAttribute("topicCount", 12);
-        model.addAttribute("groupCount", 7);
-        model.addAttribute("periodCount", 2);
-        model.addAttribute("publishedResultCount", 4);
-        model.addAttribute("currentPeriod", PERIODS.getFirst());
+        model.addAttribute("dashboard", previewDashboard(role));
         return "dashboard/index";
+    }
+
+    private DashboardView previewDashboard(String role) {
+        return switch (role) {
+            case "dean" -> new DashboardView("Trưởng khoa", "Tổng quan duyệt học vụ",
+                    "Chỉ hiển thị hồ sơ thuộc khoa của bạn.", List.of(
+                    new Metric("Đề tài chờ duyệt", 1, "Đề xuất chưa được quyết định", "/periods"),
+                    new Metric("Đề tài chờ công bố", 2, "Đã duyệt", "/periods"),
+                    new Metric("Đăng ký chờ xét", 3, "Nhóm chờ quyết định", "/periods"),
+                    new Metric("Đợt đăng ký", 2, "Đợt của khoa", "/periods")),
+                    new Focus("VIỆC CẦN XỬ LÝ", "Có 3 đăng ký chờ xét",
+                            "Mở đợt đăng ký để xét nhóm.", "/periods", "Xem các đợt", "bg-yellow-lt"));
+            case "lecturer" -> new DashboardView("Giảng viên", "Tổng quan đề tài của tôi",
+                    "Theo dõi đề tài bạn đề xuất.", List.of(
+                    new Metric("Bản nháp", 1, "Chưa gửi duyệt", "/topics"),
+                    new Metric("Chờ duyệt", 1, "Đã gửi trưởng khoa", "/topics"),
+                    new Metric("Đã duyệt", 0, "Chưa công bố", "/topics"),
+                    new Metric("Đã công bố", 1, "Sinh viên có thể xem", "/topics")),
+                    new Focus("VIỆC CỦA BẠN", "Có 1 đề tài nháp",
+                            "Hoàn thiện và gửi duyệt.", "/topics", "Xem đề tài của tôi", "bg-blue-lt"));
+            case "admin" -> new DashboardView("Quản trị sự cố", "Tổng quan quản trị",
+                    "Không có quyền xem hoặc quyết định học vụ.", List.of(),
+                    new Focus("PHẠM VI QUYỀN", "Không có dữ liệu học vụ",
+                            "Chỉ xử lý sự cố khẩn cấp.", null, null, "bg-secondary-lt"));
+            default -> new DashboardView("Sinh viên", "Tổng quan đăng ký của tôi",
+                    "Theo dõi nhóm và kết quả đăng ký của chính bạn.", List.of(
+                    new Metric("Lời mời cần phản hồi", 0, "Còn trong hạn", "/group-invitations"),
+                    new Metric("Nhóm đang tham gia", 1, "Nhóm hiện tại", "/groups"),
+                    new Metric("Đăng ký chờ xét", 0, "Đang chờ trưởng khoa", "/groups"),
+                    new Metric("Đăng ký được chấp nhận", 1, "Đăng ký thành công", "/groups")),
+                    new Focus("ĐĂNG KÝ THÀNH CÔNG", "Hệ thống quản lý đăng ký đề tài",
+                            "Trưởng khoa đã chấp nhận đăng ký đề tài của nhóm bạn.",
+                            "/registrations/1", "Xem đăng ký", "bg-green-lt"));
+        };
     }
 
     @GetMapping("/periods")

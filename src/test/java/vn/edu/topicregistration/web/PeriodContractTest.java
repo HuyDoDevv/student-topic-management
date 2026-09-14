@@ -40,6 +40,7 @@ import org.springframework.web.context.WebApplicationContext;
 import vn.edu.topicregistration.identity.domain.RoleCode;
 import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
+import vn.edu.topicregistration.shared.dashboard.DashboardView;
 import vn.edu.topicregistration.shared.time.TimeConfig;
 
 @SpringBootTest
@@ -104,6 +105,72 @@ class PeriodContractTest {
                         .with(user("dean").roles("LECTURER", "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt HK1")));
+    }
+
+    @Test
+    void dashboardQueriesAreScopedToPersistedRoleAndOrganization() throws Exception {
+        long ownPeriod = insertPeriod(deanScope.facultyId(), "Đợt CNTT", 0L);
+        jdbc.update("""
+                UPDATE registration_periods
+                SET lecturer_start = ?, lecturer_end = ?, student_start = ?, student_end = ?
+                WHERE id = ?
+                """,
+                Timestamp.from(Instant.parse("2026-09-08T00:00:00Z")),
+                Timestamp.from(Instant.parse("2026-09-09T00:00:00Z")),
+                Timestamp.from(Instant.parse("2026-09-09T00:00:01Z")),
+                Timestamp.from(STUDENT_END), ownPeriod);
+        FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization(
+                "Khoa Điện", "Điện công nghiệp");
+        long otherPeriod = insertPeriod(otherScope.facultyId(), "Đợt Điện", 0L);
+        var lecturer = fixtures.createIdentity("lecturer-dashboard", "Giảng viên A", UNUSED_HASH,
+                true, deanScope, Set.of(RoleCode.LECTURER));
+        var colleague = fixtures.createIdentity("colleague-dashboard", "Giảng viên B", UNUSED_HASH,
+                true, deanScope, Set.of(RoleCode.LECTURER));
+        var otherLecturer = fixtures.createIdentity("other-dashboard", "Giảng viên Điện", UNUSED_HASH,
+                true, otherScope, Set.of(RoleCode.LECTURER));
+        var student = fixtures.createIdentity("student-dashboard", "Sinh viên A", UNUSED_HASH,
+                true, deanScope, Set.of(RoleCode.STUDENT));
+        var invitee = fixtures.createIdentity("invitee-dashboard", "Sinh viên B", UNUSED_HASH,
+                true, deanScope, Set.of(RoleCode.STUDENT));
+        fixtures.createIdentity("admin-dashboard", "Quản trị", UNUSED_HASH,
+                true, null, Set.of(RoleCode.ADMIN));
+        insertTopic(ownPeriod, deanScope.departmentId(), lecturer.accountId(), "PENDING_APPROVAL");
+        insertTopic(ownPeriod, deanScope.departmentId(), colleague.accountId(), "PENDING_APPROVAL");
+        insertTopic(otherPeriod, otherScope.departmentId(), otherLecturer.accountId(), "PENDING_APPROVAL");
+        jdbc.update("INSERT INTO student_groups(period_id, leader_student_id) VALUES (?, ?)",
+                ownPeriod, student.accountId());
+        long groupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
+        jdbc.update("""
+                INSERT INTO group_invitations(group_id, period_id, student_id, invited_by, slot)
+                VALUES (?, ?, ?, ?, 2)
+                """, groupId, ownPeriod, invitee.accountId(), student.accountId());
+
+        DashboardView deanView = dashboardFor("dean", "LECTURER", "DEAN");
+        assertEquals(2, deanView.metrics().getFirst().value());
+        assertEquals(1, deanView.metrics().getLast().value());
+        DashboardView lecturerView = dashboardFor("lecturer-dashboard", "LECTURER");
+        assertEquals(1, lecturerView.metrics().get(1).value());
+        DashboardView studentView = dashboardFor("student-dashboard", "STUDENT");
+        assertEquals(1, studentView.metrics().get(1).value());
+        DashboardView inviteeView = dashboardFor("invitee-dashboard", "STUDENT");
+        assertEquals(1, inviteeView.metrics().getFirst().value());
+        DashboardView adminView = dashboardFor("admin-dashboard", "ADMIN");
+        assertEquals(0, adminView.metrics().size());
+    }
+
+    private DashboardView dashboardFor(String username, String... roles) throws Exception {
+        var result = mvc.perform(get("/dashboard").with(user(username).roles(roles)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return (DashboardView) result.getModelAndView().getModel().get("dashboard");
+    }
+
+    private void insertTopic(long periodId, long departmentId, long authorId, String status) {
+        jdbc.update("""
+                INSERT INTO topics(period_id, department_id, author_id, title, description,
+                                   objectives, student_requirements, expected_results, status)
+                VALUES (?, ?, ?, 'Đề tài mẫu', 'Nội dung', 'Mục tiêu', 'Yêu cầu', 'Kết quả', ?)
+                """, periodId, departmentId, authorId, status);
     }
 
     @Test

@@ -13,7 +13,7 @@ chứng test; không được hiểu là đạt.
 
 | Yêu cầu | Nguồn | AS / AT / SC | Test dự kiến | Trạng thái đặc tả | Bằng chứng |
 |---|---|---|---|---|---|
-| FR-01 Identity, role, scope, ADMIN | REQ-28,31–32 + U | AS-1.3,1.5–1.8,1.14–1.16,2.4; AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, LoginE2ETest, các contract test theo story | CONFIRMED | FOUNDATION PASS; T021 quyền sau khóa + T023 CSRF/role DB/scope khoa PASS; T070 chặn DEAN khỏi luồng tác giả ở backend/UI, test riêng deferred; moderation NOT RUN |
+| FR-01 Identity, role, scope, ADMIN | REQ-28,31–32 + U | AS-1.3,1.5–1.8,1.14–1.16,2.4; AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, DashboardServiceTest, FoundationWebTest, PeriodContractTest, LoginE2ETest, các contract test theo story | CONFIRMED | FOUNDATION PASS; T021 quyền sau khóa + T023 CSRF/role DB/scope khoa PASS; T070 chặn DEAN khỏi luồng tác giả ở backend/UI, test riêng deferred; T075 dashboard actor-scoped: 6 unit + 1 web preview + 1 MySQL contract role/faculty/author/student/admin PASS; toàn bộ `test`, `verify -Pintegration`, `verify -Pe2e` PASS trên MySQL 8.4 tạm ngày 2026-09-14; moderation NOT RUN |
 | FR-02 Tạo bốn loại đợt | REQ-01,04 | AS-1.1,1.4; AT-01; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: bốn loại, persistence, service và web contract |
 | FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.4,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024; kiểm tra bổ sung ngày-only/ngày đã qua trong fix T017 |
 | FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: DB-02, required/null theo loại và chỉ dời muộn hơn |
@@ -29,7 +29,7 @@ chứng test; không được hiểu là đạt.
 | FR-14 Vòng đời đề tài | REQ-02–03,08–11,15,31 + U | AS-2.1–2.3,2.7–2.9,3.1,3.4–3.5; AT-12; SC-002 | TopicReviewRulesTest, TopicPublicationIT | CONFIRMED | T025 giải phóng vòng đời tác giả/GVHD; tests NOT RUN |
 | FR-15 Khóa sửa lịch | REQ-03–05,31 + U | AS-1.11–1.13; AT-13; SC-001,003,005 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024: FOR UPDATE, version, khóa theo thời gian sau chờ và chỉ gia hạn mốc còn hiệu lực |
 | NFR-01 Bảo mật nền tảng | Constitution III,IV,IX + U | AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, WebExceptionHandlerTest, TestDatabaseSafetyTest | CONFIRMED | FOUNDATION PASS 2026-09-10; T023 period contract PASS cho CSRF/role/scope/input/version; route story khác còn NOT RUN |
-| NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; viewport AT-15 chưa chạy |
+| NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; T075 sửa flex-grow nhóm sidebar, preview tại 750px và E2E desktop 1280px đo khoảng cách hai nhóm menu PASS; toàn bộ viewport AT-15 chưa chạy |
 
 ## Gate status
 
