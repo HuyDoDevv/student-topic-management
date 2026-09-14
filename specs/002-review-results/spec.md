@@ -1,0 +1,288 @@
+# Feature Specification: Báo cáo, hội đồng, chấm điểm và kết quả
+
+**Feature Branch**: `feature/002-review-results`
+
+**Feature Directory**: `specs/002-review-results`
+
+**Created**: 2026-09-14
+
+**Status**: Ready for implementation — Q-11, Q-12/Q-15 và Q-13 đã được người dùng xác nhận
+
+**Input**: Người dùng yêu cầu bổ sung năm phần còn thiếu của dự án: nộp/xem báo cáo,
+hội đồng 3–5 người, chấm điểm, tổng hợp/công bố kết quả và sinh viên xem kết quả.
+
+Nguồn nghiệp vụ chính là REQ-17–27 trong
+[`docs/customer/requirements-analysis.md`](../../docs/customer/requirements-analysis.md).
+Tài liệu Human Workflow do người dùng cung cấp được dùng làm bằng chứng bổ sung cho luồng
+thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi cho AI. Các quyết định của feature
+001 về tài khoản, role, phạm vi khoa/bộ môn, nhóm, đăng ký và bảo mật tiếp tục có hiệu lực.
+
+## Clarifications
+
+### Session 2026-09-14
+
+- Người dùng xác nhận phạm vi feature gồm đúng năm mục đã chọn: báo cáo; hội đồng 3–5
+  giảng viên; chấm điểm; tổng hợp/công bố kết quả; sinh viên xem kết quả.
+- Human Workflow xác nhận Trưởng khoa tạo và điều khiển hội đồng trong khoa; hội đồng có
+  3–5 giảng viên, đúng một Chair và một Secretary là hai người khác nhau; giảng viên hướng
+  dẫn không được ngồi hội đồng của chính đề tài; mọi thành viên hội đồng nộp điểm; chỉ được
+  hoàn tất khi đủ điểm; Trưởng khoa công bố; sinh viên chỉ thấy kết quả của nhóm mình.
+- Q-11: Người dùng chọn phương án A — chỉ nhận PDF tối đa 20 MB; trưởng nhóm được thay
+  báo cáo hiện tại cho tới trước khi hội đồng phụ trách đăng ký chuyển ACTIVE. Thành viên
+  trong snapshot đăng ký, GVHD, Trưởng khoa đúng phạm vi và thành viên hội đồng được xem/tải.
+- Q-12/Q-15: Người dùng chọn phương án C — một hội đồng có thể chấm nhiều nhóm trong cùng
+  đợt và bộ môn, nhưng chỉ áp dụng cho đợt TLCN hoặc KLTN.
+- Q-13: Người dùng chọn phương án A — mỗi thành viên hội đồng nhập một điểm tổng từ 0 đến
+  10 với tối đa hai chữ số thập phân. Thành viên được sửa điểm của chính mình khi hội đồng
+  còn ACTIVE, kể cả sau submit; sau COMPLETED thì khóa. Điểm cuối là trung bình cộng điểm
+  SUBMITTED của mọi thành viên, làm tròn HALF_UP đến hai chữ số thập phân.
+
+## User Scenarios & Testing *(mandatory)*
+
+Mỗi story được kiểm thử độc lập bằng fixture ở trạng thái tiền điều kiện phù hợp. Thứ tự story
+phản ánh chuỗi nghiệp vụ, không cho phép bỏ qua kiểm tra quyền hoặc trạng thái ở backend.
+
+### User Story 1 - Trưởng nhóm nộp và người có quyền xem báo cáo (Priority: P1)
+
+Là trưởng nhóm của một đăng ký đã được chấp nhận, tôi muốn nộp báo cáo và cho người có
+trách nhiệm xem đúng file để nhóm có đầu vào chính thức cho giai đoạn đánh giá.
+
+**Why this priority**: Báo cáo là đầu ra của nhóm và là tiền đề tự nhiên cho review.
+Nguồn: REQ-17.
+
+**Independent Test**: Chuẩn bị một đăng ký ACCEPTED và file hợp lệ; kiểm tra trưởng nhóm
+nộp thành công, thành viên thường bị từ chối nộp, người được phép tải đúng nội dung và người
+ngoài phạm vi không đọc được metadata hoặc file.
+
+**Acceptance Scenarios**:
+
+1. **Given** đăng ký đã ACCEPTED và người gọi là trưởng nhóm hợp lệ, **When** nộp file
+   là PDF không quá 20 MB, **Then** hệ thống lưu metadata, người nộp và thời điểm, đồng thời
+   có thể tải lại đúng file (AS-6.1).
+2. **Given** người gọi là thành viên thường, sinh viên ngoài nhóm hoặc tài khoản không có
+   quyền, **When** nộp thay nhóm, **Then** bị từ chối và không tạo metadata/file dở dang
+   (AS-6.2).
+3. **Given** file không phải PDF, vượt 20 MB hoặc đăng ký chưa ACCEPTED, **When** nộp,
+   **Then** bị từ chối nguyên tử và báo lỗi có thể hiểu được (AS-6.3).
+4. **Given** một báo cáo đã nộp, **When** người dùng yêu cầu xem/tải, **Then** backend chỉ
+   trả metadata và file cho thành viên snapshot, GVHD, Trưởng khoa đúng khoa hoặc thành viên
+   hội đồng phụ trách; người khác không nhận được dữ liệu (AS-6.4).
+5. **Given** báo cáo hiện tại và hội đồng phụ trách chưa ACTIVE, **When** trưởng nhóm nộp
+   lại PDF hợp lệ, **Then** báo cáo hiện tại được thay thế nguyên tử; từ ACTIVE trở đi yêu
+   cầu nộp mới hoặc thay thế đều bị từ chối (AS-6.5).
+
+---
+
+### User Story 2 - Trưởng khoa lập hội đồng hợp lệ (Priority: P1)
+
+Là trưởng khoa, tôi muốn lập hội đồng cho đăng ký đã được chấp nhận để phân công đúng
+3–5 giảng viên và lịch review trong phạm vi khoa.
+
+**Why this priority**: Hội đồng xác định ai được chấm và chặn xung đột với GVHD.
+Nguồn: REQ-18–21.
+
+**Independent Test**: Chuẩn bị đăng ký ACCEPTED và danh sách giảng viên; tạo hội đồng hợp
+lệ rồi thử 2/6 người, trùng người, thiếu chức danh, người ngoài khoa và GVHD của đề tài.
+
+**Acceptance Scenarios**:
+
+1. **Given** Trưởng khoa đúng phạm vi, đợt TLCN/KLTN và đăng ký ACCEPTED, **When** lập
+   hội đồng, **Then** hội đồng có 3–5 thành viên duy nhất, đúng một Chair, đúng một
+   Secretary khác Chair, mọi thành viên cùng bộ môn với hội đồng và gắn đúng lịch/địa điểm
+   review (AS-7.1).
+2. **Given** có dưới 3 hoặc trên 5 thành viên, trùng thành viên, thiếu Chair/Secretary,
+   Chair trùng Secretary, thành viên ngoài khoa hoặc không có năng lực LECTURER,
+   **When** lưu hoặc kích hoạt, **Then** toàn bộ thao tác bị từ chối (AS-7.2).
+3. **Given** một người là GVHD chính hoặc phối hợp của đề tài, **When** thêm người đó vào
+   hội đồng chấm đề tài, **Then** backend từ chối và hội đồng không đổi (AS-7.3).
+4. **Given** hội đồng DRAFT hợp lệ, **When** Trưởng khoa lên lịch và kích hoạt,
+   **Then** trạng thái đi theo `DRAFT → ASSIGNED/SCHEDULED → ACTIVE`; không được bỏ qua
+   tiền điều kiện hoặc sửa thành viên sau ACTIVE (AS-7.4).
+5. **Given** người gọi không phải Trưởng khoa đúng phạm vi, **When** tạo, sửa, phân công
+   hoặc chuyển trạng thái hội đồng, **Then** bị từ chối và dữ liệu không đổi (AS-7.5).
+6. **Given** một hội đồng thuộc đúng đợt và bộ môn, **When** Trưởng khoa gán nhiều đăng ký
+   ACCEPTED của đợt đó, **Then** các nhóm cùng bộ môn được xếp lịch riêng trong hội đồng;
+   đăng ký từ đợt/bộ môn khác hoặc loại môn học/NCKH bị từ chối (AS-7.6).
+
+---
+
+### User Story 3 - Thành viên hội đồng chấm điểm (Priority: P1)
+
+Là thành viên hội đồng, tôi muốn lưu và gửi điểm/nhận xét cho đề tài được phân công để
+đóng góp vào kết quả chung mà không thể chấm đề tài mình hướng dẫn.
+
+**Why this priority**: Không có đủ đánh giá hợp lệ thì không thể hoàn tất và công bố.
+Nguồn: REQ-22–25.
+
+**Independent Test**: Chuẩn bị hội đồng ACTIVE; mỗi thành viên lưu nháp và submit điểm
+hợp lệ, thử điểm ngoài thang, người ngoài hội đồng, sửa điểm người khác và GVHD cố chấm.
+
+**Acceptance Scenarios**:
+
+1. **Given** hội đồng ACTIVE và người gọi là thành viên được phân công, **When** lưu điểm
+   tổng 0–10 với tối đa hai chữ số thập phân và nhận xét, **Then** evaluation của chính
+   người đó được lưu ở DRAFT; khi
+   submit thì chuyển SUBMITTED (AS-8.1).
+2. **Given** điểm thiếu, nhỏ hơn 0, lớn hơn 10 hoặc có quá hai chữ số thập phân,
+   **When** submit, **Then** bị từ chối và không tạo evaluation SUBMITTED (AS-8.2).
+3. **Given** người gọi không thuộc hội đồng, cố sửa đánh giá của người khác hoặc là GVHD
+   của đề tài, **When** lưu/submit, **Then** backend từ chối và dữ liệu không đổi (AS-8.3).
+4. **Given** evaluation đã SUBMITTED nhưng hội đồng vẫn ACTIVE, **When** chính evaluator
+   sửa và submit lại, **Then** điểm mới hợp lệ thay thế điểm cũ; sau COMPLETED hoặc PUBLISHED
+   luôn bị khóa (AS-8.4).
+5. **Given** một giảng viên thuộc nhiều hội đồng hợp lệ, **When** chấm từng đề tài được
+   phân công, **Then** các evaluation tách biệt và không ghi đè lẫn nhau (AS-8.5).
+
+---
+
+### User Story 4 - Tổng hợp, hoàn tất và công bố kết quả (Priority: P1)
+
+Là Chair, tôi muốn kiểm tra đủ evaluation và tổng hợp điểm cuối; là Trưởng khoa, tôi muốn
+công bố kết quả đã hoàn tất để kết quả chỉ xuất hiện sau khi review và grading hoàn thành.
+
+**Why this priority**: Đây là đầu ra chính thức của quy trình đánh giá.
+Nguồn: REQ-22–26.
+
+**Independent Test**: Chuẩn bị hội đồng ACTIVE với đủ và thiếu evaluation; kiểm tra complete,
+tính trung bình, publish, giao dịch lỗi và phạm vi khoa.
+
+**Acceptance Scenarios**:
+
+1. **Given** mọi evaluation bắt buộc đã SUBMITTED, **When** Chair complete hội đồng,
+   **Then** hệ thống tạo/cập nhật kết quả tổng hợp nhất quán, tính trung bình cộng các điểm
+   SUBMITTED và làm tròn HALF_UP đến hai chữ số thập phân
+   và chuyển hội đồng `ACTIVE → COMPLETED` (AS-9.1).
+2. **Given** còn thiếu evaluation, hội đồng chưa ACTIVE hoặc người gọi không phải Chair,
+   **When** complete,
+   **Then** bị từ chối và không tạo kết quả READY giả (AS-9.2).
+3. **Given** hội đồng COMPLETED và kết quả đầy đủ, **When** Trưởng khoa đúng phạm vi publish,
+   **Then** kết quả và hội đồng cùng chuyển PUBLISHED trong một giao dịch, lưu người/thời
+   điểm công bố (AS-9.3).
+4. **Given** hội đồng chưa COMPLETED, điểm đã thay đổi không hợp lệ, hoặc người gọi sai
+   quyền/phạm vi, **When** publish, **Then** bị từ chối và trạng thái không đổi (AS-9.4).
+5. **Given** hai thao tác complete/publish đồng thời, **When** xử lý, **Then** chỉ có một
+   trạng thái cuối hợp lệ và điểm cuối dựa trên một snapshot evaluation nhất quán (AS-9.5).
+
+---
+
+### User Story 5 - Sinh viên xem kết quả của nhóm mình (Priority: P1)
+
+Là sinh viên đã tham gia đăng ký, tôi muốn xem điểm và nhận xét đã công bố của đúng nhóm
+mình để biết kết quả mà không lộ kết quả nhóm khác.
+
+**Why this priority**: Hoàn thành vòng phản hồi tới người học.
+Nguồn: REQ-27; phạm vi riêng tư được người dùng xác nhận qua Human Workflow.
+
+**Independent Test**: Chuẩn bị hai nhóm và một kết quả PUBLISHED; thành viên snapshot của
+nhóm đúng xem được, sinh viên nhóm khác và người không đăng nhập không xem được.
+
+**Acceptance Scenarios**:
+
+1. **Given** kết quả của đăng ký đã PUBLISHED, **When** sinh viên thuộc snapshot đăng ký
+   mở danh sách/chi tiết, **Then** thấy đề tài, hội đồng, các điểm/nhận xét được phép và
+   điểm cuối của nhóm mình (AS-10.1).
+2. **Given** kết quả còn DRAFT/READY hoặc hội đồng chưa PUBLISHED, **When** sinh viên truy
+   cập trực tiếp bằng ID, **Then** không nhận được nội dung kết quả (AS-10.2).
+3. **Given** sinh viên không thuộc snapshot đăng ký, **When** đoán ID hoặc URL của nhóm
+   khác, **Then** backend từ chối và không tiết lộ metadata, điểm hoặc nhận xét (AS-10.3).
+4. **Given** Trưởng khoa, **When** xem kết quả, **Then** chỉ thấy dữ liệu trong khoa mình;
+   role ADMIN tiếp tục không có quyền đọc học vụ theo quyết định feature 001 (AS-10.4).
+
+### Edge Cases
+
+- Báo cáo có tên file giả mạo, đường dẫn tương đối, content type sai hoặc upload bị ngắt:
+  không được ghi file ngoài vùng lưu trữ hoặc để metadata trỏ tới file không hoàn chỉnh.
+- Thành phần hội đồng thay đổi đồng thời với activate/scoring: thao tác lấy quyền sau phải
+  đọc lại trạng thái và không được tạo evaluation cho người đã mất phân công.
+- GVHD được thay đổi hoặc dữ liệu quan hệ cũ không nhất quán: không cho activate/chấm cho
+  đến khi không còn xung đột REQ-25.
+- Hai evaluator cùng gửi lại form hoặc một evaluator mở nhiều tab: unique theo evaluator,
+  đăng ký và thành phần; không tạo điểm trùng.
+- Complete tranh chấp với submit: kết quả chỉ được COMPLETED nếu tập evaluation đã khóa
+  và đầy đủ; thao tác còn lại nhận xung đột thay vì thay đổi kết quả sau complete.
+- Publish lặp lại không được tạo bản kết quả thứ hai hoặc thay đổi người/thời điểm công bố.
+- Thành viên rời nhóm sau khi đăng ký: quyền xem kết quả dùng snapshot bất biến của lần gửi,
+  nhất quán với feature 001, không dùng membership hiện tại.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-16**: Chỉ trưởng nhóm của đăng ký ACCEPTED được nộp project report dạng PDF tối đa
+  20 MB. Trưởng nhóm được thay báo cáo hiện tại trước khi hội đồng phụ trách ACTIVE; từ
+  ACTIVE trở đi báo cáo bị khóa. (REQ-17; U Q-11)
+- **FR-17**: Backend phải kiểm tra quan hệ trước khi trả metadata hoặc nội dung báo cáo;
+  chỉ thành viên snapshot, GVHD, Trưởng khoa đúng khoa và thành viên hội đồng phụ trách
+  được xem/tải. (REQ-17, REQ-31–32; U Q-11)
+- **FR-18**: Trưởng khoa đúng phạm vi được lập hội đồng cho đăng ký ACCEPTED; hội đồng có
+  3–5 LECTURER duy nhất cùng bộ môn, đúng một Chair và một Secretary khác nhau, không gồm
+  GVHD của bất kỳ đề tài được phân công. Một hội đồng có thể chấm nhiều đăng ký cùng
+  đợt/bộ môn và chỉ áp dụng TLCN/KLTN.
+  (REQ-18–21,25; U Q-12/Q-15)
+- **FR-19**: Vòng đời hội đồng là `DRAFT → ASSIGNED/SCHEDULED → ACTIVE → COMPLETED →
+  PUBLISHED`; backend kiểm tra tiền điều kiện, khóa cấu hình từ ACTIVE và lưu version để
+  phát hiện thao tác cũ. (REQ-18–22,26; U Human Workflow)
+- **FR-20**: Chỉ thành viên hội đồng ACTIVE được lưu DRAFT và SUBMIT evaluation của chính
+  mình cho đề tài được phân công; GVHD và người ngoài hội đồng không được chấm. Mỗi evaluator
+  nhập một điểm tổng 0–10 với tối đa hai chữ số thập phân và được sửa khi còn ACTIVE.
+  (REQ-22,24–25; U Q-13)
+- **FR-21**: Điểm cuối là trung bình cộng của tập điểm hợp lệ, đầy đủ và nhất quán theo
+  mọi thành viên hội đồng, làm tròn HALF_UP đến hai chữ số thập phân; không complete khi
+  thiếu bất kỳ evaluation SUBMITTED nào. (REQ-23; U Q-13)
+- **FR-22**: Chỉ Chair của hội đồng được tổng hợp và complete sau khi mọi evaluation đã
+  SUBMITTED; chỉ Trưởng khoa đúng phạm vi được publish sau khi review và grading hoàn tất.
+  Publish chuyển result và council sang PUBLISHED trong một giao dịch, lưu actor/time và
+  không cho sửa điểm sau complete. (REQ-22,26)
+- **FR-23**: Sinh viên trong snapshot đăng ký chỉ xem kết quả PUBLISHED của chính nhóm;
+  sinh viên khác không được đọc metadata, evaluation hoặc final score. Trưởng khoa chỉ xem
+  trong khoa; ADMIN không đọc học vụ theo feature 001. (REQ-27,31–32; U Human Workflow)
+- **FR-24**: Mọi create/update/state transition/upload/download/view phải kiểm tra role,
+  khoa, membership/snapshot, supervisor và council assignment từ dữ liệu đáng tin cậy ở
+  backend; dữ liệu do client tự khai không cấp quyền. (REQ-17–27,31–32)
+- **FR-25**: Mọi validation hoặc lỗi lưu file/database phải rollback phần nghiệp vụ liên quan;
+  filename tải xuống phải an toàn, storage key không do client quyết định, và phản hồi lỗi
+  không lộ đường dẫn máy, SQL hoặc secret. (REQ-31–32; constitution IV, VII, IX)
+
+### Key Entities
+
+- **Project Report**: PDF hiện tại tối đa 20 MB gắn với một đăng ký ACCEPTED, người nộp và
+  thời điểm; có thể được trưởng nhóm thay trước khi hội đồng ACTIVE.
+- **Council**: hội đồng thuộc một period và bộ môn, có tên, trạng thái, version, Chair,
+  Secretary và 3–5 thành viên; cấu hình lịch/địa điểm và assignment tới đăng ký được chấp nhận.
+- **Council Assignment**: liên kết hội đồng với một hoặc nhiều đăng ký ACCEPTED cùng đợt/bộ môn
+  TLCN/KLTN và lịch review riêng cho từng nhóm.
+- **Evaluation**: điểm/nhận xét của một evaluator cho một đăng ký và thành phần điểm;
+  trạng thái DRAFT/SUBMITTED, không được sửa sau khi hội đồng hoàn tất.
+- **Score Component**: thành phần điểm tổng duy nhất của đợt, có khoảng 0–10 và độ chính xác
+  tối đa hai chữ số thập phân.
+- **Final Result**: kết quả duy nhất của đăng ký, hội đồng, người/thời điểm tổng hợp và công
+  bố, summary, điểm cuối cùng cùng mốc review/grading complete.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-010**: 100% ca nộp báo cáo hợp lệ bởi trưởng nhóm tạo được file tải lại đúng byte;
+  100% ca nộp sai quyền/định dạng không để lại metadata hoặc file dở dang.
+- **SC-011**: Trong toàn bộ test hội đồng, số hội đồng ACTIVE có dưới 3, trên 5, trùng thành
+  viên, thiếu chức danh hoặc chứa GVHD của đề tài bằng 0.
+- **SC-012**: 100% evaluator hợp lệ submit được evaluation; số lần người ngoài hội đồng,
+  GVHD hoặc evaluator khác sửa điểm không được phép bằng 0.
+- **SC-013**: Với mọi bộ điểm hợp lệ đã xác nhận, final score khớp quy tắc trung bình/làm
+  tròn; không có kết quả nào được publish khi thiếu evaluation hoặc board chưa COMPLETED.
+- **SC-014**: 100% sinh viên trong snapshot xem được kết quả PUBLISHED của nhóm mình;
+  số kết quả nhóm khác hoặc chưa publish bị tiết lộ trong test bằng 0.
+- **SC-015**: Trong các ca submit/complete/publish đồng thời, không có trạng thái cuối vi
+  phạm lifecycle, không có điểm bị thay đổi sau complete và không tạo result trùng.
+- **SC-016**: 100% FR-16–25 có ánh xạ REQ/U, acceptance scenario, automated test và bằng
+  chứng pass trước khi feature được đánh dấu hoàn thành.
+
+## Assumptions
+
+- Tái sử dụng đăng nhập, role, khoa/bộ môn, period, topic, supervisor, group, registration
+  ACCEPTED và registration-member snapshot của feature 001.
+- Không bổ sung quản trị tài khoản, announcements, email/push, export PDF/Excel thống kê,
+  reviewer assignment độc lập hoặc thay đổi quy tắc đăng ký trong feature này.
+- Q-11, Q-12/Q-15 và Q-13 đã được người dùng xác nhận ngày 2026-09-14 theo các phương án
+  A, C, A; các quyết định này là nguồn U bổ sung, không sửa nội dung PDF gốc.
+- Giao diện tiếp tục responsive và toàn bộ mutation dùng CSRF như NFR-01–02 của feature 001.

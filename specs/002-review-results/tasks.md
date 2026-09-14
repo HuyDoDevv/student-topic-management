@@ -1,0 +1,126 @@
+# Tasks: Báo cáo, hội đồng, chấm điểm và kết quả
+
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
+[data-model.md](data-model.md), [contracts/web.md](contracts/web.md), [quickstart.md](quickstart.md)
+
+**Tests**: Bắt buộc theo constitution VIII. Trong mỗi task nghiệp vụ, viết test có ý nghĩa
+trước implementation, xác nhận thất bại vì hành vi còn thiếu, rồi làm test đạt. Mỗi checkbox
+`Txxx` là đúng một commit gồm code, test, tài liệu và evidence của task đó.
+
+## Phase 1: Specification and design
+
+- [X] T001 Chốt Q1:A/Q2:C/Q3:A, hoàn thiện và validate `specs/002-review-results/spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/web.md`, `quickstart.md`, `checklists/requirements.md`, `tasks.md`; cập nhật `.specify/feature.json`, chạy `git diff --check` và commit riêng tài liệu feature.
+
+**Checkpoint**: Checklist 16/16, không còn `[NEEDS CLARIFICATION]`, constitution pre/post-design PASS.
+
+## Phase 2: Foundational schema and model
+
+**Purpose**: Mở khóa toàn bộ năm user story; không sửa V1–V7.
+
+- [ ] T002 Tạo test migration/schema trước, sau đó thêm `src/main/resources/db/migration/V8__implement_review_and_results.sql`; tạo enums/entities/repositories cho project report, council/member/topic, score component, evaluation và final result trong `src/main/java/vn/edu/topicregistration/entity/` và `repository/`; cập nhật `ApplicationErrorCode.java`, `application.yml`, `.gitignore` và `LayeredArchitectureTest.java`; chạy compile/unit/schema checks và commit riêng nền dữ liệu. (FR-16–25; constitution V–IX)
+
+**Checkpoint**: Hibernate mapping khớp V8; schema biểu diễn report current, council lifecycle,
+evaluation DRAFT/SUBMITTED và result READY/PUBLISHED.
+
+## Phase 3: User Story 1 — Nộp/xem báo cáo (P1, MVP)
+
+**Goal**: Snapshot leader upload/replace PDF; đúng người xem download; khóa từ ACTIVE.
+
+**Independent Test**: Fixture registration ACCEPTED, PDF hợp lệ/sai, các actor leader/member/
+supervisor/dean/council member/outsider và council trước/sau ACTIVE.
+
+- [ ] T003 [US1] Viết `ReportRulesTest.java`, `ReportServiceTest.java`, `ReportControllerTest.java` trước; cài safe local storage, `ReportUploadForm`, `ReportService`, `ReportController` và templates trong `src/main/java/vn/edu/topicregistration/{config,dto,repository,service,controller}/` cùng `src/main/resources/templates/reports/`; nối link từ registration detail, kiểm tra PDF <=20 MB/quyền/replace/rollback, chạy tests và commit riêng report. (FR-16–17,24–25; AS-6.1–6.5; SC-010)
+
+**Checkpoint**: bytes tải lại đúng, outsider không thấy metadata, upload bị khóa khi council ACTIVE.
+
+## Phase 4: User Story 2 — Hội đồng 3–5 người (P1)
+
+**Goal**: DEAN lập board TLCN/KLTN nhiều nhóm cùng department và kích hoạt đúng state.
+
+**Independent Test**: Fixture accepted registrations và lecturers; thử 3/5 hợp lệ, 2/6,
+trùng chức danh/member, khác department, supervisor, COURSE/NCKH và duplicate assignment.
+
+- [ ] T004 [US2] Viết `CouncilRulesTest.java`, `CouncilServiceTest.java`, `CouncilControllerTest.java` trước; cài `CouncilForm`, `CouncilAssignmentForm`, `CouncilService`, `CouncilController` và templates `src/main/resources/templates/councils/`; hỗ trợ DRAFT→ASSIGNED→SCHEDULED→ACTIVE, period-first locking, nhiều registration cùng department, backend scope và stale version; chạy tests và commit riêng council. (FR-18–19,24; AS-7.1–7.6; SC-011)
+
+**Checkpoint**: Không council ACTIVE nào vi phạm 3–5/member role/department/supervisor/report.
+
+## Phase 5: User Story 3 — Thành viên hội đồng chấm điểm (P1)
+
+**Goal**: Mỗi assigned member lưu/submit một score 0–10 scale <=2 khi board ACTIVE.
+
+**Independent Test**: Fixture ACTIVE board; member, outsider, supervisor và evaluator khác;
+biên 0/10/10.01/scale 3, DRAFT/SUBMITTED/resubmit và state lock.
+
+- [ ] T005 [US3] Viết `ScoreRulesTest.java`, `ScoringServiceTest.java`, `ScoringControllerTest.java` trước; cài `ScoreForm`, `ScoringService`, `ScoringController` và templates `src/main/resources/templates/scoring/`; tự bảo đảm component `Điểm hội đồng`, kiểm tra assignment/supervisor/status/version và cho sửa SUBMITTED khi còn ACTIVE; chạy tests và commit riêng scoring. (FR-20,24–25; AS-8.1–8.5; SC-012)
+
+**Checkpoint**: Một evaluation/evaluator/registration; không actor trái phép hoặc score sai được lưu.
+
+## Phase 6: User Story 4 — Tổng hợp và publish kết quả (P1)
+
+**Goal**: Chair complete/mean và DEAN publish toàn hội đồng nguyên tử.
+
+**Independent Test**: Board ACTIVE đủ/thiếu score, Chair/non-Chair, DEAN khác faculty,
+READY/PUBLISHED và thao tác concurrent complete/publish.
+
+- [ ] T006 [US4] Viết `FinalScoreRulesTest.java`, `ResultServiceTest.java` và phần faculty của `ResultControllerTest.java` trước; cài DTO/view, `ResultService`, `ResultController` cùng templates faculty trong `src/main/resources/templates/results/`; Chair complete toàn board với mean HALF_UP scale 2, DEAN publish toàn board và xem result đúng scope, khóa score/report sau complete; chạy tests và commit riêng tổng hợp/công bố. (FR-21–22,24; AS-9.1–9.5; SC-013,015)
+
+**Checkpoint**: Không publish thiếu evaluation; student chỉ thấy result PUBLISHED của snapshot mình.
+
+## Phase 7: User Story 5 — Sinh viên xem kết quả (P1)
+
+**Goal**: Snapshot student chỉ xem result PUBLISHED của đăng ký mình tham gia.
+
+**Independent Test**: Hai registration snapshot khác nhau, READY/PUBLISHED, current membership
+đã đổi và direct URL để kiểm tra không lộ metadata/score/feedback.
+
+- [ ] T007 [US5] Viết phần student privacy của `ResultControllerTest.java` và `StudentResultServiceTest.java` trước; mở rộng `ResultService`, `ResultController` và templates student trong `src/main/resources/templates/results/` cho list/detail PUBLISHED dựa trên `registration_members`, từ chối outsider/current-member-only/ADMIN và dữ liệu chưa publish; chạy tests và commit riêng student results. (FR-23–24; AS-10.1–10.4; SC-014)
+
+**Checkpoint**: Student chỉ thấy result PUBLISHED của snapshot mình; DEAN/ADMIN giữ scope đã chốt.
+
+## Phase 8: Cross-cutting acceptance
+
+- [ ] T008 Nối menu theo role tại `NavigationModelAdvice.java` và `templates/fragments/sidebar.html`, bổ sung fixture demo an toàn trong `LocalDemoSeeder.java`, test V8/integration/concurrency/E2E tại `src/test/java/vn/edu/topicregistration/{integration,concurrency,e2e}/`, cập nhật `README.md`, `specs/002-review-results/quickstart.md` và tạo `acceptance-matrix.md`; chạy `env -u JAVA_HOME ./mvnw test`, `verify -Pintegration`, `verify -Pe2e`, `git diff --check`, ghi PASS/FAIL/BLOCKED trung thực và commit riêng acceptance. (FR-16–25; SC-010–016)
+
+## Dependencies & execution order
+
+```mermaid
+flowchart TD
+  T001["T001 Spec/design"] --> T002["T002 V8 + model foundation"]
+  T002 --> T003["T003 Reports"]
+  T002 --> T004["T004 Councils"]
+  T003 --> T004
+  T004 --> T005["T005 Scoring"]
+  T005 --> T006["T006 Complete + publish"]
+  T006 --> T007["T007 Student results"]
+  T007 --> T008["T008 Acceptance"]
+```
+
+- T003 phải có trước activate ở T004 vì activate revalidate report hiện hành.
+- T005 phụ thuộc ACTIVE council; T006 phụ thuộc SUBMITTED evaluations.
+- Các task không đánh dấu `[P]` vì cùng sửa migration/model hoặc integration surfaces và phải
+  được commit tuần tự theo chính sách repository.
+- T008 không được đổi business policy; lỗi phát hiện sau commit dùng fix commit tham chiếu task gốc.
+
+## Traceability
+
+| Story / requirement | Tasks | Automated evidence |
+|---|---|---|
+| US1 / FR-16–17 | T002–T003,T008 | rules/service/web/storage/integration |
+| US2 / FR-18–19 | T002,T004,T008 | rules/service/web/schema/concurrency |
+| US3 / FR-20 | T002,T005,T008 | rules/service/web/concurrency |
+| US4 / FR-21–22 | T002,T006,T008 | calculator/service/web/concurrency |
+| US5 / FR-23 | T007–T008 | service/web/E2E privacy |
+| FR-24–25 | T002–T008 | authorization/error/storage matrix |
+
+## Implementation strategy
+
+T001–T002 là gate bắt buộc. Sau đó hoàn thiện từng vertical journey nhưng đặt class vào các
+package MVC ngang đã chốt. MVP đầu tiên là T003 report; luồng đầy đủ cần T004–T007. T008 chỉ
+đánh dấu feature sẵn sàng khi các test bắt buộc có môi trường đều pass; thiếu MySQL test hoặc
+Playwright phải ghi BLOCKED, không dùng database có dữ liệu thật và không bỏ qua test.
+
+## Generation summary
+
+8 tasks: design 1; foundation 1; reports 1; councils 1; scoring 1; result publication 1;
+student privacy 1; cross-cutting acceptance 1. Tất cả checklist task có ID, story label khi
+áp dụng và đường dẫn.
