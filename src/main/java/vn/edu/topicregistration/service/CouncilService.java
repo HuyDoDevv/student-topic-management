@@ -251,7 +251,15 @@ public class CouncilService {
         CouncilEntity council = councils.findDetailedById(councilId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        authorization.requireDeanOfFaculty(requiredFacultyId(council.getPeriod()));
+        ActorIdentity actor = authorization.currentActor();
+        long facultyId = requiredFacultyId(council.getPeriod());
+        boolean scopedDean = actor.roles().contains(RoleCode.DEAN)
+                && Objects.equals(actor.facultyId(), facultyId);
+        boolean currentChair = actor.roles().contains(RoleCode.LECTURER)
+                && Objects.equals(actor.accountId(), council.getChair().getId());
+        if (!scopedDean && !currentChair) {
+            throw new AccessDeniedException("Council is outside actor scope");
+        }
         List<CouncilMemberView> memberViews = members
                 .findAllByCouncilIdOrderBySlot(councilId)
                 .stream()
@@ -268,9 +276,15 @@ public class CouncilService {
                 .stream()
                 .map(CouncilService::toAssignmentView)
                 .toList();
-        List<RegistrationOption> available = availableRegistrations(council);
+        List<RegistrationOption> available = scopedDean
+                ? availableRegistrations(council) : List.of();
         return new CouncilDetailView(
-                toSummary(council), memberViews, assignmentViews, available);
+                toSummary(council),
+                memberViews,
+                assignmentViews,
+                available,
+                currentChair,
+                scopedDean);
     }
 
     private LockedCouncil lockedCouncil(long councilId, long expectedVersion) {
@@ -563,11 +577,21 @@ public class CouncilService {
             CouncilSummaryView council,
             List<CouncilMemberView> members,
             List<CouncilAssignmentView> assignments,
-            List<RegistrationOption> availableRegistrations) {
+            List<RegistrationOption> availableRegistrations,
+            boolean canComplete,
+            boolean canPublish) {
         public CouncilDetailView {
             members = List.copyOf(members);
             assignments = List.copyOf(assignments);
             availableRegistrations = List.copyOf(availableRegistrations);
+        }
+
+        public CouncilDetailView(
+                CouncilSummaryView council,
+                List<CouncilMemberView> members,
+                List<CouncilAssignmentView> assignments,
+                List<RegistrationOption> availableRegistrations) {
+            this(council, members, assignments, availableRegistrations, false, false);
         }
     }
 

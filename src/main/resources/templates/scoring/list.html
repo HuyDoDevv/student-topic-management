@@ -23,7 +23,9 @@
             <dt>Địa điểm</dt><dd th:text="${assignment.location}">Phòng A1-01</dd>
           </dl>
         </div>
-        <div class="card-footer text-end">
+        <div class="card-footer d-flex flex-wrap justify-content-end gap-2">
+          <a class="btn btn-outline-primary" th:if="${assignment.currentChair}"
+             th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
           <a class="btn btn-primary" th:href="@{/lecturer/scoring/{councilId}/{registrationId}(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}">Mở phiếu chấm</a>
         </div>
       </article>

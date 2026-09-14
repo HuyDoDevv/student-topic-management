@@ -13,7 +13,8 @@
       <a class="btn btn-outline-secondary" th:href="@{/faculty/boards}">Quay lại</a>
       <form th:if="${nextAction != null}" method="post" th:action="@{|/faculty/boards/${board.id}/${nextAction.route}|}" data-prevent-double-submit>
         <input type="hidden" name="version" th:value="${board.version}">
-        <button class="btn btn-primary" type="submit" th:text="${nextAction.label}">Chuyển trạng thái</button>
+        <button class="btn btn-primary" type="submit" th:text="${nextAction.label}"
+                th:attr="data-confirm=${board.status.name() == 'ACTIVE' ? 'Tổng hợp điểm và khóa toàn bộ phiếu chấm của hội đồng?' : (board.status.name() == 'COMPLETED' ? 'Công bố toàn bộ kết quả của hội đồng cho sinh viên?' : null)}">Chuyển trạng thái</button>
       </form>
     </div>
   </div>
@@ -89,6 +90,16 @@
 
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'SCHEDULED'}">
     Khi kích hoạt, hệ thống kiểm tra lại vai trò, bộ môn, xung đột giảng viên hướng dẫn và báo cáo hiện hành của mọi nhóm.
+  </div>
+  <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'ACTIVE'}">
+    Chỉ Chủ tịch hiện tại được tổng hợp khi mọi thành viên đã nộp điểm cho tất cả nhóm. Sau khi tổng hợp, điểm và báo cáo đều bị khóa.
+  </div>
+  <div class="alert alert-warning mt-3" role="status" th:if="${board.status.name() == 'COMPLETED'}">
+    Kết quả đang chờ Trưởng khoa công bố đồng thời cho toàn bộ nhóm của hội đồng.
+  </div>
+  <div class="alert alert-success mt-3" role="status" th:if="${board.status.name() == 'PUBLISHED'}">
+    Toàn bộ kết quả của hội đồng đã được công bố.
+    <a class="alert-link" th:if="${canViewFacultyResults}" th:href="@{/faculty/results}">Xem danh sách kết quả</a><span th:if="${canViewFacultyResults}">.</span>
   </div>
 </section>
 </body>

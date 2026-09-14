@@ -88,6 +88,15 @@ public class FinalResultEntity {
         this.status = FinalResultStatus.READY;
     }
 
+    public void publish(UserAccountEntity publishedBy, Instant publishedAt) {
+        if (status != FinalResultStatus.READY) {
+            throw new IllegalStateException("Only a ready result can be published");
+        }
+        this.publishedBy = Objects.requireNonNull(publishedBy, "publishedBy");
+        this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt");
+        this.status = FinalResultStatus.PUBLISHED;
+    }
+
     public Long getRegistrationId() {
         return registrationId;
     }

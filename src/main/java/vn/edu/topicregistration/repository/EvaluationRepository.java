@@ -32,6 +32,7 @@ public interface EvaluationRepository extends JpaRepository<EvaluationEntity, Lo
             + "where evaluation.council.id = :councilId order by evaluation.id")
     List<EvaluationEntity> findAllByCouncilIdForUpdate(@Param("councilId") long councilId);
 
+    @EntityGraph(attributePaths = {"evaluator", "component"})
     List<EvaluationEntity> findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(
             long councilId,
             long registrationId);

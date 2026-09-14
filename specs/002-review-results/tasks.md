@@ -87,9 +87,19 @@ MySQL/E2E đạt 123/123; schema và layered architecture checks đều đạt.
 **Independent Test**: Board ACTIVE đủ/thiếu score, Chair/non-Chair, DEAN khác faculty,
 READY/PUBLISHED và thao tác concurrent complete/publish.
 
-- [ ] T006 [US4] Viết `FinalScoreRulesTest.java`, `ResultServiceTest.java` và phần faculty của `ResultControllerTest.java` trước; cài DTO/view, `ResultService`, `ResultController` cùng templates faculty trong `src/main/resources/templates/results/`; Chair complete toàn board với mean HALF_UP scale 2, DEAN publish toàn board và xem result đúng scope, khóa score/report sau complete; chạy tests và commit riêng tổng hợp/công bố. (FR-21–22,24; AS-9.1–9.5; SC-013,015)
+- [X] T006 [US4] Viết `FinalScoreRulesTest.java`, `ResultServiceTest.java` và phần faculty của `ResultControllerTest.java` trước; cài DTO/view, `ResultService`, `ResultController` cùng templates faculty trong `src/main/resources/templates/results/`; Chair complete toàn board với mean HALF_UP scale 2, DEAN publish toàn board và xem result đúng scope, khóa score/report sau complete; chạy tests và commit riêng tổng hợp/công bố. (FR-21–22,24; AS-9.1–9.5; SC-013,015)
 
 **Checkpoint**: Không publish thiếu evaluation; student chỉ thấy result PUBLISHED của snapshot mình.
+
+**T006 evidence (2026-09-14)**: Rules/service/faculty web tests được chạy đỏ trước phần
+implementation còn thiếu, sau đó đạt 18/18. Complete khóa period→council→assignments/
+members/evaluations/results, chỉ cho Chair hiện tại tạo toàn bộ result READY từ ma trận
+SUBMITTED đầy đủ với arithmetic mean `HALF_UP` scale 2; publish chỉ cho DEAN đúng faculty
+đổi toàn bộ READY result và council sang PUBLISHED trong một transaction, có version/actor/
+time và không publish một phần. Chair không kiêm DEAN vẫn mở được board từ màn hình chấm để
+tổng hợp; danh sách/chi tiết quản trị vẫn giới hạn faculty. Regression không cần MySQL/E2E
+đạt 141/141. Suite mặc định chạy 148 test: 141 đạt, 7 lỗi môi trường cũ ở
+`PeriodContractTest` vì thiếu `TEST_DATABASE_URL`; integration/concurrency thật thuộc T008.
 
 ## Phase 7: User Story 5 — Sinh viên xem kết quả (P1)
 

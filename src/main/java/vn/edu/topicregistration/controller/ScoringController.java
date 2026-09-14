@@ -139,7 +139,8 @@ public class ScoringController {
                 assignment.groupId(),
                 assignment.topicTitle(),
                 format(assignment.scheduledAt()),
-                assignment.location());
+                assignment.location(),
+                assignment.currentChair());
     }
 
     private String format(Instant value) {
@@ -163,6 +164,7 @@ public class ScoringController {
             Long groupId,
             String topicTitle,
             String scheduledAt,
-            String location) {
+            String location,
+            boolean currentChair) {
     }
 }

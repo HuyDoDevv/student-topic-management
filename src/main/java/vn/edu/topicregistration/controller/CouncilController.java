@@ -194,9 +194,11 @@ public class CouncilController {
                 .toList());
         model.addAttribute("availableRegistrations", detail.availableRegistrations());
         model.addAttribute("canEditAssignments",
-                detail.council().status() == CouncilStatus.DRAFT
-                        || detail.council().status() == CouncilStatus.ASSIGNED);
-        model.addAttribute("nextAction", nextAction(detail.council().status()));
+                detail.canPublish()
+                        && (detail.council().status() == CouncilStatus.DRAFT
+                            || detail.council().status() == CouncilStatus.ASSIGNED));
+        model.addAttribute("canViewFacultyResults", detail.canPublish());
+        model.addAttribute("nextAction", nextAction(detail));
         return "councils/detail";
     }
 
@@ -235,12 +237,19 @@ public class CouncilController {
         return value == null ? null : DATE_TIME.format(projectTime.toBusinessTime(value));
     }
 
-    private static NextAction nextAction(CouncilStatus status) {
-        return switch (status) {
-            case DRAFT -> new NextAction("assign", "Xác nhận phân công");
-            case ASSIGNED -> new NextAction("schedule", "Xác nhận lịch bảo vệ");
-            case SCHEDULED -> new NextAction("activate", "Kích hoạt hội đồng");
-            default -> null;
+    private static NextAction nextAction(CouncilDetailView detail) {
+        return switch (detail.council().status()) {
+            case DRAFT -> detail.canPublish()
+                    ? new NextAction("assign", "Xác nhận phân công") : null;
+            case ASSIGNED -> detail.canPublish()
+                    ? new NextAction("schedule", "Xác nhận lịch bảo vệ") : null;
+            case SCHEDULED -> detail.canPublish()
+                    ? new NextAction("activate", "Kích hoạt hội đồng") : null;
+            case ACTIVE -> detail.canComplete()
+                    ? new NextAction("complete", "Tổng hợp kết quả") : null;
+            case COMPLETED -> detail.canPublish()
+                    ? new NextAction("publish", "Công bố kết quả") : null;
+            case PUBLISHED -> null;
         };
     }
 

@@ -11,6 +11,8 @@
     </div>
     <div class="btn-list">
       <a class="btn btn-outline-secondary" th:href="@{/lecturer/scoring}">Quay lại</a>
+      <a class="btn btn-outline-secondary" th:if="${assignment.currentChair}"
+         th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
       <a class="btn btn-outline-primary" th:href="@{/reports/{id}(id=${assignment.registrationId})}">Xem báo cáo</a>
     </div>
   </div>

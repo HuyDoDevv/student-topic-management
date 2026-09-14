@@ -3,12 +3,13 @@
       th:replace="~{layouts/main :: page('Hội đồng', ~{::section})}">
 <body>
 <section>
-  <div class="page-header">
+  <div class="page-header page-header-actions">
     <div>
       <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
       <h1 class="page-title">Hội đồng</h1>
       <p class="text-secondary mt-2 mb-0">Theo dõi hội đồng TLCN/KLTN trong phạm vi khoa.</p>
     </div>
+    <a class="btn btn-outline-primary" th:href="@{/faculty/results}">Xem kết quả</a>
   </div>
 
   <div class="card data-card" th:if="${!boards.isEmpty()}">

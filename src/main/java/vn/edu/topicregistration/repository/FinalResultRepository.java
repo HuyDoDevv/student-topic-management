@@ -15,7 +15,8 @@ import vn.edu.topicregistration.entity.FinalResultStatus;
 
 public interface FinalResultRepository extends JpaRepository<FinalResultEntity, Long> {
     @EntityGraph(attributePaths = {
-            "registration", "registration.topic", "council", "consolidatedBy", "publishedBy"
+            "registration", "registration.group", "registration.topic", "council",
+            "council.period", "council.period.faculty", "consolidatedBy", "publishedBy"
     })
     Optional<FinalResultEntity> findDetailedByRegistrationId(long registrationId);
 
@@ -24,7 +25,16 @@ public interface FinalResultRepository extends JpaRepository<FinalResultEntity, 
             + "where result.council.id = :councilId order by result.registrationId")
     List<FinalResultEntity> findAllByCouncilIdForUpdate(@Param("councilId") long councilId);
 
-    @EntityGraph(attributePaths = {"registration", "registration.topic", "council"})
+    @EntityGraph(attributePaths = {
+            "registration", "registration.group", "registration.topic", "council"
+    })
+    List<FinalResultEntity>
+            findAllByCouncilPeriodFacultyIdOrderByConsolidatedAtDescRegistrationIdDesc(
+                    long facultyId);
+
+    @EntityGraph(attributePaths = {
+            "registration", "registration.group", "registration.topic", "council"
+    })
     List<FinalResultEntity> findAllByCouncilPeriodFacultyIdAndStatusOrderByPublishedAtDesc(
             long facultyId,
             FinalResultStatus status);

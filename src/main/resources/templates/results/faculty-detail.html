@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chi tiết kết quả', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle" th:text="${result.councilName + ' · Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">Hội đồng · N001</div>
+      <h1 class="page-title" th:text="${result.topicTitle}">Đề tài</h1>
+      <span class="badge mt-2" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span>
+    </div>
+    <div class="btn-list">
+      <a class="btn btn-outline-secondary" th:href="@{/faculty/results}">Quay lại</a>
+      <a class="btn btn-outline-primary" th:href="@{/faculty/boards/{id}(id=${result.councilId})}">Xem hội đồng</a>
+    </div>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-lg-4">
+      <article class="card h-100">
+        <div class="card-header"><h2 class="card-title">Điểm tổng hợp</h2></div>
+        <div class="card-body text-center">
+          <div class="display-3 fw-bold text-primary" th:text="${result.finalScore}">8.50</div>
+          <p class="text-secondary mt-2 mb-0" th:text="${evaluationSummary}">3 điểm đã nộp; trung bình 8.50</p>
+        </div>
+        <div class="card-footer">
+          <dl class="detail-list mb-0">
+            <dt>Tổng hợp bởi</dt><dd th:text="${consolidatedBy}">Chủ tịch</dd>
+            <dt>Hoàn tất</dt><dd th:text="${result.consolidatedAt}">21/09/2026 09:00</dd>
+            <dt th:if="${result.publishedAt != null}">Công bố bởi</dt><dd th:if="${result.publishedAt != null}" th:text="${publishedBy}">Trưởng khoa</dd>
+            <dt th:if="${result.publishedAt != null}">Công bố lúc</dt><dd th:if="${result.publishedAt != null}" th:text="${result.publishedAt}">21/09/2026 10:00</dd>
+          </dl>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-lg-8">
+      <article class="card h-100">
+        <div class="card-header"><h2 class="card-title">Điểm thành viên hội đồng</h2></div>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table responsive-table">
+            <thead><tr><th>Giảng viên</th><th>Điểm</th><th>Nhận xét</th><th>Đã nộp lúc</th></tr></thead>
+            <tbody>
+            <tr th:each="evaluation : ${evaluations}">
+              <td data-label="Giảng viên" class="fw-semibold" th:text="${evaluation.evaluatorName}">Giảng viên A</td>
+              <td data-label="Điểm"><span class="badge bg-blue-lt fs-5" th:text="${evaluation.score}">8.50</span></td>
+              <td data-label="Nhận xét" th:text="${evaluation.feedback != null ? evaluation.feedback : 'Không có nhận xét'}">Đạt</td>
+              <td data-label="Đã nộp lúc" th:text="${evaluation.submittedAt}">21/09/2026 08:30</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+</body>
+</html>

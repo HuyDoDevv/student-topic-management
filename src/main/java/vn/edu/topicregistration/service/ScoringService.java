@@ -97,7 +97,7 @@ public class ScoringService {
                         == RegistrationStatus.ACCEPTED)
                 .filter(assignment -> !isSupervisor(
                         assignment.getRegistration(), lecturer.accountId()))
-                .map(ScoringService::toAssignmentView)
+                .map(assignment -> toAssignmentView(assignment, lecturer.accountId()))
                 .toList();
     }
 
@@ -127,7 +127,8 @@ public class ScoringService {
                         councilId, registrationId, lecturer.accountId())
                 .map(ScoringService::toView)
                 .orElse(null);
-        return new ScoreWorkspace(toAssignmentView(assignment), evaluation);
+        return new ScoreWorkspace(
+                toAssignmentView(assignment, lecturer.accountId()), evaluation);
     }
 
     private EvaluationView mutate(
@@ -252,7 +253,9 @@ public class ScoringService {
                 .anyMatch(id -> Objects.equals(id, actorId));
     }
 
-    private static ScoringAssignmentView toAssignmentView(CouncilTopicEntity assignment) {
+    private static ScoringAssignmentView toAssignmentView(
+            CouncilTopicEntity assignment,
+            long actorId) {
         return new ScoringAssignmentView(
                 assignment.getCouncil().getId(),
                 assignment.getCouncil().getName(),
@@ -260,7 +263,9 @@ public class ScoringService {
                 assignment.getRegistration().getGroup().getId(),
                 assignment.getRegistration().getTopic().getTitle(),
                 assignment.getScheduledAt(),
-                assignment.getLocation());
+                assignment.getLocation(),
+                Objects.equals(assignment.getCouncil().getChair().getId(), actorId),
+                assignment.getCouncil().getVersion());
     }
 
     private static EvaluationView toView(EvaluationEntity evaluation) {
@@ -301,7 +306,20 @@ public class ScoringService {
             Long groupId,
             String topicTitle,
             Instant scheduledAt,
-            String location) {
+            String location,
+            boolean currentChair,
+            long councilVersion) {
+        public ScoringAssignmentView(
+                Long councilId,
+                String councilName,
+                Long registrationId,
+                Long groupId,
+                String topicTitle,
+                Instant scheduledAt,
+                String location) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, false, 0L);
+        }
     }
 
     public record EvaluationView(
