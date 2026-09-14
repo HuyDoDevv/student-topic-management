@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Báo cáo đề tài', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">ĐĂNG KÝ #<span th:text="${registrationId}">1</span></div>
+      <h1 class="page-title" th:text="${workspace.topicTitle}">Tên đề tài</h1>
+      <div class="text-secondary mt-2">
+        Nhóm <span class="fw-semibold" th:text="${groupCode}">N001</span>
+      </div>
+    </div>
+    <div class="btn-list">
+      <a class="btn btn-outline-secondary"
+         th:href="@{/registrations/{id}(id=${registrationId})}">Quay lại đăng ký</a>
+      <a class="btn btn-primary" th:if="${report != null}"
+         th:href="@{/reports/{id}/download(id=${registrationId})}">Tải PDF</a>
+    </div>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-lg-7">
+      <article class="card h-100">
+        <div class="card-header"><h2 class="card-title">Báo cáo hiện tại</h2></div>
+        <div class="card-body" th:if="${report != null}">
+          <dl class="detail-list detail-list-grid">
+            <dt>Tên file</dt><dd th:text="${report.fileName}">report.pdf</dd>
+            <dt>Dung lượng</dt><dd><span th:text="${report.sizeBytes}">1024</span> byte</dd>
+            <dt>Người nộp</dt><dd th:text="${report.submittedBy}">Sinh viên</dd>
+            <dt>Nộp lúc</dt><dd th:text="${submittedAt}">14/09/2026 15:30</dd>
+          </dl>
+          <p class="text-secondary mb-0">
+            Chỉ báo cáo hiện tại được hiển thị. Các bản đã thay không được dùng để chấm điểm.
+          </p>
+        </div>
+        <div class="empty" th:if="${report == null}">
+          <div class="empty-header">PDF</div>
+          <p class="empty-title">Chưa có báo cáo</p>
+          <p class="empty-subtitle text-secondary">Trưởng nhóm có thể nộp báo cáo trước khi hội đồng bắt đầu.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-lg-5">
+      <aside class="card h-100">
+        <div class="card-header"><h2 class="card-title" th:text="${report == null} ? 'Nộp báo cáo' : 'Thay báo cáo'"></h2></div>
+        <div class="card-body" th:if="${canUpload}">
+          <form th:action="@{/reports/{id}(id=${registrationId})}"
+                th:object="${reportUploadForm}" method="post" enctype="multipart/form-data"
+                data-prevent-double-submit>
+            <input type="hidden" th:field="*{version}">
+            <div class="mb-3">
+              <label class="form-label" for="report-file">File PDF</label>
+              <input class="form-control" id="report-file" type="file" th:field="*{file}"
+                     accept="application/pdf,.pdf" required>
+              <div class="form-hint">Tối đa 20 MB. File phải có nội dung PDF hợp lệ.</div>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('file')}"
+                   th:errors="*{file}">File chưa hợp lệ.</div>
+            </div>
+            <button class="btn btn-primary w-100" type="submit"
+                    th:text="${report == null} ? 'Nộp báo cáo' : 'Thay báo cáo'"></button>
+          </form>
+        </div>
+        <div class="card-body" th:unless="${canUpload}">
+          <div class="alert alert-info mb-0" role="status">
+            Chỉ trưởng nhóm tại thời điểm gửi đăng ký được nộp. Báo cáo bị khóa khi hội đồng bắt đầu làm việc.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+</body>
+</html>

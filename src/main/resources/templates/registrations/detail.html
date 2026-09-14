@@ -16,6 +16,8 @@
     <div class="btn-list">
       <a class="btn btn-outline-secondary"
          th:href="${registration.deanViewer} ? @{/periods/{id}(id=${registration.periodId})} : @{/groups/{id}(id=${registration.groupId})}">Quay lại</a>
+      <a class="btn btn-outline-primary" th:if="${registration.status.name() == 'ACCEPTED'}"
+         th:href="@{/reports/{id}(id=${registration.id})}">Báo cáo</a>
       <a class="btn btn-primary" th:if="${registration.canDecide}"
          th:href="@{/registrations/{id}/decision(id=${registration.id})}">Xét duyệt</a>
       <form th:if="${registration.canWithdraw}"

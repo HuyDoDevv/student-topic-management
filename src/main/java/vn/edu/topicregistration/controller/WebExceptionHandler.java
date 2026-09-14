@@ -18,6 +18,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -58,6 +59,12 @@ public class WebExceptionHandler {
                 .toList();
         ApplicationErrorCode code = ApplicationErrorCode.VALIDATION_FAILED;
         return error(response, code.status(), code.name(), code.title(), code.userMessage(), fields);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ModelAndView handleUploadTooLarge(HttpServletResponse response) {
+        ApplicationErrorCode code = ApplicationErrorCode.INVALID_REPORT_FILE;
+        return error(response, code.status(), code.name(), code.title(), code.userMessage(), List.of());
     }
 
     @ExceptionHandler({OptimisticLockingFailureException.class,

@@ -35,9 +35,15 @@ có dữ liệu để thay thế. Migration MySQL tích hợp vẫn thuộc T008
 **Independent Test**: Fixture registration ACCEPTED, PDF hợp lệ/sai, các actor leader/member/
 supervisor/dean/council member/outsider và council trước/sau ACTIVE.
 
-- [ ] T003 [US1] Viết `ReportRulesTest.java`, `ReportServiceTest.java`, `ReportControllerTest.java` trước; cài safe local storage, `ReportUploadForm`, `ReportService`, `ReportController` và templates trong `src/main/java/vn/edu/topicregistration/{config,dto,repository,service,controller}/` cùng `src/main/resources/templates/reports/`; nối link từ registration detail, kiểm tra PDF <=20 MB/quyền/replace/rollback, chạy tests và commit riêng report. (FR-16–17,24–25; AS-6.1–6.5; SC-010)
+- [X] T003 [US1] Viết `ReportRulesTest.java`, `ReportServiceTest.java`, `ReportControllerTest.java` trước; cài safe local storage, `ReportUploadForm`, `ReportService`, `ReportController` và templates trong `src/main/java/vn/edu/topicregistration/{config,dto,repository,service,controller}/` cùng `src/main/resources/templates/reports/`; nối link từ registration detail, kiểm tra PDF <=20 MB/quyền/replace/rollback, chạy tests và commit riêng report. (FR-16–17,24–25; AS-6.1–6.5; SC-010)
 
 **Checkpoint**: bytes tải lại đúng, outsider không thấy metadata, upload bị khóa khi council ACTIVE.
+
+**T003 evidence (2026-09-14)**: ba test report được viết trước và chạy đỏ vì API chưa có,
+sau đó chạy đỏ hành vi 10 ca với khung chưa triển khai. Implementation đạt 15/15 ca report/
+error mục tiêu và regression không cần MySQL đạt 90/90; kiểm tra gồm PDF signature/20 MB,
+generated storage key, path traversal, quyền, replace theo version, cleanup khi DB lỗi,
+download headers và multipart vượt giới hạn trả 422.
 
 ## Phase 4: User Story 2 — Hội đồng 3–5 người (P1)
 

@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
@@ -42,6 +43,7 @@ class WebExceptionHandlerTest {
         assertError("/failure/missing", 404, "RESOURCE_NOT_FOUND");
         assertError("/failure/conflict", 409, "CONFLICT");
         assertError("/failure/window", 422, "WINDOW_CLOSED");
+        assertError("/failure/upload-too-large", 422, "INVALID_REPORT_FILE");
     }
 
     @Test
@@ -93,6 +95,11 @@ class WebExceptionHandlerTest {
         @GetMapping("/failure/window")
         String window() {
             throw new ApplicationException(ApplicationErrorCode.WINDOW_CLOSED);
+        }
+
+        @GetMapping("/failure/upload-too-large")
+        String uploadTooLarge() {
+            throw new MaxUploadSizeExceededException(20L * 1024 * 1024);
         }
 
         @GetMapping("/failure/unexpected")

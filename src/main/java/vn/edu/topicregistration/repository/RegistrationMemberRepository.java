@@ -32,4 +32,8 @@ public interface RegistrationMemberRepository
     boolean existsByRegistrationIdAndStudentId(
             @Param("registrationId") long registrationId,
             @Param("studentId") long studentId);
+
+    boolean existsByRegistrationIdAndStudentIdAndLeaderAtSubmissionTrue(
+            long registrationId,
+            long studentId);
 }
