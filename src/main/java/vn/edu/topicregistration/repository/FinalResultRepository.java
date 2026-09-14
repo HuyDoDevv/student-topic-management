@@ -38,4 +38,31 @@ public interface FinalResultRepository extends JpaRepository<FinalResultEntity, 
     List<FinalResultEntity> findAllByCouncilPeriodFacultyIdAndStatusOrderByPublishedAtDesc(
             long facultyId,
             FinalResultStatus status);
+
+    @EntityGraph(attributePaths = {
+            "registration", "registration.group", "registration.topic", "council"
+    })
+    @Query("select result from FinalResultEntity result "
+            + "where result.status = :status "
+            + "and exists (select member.id from RegistrationMemberEntity member "
+            + "where member.registration.id = result.registrationId "
+            + "and member.student.id = :studentId) "
+            + "order by result.publishedAt desc, result.registrationId desc")
+    List<FinalResultEntity> findAllVisibleToStudent(
+            @Param("studentId") long studentId,
+            @Param("status") FinalResultStatus status);
+
+    @EntityGraph(attributePaths = {
+            "registration", "registration.group", "registration.topic", "council"
+    })
+    @Query("select result from FinalResultEntity result "
+            + "where result.registrationId = :registrationId "
+            + "and result.status = :status "
+            + "and exists (select member.id from RegistrationMemberEntity member "
+            + "where member.registration.id = result.registrationId "
+            + "and member.student.id = :studentId)")
+    Optional<FinalResultEntity> findVisibleToStudent(
+            @Param("registrationId") long registrationId,
+            @Param("studentId") long studentId,
+            @Param("status") FinalResultStatus status);
 }

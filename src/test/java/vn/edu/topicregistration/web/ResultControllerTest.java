@@ -33,6 +33,8 @@ import vn.edu.topicregistration.service.ResultService.BoardResultView;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
+import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
+import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
 
 class ResultControllerTest {
@@ -108,6 +110,29 @@ class ResultControllerTest {
         verify(results, never()).complete(eq(41L), org.mockito.ArgumentMatchers.anyLong());
     }
 
+    @Test
+    void studentListRendersOnlyServiceScopedPublishedResults() throws Exception {
+        when(results.listForCurrentStudent()).thenReturn(List.of(studentSummary()));
+
+        mvc.perform(get("/student/results"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("results/student-list"))
+                .andExpect(model().attributeExists("results"));
+    }
+
+    @Test
+    void studentDetailRendersPublishedOwnResult() throws Exception {
+        when(results.detailForCurrentStudent(51L)).thenReturn(new StudentResultDetailView(
+                studentSummary(),
+                "3 điểm đã nộp; trung bình 8.50",
+                detail().evaluations()));
+
+        mvc.perform(get("/student/results/51"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("results/student-detail"))
+                .andExpect(model().attributeExists("result", "evaluations"));
+    }
+
     private static FacultyResultDetailView detail() {
         return new FacultyResultDetailView(
                 summary(),
@@ -135,5 +160,15 @@ class ResultControllerTest {
                 NOW,
                 null,
                 0L);
+    }
+
+    private static StudentResultSummaryView studentSummary() {
+        return new StudentResultSummaryView(
+                51L,
+                21L,
+                "Đề tài thử nghiệm",
+                "Hội đồng KLTN",
+                new BigDecimal("8.50"),
+                NOW);
     }
 }

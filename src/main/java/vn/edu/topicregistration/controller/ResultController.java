@@ -28,6 +28,8 @@ import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
+import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
+import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
 
 @Controller
@@ -70,6 +72,27 @@ public class ResultController {
                 .map(this::display)
                 .toList());
         return "results/faculty-detail";
+    }
+
+    @GetMapping("/student/results")
+    public String studentList(Model model) {
+        common(model);
+        model.addAttribute("results", results.listForCurrentStudent().stream()
+                .map(this::display)
+                .toList());
+        return "results/student-list";
+    }
+
+    @GetMapping("/student/results/{registrationId}")
+    public String studentDetail(@PathVariable long registrationId, Model model) {
+        StudentResultDetailView detail = results.detailForCurrentStudent(registrationId);
+        common(model);
+        model.addAttribute("result", display(detail.result()));
+        model.addAttribute("evaluationSummary", detail.evaluationSummary());
+        model.addAttribute("evaluations", detail.evaluations().stream()
+                .map(this::display)
+                .toList());
+        return "results/student-detail";
     }
 
     @PostMapping("/faculty/boards/{id}/complete")
@@ -131,6 +154,16 @@ public class ResultController {
                 format(evaluation.submittedAt()));
     }
 
+    private StudentResultPageView display(StudentResultSummaryView result) {
+        return new StudentResultPageView(
+                result.registrationId(),
+                result.groupId(),
+                result.topicTitle(),
+                result.councilName(),
+                score(result.finalScore()),
+                format(result.publishedAt()));
+    }
+
     private String format(Instant value) {
         return value == null ? null : DATE_TIME.format(projectTime.toBusinessTime(value));
     }
@@ -175,5 +208,14 @@ public class ResultController {
             EvaluationStatus status,
             String statusLabel,
             String submittedAt) {
+    }
+
+    public record StudentResultPageView(
+            Long registrationId,
+            Long groupId,
+            String topicTitle,
+            String councilName,
+            String finalScore,
+            String publishedAt) {
     }
 }

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Kết quả của tôi', ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle">SINH VIÊN</div>
+      <h1 class="page-title">Kết quả của tôi</h1>
+      <p class="text-secondary mt-2 mb-0">Chỉ các kết quả đã công bố của nhóm bạn tại thời điểm gửi đăng ký được hiển thị.</p>
+    </div>
+  </div>
+
+  <div class="row row-cards" th:if="${!results.isEmpty()}">
+    <div class="col-md-6 col-xl-4" th:each="result : ${results}">
+      <article class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between gap-3">
+            <span class="badge bg-green-lt">Đã công bố</span>
+            <span class="display-6 fw-bold text-primary" th:text="${result.finalScore}">8.50</span>
+          </div>
+          <h2 class="card-title mt-3" th:text="${result.topicTitle}">Đề tài</h2>
+          <dl class="detail-list mt-3 mb-0">
+            <dt>Nhóm</dt><dd th:text="${'N' + #numbers.formatInteger(result.groupId, 3)}">N001</dd>
+            <dt>Hội đồng</dt><dd th:text="${result.councilName}">Hội đồng KLTN</dd>
+            <dt>Công bố lúc</dt><dd th:text="${result.publishedAt}">21/09/2026 10:00</dd>
+          </dl>
+        </div>
+        <div class="card-footer text-end">
+          <a class="btn btn-primary" th:href="@{/student/results/{id}(id=${result.registrationId})}">Xem chi tiết</a>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="card" th:if="${results.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có kết quả được công bố', 'Kết quả sẽ xuất hiện sau khi Chủ tịch tổng hợp và Trưởng khoa công bố hội đồng.')}"></div>
+</section>
+</body>
+</html>

@@ -204,6 +204,38 @@ public class ResultService {
                 evaluationViews);
     }
 
+    @Transactional(readOnly = true)
+    public List<StudentResultSummaryView> listForCurrentStudent() {
+        ActorIdentity student = currentStudent();
+        return results.findAllVisibleToStudent(
+                        student.accountId(), FinalResultStatus.PUBLISHED)
+                .stream()
+                .map(ResultService::toStudentSummary)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public StudentResultDetailView detailForCurrentStudent(long registrationId) {
+        ActorIdentity student = currentStudent();
+        FinalResultEntity result = results.findVisibleToStudent(
+                        registrationId,
+                        student.accountId(),
+                        FinalResultStatus.PUBLISHED)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        List<EvaluationResultView> evaluationViews = evaluations
+                .findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(
+                        result.getCouncil().getId(), registrationId)
+                .stream()
+                .filter(evaluation -> evaluation.getStatus() == EvaluationStatus.SUBMITTED)
+                .map(ResultService::toEvaluationView)
+                .toList();
+        return new StudentResultDetailView(
+                toStudentSummary(result),
+                result.getEvaluationSummary(),
+                evaluationViews);
+    }
+
     private LockedBoard lockBoard(
             long councilId,
             long expectedVersion,
@@ -248,6 +280,14 @@ public class ResultService {
             throw new AccessDeniedException("Dean scope is missing");
         }
         return dean;
+    }
+
+    private ActorIdentity currentStudent() {
+        ActorIdentity student = authorization.requireRole(RoleCode.STUDENT);
+        if (student.accountId() == null) {
+            throw new AccessDeniedException("Student account is missing");
+        }
+        return student;
     }
 
     private static boolean exactSubmittedMatrix(
@@ -374,6 +414,16 @@ public class ResultService {
                 evaluation.getSubmittedAt());
     }
 
+    private static StudentResultSummaryView toStudentSummary(FinalResultEntity result) {
+        return new StudentResultSummaryView(
+                result.getRegistrationId(),
+                result.getRegistration().getGroup().getId(),
+                result.getRegistration().getTopic().getTitle(),
+                result.getCouncil().getName(),
+                result.getFinalScore(),
+                result.getPublishedAt());
+    }
+
     private static String displayName(UserAccountEntity account) {
         return account.getFullName() == null || account.getFullName().isBlank()
                 ? account.getUsername()
@@ -453,6 +503,24 @@ public class ResultService {
             String publishedBy,
             List<EvaluationResultView> evaluations) {
         public FacultyResultDetailView {
+            evaluations = List.copyOf(evaluations);
+        }
+    }
+
+    public record StudentResultSummaryView(
+            Long registrationId,
+            Long groupId,
+            String topicTitle,
+            String councilName,
+            BigDecimal finalScore,
+            Instant publishedAt) {
+    }
+
+    public record StudentResultDetailView(
+            StudentResultSummaryView result,
+            String evaluationSummary,
+            List<EvaluationResultView> evaluations) {
+        public StudentResultDetailView {
             evaluations = List.copyOf(evaluations);
         }
     }

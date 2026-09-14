@@ -108,9 +108,17 @@ tổng hợp; danh sách/chi tiết quản trị vẫn giới hạn faculty. Reg
 **Independent Test**: Hai registration snapshot khác nhau, READY/PUBLISHED, current membership
 đã đổi và direct URL để kiểm tra không lộ metadata/score/feedback.
 
-- [ ] T007 [US5] Viết phần student privacy của `ResultControllerTest.java` và `StudentResultServiceTest.java` trước; mở rộng `ResultService`, `ResultController` và templates student trong `src/main/resources/templates/results/` cho list/detail PUBLISHED dựa trên `registration_members`, từ chối outsider/current-member-only/ADMIN và dữ liệu chưa publish; chạy tests và commit riêng student results. (FR-23–24; AS-10.1–10.4; SC-014)
+- [X] T007 [US5] Viết phần student privacy của `ResultControllerTest.java` và `StudentResultServiceTest.java` trước; mở rộng `ResultService`, `ResultController` và templates student trong `src/main/resources/templates/results/` cho list/detail PUBLISHED dựa trên `registration_members`, từ chối outsider/current-member-only/ADMIN và dữ liệu chưa publish; chạy tests và commit riêng student results. (FR-23–24; AS-10.1–10.4; SC-014)
 
 **Checkpoint**: Student chỉ thấy result PUBLISHED của snapshot mình; DEAN/ADMIN giữ scope đã chốt.
+
+**T007 evidence (2026-09-14)**: Student service/privacy và hai route HTML đạt 6/6 ca mục
+tiêu. Cả list lẫn detail lọc tại repository bằng `registration_members` snapshot và trạng
+thái PUBLISHED; direct ID của nhóm khác hoặc READY trả lỗi chung trước khi đọc evaluation,
+membership hiện tại không cấp quyền và ADMIN không gọi được truy vấn sinh viên. Regression
+không cần MySQL/E2E đạt 147/147. Suite mặc định chạy 154 test: 147 đạt, 7 lỗi môi trường
+cũ ở `PeriodContractTest` vì thiếu `TEST_DATABASE_URL`; truy vấn JPA trên MySQL và E2E thuộc
+T008.
 
 ## Phase 8: Cross-cutting acceptance
 
