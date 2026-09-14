@@ -9,13 +9,13 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import vn.edu.topicregistration.topics.domain.TopicRules;
-import vn.edu.topicregistration.topics.domain.TopicRules.Failure;
-import vn.edu.topicregistration.topics.domain.TopicRules.SupervisorCandidate;
-import vn.edu.topicregistration.topics.domain.TopicRules.TopicAccess;
-import vn.edu.topicregistration.topics.domain.TopicRules.TopicDraft;
-import vn.edu.topicregistration.topics.domain.TopicRules.TopicRuleException;
-import vn.edu.topicregistration.topics.domain.TopicRules.TopicStatus;
+import vn.edu.topicregistration.service.TopicRules;
+import vn.edu.topicregistration.service.TopicRules.Failure;
+import vn.edu.topicregistration.service.TopicRules.SupervisorCandidate;
+import vn.edu.topicregistration.service.TopicRules.TopicAccess;
+import vn.edu.topicregistration.service.TopicRules.TopicDraft;
+import vn.edu.topicregistration.service.TopicRules.TopicRuleException;
+import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 
 /** FR-05/06/14; AS-2.1-2.3, AS-2.5-2.11; AT-03/12. */
 class TopicRulesTest {

@@ -21,7 +21,7 @@ import com.microsoft.playwright.Playwright;
 import vn.edu.topicregistration.TopicRegistrationApplication;
 import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
-import vn.edu.topicregistration.shared.time.TimeConfig;
+import vn.edu.topicregistration.config.TimeConfig;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BrowserTestSupport {

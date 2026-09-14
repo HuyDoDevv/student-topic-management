@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.view.RedirectView;
 
-import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
-import vn.edu.topicregistration.shared.error.ApplicationException;
-import vn.edu.topicregistration.shared.web.WebExceptionHandler;
-import vn.edu.topicregistration.shared.web.WebRedirects;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.controller.WebExceptionHandler;
+import vn.edu.topicregistration.controller.WebRedirects;
 
 class WebExceptionHandlerTest {
     MockMvc mvc;

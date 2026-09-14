@@ -1,0 +1,35 @@
+package vn.edu.topicregistration.controller;
+
+import vn.edu.topicregistration.service.DashboardService;
+import vn.edu.topicregistration.util.ProjectTime;
+
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+
+@Controller
+@Profile("!preview & !test")
+public class FoundationController {
+    private final ProjectTime projectTime;
+    private final DashboardService dashboard;
+
+    public FoundationController(ProjectTime projectTime, DashboardService dashboard) {
+        this.projectTime = projectTime;
+        this.dashboard = dashboard;
+    }
+
+    @GetMapping({"/", "/dashboard"})
+    String home(Model model) {
+        model.addAttribute("today", projectTime.toBusinessTime(projectTime.now()).toLocalDate().format(
+                DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))));
+        model.addAttribute("activeNav", "dashboard");
+        model.addAttribute("pageSection", "Không gian làm việc");
+        model.addAttribute("dashboard", dashboard.current());
+        return "dashboard/index";
+    }
+}

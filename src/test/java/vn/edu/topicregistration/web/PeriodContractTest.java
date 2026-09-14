@@ -37,11 +37,11 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
-import vn.edu.topicregistration.shared.dashboard.DashboardView;
-import vn.edu.topicregistration.shared.time.TimeConfig;
+import vn.edu.topicregistration.dto.DashboardView;
+import vn.edu.topicregistration.config.TimeConfig;
 
 @SpringBootTest
 @ActiveProfiles("local")

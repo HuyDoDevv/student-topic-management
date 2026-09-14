@@ -58,7 +58,7 @@ không dùng H2 thay MySQL cho kiểm thử ràng buộc và đồng thời.
 | II. Truy vết | PASS về phương pháp | Bảng FR/REQ/AT và contracts giữ ID |
 | III. Backend quyền | PASS về thiết kế | Ma trận quyền và scope khoa/bộ môn/quan hệ tài nguyên đã được xác nhận |
 | IV. Boundary validation | PASS về thiết kế | DTO whitelist, kiểm tra service, lỗi không ghi dở dang |
-| V. Tách nghiệp vụ | PASS về thiết kế | web → application/domain → persistence; Thymeleaf chỉ trình bày |
+| V. Tách nghiệp vụ | PASS về thiết kế | controller → service → repository; DTO/entity tách khỏi controller và Thymeleaf chỉ trình bày |
 | VI. Đồng thời | PASS về thiết kế, chưa kiểm thử | Khóa đợt + unique/FK/check; ma trận tranh chấp |
 | VII. Migration | PASS về thiết kế | SQL V1, V2… quản lý thay đổi; Hibernate validate khi boot |
 | VIII. Tests | PASS về kế hoạch, chưa chạy | Unit, HTTP, DB, concurrency, browser |
@@ -110,21 +110,23 @@ của giai đoạn chưa hết hạn. Mỗi ngày phụ chỉ được dời mu�
 
 ### Source Code (repository root)
 
-Cấu trúc dự kiến, **chưa tạo mã nguồn hoặc sao chép assets**:
+Cấu trúc production hiện tại sau T076:
 
 ```text
 pom.xml
 mvnw / mvnw.cmd / .mvn/wrapper/
 src/main/java/.../
-  identity/
-  periods/
-  topics/
-  groups/
-  registrations/
-  shared/
-    security/
-    time/
-  (mỗi module: web/, application/, domain/, persistence/)
+  TopicRegistrationApplication.java
+  config/
+  controller/
+  dto/
+  entity/
+  exception/
+  repository/
+  security/
+  seed/
+  service/
+  util/
 src/main/resources/
   templates/
     fragments/
@@ -143,9 +145,10 @@ THIRD_PARTY_NOTICES.md
 licenses/
 ```
 
-Một tiến trình, một DB. Controllers nhận DTO, gọi service, chuyển lỗi sang view;
-service kiểm tra quyền theo dữ liệu và mở transaction; domain giữ quy tắc thuần;
-repository thực hiện truy vấn/khóa. Không dùng entity làm form binding hoặc đặt
+Một tiến trình, một DB và đúng một `@SpringBootApplication`. Cấu trúc package theo
+layer MVC: controller nhận DTO, gọi service và chuyển lỗi sang view; service kiểm tra
+quyền theo dữ liệu, giữ quy tắc nghiệp vụ và mở transaction; repository thực hiện
+truy vấn/khóa; entity chỉ ánh xạ trạng thái lưu trữ. Không dùng entity làm form binding hoặc đặt
 logic nghiệp vụ trong template. Tắt Open EntityManager in View, dựng view model
 trong service để không tải dữ liệu ngoài kiểm tra quyền.
 

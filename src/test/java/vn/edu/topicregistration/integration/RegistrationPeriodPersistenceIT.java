@@ -23,9 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import vn.edu.topicregistration.identity.persistence.FacultyEntity;
-import vn.edu.topicregistration.periods.persistence.RegistrationPeriodEntity;
-import vn.edu.topicregistration.periods.persistence.RegistrationPeriodRepository;
+import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 
 @SpringBootTest
 @ActiveProfiles("local")

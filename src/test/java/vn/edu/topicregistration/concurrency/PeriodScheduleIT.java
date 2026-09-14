@@ -40,17 +40,17 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
-import vn.edu.topicregistration.periods.application.PeriodService;
-import vn.edu.topicregistration.periods.application.PeriodService.PeriodView;
-import vn.edu.topicregistration.periods.domain.PeriodRules.PeriodConfiguration;
-import vn.edu.topicregistration.periods.domain.PeriodRules.RegistrationState;
-import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
-import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
-import vn.edu.topicregistration.shared.error.ApplicationException;
-import vn.edu.topicregistration.shared.time.TimeConfig;
+import vn.edu.topicregistration.service.PeriodService;
+import vn.edu.topicregistration.service.PeriodService.PeriodView;
+import vn.edu.topicregistration.service.PeriodRules.PeriodConfiguration;
+import vn.edu.topicregistration.service.PeriodRules.RegistrationState;
+import vn.edu.topicregistration.service.PeriodRules.TopicType;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.config.TimeConfig;
 
 @SpringBootTest
 @ActiveProfiles("local")

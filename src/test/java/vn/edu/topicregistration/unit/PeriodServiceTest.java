@@ -16,21 +16,21 @@ import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
-import vn.edu.topicregistration.identity.persistence.FacultyEntity;
-import vn.edu.topicregistration.periods.application.PeriodService;
-import vn.edu.topicregistration.periods.application.PeriodTransactionService;
-import vn.edu.topicregistration.periods.application.PeriodTransactionService.CreationContext;
-import vn.edu.topicregistration.periods.application.PeriodTransactionService.LockedPeriodContext;
-import vn.edu.topicregistration.periods.domain.PeriodRules.PeriodConfiguration;
-import vn.edu.topicregistration.periods.domain.PeriodRules.RegistrationState;
-import vn.edu.topicregistration.periods.domain.PeriodRules.TopicType;
-import vn.edu.topicregistration.periods.persistence.RegistrationPeriodEntity;
-import vn.edu.topicregistration.periods.persistence.RegistrationPeriodRepository;
-import vn.edu.topicregistration.shared.error.ApplicationErrorCode;
-import vn.edu.topicregistration.shared.error.ApplicationException;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy;
-import vn.edu.topicregistration.shared.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.service.PeriodService;
+import vn.edu.topicregistration.service.PeriodTransactionService;
+import vn.edu.topicregistration.service.PeriodTransactionService.CreationContext;
+import vn.edu.topicregistration.service.PeriodTransactionService.LockedPeriodContext;
+import vn.edu.topicregistration.service.PeriodRules.PeriodConfiguration;
+import vn.edu.topicregistration.service.PeriodRules.RegistrationState;
+import vn.edu.topicregistration.service.PeriodRules.TopicType;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 class PeriodServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-10T00:00:00Z");

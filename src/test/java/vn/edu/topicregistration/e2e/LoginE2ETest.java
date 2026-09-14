@@ -12,7 +12,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.Cookie;
 import com.microsoft.playwright.options.SameSiteAttribute;
 
-import vn.edu.topicregistration.identity.domain.RoleCode;
+import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.integration.FixtureSupport;
 
 class LoginE2ETest extends BrowserTestSupport {

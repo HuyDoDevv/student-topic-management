@@ -10,10 +10,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import vn.edu.topicregistration.groups.domain.GroupRules;
-import vn.edu.topicregistration.groups.domain.GroupRules.Failure;
-import vn.edu.topicregistration.groups.domain.GroupRules.GroupRuleException;
-import vn.edu.topicregistration.groups.domain.GroupRules.MutationContext;
+import vn.edu.topicregistration.service.GroupRules;
+import vn.edu.topicregistration.service.GroupRules.Failure;
+import vn.edu.topicregistration.service.GroupRules.GroupRuleException;
+import vn.edu.topicregistration.service.GroupRules.MutationContext;
 
 class GroupRulesTest {
     private static final Instant START = Instant.parse("2026-09-12T01:00:00Z");

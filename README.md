@@ -87,6 +87,26 @@ Chạy kiểm thử bằng `./mvnw verify` trên macOS hoặc `.\mvnw.cmd verify
 Kiểm thử SQL nằm ở `src/test/resources/database/full-schema-check.sql`, chạy trên DB
 kiểm thử đã được Flyway migrate; dữ liệu fixture được rollback.
 
+Ứng dụng dùng Spring MVC theo package ngang. Chỉ
+`vn.edu.topicregistration.TopicRegistrationApplication` là entrypoint chạy Spring Boot;
+tên package `application` cũ chỉ từng là tầng use case của mỗi nhóm chức năng, không phải
+các ứng dụng Spring Boot riêng. Cấu trúc production hiện tại:
+
+```text
+vn.edu.topicregistration/
+├── TopicRegistrationApplication.java
+├── config/       # cấu hình Spring
+├── controller/   # MVC controllers và xử lý HTTP/view
+├── dto/          # form input và view DTO
+├── entity/       # JPA entities và enum trạng thái lưu trữ
+├── repository/   # Spring Data/JDBC queries
+├── service/      # nghiệp vụ, transaction và rules
+├── security/     # đăng nhập và authorization
+├── exception/    # lỗi ứng dụng
+├── seed/         # dữ liệu demo local
+└── util/         # tiện ích thời gian dùng chung
+```
+
 - `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`: ứng dụng và build đa nền tảng.
 - `src/main/resources/db/migration/`: migration SQL toàn hệ thống.
 - `database/`: tài liệu thiết kế, luồng dữ liệu và hướng dẫn MySQL/DBeaver.

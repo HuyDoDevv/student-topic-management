@@ -10,8 +10,8 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
-import vn.edu.topicregistration.shared.time.ProjectTime;
-import vn.edu.topicregistration.shared.time.TimeConfig;
+import vn.edu.topicregistration.util.ProjectTime;
+import vn.edu.topicregistration.config.TimeConfig;
 
 class TimeTest {
     @Test
