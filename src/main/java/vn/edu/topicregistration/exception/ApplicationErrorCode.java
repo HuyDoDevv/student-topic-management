@@ -16,7 +16,16 @@ public enum ApplicationErrorCode {
     INVALID_GROUP_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái nhóm không hợp lệ", "Nhóm không thể thực hiện thao tác này ở trạng thái hiện tại."),
     ACTIVE_REGISTRATION_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã có đăng ký đang xử lý", "Hãy xử lý đăng ký hiện tại trước khi gửi đăng ký mới."),
     TOPIC_TAKEN(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài đã nhận nhóm", "Hãy chọn một đề tài khác."),
-    INVALID_TOPIC_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái đề tài không hợp lệ", "Đề tài không thể thực hiện thao tác này ở trạng thái hiện tại.");
+    INVALID_TOPIC_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái đề tài không hợp lệ", "Đề tài không thể thực hiện thao tác này ở trạng thái hiện tại."),
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "Chưa có báo cáo", "Đăng ký này chưa có báo cáo có thể xem."),
+    INVALID_REPORT_FILE(HttpStatus.UNPROCESSABLE_CONTENT, "Báo cáo chưa hợp lệ", "Chỉ chấp nhận file PDF không quá 20 MB."),
+    REPORT_LOCKED(HttpStatus.UNPROCESSABLE_CONTENT, "Báo cáo đã bị khóa", "Không thể thay báo cáo từ khi hội đồng bắt đầu làm việc."),
+    INVALID_COUNCIL_MEMBERS(HttpStatus.UNPROCESSABLE_CONTENT, "Thành viên hội đồng chưa hợp lệ", "Hội đồng phải có từ ba đến năm giảng viên hợp lệ."),
+    INVALID_COUNCIL_ASSIGNMENT(HttpStatus.UNPROCESSABLE_CONTENT, "Phân công hội đồng chưa hợp lệ", "Đăng ký không thể được phân công cho hội đồng này."),
+    INVALID_COUNCIL_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái hội đồng không hợp lệ", "Hội đồng chưa đủ điều kiện thực hiện thao tác này."),
+    INVALID_SCORE(HttpStatus.UNPROCESSABLE_CONTENT, "Điểm chưa hợp lệ", "Điểm phải từ 0 đến 10 và có tối đa hai chữ số thập phân."),
+    EVALUATIONS_INCOMPLETE(HttpStatus.UNPROCESSABLE_CONTENT, "Chưa đủ điểm", "Mọi thành viên hội đồng phải nộp điểm trước khi tổng hợp."),
+    RESULT_NOT_READY(HttpStatus.UNPROCESSABLE_CONTENT, "Kết quả chưa sẵn sàng", "Kết quả chưa đủ điều kiện để công bố.");
 
     private final HttpStatus status;
     private final String title;

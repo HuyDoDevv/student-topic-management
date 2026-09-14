@@ -3,6 +3,10 @@ spring:
     name: topic-registration
   profiles:
     default: local
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
   jpa:
     open-in-view: false
     hibernate:
@@ -26,3 +30,7 @@ server:
     include-message: never
     include-binding-errors: never
     include-stacktrace: never
+
+app:
+  report-storage:
+    root: ${REPORT_STORAGE_ROOT:${java.io.tmpdir}/topic-registration-reports}

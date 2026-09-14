@@ -17,10 +17,16 @@ trước implementation, xác nhận thất bại vì hành vi còn thiếu, r�
 
 **Purpose**: Mở khóa toàn bộ năm user story; không sửa V1–V7.
 
-- [ ] T002 Tạo test migration/schema trước, sau đó thêm `src/main/resources/db/migration/V8__implement_review_and_results.sql`; tạo enums/entities/repositories cho project report, council/member/topic, score component, evaluation và final result trong `src/main/java/vn/edu/topicregistration/entity/` và `repository/`; cập nhật `ApplicationErrorCode.java`, `application.yml`, `.gitignore` và `LayeredArchitectureTest.java`; chạy compile/unit/schema checks và commit riêng nền dữ liệu. (FR-16–25; constitution V–IX)
+- [X] T002 Tạo test migration/schema trước, sau đó thêm `src/main/resources/db/migration/V8__implement_review_and_results.sql`; tạo enums/entities/repositories cho project report, council/member/topic, score component, evaluation và final result trong `src/main/java/vn/edu/topicregistration/entity/` và `repository/`; cập nhật `ApplicationErrorCode.java`, `application.yml`, `.gitignore` và `LayeredArchitectureTest.java`; chạy compile/unit/schema checks và commit riêng nền dữ liệu. (FR-16–25; constitution V–IX)
 
 **Checkpoint**: Hibernate mapping khớp V8; schema biểu diễn report current, council lifecycle,
 evaluation DRAFT/SUBMITTED và result READY/PUBLISHED.
+
+**T002 evidence (2026-09-14)**: `ReviewSchemaContractTest` đã được chạy đỏ trước V8 vì
+thiếu migration, sau đó schema/architecture tests đạt 3/3 và toàn bộ package unit đạt 63/63
+bằng Java 21. Lần chạy suite mặc định đạt 78 test và còn 7 lỗi môi trường từ
+`PeriodContractTest` cũ vì `TEST_DATABASE_URL` chưa được cấu hình; không dùng database local
+có dữ liệu để thay thế. Migration MySQL tích hợp vẫn thuộc T008 khi có `TEST_DATABASE_*`.
 
 ## Phase 3: User Story 1 — Nộp/xem báo cáo (P1, MVP)
 

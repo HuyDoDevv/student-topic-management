@@ -17,8 +17,10 @@ import vn.edu.topicregistration.TopicRegistrationApplication;
 import vn.edu.topicregistration.config.TimeConfig;
 import vn.edu.topicregistration.controller.PeriodController;
 import vn.edu.topicregistration.dto.PeriodForm;
+import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.security.SecurityConfig;
 import vn.edu.topicregistration.seed.LocalDemoSeeder;
@@ -61,8 +63,10 @@ class LayeredArchitectureTest {
                 Map.entry(TimeConfig.class, "config"),
                 Map.entry(PeriodController.class, "controller"),
                 Map.entry(PeriodForm.class, "dto"),
+                Map.entry(ProjectReportEntity.class, "entity"),
                 Map.entry(RegistrationPeriodEntity.class, "entity"),
                 Map.entry(ApplicationException.class, "exception"),
+                Map.entry(ProjectReportRepository.class, "repository"),
                 Map.entry(RegistrationPeriodRepository.class, "repository"),
                 Map.entry(SecurityConfig.class, "security"),
                 Map.entry(LocalDemoSeeder.class, "seed"),
