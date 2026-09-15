@@ -45,6 +45,36 @@ database có dữ liệu thật cho integration/concurrency.
 3. Result READY không xuất hiện cho student.
 4. DEAN chỉ thấy result trong faculty; ADMIN không thấy academic result.
 
+## Local demo fixture
+
+Để xem nhanh toàn bộ luồng trên một database local rỗng, cấu hình `.env`:
+
+```dotenv
+SPRING_PROFILES_ACTIVE=local
+DEMO_SEED_ENABLED=true
+DEMO_SEED_PASSWORD=mat-khau-demo-tu-chon
+# REPORT_STORAGE_ROOT=/thu-muc-rieng/cho/report-demo
+```
+
+Chạy `./run.sh` một lần rồi tắt `DEMO_SEED_ENABLED`. Seeder tạo thêm hai giảng viên
+`lecturer4.demo`, `lecturer5.demo`, một hội đồng `[DEMO] ... Đang chấm` và một hội đồng
+`[DEMO] ... Đã công bố`. Mọi tài khoản `.demo` được tạo trong lần chạy dùng mật khẩu đã
+cấu hình; tài khoản đã tồn tại không bị đổi mật khẩu.
+
+1. Đăng nhập `lecturer4.demo` hoặc `lecturer5.demo`, vào **Chấm điểm** để xem/sửa evaluation.
+2. Đăng nhập `lecturer1.demo`, vào **Chấm điểm**, mở một đề tài rồi dùng liên kết hội đồng;
+   fixture đã đủ evaluation nên Chair có thể **Tổng hợp kết quả**.
+3. Đăng nhập `dean.demo`, vào **Hội đồng** để publish board vừa hoàn tất, hoặc vào
+   **Kết quả hội đồng** để xem fixture đã công bố.
+4. Đăng nhập `student1.demo`, vào **Kết quả của tôi** để xem kết quả PUBLISHED; sinh viên
+   khác nhóm không đọc được URL chi tiết đó.
+5. Từ **Nhóm sinh viên**, `student1.demo` có một đăng ký KLTN ACCEPTED chưa gắn hội đồng để
+   thử nộp/thay PDF. Các registration thuộc board ACTIVE/PUBLISHED có sẵn PDF để thử quyền
+   xem/tải và phải từ chối replace.
+
+Seeder chỉ bổ sung row còn thiếu và không đưa workflow đã thao tác về trạng thái cũ. Dùng
+database local rỗng mới khi cần diễn lại từ đầu. Không bật seeder trên database thật.
+
 ## Verification commands
 
 ```bash

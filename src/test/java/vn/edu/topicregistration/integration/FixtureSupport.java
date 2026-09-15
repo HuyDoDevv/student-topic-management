@@ -25,6 +25,10 @@ public final class FixtureSupport {
         return clock.instant();
     }
 
+    public DataSource dataSource() {
+        return dataSource;
+    }
+
     public OrganizationScope createOrganization(String facultyName, String departmentName) {
         try (Connection connection = dataSource.getConnection()) {
             long facultyId = insertReturningId(connection,

@@ -25,7 +25,7 @@ import vn.edu.topicregistration.config.TimeConfig;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BrowserTestSupport {
-    private static final Instant FIXED_NOW = Instant.parse("2026-09-10T01:00:00Z");
+    protected static final Instant FIXED_NOW = Instant.parse("2026-09-10T01:00:00Z");
 
     private ConfigurableApplicationContext applicationContext;
     private Playwright playwright;

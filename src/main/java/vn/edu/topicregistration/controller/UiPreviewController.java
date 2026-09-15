@@ -406,6 +406,10 @@ public class UiPreviewController {
         model.addAttribute("canManagePeriods", true);
         model.addAttribute("canAuthorTopics", true);
         model.addAttribute("canManageGroups", true);
+        model.addAttribute("canManageBoards", false);
+        model.addAttribute("canScoreBoards", false);
+        model.addAttribute("canViewFacultyResults", false);
+        model.addAttribute("canViewStudentResults", false);
         model.addAttribute("previewMode", true);
     }
 

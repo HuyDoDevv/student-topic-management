@@ -222,6 +222,25 @@ public class CouncilService {
     }
 
     @Transactional(readOnly = true)
+    public CouncilCreationOptions creationOptionsForCurrentDean() {
+        ActorIdentity dean = currentDean();
+        List<CouncilPeriodOption> periodOptions = periods
+                .findAllByFacultyIdOrderByLecturerStartDesc(dean.facultyId())
+                .stream()
+                .filter(period -> CouncilRules.isSupportedTopicType(period.getTopicType()))
+                .map(period -> new CouncilPeriodOption(
+                        period.getId(), period.getName(), period.getTopicType()))
+                .toList();
+        List<CouncilDepartmentOption> departmentOptions = departments
+                .findAllByFacultyIdOrderByName(dean.facultyId())
+                .stream()
+                .map(department -> new CouncilDepartmentOption(
+                        department.getId(), department.getName()))
+                .toList();
+        return new CouncilCreationOptions(periodOptions, departmentOptions);
+    }
+
+    @Transactional(readOnly = true)
     public CreationWorkspace creationWorkspace(long periodId, long departmentId) {
         RegistrationPeriodEntity period = periods.findById(periodId)
                 .orElseThrow(() -> new ApplicationException(
@@ -541,6 +560,17 @@ public class CouncilService {
     }
 
     public record LecturerOption(Long id, String fullName, String username) {
+    }
+
+    public record CouncilPeriodOption(Long id, String name, String topicType) {
+    }
+
+    public record CouncilDepartmentOption(Long id, String name) {
+    }
+
+    public record CouncilCreationOptions(
+            List<CouncilPeriodOption> periods,
+            List<CouncilDepartmentOption> departments) {
     }
 
     public record CreationWorkspace(

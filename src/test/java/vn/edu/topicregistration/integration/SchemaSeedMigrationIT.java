@@ -27,18 +27,18 @@ import vn.edu.topicregistration.seed.DemoSeedProperties;
 import vn.edu.topicregistration.seed.LocalDemoSeeder;
 import vn.edu.topicregistration.util.ProjectTime;
 
-/** T060: migrate only an explicitly configured, isolated MySQL test database. */
+/** T060/T008: migrate only an explicitly configured, isolated MySQL test database. */
 class SchemaSeedMigrationIT {
     private static final Instant DEMO_NOW = Instant.parse("2026-09-13T03:00:00Z");
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV7WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV8WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
-        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7"),
+        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -48,9 +48,9 @@ class SchemaSeedMigrationIT {
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(44, constraintCount(jdbc, "CHECK"));
-        assertEquals(49, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(19, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(56, constraintCount(jdbc, "CHECK"));
+        assertEquals(50, constraintCount(jdbc, "FOREIGN KEY"));
+        assertEquals(21, constraintCount(jdbc, "UNIQUE"));
         assertEquals(23, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
@@ -79,6 +79,12 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_registration_members_slot", "UNIQUE");
         assertConstraint(jdbc, "uq_registration_members_leader", "UNIQUE");
         assertConstraint(jdbc, "chk_registration_members_slot", "CHECK");
+        assertConstraint(jdbc, "uq_project_reports_current_registration", "UNIQUE");
+        assertConstraint(jdbc, "chk_project_reports_content_type", "CHECK");
+        assertConstraint(jdbc, "fk_councils_department", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_council_topics_registration", "UNIQUE");
+        assertConstraint(jdbc, "chk_evaluations_lifecycle", "CHECK");
+        assertConstraint(jdbc, "chk_final_results_lifecycle", "CHECK");
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM roles"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM user_accounts"),
                 "Flyway must not enable the optional demo seed");
@@ -178,7 +184,7 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void v6WithExistingFixtureUpgradesToV7WithoutLosingHistory() {
+    void v6WithExistingFixtureUpgradesThroughV8WithoutLosingHistory() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV6 = Flyway.configure()
                 .dataSource(database.dataSource())
@@ -215,7 +221,7 @@ class SchemaSeedMigrationIT {
                 .filter(entry -> Integer.parseInt(entry.getKey()) <= 6)
                 .collect(java.util.stream.Collectors.toMap(
                         Map.Entry::getKey, Map.Entry::getValue)));
-        assertEquals(7, count(jdbc,
+        assertEquals(8, count(jdbc,
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(7, count(jdbc, "SELECT COUNT(*) FROM registration_members"));

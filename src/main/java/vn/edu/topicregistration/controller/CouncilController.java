@@ -63,6 +63,7 @@ public class CouncilController {
         model.addAttribute("boards", councils.listForCurrentDean().stream()
                 .map(CouncilController::display)
                 .toList());
+        model.addAttribute("creationOptions", councils.creationOptionsForCurrentDean());
         return "councils/list";
     }
 

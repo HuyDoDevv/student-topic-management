@@ -15,13 +15,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll("form[data-prevent-double-submit]").forEach((form) => {
     form.addEventListener("submit", (event) => {
-      const confirmation = form.dataset.confirm;
+      const confirmation = event.submitter?.dataset.confirm ?? form.dataset.confirm;
       if (confirmation && !window.confirm(confirmation)) {
         event.preventDefault();
         return;
       }
+
+      if (form.dataset.submitting === "true") {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.submitting = "true";
       form.querySelectorAll("button[type='submit']").forEach((button) => {
-        button.disabled = true;
+        button.setAttribute("aria-disabled", "true");
         button.setAttribute("aria-busy", "true");
       });
     });

@@ -26,7 +26,10 @@ import vn.edu.topicregistration.controller.CouncilController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.service.CouncilService;
+import vn.edu.topicregistration.service.CouncilService.CouncilCreationOptions;
+import vn.edu.topicregistration.service.CouncilService.CouncilDepartmentOption;
 import vn.edu.topicregistration.service.CouncilService.CouncilDetailView;
+import vn.edu.topicregistration.service.CouncilService.CouncilPeriodOption;
 import vn.edu.topicregistration.service.CouncilService.CouncilSummaryView;
 import vn.edu.topicregistration.service.CouncilService.CreationWorkspace;
 import vn.edu.topicregistration.service.CouncilService.LecturerOption;
@@ -52,11 +55,16 @@ class CouncilControllerTest {
     @Test
     void listsOnlyServiceScopedBoards() throws Exception {
         when(councils.listForCurrentDean()).thenReturn(List.of(summary()));
+        CouncilCreationOptions options = new CouncilCreationOptions(
+                List.of(new CouncilPeriodOption(7L, "Đợt KLTN", "KLTN")),
+                List.of(new CouncilDepartmentOption(4L, "Công nghệ phần mềm")));
+        when(councils.creationOptionsForCurrentDean()).thenReturn(options);
 
         mvc.perform(get("/faculty/boards"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("councils/list"))
-                .andExpect(model().attributeExists("boards"));
+                .andExpect(model().attributeExists("boards"))
+                .andExpect(model().attribute("creationOptions", options));
     }
 
     @Test

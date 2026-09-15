@@ -2,16 +2,24 @@ package vn.edu.topicregistration.seed;
 
 import vn.edu.topicregistration.util.ProjectTime;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +30,11 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import vn.edu.topicregistration.repository.ReportFileRepository;
+import vn.edu.topicregistration.repository.ReportFileRepository.StoredReportFile;
 
 
 /**
@@ -36,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnProperty(prefix = "demo.seed", name = "enabled", havingValue = "true")
 public class LocalDemoSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(LocalDemoSeeder.class);
+    private static final byte[] DEMO_REPORT_PDF = createDemoReportPdf();
 
     private static final String FACULTY_NAME = "[DEMO] Khoa Công nghệ Thông tin";
     private static final String SOFTWARE_DEPARTMENT = "[DEMO] Công nghệ phần mềm";
@@ -45,16 +59,32 @@ public class LocalDemoSeeder implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final ProjectTime projectTime;
     private final DemoSeedProperties properties;
+    private final ReportFileRepository reportFiles;
 
+    @Autowired
+    public LocalDemoSeeder(
+            JdbcTemplate jdbc,
+            PasswordEncoder passwordEncoder,
+            ProjectTime projectTime,
+            DemoSeedProperties properties,
+            ReportFileRepository reportFiles) {
+        this.jdbc = jdbc;
+        this.passwordEncoder = passwordEncoder;
+        this.projectTime = projectTime;
+        this.properties = properties;
+        this.reportFiles = reportFiles;
+    }
+
+    /**
+     * Keeps older direct-construction migration checks source-compatible. Review fixtures need
+     * the five-argument constructor so their PDF metadata can never point to a missing file.
+     */
     public LocalDemoSeeder(
             JdbcTemplate jdbc,
             PasswordEncoder passwordEncoder,
             ProjectTime projectTime,
             DemoSeedProperties properties) {
-        this.jdbc = jdbc;
-        this.passwordEncoder = passwordEncoder;
-        this.projectTime = projectTime;
-        this.properties = properties;
+        this(jdbc, passwordEncoder, projectTime, properties, null);
     }
 
     @Override
@@ -64,15 +94,6 @@ public class LocalDemoSeeder implements ApplicationRunner {
         if (password == null || password.isBlank()) {
             throw new IllegalStateException(
                     "DEMO_SEED_PASSWORD is required when DEMO_SEED_ENABLED=true");
-        }
-
-        if (exists(
-                "SELECT COUNT(*) FROM user_accounts WHERE username = ?",
-                "dean.demo")) {
-            log.info(
-                    "Local demo fixture already exists; preserving its current dates, "
-                            + "memberships, and workflow states.");
-            return;
         }
 
         String passwordHash = passwordEncoder.encode(password);
@@ -213,9 +234,168 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 null,
                 null);
 
+        if (reviewSchemaAvailable()) {
+            if (reportFiles == null) {
+                log.info(
+                        "Review schema is available, but no report storage was supplied; "
+                                + "skipping review demo fixtures for this direct seeder run.");
+            } else {
+                seedReviewFixtures(
+                        passwordHash,
+                        facultyId,
+                        softwareDepartmentId,
+                        deanId,
+                        lecturer1Id,
+                        lecturer2Id,
+                        students,
+                        today);
+            }
+        }
+
         log.info(
-                "Local demo data is ready: dean.demo, lecturer1.demo..lecturer3.demo, "
-                        + "student1.demo..student7.demo. Disable DEMO_SEED_ENABLED after seeding.");
+                "Local demo data is ready. Existing rows and workflow states were preserved; "
+                        + "disable DEMO_SEED_ENABLED after seeding.");
+    }
+
+    private void seedReviewFixtures(
+            String passwordHash,
+            long facultyId,
+            long departmentId,
+            long deanId,
+            long chairId,
+            long supervisorId,
+            long[] students,
+            LocalDate today) {
+        long secretaryId = account(
+                "lecturer4.demo", "Giảng viên Demo 4", departmentId, passwordHash,
+                "LECTURER");
+        long memberId = account(
+                "lecturer5.demo", "Giảng viên Demo 5", departmentId, passwordHash,
+                "LECTURER");
+
+        PeriodWindow activePeriod = period(
+                facultyId,
+                "[DEMO] Khóa luận tốt nghiệp - Đang chấm",
+                "KLTN",
+                today.minusDays(90),
+                today.minusDays(80),
+                today.minusDays(75),
+                today.minusDays(65),
+                today.plusDays(7),
+                today.plusDays(10));
+        long activeTopicOne = topic(
+                activePeriod.id(), departmentId, supervisorId,
+                "[DEMO] Cổng quản lý chấm khóa luận", "PUBLISHED");
+        supervisor(activeTopicOne, supervisorId, 1);
+        long activeTopicTwo = topic(
+                activePeriod.id(), departmentId, supervisorId,
+                "[DEMO] Theo dõi tiến độ khóa luận", "PUBLISHED");
+        supervisor(activeTopicTwo, supervisorId, 1);
+
+        CreatedRow activeGroupOne = group(activePeriod.id(), students[0]);
+        if (activeGroupOne.created()) {
+            membership(activeGroupOne.id(), activePeriod.id(), students[1], 2);
+            membership(activeGroupOne.id(), activePeriod.id(), students[2], 3);
+        }
+        CreatedRow activeGroupTwo = group(activePeriod.id(), students[3]);
+        if (activeGroupTwo.created()) {
+            membership(activeGroupTwo.id(), activePeriod.id(), students[4], 2);
+            membership(activeGroupTwo.id(), activePeriod.id(), students[5], 3);
+        }
+        long activeRegistrationOne = registration(
+                activePeriod, activeGroupOne.id(), activeTopicOne, "ACCEPTED", deanId,
+                activePeriod.studentStart().plus(1, ChronoUnit.DAYS), null, null, null);
+        long activeRegistrationTwo = registration(
+                activePeriod, activeGroupTwo.id(), activeTopicTwo, "ACCEPTED", deanId,
+                activePeriod.studentStart().plus(1, ChronoUnit.DAYS), null, null, null);
+
+        CreatedRow activeCouncil = council(
+                activePeriod.id(), departmentId,
+                "[DEMO] Hội đồng KLTN - Đang chấm",
+                chairId, secretaryId, "ACTIVE", today.minusDays(14));
+        if (activeCouncil.created()) {
+            report(activeRegistrationOne, students[0], today.minusDays(12),
+                    "bao-cao-khoa-luan-nhom-1.pdf");
+            report(activeRegistrationTwo, students[3], today.minusDays(12),
+                    "bao-cao-khoa-luan-nhom-2.pdf");
+            councilMember(activeCouncil.id(), memberId, 3);
+            councilTopic(
+                    activeCouncil.id(), activeRegistrationOne, activePeriod.id(),
+                    today.minusDays(1), "Phòng A4-101");
+            councilTopic(
+                    activeCouncil.id(), activeRegistrationTwo, activePeriod.id(),
+                    today.minusDays(1), "Phòng A4-101");
+            long componentId = scoreComponent(activePeriod.id());
+            Instant scoredAt = projectTime.now().minus(1, ChronoUnit.DAYS);
+            evaluation(activeCouncil.id(), activeRegistrationOne, activePeriod.id(),
+                    chairId, componentId, "8.00", "Nội dung đầy đủ, trình bày rõ ràng.", scoredAt);
+            evaluation(activeCouncil.id(), activeRegistrationOne, activePeriod.id(),
+                    secretaryId, componentId, "8.50", "Giải pháp phù hợp với bài toán.", scoredAt);
+            evaluation(activeCouncil.id(), activeRegistrationOne, activePeriod.id(),
+                    memberId, componentId, "9.00", "Sản phẩm hoạt động ổn định.", scoredAt);
+            evaluation(activeCouncil.id(), activeRegistrationTwo, activePeriod.id(),
+                    chairId, componentId, "7.75", "Cần làm rõ thêm phần kiểm chứng.", scoredAt);
+            evaluation(activeCouncil.id(), activeRegistrationTwo, activePeriod.id(),
+                    secretaryId, componentId, "8.25", "Kiến trúc và giao diện hợp lý.", scoredAt);
+            evaluation(activeCouncil.id(), activeRegistrationTwo, activePeriod.id(),
+                    memberId, componentId, "8.00", "Đáp ứng các yêu cầu chính.", scoredAt);
+        }
+
+        PeriodWindow publishedPeriod = period(
+                facultyId,
+                "[DEMO] Khóa luận tốt nghiệp - Đã công bố",
+                "KLTN",
+                today.minusDays(160),
+                today.minusDays(150),
+                today.minusDays(145),
+                today.minusDays(135),
+                today.minusDays(100),
+                today.minusDays(90));
+        long publishedTopic = topic(
+                publishedPeriod.id(), departmentId, supervisorId,
+                "[DEMO] Hệ thống hỗ trợ quản lý đề tài", "PUBLISHED");
+        supervisor(publishedTopic, supervisorId, 1);
+        CreatedRow publishedGroup = group(publishedPeriod.id(), students[0]);
+        if (publishedGroup.created()) {
+            membership(publishedGroup.id(), publishedPeriod.id(), students[1], 2);
+            membership(publishedGroup.id(), publishedPeriod.id(), students[2], 3);
+        }
+        long publishedRegistration = registration(
+                publishedPeriod, publishedGroup.id(), publishedTopic, "ACCEPTED", deanId,
+                publishedPeriod.studentStart().plus(1, ChronoUnit.DAYS), null, null, null);
+        CreatedRow publishedCouncil = council(
+                publishedPeriod.id(), departmentId,
+                "[DEMO] Hội đồng KLTN - Đã công bố",
+                chairId, secretaryId, "PUBLISHED", today.minusDays(110));
+        if (publishedCouncil.created()) {
+            report(publishedRegistration, students[0], today.minusDays(108),
+                    "bao-cao-khoa-luan-da-cong-bo.pdf");
+            councilMember(publishedCouncil.id(), memberId, 3);
+            councilTopic(
+                    publishedCouncil.id(), publishedRegistration, publishedPeriod.id(),
+                    today.minusDays(93), "Phòng A4-102");
+            long componentId = scoreComponent(publishedPeriod.id());
+            Instant scoredAt = projectTime.now().minus(92, ChronoUnit.DAYS);
+            evaluation(publishedCouncil.id(), publishedRegistration, publishedPeriod.id(),
+                    chairId, componentId, "9.00", "Báo cáo có chất lượng tốt.", scoredAt);
+            evaluation(publishedCouncil.id(), publishedRegistration, publishedPeriod.id(),
+                    secretaryId, componentId, "8.50", "Sản phẩm đáp ứng mục tiêu.", scoredAt);
+            evaluation(publishedCouncil.id(), publishedRegistration, publishedPeriod.id(),
+                    memberId, componentId, "8.75", "Phần trình bày và phản biện tốt.", scoredAt);
+            finalResult(
+                    publishedRegistration,
+                    publishedCouncil.id(),
+                    chairId,
+                    deanId,
+                    projectTime.now().minus(91, ChronoUnit.DAYS),
+                    projectTime.now().minus(90, ChronoUnit.DAYS),
+                    new BigDecimal("8.75"));
+        }
+
+        log.info(
+                "Review demo fixtures are ready: ACTIVE board {}, PUBLISHED board {}, "
+                        + "lecturer4.demo and lecturer5.demo.",
+                activeCouncil.id(), publishedCouncil.id());
     }
 
     private long faculty(String name) {
@@ -245,20 +425,17 @@ public class LocalDemoSeeder implements ApplicationRunner {
             String... roles) {
         Long existing = optionalId(
                 "SELECT id FROM user_accounts WHERE username = ?", username);
-        long accountId = existing != null
-                ? existing
-                : insert(
-                        "INSERT INTO user_accounts(full_name, enabled, username, password_hash, "
-                                + "department_id) VALUES (?, TRUE, ?, ?, ?)",
-                        fullName, username, passwordHash, departmentId);
+        if (existing != null) {
+            return existing;
+        }
+        long accountId = insert(
+                "INSERT INTO user_accounts(full_name, enabled, username, password_hash, "
+                        + "department_id) VALUES (?, TRUE, ?, ?, ?)",
+                fullName, username, passwordHash, departmentId);
         for (String role : roles) {
-            if (!exists(
-                    "SELECT COUNT(*) FROM user_roles WHERE user_id = ? AND role_code = ?",
-                    accountId, role)) {
-                jdbc.update(
-                        "INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)",
-                        accountId, role);
-            }
+            jdbc.update(
+                    "INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)",
+                    accountId, role);
         }
         return accountId;
     }
@@ -377,7 +554,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
         }
     }
 
-    private void registration(
+    private long registration(
             PeriodWindow period,
             long groupId,
             long topicId,
@@ -387,14 +564,14 @@ public class LocalDemoSeeder implements ApplicationRunner {
             Instant withdrawnAt,
             String rejectionKind,
             String rejectionReason) {
-        if (exists(
-                "SELECT COUNT(*) FROM registrations "
-                        + "WHERE group_id = ? AND topic_id = ?",
-                groupId, topicId)) {
-            return;
+        Long existing = optionalId(
+                "SELECT id FROM registrations WHERE group_id = ? AND topic_id = ?",
+                groupId, topicId);
+        if (existing != null) {
+            return existing;
         }
         Instant submittedAt = period.studentStart().plus(1, ChronoUnit.HOURS);
-        jdbc.update(
+        return insert(
                 "INSERT INTO registrations("
                         + "period_id, group_id, topic_id, status, submitted_at, decided_at, "
                         + "withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, "
@@ -409,6 +586,233 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 decisionActorId,
                 rejectionKind,
                 rejectionReason);
+    }
+
+    private CreatedRow council(
+            long periodId,
+            long departmentId,
+            String name,
+            long chairId,
+            long secretaryId,
+            String status,
+            LocalDate createdDate) {
+        Long existing = optionalId(
+                "SELECT id FROM councils WHERE period_id = ? AND name = ? ORDER BY id LIMIT 1",
+                periodId, name);
+        if (existing != null) {
+            return new CreatedRow(existing, false);
+        }
+        return new CreatedRow(insert(
+                "INSERT INTO councils("
+                        + "period_id, department_id, name, chair_id, secretary_id, status, "
+                        + "created_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
+                periodId,
+                departmentId,
+                name,
+                chairId,
+                secretaryId,
+                status,
+                Timestamp.from(projectTime.toStartOfDay(createdDate))), true);
+    }
+
+    private void councilMember(long councilId, long lecturerId, int slot) {
+        if (!exists(
+                "SELECT COUNT(*) FROM council_members WHERE council_id = ? AND lecturer_id = ?",
+                councilId, lecturerId)) {
+            jdbc.update(
+                    "INSERT INTO council_members(council_id, lecturer_id, slot) VALUES (?, ?, ?)",
+                    councilId, lecturerId, slot);
+        }
+    }
+
+    private void councilTopic(
+            long councilId,
+            long registrationId,
+            long periodId,
+            LocalDate scheduledDate,
+            String location) {
+        if (!exists(
+                "SELECT COUNT(*) FROM council_topics "
+                        + "WHERE council_id = ? AND registration_id = ?",
+                councilId, registrationId)) {
+            jdbc.update(
+                    "INSERT INTO council_topics("
+                            + "council_id, registration_id, period_id, registration_status, "
+                            + "scheduled_at, location) VALUES (?, ?, ?, 'ACCEPTED', ?, ?)",
+                    councilId,
+                    registrationId,
+                    periodId,
+                    Timestamp.from(projectTime.toStartOfDay(scheduledDate).plus(8, ChronoUnit.HOURS)),
+                    location);
+        }
+    }
+
+    private long scoreComponent(long periodId) {
+        Long existing = optionalId(
+                "SELECT id FROM score_components WHERE period_id = ? AND name = ?",
+                periodId, "Điểm hội đồng");
+        return existing != null
+                ? existing
+                : insert(
+                        "INSERT INTO score_components("
+                                + "period_id, name, minimum_score, maximum_score) "
+                                + "VALUES (?, 'Điểm hội đồng', 0.00, 10.00)",
+                        periodId);
+    }
+
+    private void evaluation(
+            long councilId,
+            long registrationId,
+            long periodId,
+            long evaluatorId,
+            long componentId,
+            String score,
+            String feedback,
+            Instant submittedAt) {
+        if (!exists(
+                "SELECT COUNT(*) FROM evaluations "
+                        + "WHERE registration_id = ? AND evaluator_id = ? AND component_id = ?",
+                registrationId, evaluatorId, componentId)) {
+            jdbc.update(
+                    "INSERT INTO evaluations("
+                            + "registration_id, period_id, registration_status, evaluator_id, "
+                            + "component_id, council_id, score, feedback, status, evaluated_at, "
+                            + "submitted_at, version) "
+                            + "VALUES (?, ?, 'ACCEPTED', ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?, 0)",
+                    registrationId,
+                    periodId,
+                    evaluatorId,
+                    componentId,
+                    councilId,
+                    new BigDecimal(score),
+                    feedback,
+                    Timestamp.from(submittedAt),
+                    Timestamp.from(submittedAt));
+        }
+    }
+
+    private void finalResult(
+            long registrationId,
+            long councilId,
+            long consolidatedBy,
+            long publishedBy,
+            Instant completedAt,
+            Instant publishedAt,
+            BigDecimal finalScore) {
+        if (!exists(
+                "SELECT COUNT(*) FROM final_results WHERE registration_id = ?",
+                registrationId)) {
+            jdbc.update(
+                    "INSERT INTO final_results("
+                            + "registration_id, registration_status, council_id, consolidated_by, "
+                            + "consolidated_at, evaluation_summary, final_score, "
+                            + "review_completed_at, grading_completed_at, published_by, "
+                            + "published_at, status, version) "
+                            + "VALUES (?, 'ACCEPTED', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED', 0)",
+                    registrationId,
+                    councilId,
+                    consolidatedBy,
+                    Timestamp.from(completedAt),
+                    "3/3 đánh giá đã gửi; điểm cuối là trung bình cộng.",
+                    finalScore,
+                    Timestamp.from(completedAt),
+                    Timestamp.from(completedAt),
+                    publishedBy,
+                    Timestamp.from(publishedAt));
+        }
+    }
+
+    private void report(
+            long registrationId,
+            long submittedBy,
+            LocalDate submittedDate,
+            String fileName) {
+        if (exists(
+                "SELECT COUNT(*) FROM project_reports "
+                        + "WHERE registration_id = ? AND replaced_at IS NULL",
+                registrationId)) {
+            return;
+        }
+
+        StoredReportFile stored;
+        try {
+            stored = reportFiles.store(
+                    new ByteArrayInputStream(DEMO_REPORT_PDF), DEMO_REPORT_PDF.length);
+        } catch (IOException | RuntimeException exception) {
+            throw new IllegalStateException("Could not store the local demo report", exception);
+        }
+        deleteReportOnRollback(stored.storageKey());
+        try {
+            jdbc.update(
+                    "INSERT INTO project_reports("
+                            + "registration_id, registration_status, submitted_by, submitted_at, "
+                            + "file_name, storage_key, content_type, size_bytes, version) "
+                            + "VALUES (?, 'ACCEPTED', ?, ?, ?, ?, 'application/pdf', ?, 0)",
+                    registrationId,
+                    submittedBy,
+                    Timestamp.from(projectTime.toStartOfDay(submittedDate)),
+                    fileName,
+                    stored.storageKey(),
+                    stored.sizeBytes());
+        } catch (RuntimeException exception) {
+            reportFiles.delete(stored.storageKey());
+            throw exception;
+        }
+    }
+
+    private void deleteReportOnRollback(String storageKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                            reportFiles.delete(storageKey);
+                        }
+                    }
+                });
+    }
+
+    private boolean reviewSchemaAvailable() {
+        return exists(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'councils' "
+                        + "AND column_name = 'status'");
+    }
+
+    private static byte[] createDemoReportPdf() {
+        String content = "BT /F1 18 Tf 72 760 Td ([DEMO] Student topic report) Tj ET\n";
+        List<String> objects = List.of(
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+                        + "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+                "<< /Length " + content.getBytes(StandardCharsets.US_ASCII).length
+                        + " >>\nstream\n" + content + "endstream",
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        writeAscii(output, "%PDF-1.4\n");
+        List<Integer> offsets = new ArrayList<>();
+        for (int index = 0; index < objects.size(); index++) {
+            offsets.add(output.size());
+            writeAscii(output, (index + 1) + " 0 obj\n" + objects.get(index) + "\nendobj\n");
+        }
+        int xrefOffset = output.size();
+        writeAscii(output, "xref\n0 " + (objects.size() + 1) + "\n");
+        writeAscii(output, "0000000000 65535 f \n");
+        for (Integer offset : offsets) {
+            writeAscii(output, String.format(Locale.ROOT, "%010d 00000 n \n", offset));
+        }
+        writeAscii(output,
+                "trailer\n<< /Size " + (objects.size() + 1) + " /Root 1 0 R >>\n"
+                        + "startxref\n" + xrefOffset + "\n%%EOF\n");
+        return output.toByteArray();
+    }
+
+    private static void writeAscii(ByteArrayOutputStream output, String value) {
+        output.writeBytes(value.getBytes(StandardCharsets.US_ASCII));
     }
 
     private Timestamp timestamp(Instant value) {

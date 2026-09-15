@@ -56,10 +56,11 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
 - Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql)
   để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
   đăng ký GV/SV; các migration V4–V7 bổ sung moderation, lời mời nhóm, metadata từ chối
-  và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ đầu ngày, ngày kết thúc
-  tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
+  và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. V8 hoàn thiện vòng đời báo cáo,
+  hội đồng, evaluation và kết quả công bố. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ
+  đầu ngày, ngày kết thúc tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
   `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới sau `V7__...sql`; không
+- Các thay đổi schema tiếp theo phải là migration mới sau `V8__...sql`; không
   sửa migration đã được dùng trên database chung.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway
@@ -72,14 +73,30 @@ Spring Security bằng tài khoản được cấp, policy role/scope, clock ngh
 và hạ tầng unit/integration/E2E. Profile `local` dùng MySQL và Hibernate validate;
 profile `preview` chỉ hiển thị catalogue UI mà không truy cập database.
 
-Các luồng đợt đăng ký, đề xuất/duyệt đề tài, nhóm sinh viên và đăng ký đề tài đã kết nối
-MySQL trên profile `local`. Dự án không tự tạo tài khoản mặc định. Khi cần dữ liệu để xem
-giao diện, bật `DEMO_SEED_ENABLED=true` và đặt `DEMO_SEED_PASSWORD` trong `.env`, chạy ứng
-dụng một lần rồi tắt cờ. Các tài khoản được tạo là `dean.demo`, `lecturer1.demo` đến
-`lecturer3.demo` và `student1.demo` đến `student7.demo`, cùng dùng mật khẩu đã nhập.
-Seeder chỉ thêm fixture còn thiếu và không reset dữ liệu hoặc lịch đã tồn tại khi khởi động lại.
-`dean.demo` quản lý đợt, duyệt và công bố; tài khoản này không được tạo/sửa/gửi duyệt đề tài.
-Các thao tác tác giả đề tài dùng `lecturer1.demo` đến `lecturer3.demo`.
+Các luồng đợt đăng ký, đề xuất/duyệt đề tài, nhóm sinh viên, đăng ký đề tài, báo cáo,
+hội đồng, chấm điểm và kết quả đã kết nối MySQL trên profile `local`. Dự án không tự tạo
+tài khoản mặc định. Khi cần dữ liệu để xem giao diện, bật `DEMO_SEED_ENABLED=true`, đặt
+`DEMO_SEED_PASSWORD` và nếu muốn thì đặt `REPORT_STORAGE_ROOT` tới thư mục PDF riêng trong
+`.env`; chạy ứng dụng một lần rồi tắt cờ.
+
+Các tài khoản được tạo là `dean.demo`, `lecturer1.demo` đến `lecturer5.demo` và
+`student1.demo` đến `student7.demo`. Tài khoản được tạo trong cùng lần seed dùng mật khẩu
+đã nhập. Seeder chỉ thêm fixture còn thiếu; không đổi mật khẩu, ngày, membership hay trạng
+thái workflow đã tồn tại khi khởi động lại. Vì vậy, sau khi thao tác complete/publish trên
+dữ liệu demo, muốn trở lại trạng thái ban đầu thì dùng một database local rỗng mới thay vì
+trông chờ seeder reset dữ liệu.
+
+- `dean.demo`: quản lý hội đồng, xem kết quả trong khoa và publish hội đồng đã hoàn tất.
+- `lecturer1.demo`: Chair của fixture đang chấm; có thể sửa điểm rồi tổng hợp kết quả.
+- `lecturer2.demo`: GVHD của các đề tài review; được xem báo cáo nhưng không được chấm.
+- `lecturer4.demo`, `lecturer5.demo`: thành viên hội đồng, có thể sửa/submit điểm của mình.
+- `student1.demo` đến `student3.demo`: có sẵn một kết quả đã công bố để kiểm tra quyền xem.
+- `student1.demo`: còn có đăng ký KLTN đã chấp nhận nhưng chưa gắn hội đồng để thử upload hoặc
+  thay báo cáo; các báo cáo gắn hội đồng `ACTIVE`/`PUBLISHED` chỉ cho xem và tải.
+
+Các thao tác tác giả đề tài dùng tài khoản giảng viên không kiêm Trưởng khoa. File PDF demo
+được lưu qua cùng repository với file upload thật; nếu giao dịch seed thất bại, file vừa tạo
+được dọn để không còn metadata hoặc file mồ côi.
 
 ## Kiểm thử và cấu trúc
 

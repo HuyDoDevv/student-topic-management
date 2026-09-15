@@ -41,6 +41,18 @@
         <li class="nav-item" th:if="${previewMode}" th:classappend="${activeNav == 'decisions'} ? ' active'">
           <a class="nav-link" th:href="@{/registrations/1/decision}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 5h6M9 3h6v4H9zM6 5H5a2 2 0 0 0-2 2v13h18V7a2 2 0 0 0-2-2h-1M8 13l2 2 5-5M8 18h8"/></svg></span><span class="nav-link-title">Xét duyệt đăng ký</span></a>
         </li>
+        <li class="nav-item" th:if="${canManageBoards}" th:classappend="${activeNav == 'boards'} ? ' active'">
+          <a class="nav-link" th:href="@{/faculty/boards}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 13h16M6 17h12M8 21h8"/></svg></span><span class="nav-link-title">Hội đồng</span></a>
+        </li>
+        <li class="nav-item" th:if="${canScoreBoards}" th:classappend="${activeNav == 'scoring'} ? ' active'">
+          <a class="nav-link" th:href="@{/lecturer/scoring}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 4h14v16H5zM8 8h8M8 12h3M14 12h2M8 16h3M14 16h2"/></svg></span><span class="nav-link-title">Chấm điểm</span></a>
+        </li>
+        <li class="nav-item" th:if="${canViewFacultyResults}" th:classappend="${activeNav == 'results'} ? ' active'">
+          <a class="nav-link" th:href="@{/faculty/results}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 19V9M10 19V5M15 19v-7M20 19V3M3 19h19"/></svg></span><span class="nav-link-title">Kết quả hội đồng</span></a>
+        </li>
+        <li class="nav-item" th:if="${canViewStudentResults}" th:classappend="${activeNav == 'results'} ? ' active'">
+          <a class="nav-link" th:href="@{/student/results}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 4h14v16H5zM8 9l2 2 5-5M8 15h8"/></svg></span><span class="nav-link-title">Kết quả của tôi</span></a>
+        </li>
       </ul>
       <div class="sidebar-note">
         <span class="status-dot bg-teal me-2"></span>Cổng đề tài sinh viên

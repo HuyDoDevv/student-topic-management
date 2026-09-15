@@ -26,6 +26,10 @@ public class NavigationModelAdvice {
             model.addAttribute("canManagePeriods", false);
             model.addAttribute("canAuthorTopics", false);
             model.addAttribute("canManageGroups", false);
+            model.addAttribute("canManageBoards", false);
+            model.addAttribute("canScoreBoards", false);
+            model.addAttribute("canViewFacultyResults", false);
+            model.addAttribute("canViewStudentResults", false);
             model.addAttribute("previewMode", false);
             return;
         }
@@ -43,6 +47,10 @@ public class NavigationModelAdvice {
         model.addAttribute("canAuthorTopics",
                 roles.contains(RoleCode.LECTURER) && !roles.contains(RoleCode.DEAN));
         model.addAttribute("canManageGroups", roles.contains(RoleCode.STUDENT));
+        model.addAttribute("canManageBoards", roles.contains(RoleCode.DEAN));
+        model.addAttribute("canScoreBoards", roles.contains(RoleCode.LECTURER));
+        model.addAttribute("canViewFacultyResults", roles.contains(RoleCode.DEAN));
+        model.addAttribute("canViewStudentResults", roles.contains(RoleCode.STUDENT));
         model.addAttribute("previewMode", false);
     }
 

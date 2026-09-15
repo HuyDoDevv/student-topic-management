@@ -122,7 +122,12 @@ T008.
 
 ## Phase 8: Cross-cutting acceptance
 
-- [ ] T008 Nối menu theo role tại `NavigationModelAdvice.java` và `templates/fragments/sidebar.html`, bổ sung fixture demo an toàn trong `LocalDemoSeeder.java`, test V8/integration/concurrency/E2E tại `src/test/java/vn/edu/topicregistration/{integration,concurrency,e2e}/`, cập nhật `README.md`, `specs/002-review-results/quickstart.md` và tạo `acceptance-matrix.md`; chạy `env -u JAVA_HOME ./mvnw test`, `verify -Pintegration`, `verify -Pe2e`, `git diff --check`, ghi PASS/FAIL/BLOCKED trung thực và commit riêng acceptance. (FR-16–25; SC-010–016)
+- [X] T008 Nối menu theo role tại `NavigationModelAdvice.java` và `templates/fragments/sidebar.html`, bổ sung fixture demo an toàn trong `LocalDemoSeeder.java`, test V8/integration/concurrency/E2E tại `src/test/java/vn/edu/topicregistration/{integration,concurrency,e2e}/`, cập nhật `README.md`, `specs/002-review-results/quickstart.md` và tạo `acceptance-matrix.md`; chạy `env -u JAVA_HOME ./mvnw test`, `verify -Pintegration`, `verify -Pe2e`, `git diff --check`, ghi PASS/FAIL/BLOCKED trung thực và commit riêng acceptance. (FR-16–25; SC-010–016)
+
+**T008 evidence (2026-09-15)**: Menu theo role, luồng lập hội đồng, fixture review có file
+thật và ma trận nghiệm thu đã hoàn tất. Trên MySQL 8.4.11 test cô lập, suite mặc định đạt
+157/157, integration/concurrency đạt 18/18 và E2E đạt 2/2. Browser journey xác nhận upload,
+submit điểm có CSRF, complete, publish và privacy 404; `git diff --check` đạt.
 
 ## Dependencies & execution order
 
