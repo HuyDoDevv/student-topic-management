@@ -47,7 +47,7 @@ Nguồn: [DBeaver Create Connection](https://dbeaver.com/docs/dbeaver/Create-Con
 |---|---|
 | SPRING_PROFILES_ACTIVE | local |
 | SERVER_ADDRESS | 127.0.0.1 |
-| SERVER_PORT | 8080 |
+| SERVER_PORT | 8088 |
 | SPRING_DATASOURCE_URL | jdbc:mysql://127.0.0.1:3306/topic_registration_local?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true |
 | SPRING_DATASOURCE_USERNAME | Tài khoản local tự tạo |
 | SPRING_DATASOURCE_PASSWORD | Secret do người chạy nhập, không commit |
@@ -62,7 +62,7 @@ Ví dụ zsh tại root dự án sau triển khai (tên user chỉ là ví dụ,
 ```sh
 export SPRING_PROFILES_ACTIVE=local
 export SERVER_ADDRESS=127.0.0.1
-export SERVER_PORT=8080
+export SERVER_PORT=8088
 export SPRING_DATASOURCE_URL='jdbc:mysql://127.0.0.1:3306/topic_registration_local?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true'
 export SPRING_DATASOURCE_USERNAME=topic_local
 read -rs 'SPRING_DATASOURCE_PASSWORD?Mật khẩu database: '

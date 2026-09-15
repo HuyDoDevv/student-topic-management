@@ -57,7 +57,7 @@ rỗng. Không chạy thủ công trên database mà Flyway đang quản lý.
 
 ```dotenv
 SPRING_PROFILES_ACTIVE=local
-SERVER_PORT=8080
+SERVER_PORT=8088
 SPRING_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/topic_registration_local?useUnicode=true&characterEncoding=UTF-8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&useSSL=false&allowPublicKeyRetrieval=true
 SPRING_DATASOURCE_USERNAME=topic_local
 SPRING_DATASOURCE_PASSWORD=THAY_BANG_MAT_KHAU_THAT

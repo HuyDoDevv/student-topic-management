@@ -17,7 +17,7 @@ merge về `develop` sau khi task, test và bằng chứng nghiệm thu đã ho�
 1. Có JDK 21 và MySQL 8.4 local đang chạy.
 2. Sao chép `.env.example` thành `.env` và điền cấu hình riêng của máy.
 3. Muốn xem giao diện: đặt `SPRING_PROFILES_ACTIVE=preview` trong `.env`.
-4. Chạy lệnh tương ứng bên dưới, mở http://localhost:8080. Dừng bằng Ctrl+C.
+4. Chạy lệnh tương ứng bên dưới, mở http://127.0.0.1:8088. Dừng bằng Ctrl+C.
 
 Kiểm tra `./mvnw --version` phải hiển thị Java 21. Nếu terminal đang có `JAVA_HOME`
 trỏ tới Java cũ, khai báo đúng JDK 21 trong `.env` và chạy qua script bên dưới.
