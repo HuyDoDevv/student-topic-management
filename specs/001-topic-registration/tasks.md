@@ -275,6 +275,8 @@ tài khoản hiện hữu hoặc quản lý danh mục khoa/bộ môn.
 
 - [X] T080 [FR-01] Tạo workspace ADMIN xem/tìm/lọc toàn bộ tài khoản; tạo từng tài khoản STUDENT/LECTURER/DEAN với password băm và role cố định; import CSV UTF-8 nguyên tử tối đa 1 MB/5.000 dòng, báo lỗi theo dòng và tải file mẫu; chặn người không có ADMIN ở backend, không cho tạo ADMIN hoặc nhận role từ client; thêm menu/dashboard/preview, unit/web tests và đồng bộ spec/plan/data-model/web contract/acceptance matrix.
 
+- [X] T081 [FR-01] Tách layout workspace ADMIN: chuyển thống kê tài khoản về Dashboard; tạo route/menu/danh sách riêng cho Sinh viên, Giảng viên và Trưởng khoa với loại tài khoản khóa ở backend; gom tạo đơn lẻ và import CSV vào trang Tạo tài khoản riêng; viết test controller/dashboard/preview trước implementation và đồng bộ spec/plan/web contract/acceptance matrix.
+
 ## Dependencies & execution order
 
 ```mermaid
@@ -287,7 +289,7 @@ flowchart TD
   U3 --> U5["T047–T058 US5"]
   U4 --> U5
   U5 --> P["T059–T064,T071–T075 Verification"]
-  F --> A["T080 ADMIN account provisioning"]
+  F --> A["T080–T081 ADMIN account provisioning"]
 ```
 
 - T001 → T002 → (T003 || T004) → T005. T005 chờ tài nguyên T004.
@@ -327,7 +329,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 
 | Requirement | Tasks chính | Tests / nguồn |
 |---|---|---|
-| FR-01 | T006,T008–T011,T016,T061,T070,T075,T077,T080 | REQ-28,31–32; AT-06,09–10,14 |
+| FR-01 | T006,T008–T011,T016,T061,T070,T075,T077,T080–T081 | REQ-28,31–32; AT-06,09–10,14 |
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
 | FR-03 | T018–T024,T026,T029,T048,T052,T077–T079 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
@@ -374,6 +376,6 @@ cách gọi `$speckit-implement`.
 
 ## Generation summary
 
-79 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12;
-final 11; architecture maintenance 1; usability feedback 3.
+81 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12;
+final 11; architecture maintenance 1; usability feedback 3; ADMIN provisioning/layout 2.
 Tất cả user stories P1 như spec. 16 task có [P], chỉ trong nhóm dependency đã mô tả.

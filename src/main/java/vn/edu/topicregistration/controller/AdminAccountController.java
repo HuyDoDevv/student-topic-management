@@ -50,15 +50,44 @@ public class AdminAccountController {
     }
 
     @GetMapping("/admin/accounts")
-    public String list(
+    public Object accountsRoot() {
+        return WebRedirects.seeOther(AccountSection.STUDENTS.path);
+    }
+
+    @GetMapping("/admin/accounts/students")
+    public String students(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) AccountType accountType,
             @RequestParam(required = false) Long facultyId,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, accountType, facultyId, departmentId, enabled));
+                query, AccountType.STUDENT, facultyId, departmentId, enabled),
+                AccountSection.STUDENTS);
+    }
+
+    @GetMapping("/admin/accounts/lecturers")
+    public String lecturers(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Long facultyId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Boolean enabled,
+            Model model) {
+        return renderList(model, new AccountFilter(
+                query, AccountType.LECTURER, facultyId, departmentId, enabled),
+                AccountSection.LECTURERS);
+    }
+
+    @GetMapping("/admin/accounts/deans")
+    public String deans(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Long facultyId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Boolean enabled,
+            Model model) {
+        return renderList(model, new AccountFilter(
+                query, AccountType.DEAN, facultyId, departmentId, enabled),
+                AccountSection.DEANS);
     }
 
     @GetMapping("/admin/accounts/new")
@@ -96,7 +125,7 @@ public class AdminAccountController {
         }
         redirectAttributes.addFlashAttribute(
                 "successMessage", "Đã tạo tài khoản " + form.getUsername().trim() + ".");
-        return WebRedirects.seeOther("/admin/accounts");
+        return WebRedirects.seeOther(managementPath(form.getAccountType()));
     }
 
     @PostMapping(
@@ -117,11 +146,11 @@ public class AdminAccountController {
         if (result.hasErrors()) {
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             model.addAttribute("importIssues", result.issues());
-            return renderList(model, AccountFilter.empty());
+            return renderForm(model, new AdminAccountForm());
         }
         redirectAttributes.addFlashAttribute(
                 "successMessage", "Đã import " + result.importedCount() + " tài khoản.");
-        return WebRedirects.seeOther("/admin/accounts");
+        return WebRedirects.seeOther("/admin/accounts/new");
     }
 
     @GetMapping("/admin/accounts/import-template.csv")
@@ -136,15 +165,21 @@ public class AdminAccountController {
                 .body(accounts.csvTemplate());
     }
 
-    private String renderList(Model model, AccountFilter filter) {
-        common(model);
+    private String renderList(
+            Model model, AccountFilter filter, AccountSection section) {
+        common(model, section.activeNav);
         model.addAttribute("workspace", accounts.workspace(filter));
-        model.addAttribute("accountTypeFilters", List.of(AccountType.values()));
+        model.addAttribute("managementTitle", section.title);
+        model.addAttribute("managementDescription", section.description);
+        model.addAttribute("searchTitle", section.searchTitle);
+        model.addAttribute("accountLabel", section.accountLabel);
+        model.addAttribute("managementPath", section.path);
+        model.addAttribute("accountBadgeClass", section.badgeClass);
         return "admin/accounts/list";
     }
 
     private String renderForm(Model model, AdminAccountForm form) {
-        common(model);
+        common(model, "admin-account-create");
         if (!model.containsAttribute("adminAccountForm")) {
             model.addAttribute("adminAccountForm", form);
         }
@@ -154,8 +189,60 @@ public class AdminAccountController {
         return "admin/accounts/form";
     }
 
-    private static void common(Model model) {
-        model.addAttribute("activeNav", "admin-accounts");
+    private static String managementPath(AccountType type) {
+        return switch (type) {
+            case STUDENT -> AccountSection.STUDENTS.path;
+            case LECTURER -> AccountSection.LECTURERS.path;
+            case DEAN -> AccountSection.DEANS.path;
+            case ADMIN -> "/admin/accounts/new";
+        };
+    }
+
+    private static void common(Model model, String activeNav) {
+        model.addAttribute("activeNav", activeNav);
         model.addAttribute("pageSection", "Quản trị hệ thống");
+    }
+
+    private enum AccountSection {
+        STUDENTS(
+                "Quản lý sinh viên",
+                "Tra cứu tài khoản sinh viên theo khoa, bộ môn và trạng thái.",
+                "Tìm sinh viên", "sinh viên", "/admin/accounts/students",
+                "admin-students", "bg-azure-lt"),
+        LECTURERS(
+                "Quản lý giảng viên",
+                "Tra cứu tài khoản giảng viên theo khoa, bộ môn và trạng thái.",
+                "Tìm giảng viên", "giảng viên", "/admin/accounts/lecturers",
+                "admin-lecturers", "bg-blue-lt"),
+        DEANS(
+                "Quản lý trưởng khoa",
+                "Tra cứu tài khoản trưởng khoa theo khoa, bộ môn và trạng thái.",
+                "Tìm trưởng khoa", "trưởng khoa", "/admin/accounts/deans",
+                "admin-deans", "bg-purple-lt");
+
+        private final String title;
+        private final String description;
+        private final String searchTitle;
+        private final String accountLabel;
+        private final String path;
+        private final String activeNav;
+        private final String badgeClass;
+
+        AccountSection(
+                String title,
+                String description,
+                String searchTitle,
+                String accountLabel,
+                String path,
+                String activeNav,
+                String badgeClass) {
+            this.title = title;
+            this.description = description;
+            this.searchTitle = searchTitle;
+            this.accountLabel = accountLabel;
+            this.path = path;
+            this.activeNav = activeNav;
+            this.badgeClass = badgeClass;
+        }
     }
 }

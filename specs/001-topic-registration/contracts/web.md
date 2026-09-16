@@ -81,8 +81,11 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | PENDING → REJECTED khi reason không rỗng sau khi trim; thiếu reason trả lỗi validation và không đổi trạng thái | 12 |
-| GET /admin/accounts | query,accountType,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách toàn bộ tài khoản đã lọc cùng danh mục khoa/bộ môn; người khác bị từ chối ở service | 01 |
-| GET /admin/accounts/new | — | ADMIN nhận form chỉ có STUDENT, LECTURER, DEAN và bộ môn hiện hữu | 01 |
+| GET /admin/accounts | — | Redirect 303 sang `/admin/accounts/students`; không còn workspace gộp chung | 01 |
+| GET /admin/accounts/students | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ STUDENT đã lọc; loại tài khoản do backend khóa theo route | 01 |
+| GET /admin/accounts/lecturers | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ LECTURER không gồm DEAN; loại do backend khóa theo route | 01 |
+| GET /admin/accounts/deans | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ DEAN; loại do backend khóa theo route | 01 |
+| GET /admin/accounts/new | — | ADMIN nhận trang cấp tài khoản riêng gồm form STUDENT/LECTURER/DEAN, import CSV và bảng mã bộ môn | 01 |
 | POST /admin/accounts | accountType,username,fullName,password,departmentId | 303 sau khi tạo một tài khoản; password được băm; DEAN nhận DEAN+LECTURER; username trùng hoặc input sai trả 422 và không ghi | 01 |
 | POST /admin/accounts/import | multipart `file` | CSV UTF-8 tối đa 1 MB/5.000 dòng, header cố định; kiểm tra toàn file trước khi ghi; có lỗi trả 422 kèm số dòng và rollback toàn bộ, hợp lệ trả 303 | 01 |
 | GET /admin/accounts/import-template.csv | — | Tải CSV UTF-8 có BOM với header `account_type,username,full_name,password,department_id`; chỉ ADMIN | 01 |

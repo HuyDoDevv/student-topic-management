@@ -27,7 +27,9 @@ class FoundationWebTest {
     @Test void shellRendersLocalAssets() throws Exception {
         mvc.perform(get("/")).andExpect(status().isOk())
             .andExpect(content().string(containsString("Quản lý đề tài sinh viên")))
-            .andExpect(content().string(containsString("/vendor/tabler/1.4.0/css/tabler.min.css")));
+            .andExpect(content().string(containsString("/vendor/tabler/1.4.0/css/tabler.min.css")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("action=\"/logout\""))));
         mvc.perform(get("/vendor/tabler/1.4.0/css/tabler.min.css")).andExpect(status().isOk());
         mvc.perform(get("/vendor/tabler/1.4.0/js/tabler.min.js")).andExpect(status().isOk());
     }
@@ -48,7 +50,10 @@ class FoundationWebTest {
             .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Kết quả công bố"))));
         mvc.perform(get("/dashboard?role=admin"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Không có dữ liệu học vụ")))
+            .andExpect(content().string(containsString("Tổng tài khoản")))
+            .andExpect(content().string(containsString("Sinh viên")))
+            .andExpect(content().string(containsString("Giảng viên")))
+            .andExpect(content().string(containsString("Trưởng khoa")))
             .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Đề tài chờ duyệt"))));
     }
 
@@ -59,7 +64,8 @@ class FoundationWebTest {
             "/topics/101", "/topics/101/edit", "/periods/1/topics/review",
             "/periods/1/groups/new", "/groups/1", "/groups/1/registrations/new",
             "/registrations/1", "/registrations/1/decision",
-            "/admin/accounts", "/admin/accounts/new"
+            "/admin/accounts/students", "/admin/accounts/lecturers",
+            "/admin/accounts/deans", "/admin/accounts/new"
         };
 
         for (String route : routes) {
@@ -69,12 +75,31 @@ class FoundationWebTest {
         }
     }
 
-    @Test void adminAccountPreviewShowsCreateImportTemplateAndFilters() throws Exception {
-        mvc.perform(get("/admin/accounts"))
+    @Test void adminAccountPreviewSeparatesDashboardRoleListsAndProvisioning() throws Exception {
+        mvc.perform(get("/admin/accounts/students"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("Quản lý tài khoản")))
-            .andExpect(content().string(containsString("Tải file mẫu")))
-            .andExpect(content().string(containsString("Tìm và lọc tài khoản")));
+            .andExpect(content().string(containsString("Quản lý sinh viên")))
+            .andExpect(content().string(containsString("Tìm sinh viên")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Import tài khoản"))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Tổng tài khoản"))));
+
+        mvc.perform(get("/admin/accounts/lecturers"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Quản lý giảng viên")));
+
+        mvc.perform(get("/admin/accounts/deans"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Quản lý trưởng khoa")));
+
+        mvc.perform(get("/admin/accounts/new"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Tạo tài khoản")))
+            .andExpect(content().string(containsString("Import tài khoản bằng CSV")))
+            .andExpect(content().string(containsString("Tải file mẫu")));
+
+        mvc.perform(get("/admin/accounts"))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(redirectedUrl("/admin/accounts/students"));
     }
 
     @Test void deanPreviewSeparatesStudentRegistrationsFromLecturerProposals() throws Exception {

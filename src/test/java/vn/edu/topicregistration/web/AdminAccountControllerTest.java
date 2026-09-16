@@ -2,6 +2,7 @@ package vn.edu.topicregistration.web;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import vn.edu.topicregistration.controller.AdminAccountController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.service.AdminAccountService;
+import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.AccountWorkspace;
 import vn.edu.topicregistration.service.AdminAccountService.ImportIssue;
 import vn.edu.topicregistration.service.AdminAccountService.ImportResult;
@@ -46,14 +48,43 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void rendersAccountManagementAndFilters() throws Exception {
-        mvc.perform(get("/admin/accounts")
+    void legacyWorkspaceRedirectsToStudentManagement() throws Exception {
+        mvc.perform(get("/admin/accounts"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/students"));
+    }
+
+    @Test
+    void rendersStudentManagementAndFilters() throws Exception {
+        mvc.perform(get("/admin/accounts/students")
                         .param("query", "student")
-                        .param("accountType", "STUDENT")
                         .param("enabled", "true"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/accounts/list"))
-                .andExpect(model().attributeExists("workspace"));
+                .andExpect(model().attributeExists("workspace"))
+                .andExpect(model().attribute("managementTitle", "Quản lý sinh viên"))
+                .andExpect(model().attribute("activeNav", "admin-students"));
+
+        verify(accounts).workspace(argThat(
+                filter -> filter.accountType() == AccountType.STUDENT));
+    }
+
+    @Test
+    void rendersLecturerAndDeanManagementSeparately() throws Exception {
+        mvc.perform(get("/admin/accounts/lecturers"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("managementTitle", "Quản lý giảng viên"))
+                .andExpect(model().attribute("activeNav", "admin-lecturers"));
+
+        mvc.perform(get("/admin/accounts/deans"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("managementTitle", "Quản lý trưởng khoa"))
+                .andExpect(model().attribute("activeNav", "admin-deans"));
+
+        verify(accounts).workspace(argThat(
+                filter -> filter.accountType() == AccountType.LECTURER));
+        verify(accounts).workspace(argThat(
+                filter -> filter.accountType() == AccountType.DEAN));
     }
 
     @Test
@@ -66,7 +97,7 @@ class AdminAccountControllerTest {
                         .param("departmentId", "7")
                         .param("roles", "ADMIN"))
                 .andExpect(status().isSeeOther())
-                .andExpect(redirectedUrl("/admin/accounts"));
+                .andExpect(redirectedUrl("/admin/accounts/students"));
 
         verify(accounts).create(any());
     }
@@ -126,7 +157,7 @@ class AdminAccountControllerTest {
 
         mvc.perform(multipart("/admin/accounts/import").file(file))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(view().name("admin/accounts/list"))
+                .andExpect(view().name("admin/accounts/form"))
                 .andExpect(model().attributeExists("importIssues"));
     }
 

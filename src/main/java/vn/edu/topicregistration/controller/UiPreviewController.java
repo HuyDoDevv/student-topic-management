@@ -181,10 +181,15 @@ public class UiPreviewController {
                     new Metric("Đã công bố", 1, "Sinh viên có thể xem", "/topics")),
                     new Focus("VIỆC CỦA BẠN", "Có 1 đề tài nháp",
                             "Hoàn thiện và gửi duyệt.", "/topics", "Xem đề tài của tôi", "bg-blue-lt"));
-            case "admin" -> new DashboardView("Quản trị sự cố", "Tổng quan quản trị",
-                    "Không có quyền xem hoặc quyết định học vụ.", List.of(),
-                    new Focus("PHẠM VI QUYỀN", "Không có dữ liệu học vụ",
-                            "Chỉ xử lý sự cố khẩn cấp.", null, null, "bg-secondary-lt"));
+            case "admin" -> new DashboardView("Quản trị hệ thống", "Tổng quan tài khoản",
+                    "Thống kê tài khoản hệ thống; không bao gồm dữ liệu nghiệp vụ học vụ.", List.of(
+                    new Metric("Tổng tài khoản", 33, "33 tài khoản đang hoạt động", null),
+                    new Metric("Sinh viên", 20, "Tài khoản STUDENT", "/admin/accounts/students"),
+                    new Metric("Giảng viên", 10, "Tài khoản LECTURER", "/admin/accounts/lecturers"),
+                    new Metric("Trưởng khoa", 2, "Tài khoản DEAN", "/admin/accounts/deans")),
+                    new Focus("CẤP TÀI KHOẢN", "Tạo tài khoản mới",
+                            "Tạo từng tài khoản hoặc import danh sách CSV.",
+                            "/admin/accounts/new", "Mở trang tạo tài khoản", "bg-blue-lt"));
             default -> new DashboardView("Sinh viên", "Tổng quan đăng ký của tôi",
                     "Theo dõi nhóm và kết quả đăng ký của chính bạn.", List.of(
                     new Metric("Lời mời cần phản hồi", 0, "Còn trong hạn", "/group-invitations"),
@@ -338,8 +343,45 @@ public class UiPreviewController {
     }
 
     @GetMapping("/admin/accounts")
-    String adminAccounts(Model model) {
-        common(model, "admin-accounts", "Quản trị hệ thống");
+    Object adminAccountsRoot() {
+        return WebRedirects.seeOther("/admin/accounts/students");
+    }
+
+    @GetMapping("/admin/accounts/students")
+    String adminStudents(Model model) {
+        return adminAccounts(model, AccountType.STUDENT);
+    }
+
+    @GetMapping("/admin/accounts/lecturers")
+    String adminLecturers(Model model) {
+        return adminAccounts(model, AccountType.LECTURER);
+    }
+
+    @GetMapping("/admin/accounts/deans")
+    String adminDeans(Model model) {
+        return adminAccounts(model, AccountType.DEAN);
+    }
+
+    private String adminAccounts(Model model, AccountType type) {
+        String path = switch (type) {
+            case STUDENT -> "/admin/accounts/students";
+            case LECTURER -> "/admin/accounts/lecturers";
+            case DEAN -> "/admin/accounts/deans";
+            case ADMIN -> throw new IllegalArgumentException("ADMIN preview list is unsupported");
+        };
+        String subject = switch (type) {
+            case STUDENT -> "sinh viên";
+            case LECTURER -> "giảng viên";
+            case DEAN -> "trưởng khoa";
+            case ADMIN -> throw new IllegalArgumentException("ADMIN preview list is unsupported");
+        };
+        String activeNav = switch (type) {
+            case STUDENT -> "admin-students";
+            case LECTURER -> "admin-lecturers";
+            case DEAN -> "admin-deans";
+            case ADMIN -> throw new IllegalArgumentException("ADMIN preview list is unsupported");
+        };
+        common(model, activeNav, "Quản trị hệ thống");
         List<FacultyOption> faculties = List.of(new FacultyOption(1L, "Công nghệ thông tin"));
         List<DepartmentOption> departments = List.of(
                 new DepartmentOption(1L, "Công nghệ phần mềm", 1L, "Công nghệ thông tin"),
@@ -355,16 +397,28 @@ public class UiPreviewController {
                         AccountType.STUDENT.label(), 2L, "Hệ thống thông tin", 1L,
                         "Công nghệ thông tin", true));
         model.addAttribute("workspace", new AccountWorkspace(
-                accountViews, faculties, departments,
+                accountViews.stream().filter(account -> account.accountType() == type).toList(),
+                faculties, departments,
                 List.of(AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN),
-                AccountFilter.empty(), 3, 3, 1, 2));
-        model.addAttribute("accountTypeFilters", List.of(AccountType.values()));
+                new AccountFilter(null, type, null, null, null), 3, 3, 1, 2));
+        model.addAttribute("managementTitle", "Quản lý " + subject);
+        model.addAttribute("managementDescription",
+                "Tra cứu tài khoản " + subject + " theo khoa, bộ môn và trạng thái.");
+        model.addAttribute("searchTitle", "Tìm " + subject);
+        model.addAttribute("accountLabel", subject);
+        model.addAttribute("managementPath", path);
+        model.addAttribute("accountBadgeClass", switch (type) {
+            case STUDENT -> "bg-azure-lt";
+            case LECTURER -> "bg-blue-lt";
+            case DEAN -> "bg-purple-lt";
+            case ADMIN -> "bg-secondary-lt";
+        });
         return "admin/accounts/list";
     }
 
     @GetMapping("/admin/accounts/new")
     String adminAccountForm(Model model) {
-        common(model, "admin-accounts", "Quản trị hệ thống");
+        common(model, "admin-account-create", "Quản trị hệ thống");
         model.addAttribute("adminAccountForm", new AdminAccountForm());
         model.addAttribute("accountTypes", List.of(
                 AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN));

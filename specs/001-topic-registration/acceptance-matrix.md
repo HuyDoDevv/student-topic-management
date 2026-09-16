@@ -13,7 +13,7 @@ chứng test; không được hiểu là đạt.
 
 | Yêu cầu | Nguồn | AS / AT / SC | Test dự kiến | Trạng thái đặc tả | Bằng chứng |
 |---|---|---|---|---|---|
-| FR-01 Identity, role, scope, ADMIN | REQ-28,31–32 + U | AS-1.3,1.5–1.8,1.14–1.17,2.4; AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, AdminAccountServiceTest, AdminAccountControllerTest, DashboardServiceTest, NavigationModelAdviceTest, FoundationWebTest, PeriodContractTest, LoginE2ETest, các contract test theo story | CONFIRMED | FOUNDATION PASS; T021 quyền sau khóa + T023 CSRF/role DB/scope khoa PASS; T070 chặn DEAN khỏi luồng tác giả ở backend/UI, test riêng deferred; T075 dashboard actor-scoped PASS; T080 cấp tài khoản từng người/import nguyên tử/file mẫu và chặn non-ADMIN PASS 32 unit/web/preview tests; full suite 170/177 đạt, 7 lỗi môi trường MySQL đã biết ở PeriodContractTest; moderation NOT RUN |
+| FR-01 Identity, role, scope, ADMIN | REQ-28,31–32 + U | AS-1.3,1.5–1.8,1.14–1.18,2.4; AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, AdminAccountServiceTest, AdminAccountControllerTest, DashboardServiceTest, NavigationModelAdviceTest, FoundationWebTest, PeriodContractTest, LoginE2ETest, các contract test theo story | CONFIRMED | FOUNDATION PASS; T021 quyền sau khóa + T023 CSRF/role DB/scope khoa PASS; T070 chặn DEAN khỏi luồng tác giả ở backend/UI, test riêng deferred; T075 dashboard actor-scoped PASS; T080 cấp tài khoản từng người/import nguyên tử/file mẫu và chặn non-ADMIN PASS 32 unit/web/preview tests; T081 tách Dashboard, ba danh sách khóa loại và trang tạo/import riêng PASS 26 test mục tiêu + visual QA desktop/mobile; full suite 172/179 đạt, 7 lỗi môi trường MySQL đã biết ở PeriodContractTest; moderation NOT RUN |
 | FR-02 Tạo bốn loại đợt | REQ-01,04 | AS-1.1,1.4; AT-01; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: bốn loại, persistence, service và web contract |
 | FR-03 Lịch GV/SV | REQ-02–05 + U | AS-1.1,1.4,1.9–1.10,2.2,5.2,5.11,5.13,5.17–5.18; AT-02,13; SC-003 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT, DashboardServiceTest, FoundationWebTest | CONFIRMED | US1 PASS T018–T024; kiểm tra bổ sung ngày-only/ngày đã qua trong fix T017; T077 lọc/count đợt còn hiệu lực, nhãn giai đoạn, bộ lọc và ba số hồ sơ theo đợt PASS ở unit/preview |
 | FR-04 Ngày theo loại | REQ-06–07 + U | AS-1.2,1.11–1.12; AT-01,13; SC-001 | PeriodRulesTest, PeriodContractTest | CONFIRMED | US1 PASS T018–T024: DB-02, required/null theo loại và chỉ dời muộn hơn |
@@ -29,13 +29,13 @@ chứng test; không được hiểu là đạt.
 | FR-14 Vòng đời đề tài | REQ-02–03,08–11,15,31 + U | AS-2.1–2.3,2.7–2.9,3.1,3.4–3.5; AT-12; SC-002 | TopicReviewRulesTest, TopicPublicationIT | CONFIRMED | T025 giải phóng vòng đời tác giả/GVHD; tests NOT RUN |
 | FR-15 Khóa sửa lịch | REQ-03–05,31 + U | AS-1.11–1.13; AT-13; SC-001,003,005 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024: FOR UPDATE, version, khóa theo thời gian sau chờ và chỉ gia hạn mốc còn hiệu lực |
 | NFR-01 Bảo mật nền tảng | Constitution III,IV,IX + U | AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, WebExceptionHandlerTest, TestDatabaseSafetyTest | CONFIRMED | FOUNDATION PASS 2026-09-10; T023 period contract PASS cho CSRF/role/scope/input/version; route story khác còn NOT RUN |
-| NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; T075 sửa flex-grow nhóm sidebar, preview tại 750px và E2E desktop 1280px đo khoảng cách hai nhóm menu PASS; toàn bộ viewport AT-15 chưa chạy |
+| NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; T075 sửa flex-grow nhóm sidebar, preview tại 750px và E2E desktop 1280px đo khoảng cách hai nhóm menu PASS; T081 visual QA trang tạo/import tại desktop 1440px và mobile 390px PASS; toàn bộ viewport AT-15 chưa chạy |
 
 ## Gate status
 
 | Gate | Trạng thái | Điều kiện còn lại |
 |---|---|---|
-| G-Identity / T006,T080 | PASS trong phạm vi cấp tài khoản | Foundation identity/security T008–T016 và provisioning ADMIN T080 đã triển khai; contract học vụ theo story chạy ở phase tương ứng |
+| G-Identity / T006,T080–T081 | PASS trong phạm vi cấp tài khoản | Foundation identity/security T008–T016 và provisioning/layout ADMIN T080–T081 đã triển khai; contract học vụ theo story chạy ở phase tương ứng |
 | G-Acceptance / T007 | CONFIRMED | Không còn quyết định nghiệp vụ đang mở trong phạm vi hiện tại |
 | G-Period / T017 | PASS | Q-02 đã giải quyết; US1 T018–T024 đã triển khai và nghiệm thu |
 | G-Topic / T025 | CONFIRMED | Q-05/Q-06 đã giải quyết ngày 2026-09-10; US2 T026–T032 được phép triển khai |
@@ -111,3 +111,14 @@ database local của người dùng.
 | UI và điều hướng | PASS | `DashboardServiceTest`, `NavigationModelAdviceTest` và `FoundationWebTest` kiểm tra lối quản lý tài khoản chỉ dành ADMIN, trang danh sách/bộ lọc/import/file mẫu và form tạo render trong preview. |
 | Kiểm thử mục tiêu | PASS | `AdminAccountServiceTest,AdminAccountControllerTest,NavigationModelAdviceTest,DashboardServiceTest,FoundationWebTest`: 32 test, 0 failure/error. |
 | Full unit/web suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test`: 177 test, 170 đạt; 7 lỗi đều thuộc `PeriodContractTest` vì thiếu `TEST_DATABASE_URL`, không liên quan T080. Không dùng database local có dữ liệu thật. |
+
+## Bằng chứng layout ADMIN T081 — 2026-09-16
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Dashboard tài khoản | PASS | `DashboardServiceTest` kiểm tra ADMIN nhận bốn thống kê thật: tổng tài khoản, Sinh viên, Giảng viên và Trưởng khoa; không gọi clock hoặc truy vấn học vụ. `JdbcDashboardQuery` đếm DEAN riêng khỏi LECTURER dù DEAN đồng thời mang hai role. |
+| Danh sách khóa loại | PASS | `AdminAccountControllerTest` kiểm tra `/admin/accounts/students`, `/lecturers`, `/deans` luôn dựng `AccountFilter` với loại cố định phía backend; `/admin/accounts` chuyển hướng về Sinh viên và tạo thành công chuyển về danh sách đúng loại. |
+| Tạo và import riêng | PASS | `FoundationWebTest` kiểm tra ba trang danh sách không chứa import/thống kê, còn `/admin/accounts/new` chứa form đơn lẻ, import CSV và file mẫu; sidebar có bốn mục ADMIN riêng. Preview chỉ cho GET, từ chối mọi request mutation và không tạo session CSRF khi render form. |
+| Visual QA | PASS | Preview desktop 1440px cho Dashboard, ba danh sách và trang tạo/import tách biệt; Playwright viewport 390px xác nhận form, nút, file input và bảng mã bộ môn xếp dọc, không tràn ngang. |
+| Kiểm thử mục tiêu | PASS | `env -u JAVA_HOME ./mvnw -Dtest=DashboardServiceTest,AdminAccountControllerTest,FoundationWebTest test`: 26 test, 0 failure/error. |
+| Full unit/web suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test`: 179 test, 172 đạt; 7 lỗi đều thuộc `PeriodContractTest` vì thiếu `TEST_DATABASE_URL`, không liên quan T081. Không dùng database local có dữ liệu thật. |

@@ -40,7 +40,9 @@ ba giai đoạn của cửa sổ SV. Không triển khai feedback ADMIN trong nh
 lọc toàn bộ tài khoản; tạo từng tài khoản STUDENT/LECTURER/DEAN; import CSV UTF-8 nguyên tử
 tối đa 1 MB/5.000 dòng; và tải file mẫu có header cố định. Mật khẩu được băm bằng cấu hình
 `PasswordEncoder`; DEAN được gán DEAN+LECTURER. Backend không nhận role tùy ý từ form/file,
-không cho tạo ADMIN và không cấp thêm quyền học vụ.
+không cho tạo ADMIN và không cấp thêm quyền học vụ. T081 tách workspace theo
+feedback layout: thống kê chuyển về Dashboard, ba danh sách STUDENT/LECTURER/DEAN có
+route/menu riêng và tạo từng tài khoản/import CSV nằm trên trang cấp tài khoản riêng.
 
 ## Technical Context
 
@@ -173,7 +175,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
 | 4 | Nhóm, lời mời có xác nhận, thành viên, tự rời/giải tán và chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã chốt lại ngày 2026-09-11 |
 | 5 | Gửi/rút/đăng ký lại, snapshot thành viên lúc gửi, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-04–08,11; G-Registration đã giải phóng ngày 2026-09-11, quy tắc đủ 3/snapshot cập nhật ngày 2026-09-12 |
-| 6 | Quản lý cấp tài khoản ADMIN: danh sách, tạo từng người, import nguyên tử và file mẫu | FR-01; REQ-28,31–32 | AS-1.17; AT-10; unit/web/preview tests T080 |
+| 6 | Quản lý cấp tài khoản ADMIN: Dashboard thống kê, danh sách tách theo loại, trang tạo/import nguyên tử và file mẫu | FR-01; REQ-28,31–32 | AS-1.17–1.18; AT-10; unit/web/preview tests T080–T081 |
 | 7 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 
 Đây là trình tự kế hoạch, không phải tasks.md và không cho phép bỏ qua gate ở mỗi phần.

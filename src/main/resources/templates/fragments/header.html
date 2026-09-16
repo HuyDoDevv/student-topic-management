@@ -36,7 +36,8 @@
         <div class="dropdown-menu dropdown-menu-end">
           <a class="dropdown-item" th:href="@{/dashboard}">Trang tổng quan</a>
           <div class="dropdown-divider"></div>
-          <form th:action="@{/logout}" method="post"><button class="dropdown-item" type="submit">Đăng xuất</button></form>
+          <form th:if="${!previewMode}" th:action="@{/logout}" method="post"><button class="dropdown-item" type="submit">Đăng xuất</button></form>
+          <span class="dropdown-item-text text-secondary" th:if="${previewMode}">Chế độ xem trước</span>
         </div>
       </div>
     </div>
