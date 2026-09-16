@@ -9,9 +9,15 @@
       <h1 class="page-title">Đề tài của tôi</h1>
       <p class="text-secondary mt-2 mb-0">Theo dõi đề tài từ bản nháp đến khi được công bố.</p>
     </div>
-    <a class="btn btn-primary" th:href="@{/periods/{id}/topics/new(id=${period.id})}">
+    <a class="btn btn-primary" th:if="${period.lecturerOpen}"
+       th:href="@{/periods/{id}/topics/new(id=${period.id})}">
       <span aria-hidden="true">＋</span> Tạo đề tài
     </a>
+  </div>
+
+  <div class="alert alert-info" role="status" th:if="${!period.lecturerOpen}">
+    <strong>Đã ngoài thời gian tạo đề tài mới.</strong>
+    Bạn vẫn có thể xem đề tài cũ và chỉnh sửa bản nháp của mình.
   </div>
 
   <div class="card data-card" th:if="${!topics.isEmpty()}">
@@ -67,7 +73,7 @@
   </div>
 
   <div class="card" th:if="${topics.isEmpty()}"
-       th:insert="~{fragments/feedback :: empty('Chưa có đề tài', 'Tạo bản nháp đầu tiên cho đợt đăng ký này.')}" ></div>
+       th:insert="~{fragments/feedback :: empty('Chưa có đề tài', ${period.lecturerOpen ? 'Tạo bản nháp đầu tiên cho đợt đăng ký này.' : 'Đợt này không có đề tài cũ để hiển thị.'})}" ></div>
 </section>
 </body>
 </html>

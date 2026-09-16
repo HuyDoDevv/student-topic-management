@@ -283,7 +283,8 @@ public class GroupService {
                         period.getName(),
                         period.getStudentStart(),
                         period.getStudentEnd(),
-                        isStudentWindowOpen(period, now),
+                        StudentPeriodPhase.at(
+                                now, period.getStudentStart(), period.getStudentEnd()),
                         groups.findByPeriodIdAndMemberStudentId(
                                 period.getId(), student.accountId()).isPresent(),
                         invitations.existsByPeriodIdAndStudentIdAndStatus(
@@ -339,7 +340,8 @@ public class GroupService {
                 period.getName(),
                 period.getStudentStart(),
                 period.getStudentEnd(),
-                isStudentWindowOpen(period, now),
+                StudentPeriodPhase.at(
+                        now, period.getStudentStart(), period.getStudentEnd()),
                 current.isPresent(),
                 invitations.existsByPeriodIdAndStudentIdAndStatus(
                         periodId, student.accountId(), GroupInvitationStatus.PENDING));
@@ -664,9 +666,28 @@ public class GroupService {
             String name,
             Instant studentStart,
             Instant studentEnd,
-            boolean studentOpen,
+            StudentPeriodPhase phase,
             boolean hasGroup,
             boolean hasPendingInvitation) {
+        public boolean studentOpen() {
+            return phase == StudentPeriodPhase.OPEN;
+        }
+    }
+
+    public enum StudentPeriodPhase {
+        UPCOMING,
+        OPEN,
+        ENDED;
+
+        public static StudentPeriodPhase at(Instant now, Instant start, Instant end) {
+            Objects.requireNonNull(now, "now");
+            Objects.requireNonNull(start, "start");
+            Objects.requireNonNull(end, "end");
+            if (now.isBefore(start)) {
+                return UPCOMING;
+            }
+            return now.isAfter(end) ? ENDED : OPEN;
+        }
     }
 
     public record GroupWorkspace(

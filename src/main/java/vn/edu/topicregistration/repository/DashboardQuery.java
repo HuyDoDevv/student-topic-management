@@ -5,9 +5,9 @@ import java.util.Optional;
 
 /** Read-only, explicitly scoped queries; callers must use the reloaded actor identity. */
 public interface DashboardQuery {
-    long countFacultyTopics(long facultyId, String status);
-    long countFacultyPendingRegistrations(long facultyId);
-    long countFacultyPeriods(long facultyId);
+    long countFacultyTopics(long facultyId, String status, Instant now);
+    long countFacultyPendingRegistrations(long facultyId, Instant now);
+    long countFacultyActivePeriods(long facultyId, Instant now);
     long countLecturerTopics(long lecturerId, long departmentId, long facultyId, String status);
     long countStudentInvitations(long studentId, long facultyId, Instant now);
     long countStudentGroups(long studentId, long facultyId);

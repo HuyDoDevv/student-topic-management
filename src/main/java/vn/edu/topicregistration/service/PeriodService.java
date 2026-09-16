@@ -84,6 +84,8 @@ public class PeriodService {
         ActorIdentity dean = currentDean();
         Instant now = clock.instant();
         return periods.findAllByFacultyIdOrderByLecturerStartDesc(dean.facultyId()).stream()
+                .filter(period -> PeriodRules.stateAt(toConfiguration(period), now)
+                        != RegistrationState.REGISTRATION_CLOSED)
                 .map(period -> toView(period, now))
                 .toList();
     }

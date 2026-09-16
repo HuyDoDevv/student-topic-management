@@ -64,6 +64,7 @@ public class TopicAuthorService {
         Objects.requireNonNull(command, "command");
         RegistrationPeriodEntity period = lockedPeriod(periodId);
         ActorIdentity actor = currentLecturerFor(period);
+        requireLecturerWindow(period, clock.instant());
         DepartmentEntity department = requiredEntity(DepartmentEntity.class, actor.departmentId());
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
         LoadedDraft loaded = loadDraft(command, author);
@@ -137,8 +138,18 @@ public class TopicAuthorService {
                         period.getLecturerStart(),
                         period.getLecturerEnd(),
                         !now.isBefore(period.getLecturerStart())
-                                && !now.isAfter(period.getLecturerEnd())))
+                                && !now.isAfter(period.getLecturerEnd()),
+                        !now.isAfter(period.getStudentEnd())))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TopicFormContext createFormContext(long periodId) {
+        TopicFormContext context = formContext(periodId);
+        if (!context.period().lecturerOpen()) {
+            throw new ApplicationException(ApplicationErrorCode.WINDOW_CLOSED);
+        }
+        return context;
     }
 
     @Transactional(readOnly = true)
@@ -186,7 +197,8 @@ public class TopicAuthorService {
                         period.getLecturerStart(),
                         period.getLecturerEnd(),
                         !now.isBefore(period.getLecturerStart())
-                                && !now.isAfter(period.getLecturerEnd())),
+                                && !now.isAfter(period.getLecturerEnd()),
+                        !now.isAfter(period.getStudentEnd())),
                 department.getId(),
                 department.getName(),
                 new LecturerOption(author.getId(), displayName(author), author.getUsername()),
@@ -196,6 +208,12 @@ public class TopicAuthorService {
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
         return periods.findByIdForUpdate(periodId)
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    private static void requireLecturerWindow(RegistrationPeriodEntity period, Instant now) {
+        if (now.isBefore(period.getLecturerStart()) || now.isAfter(period.getLecturerEnd())) {
+            throw new ApplicationException(ApplicationErrorCode.WINDOW_CLOSED);
+        }
     }
 
     private LockedTopic lockedTopic(long topicId, long expectedVersion) {
@@ -435,7 +453,8 @@ public class TopicAuthorService {
             String name,
             Instant lecturerStart,
             Instant lecturerEnd,
-            boolean lecturerOpen) {
+            boolean lecturerOpen,
+            boolean active) {
     }
 
     public record TopicFormContext(

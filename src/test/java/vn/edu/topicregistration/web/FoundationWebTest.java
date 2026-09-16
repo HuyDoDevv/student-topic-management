@@ -80,6 +80,44 @@ class FoundationWebTest {
             .andExpect(content().string(containsString("Sinh viên chưa thể đăng ký")));
     }
 
+    @Test void deanPeriodListShowsActiveWorkflowStatisticsAndFilter() throws Exception {
+        mvc.perform(get("/periods"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Lọc trạng thái đợt")))
+            .andExpect(content().string(containsString("Đề tài chờ duyệt")))
+            .andExpect(content().string(containsString("Nhóm chờ xét")))
+            .andExpect(content().string(containsString("Đề tài chờ công bố")))
+            .andExpect(content().string(containsString("Đang nhận đề tài GV")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("Đợt đã kết thúc"))));
+    }
+
+    @Test void lecturerPeriodsAreSplitAndExpiredPeriodDoesNotOfferCreateAction() throws Exception {
+        mvc.perform(get("/topics"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đợt còn hiệu lực")))
+            .andExpect(content().string(containsString("Đợt đã hết hạn")));
+
+        mvc.perform(get("/periods/3/topics"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đã ngoài thời gian tạo đề tài mới")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("href=\"/periods/3/topics/new\""))));
+    }
+
+    @Test void studentPeriodsAreSeparatedByRegistrationPhase() throws Exception {
+        mvc.perform(get("/groups"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Sắp đăng ký")))
+            .andExpect(content().string(containsString("Đang đăng ký")))
+            .andExpect(content().string(containsString("Đã kết thúc")))
+            .andExpect(content().string(containsString("href=\"/periods/4/groups/new\"")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("href=\"/periods/2/groups/new\""))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("href=\"/periods/3/groups/new\""))));
+    }
+
     @Test void registrationPreviewExplainsCompleteGroupAndSubmissionSnapshot() throws Exception {
         mvc.perform(get("/groups/1/registrations/new"))
             .andExpect(status().isOk())

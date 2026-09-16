@@ -56,10 +56,11 @@ public class DashboardService {
 
     private DashboardView dean(ActorIdentity actor) {
         long facultyId = required(actor.facultyId());
-        long pendingTopics = query.countFacultyTopics(facultyId, "PENDING_APPROVAL");
-        long approvedTopics = query.countFacultyTopics(facultyId, "APPROVED");
-        long pendingRegistrations = query.countFacultyPendingRegistrations(facultyId);
-        long periods = query.countFacultyPeriods(facultyId);
+        var now = time.now();
+        long pendingTopics = query.countFacultyTopics(facultyId, "PENDING_APPROVAL", now);
+        long approvedTopics = query.countFacultyTopics(facultyId, "APPROVED", now);
+        long pendingRegistrations = query.countFacultyPendingRegistrations(facultyId, now);
+        long periods = query.countFacultyActivePeriods(facultyId, now);
         Focus focus = pendingRegistrations > 0
                 ? new Focus("VIỆC CẦN XỬ LÝ", "Có " + pendingRegistrations + " đăng ký chờ xét",
                         "Mở đợt đăng ký để xem nhóm và quyết định chấp nhận hoặc từ chối.",
@@ -80,7 +81,7 @@ public class DashboardService {
                 new Metric("Đề tài chờ duyệt", pendingTopics, "Đề xuất giảng viên chưa được quyết định", "/periods"),
                 new Metric("Đề tài chờ công bố", approvedTopics, "Đã duyệt nhưng sinh viên chưa thấy", "/periods"),
                 new Metric("Đăng ký chờ xét", pendingRegistrations, "Nhóm sinh viên chờ quyết định", "/periods"),
-                new Metric("Đợt đăng ký", periods, "Các đợt của khoa", "/periods")), focus);
+                new Metric("Đợt còn hiệu lực", periods, "Chưa kết thúc thời gian đăng ký sinh viên", "/periods")), focus);
     }
 
     private DashboardView lecturer(ActorIdentity actor) {

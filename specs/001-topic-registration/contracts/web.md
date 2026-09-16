@@ -13,7 +13,7 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 |---|---|---|---|
 | Tạo đợt | DEAN | Tên/loại/lịch ngày hợp lệ, không có ngày đã qua; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
-| Tạo/sửa nháp | LECTURER tác giả, không có DEAN | Đề tài của mình trong đúng một đợt, bộ môn mình, DRAFT; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn; tài khoản có DEAN bị từ chối dù đồng thời có LECTURER | 01,05–06,14 |
+| Tạo/sửa nháp | LECTURER tác giả, không có DEAN | Chỉ mở form/tạo mới trong hạn GV và kiểm tra lại dưới khóa đợt; đề tài hiện hữu của mình trong đúng một đợt, bộ môn mình, DRAFT vẫn sửa được ngoài hạn; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn; tài khoản có DEAN bị từ chối dù đồng thời có LECTURER | 01,03,05–06,14 |
 | Gửi duyệt | LECTURER tác giả, không có DEAN | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi; tài khoản có DEAN bị từ chối | 01,05–06,14 |
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; đúng khoa của DEAN | 07,14 |
 | Công bố | DEAN | Toàn bộ APPROVED trong đúng đợt/khoa, nguyên tử; không đổi DRAFT/PENDING_APPROVAL | 07,14 |
@@ -49,18 +49,20 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | GET /login | — | 200 form Tabler | 01 |
 | POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
-| GET /; GET /dashboard | — | 200 dashboard theo vai trò đã xác thực, số liệu truy vấn trong scope từ database: DEAN theo khoa, LECTURER theo tác giả/bộ môn/khoa, STUDENT theo tài khoản/khoa và snapshot registration; DEAN+LECTURER dùng DEAN, ADMIN không xem số liệu học vụ. Các lối tắt không cấp thêm quyền. | 01,10–11 |
-| GET /periods; GET /periods/{id} | — | 200 danh sách/chi tiết theo scope; chi tiết đợt của DEAN kèm danh sách topic và thao tác review/publish | 01–04,07 |
+| GET /; GET /dashboard | — | 200 dashboard theo vai trò đã xác thực, số liệu truy vấn trong scope từ database: DEAN theo khoa và chỉ đếm đợt chưa qua `student_end`, LECTURER theo tác giả/bộ môn/khoa, STUDENT theo tài khoản/khoa và snapshot registration; DEAN+LECTURER dùng DEAN, ADMIN không xem số liệu học vụ. Các lối tắt không cấp thêm quyền. | 01,03,10–11 |
+| GET /periods; GET /periods/{id} | — | 200 theo scope; danh sách DEAN chỉ có đợt chưa qua `student_end`, có lọc theo nhãn giai đoạn và các số chờ duyệt/chờ xét/chờ công bố; chi tiết vẫn truy cập đợt cũ đúng quyền và có thao tác review/publish | 01–04,07,11 |
 | POST /periods | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate | 303 tới period mới; từ chối giá trị có giờ hoặc ngày đã qua; ngày bắt buộc/null đúng theo loại | 02–04 |
 | POST /periods/{id} | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |
-| GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt | 05,07 |
-| POST /periods/{id}/topics | 5 nội dung,coSupervisorIds | Tạo DRAFT thuộc riêng đợt trong path; author/department từ identity, tác giả tự động là GVHD chính, tối đa một GVHD phối hợp lấy từ danh mục đã lọc | 05–06,14 |
+| GET /topics | — | 200 danh sách đợt của tác giả, tách còn hiệu lực/đã hết hạn theo `student_end`; cả hai nhóm đều mở được danh sách đề tài cũ | 03,05 |
+| GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt; nút tạo mới chỉ có khi hạn GV đang mở | 05,07 |
+| GET /periods/{id}/topics/new; POST /periods/{id}/topics | 5 nội dung,coSupervisorIds | Chỉ trong hạn GV; GET ngoài hạn và POST trực tiếp đều trả WINDOW_CLOSED. Khi hợp lệ, tạo DRAFT thuộc riêng đợt trong path; author/department từ identity, tác giả tự động là GVHD chính, tối đa một GVHD phối hợp lấy từ danh mục đã lọc | 03,05–06,14 |
 | GET /topics/{id}; GET /topics/{id}/edit | — | Chỉ dữ liệu/view được policy cho phép | 01,05 |
 | POST /topics/{id}/draft | 5 nội dung,coSupervisorIds,version | 303; chỉ tác giả và DRAFT; tác giả luôn là GVHD chính; nếu bị từ chối về DRAFT thì được sửa người phối hợp/gửi lại trong hạn GV | 05–06,14 |
 | POST /topics/{id}/submit | version | DRAFT → PENDING_APPROVAL | 05–06,14 |
 | POST /topics/{id}/approve | version | PENDING_APPROVAL → APPROVED | 07,14 |
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |
 | POST /periods/{id}/topics/publish | — | Khóa đợt; toàn bộ APPROVED của đợt → PUBLISHED nguyên tử; không đổi DRAFT/PENDING_APPROVAL; không có APPROVED thì không ghi | 07,14 |
+| GET /groups | — | 200 danh sách đợt của SV, tách “Sắp đăng ký”, “Đang đăng ký” và “Đã kết thúc” theo cửa sổ SV; chỉ đợt đang mở có lối tạo nhóm mới, nhóm/lời mời đã có vẫn có lối xem đúng quyền | 03,08 |
 | POST /periods/{id}/groups | CSRF | Trong hạn SV; nhóm mới, người tạo là leader và thành viên đầu tiên | 08–09 |
 | GET /groups/{id} | — | Chi tiết nhóm; mọi thành viên hiện tại thấy tên/trạng thái đăng ký PENDING hoặc ACCEPTED và liên kết chi tiết; ACCEPTED có xác nhận đăng ký thành công; các trường khác theo policy | 01,08,10–11 |
 | GET /group-invitations | — | SV chỉ thấy lời mời gửi cho chính mình; PENDING sau hạn hiển thị hết hiệu lực | 01,08 |
