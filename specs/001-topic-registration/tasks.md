@@ -263,7 +263,7 @@ sửa đồng thời template preview và tài liệu dùng chung.
 
 - [X] T077 [US1] Dashboard và danh sách Trưởng khoa chỉ tính/hiển thị đợt chưa qua `student_end`; đổi nhãn giai đoạn rõ GV/SV, thêm lọc trạng thái và ba cột đề tài chờ duyệt, nhóm chờ xét, đề tài chờ công bố. Viết test lọc active và render preview trước implementation; cập nhật spec/plan/contract/ma trận.
 
-- [ ] T078 [US2] Chặn mở form và tạo đề tài mới ngoài hạn GV ở UI/backend, vẫn cho xem và sửa bản nháp cũ; chia trang chọn đợt Giảng viên thành còn hiệu lực/đã hết hạn và ẩn nút tạo khi không mở.
+- [X] T078 [US2] Chặn mở form và tạo đề tài mới ngoài hạn GV ở UI/backend, vẫn cho xem và sửa bản nháp cũ; chia trang chọn đợt Giảng viên thành còn hiệu lực/đã hết hạn và ẩn nút tạo khi không mở. Viết `TopicAuthorServiceTest` và preview test đỏ trước implementation, sau đó chạy đạt.
 
 - [ ] T079 [US4] Chia trang chọn đợt Sinh viên thành sắp đăng ký, đang đăng ký và đã kết thúc/ngoài thời gian đăng ký theo `student_start`/`student_end`, giữ các lối xem nhóm/lời mời cũ đúng quyền.
 
@@ -322,7 +322,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
 | FR-03 | T018–T024,T026,T029,T048,T052,T077–T079 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
-| FR-05 | T025–T032,T070 | REQ-08–09; AT-03,06,12 |
+| FR-05 | T025–T032,T070,T078 | REQ-08–09; AT-03,06,12 |
 | FR-06 | T025–T032,T069–T070 | REQ-10–11 phần GVHD; AT-03,06 |
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
 | FR-08 | T039–T046,T054,T057–T058,T065–T068,T073 | REQ-12–13; AT-04,06–08 |

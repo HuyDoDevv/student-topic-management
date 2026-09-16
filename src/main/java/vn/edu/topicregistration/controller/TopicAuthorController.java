@@ -52,7 +52,13 @@ public class TopicAuthorController {
     @GetMapping("/topics")
     String periods(Model model) {
         common(model);
-        model.addAttribute("periods", topics.listPeriodsForAuthor());
+        var periods = topics.listPeriodsForAuthor();
+        model.addAttribute("activePeriods", periods.stream()
+                .filter(TopicAuthorService.TopicPeriodView::active)
+                .toList());
+        model.addAttribute("expiredPeriods", periods.stream()
+                .filter(period -> !period.active())
+                .toList());
         return "topics/period-selection";
     }
 
@@ -67,7 +73,7 @@ public class TopicAuthorController {
 
     @GetMapping("/periods/{periodId}/topics/new")
     String createForm(@PathVariable long periodId, Model model) {
-        TopicFormContext context = topics.formContext(periodId);
+        TopicFormContext context = topics.createFormContext(periodId);
         return renderForm(model, new TopicDraftForm(), context, null, false);
     }
 
@@ -78,7 +84,7 @@ public class TopicAuthorController {
             BindingResult bindingResult,
             HttpServletResponse response,
             Model model) {
-        TopicFormContext context = topics.formContext(periodId);
+        TopicFormContext context = topics.createFormContext(periodId);
         if (bindingResult.hasErrors()) {
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, null, false);

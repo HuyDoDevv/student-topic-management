@@ -92,6 +92,19 @@ class FoundationWebTest {
                     containsString("Đợt đã kết thúc"))));
     }
 
+    @Test void lecturerPeriodsAreSplitAndExpiredPeriodDoesNotOfferCreateAction() throws Exception {
+        mvc.perform(get("/topics"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đợt còn hiệu lực")))
+            .andExpect(content().string(containsString("Đợt đã hết hạn")));
+
+        mvc.perform(get("/periods/3/topics"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Đã ngoài thời gian tạo đề tài mới")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("href=\"/periods/3/topics/new\""))));
+    }
+
     @Test void registrationPreviewExplainsCompleteGroupAndSubmissionSnapshot() throws Exception {
         mvc.perform(get("/groups/1/registrations/new"))
             .andExpect(status().isOk())

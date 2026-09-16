@@ -39,13 +39,21 @@ public class UiPreviewController {
                     1, "Đồ án chuyên ngành HK1 2026–2027", "Đồ án chuyên ngành",
                     "01/09/2026", "15/09/2026",
                     "20/09/2026", "30/09/2026",
-                    null, null, "Đang nhận đề tài GV", "bg-green-lt", 1, 2, 1),
+                    null, null, "Đang nhận đề tài GV", "bg-green-lt", 1, 2, 1,
+                    true, true),
             new PreviewPeriod(
                     2, "Khóa luận tốt nghiệp HK1 2026–2027", "Khóa luận tốt nghiệp",
                     "01/10/2026", "10/10/2026",
                     "15/10/2026", "25/10/2026",
                     "20/12/2026", "10/01/2027",
-                    "Sắp nhận đề tài GV", "bg-azure-lt", 0, 0, 0));
+                    "Sắp nhận đề tài GV", "bg-azure-lt", 0, 0, 0,
+                    false, true),
+            new PreviewPeriod(
+                    3, "Đồ án chuyên ngành HK2 2025–2026", "Đồ án chuyên ngành",
+                    "01/03/2026", "15/03/2026",
+                    "20/03/2026", "31/03/2026",
+                    null, null, "Đã kết thúc", "bg-secondary-lt", 0, 0, 0,
+                    false, false));
 
     private static final List<PreviewTopic> TOPICS = List.of(
             new PreviewTopic(
@@ -172,7 +180,9 @@ public class UiPreviewController {
     @GetMapping("/periods")
     String periodList(Model model) {
         common(model, "periods", "Quản lý học vụ");
-        model.addAttribute("periods", PERIODS);
+        model.addAttribute("periods", PERIODS.stream()
+                .filter(PreviewPeriod::active)
+                .toList());
         return "periods/list";
     }
 
@@ -212,7 +222,7 @@ public class UiPreviewController {
     @GetMapping("/periods/{periodId}/topics")
     String topicList(@PathVariable long periodId, Model model) {
         common(model, "topics", "Đề tài");
-        model.addAttribute("period", PERIODS.getFirst());
+        model.addAttribute("period", previewPeriod(periodId));
         model.addAttribute("topics", TOPICS);
         return "topics/list";
     }
@@ -220,7 +230,12 @@ public class UiPreviewController {
     @GetMapping("/topics")
     String topicPeriods(Model model) {
         common(model, "topics", "Đề tài");
-        model.addAttribute("periods", PERIODS);
+        model.addAttribute("activePeriods", PERIODS.stream()
+                .filter(PreviewPeriod::active)
+                .toList());
+        model.addAttribute("expiredPeriods", PERIODS.stream()
+                .filter(period -> !period.active())
+                .toList());
         return "topics/period-selection";
     }
 
@@ -439,6 +454,13 @@ public class UiPreviewController {
         return form;
     }
 
+    private PreviewPeriod previewPeriod(long id) {
+        return PERIODS.stream()
+                .filter(period -> period.id() == id)
+                .findFirst()
+                .orElse(PERIODS.getFirst());
+    }
+
     private Map<String, Boolean> previewLocks(boolean locked) {
         return Map.of(
                 "base", locked,
@@ -462,17 +484,15 @@ public class UiPreviewController {
             String statusClass,
             long pendingTopicCount,
             long pendingRegistrationCount,
-            long approvedTopicCount) {
+            long approvedTopicCount,
+            boolean lecturerOpen,
+            boolean active) {
         public String lecturerWindow() {
             return lecturerStart + " – " + lecturerEnd;
         }
 
         public String studentWindow() {
             return studentStart + " – " + studentEnd;
-        }
-
-        public boolean lecturerOpen() {
-            return true;
         }
     }
 
