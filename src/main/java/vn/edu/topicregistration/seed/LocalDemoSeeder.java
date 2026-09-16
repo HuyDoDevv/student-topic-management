@@ -102,6 +102,9 @@ public class LocalDemoSeeder implements ApplicationRunner {
         long informationSystemsDepartmentId = department(
                 INFORMATION_SYSTEMS_DEPARTMENT, facultyId);
 
+        account(
+                "admin.demo", "Quản trị viên Demo", null, passwordHash,
+                "ADMIN");
         long deanId = account(
                 "dean.demo", "Trưởng khoa Demo", softwareDepartmentId, passwordHash,
                 "DEAN", "LECTURER");
@@ -420,7 +423,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
     private long account(
             String username,
             String fullName,
-            long departmentId,
+            Long departmentId,
             String passwordHash,
             String... roles) {
         Long existing = optionalId(
