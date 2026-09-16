@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page(${managementTitle}, ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">QUẢN TRỊ HỆ THỐNG</div>
+      <h1 class="page-title" th:text="${managementTitle}">Quản lý sinh viên</h1>
+      <p class="text-secondary mt-2 mb-0" th:text="${managementDescription}">
+        Tra cứu tài khoản theo khoa, bộ môn và trạng thái.
+      </p>
+    </div>
+    <a class="btn btn-primary" th:href="@{/admin/accounts/new}">+ Tạo tài khoản</a>
+  </div>
+
+  <div class="alert alert-success" role="status" th:if="${successMessage != null}"
+       th:text="${successMessage}">Đã lưu.</div>
+
+  <form class="card mb-4" method="get" th:action="${managementPath}">
+    <div class="card-header"><h2 class="card-title" th:text="${searchTitle}">Tìm sinh viên</h2></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="query">Tên đăng nhập hoặc họ tên</label>
+          <input class="form-control" id="query" name="query" type="search"
+                 th:value="${workspace.filter.query}" placeholder="Nhập từ khóa">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="enabled">Trạng thái</label>
+          <select class="form-select" id="enabled" name="enabled">
+            <option value="">Tất cả</option>
+            <option value="true" th:selected="${workspace.filter.enabled == true}">Đang hoạt động</option>
+            <option value="false" th:selected="${workspace.filter.enabled == false}">Đã khóa</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="facultyId">Khoa</label>
+          <select class="form-select" id="facultyId" name="facultyId">
+            <option value="">Tất cả khoa</option>
+            <option th:each="faculty : ${workspace.faculties}" th:value="${faculty.id}"
+                    th:selected="${workspace.filter.facultyId == faculty.id}"
+                    th:text="${faculty.name}">Khoa CNTT</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="departmentId">Bộ môn</label>
+          <select class="form-select" id="departmentId" name="departmentId">
+            <option value="">Tất cả bộ môn</option>
+            <option th:each="department : ${workspace.departments}" th:value="${department.id}"
+                    th:selected="${workspace.filter.departmentId == department.id}"
+                    th:text="${department.facultyName + ' · ' + department.name}">Bộ môn</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-end">
+      <a class="btn btn-outline-secondary" th:href="${managementPath}">Xóa bộ lọc</a>
+      <button class="btn btn-primary" type="submit">Áp dụng</button>
+    </div>
+  </form>
+
+  <div class="card data-card" th:if="${!workspace.accounts.isEmpty()}">
+    <div class="card-header">
+      <h2 class="card-title">Danh sách <span th:text="${accountLabel}">sinh viên</span></h2>
+      <span class="badge bg-blue-lt ms-auto"
+            th:text="${#lists.size(workspace.accounts)} + ' kết quả'">0 kết quả</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead><tr><th>Tài khoản</th><th>Loại</th><th>Khoa</th><th>Bộ môn</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        <tr th:each="account : ${workspace.accounts}">
+          <td data-label="Tài khoản"><strong th:text="${account.fullName}">Nguyễn Văn A</strong><br><span class="text-secondary" th:text="${account.username}">username</span></td>
+          <td data-label="Loại"><span class="badge" th:classappend="${accountBadgeClass}" th:text="${account.accountTypeLabel}">Sinh viên</span></td>
+          <td data-label="Khoa" th:text="${account.facultyName}">CNTT</td>
+          <td data-label="Bộ môn" th:text="${account.departmentName}">CNPM</td>
+          <td data-label="Trạng thái"><span class="badge" th:classappend="${account.enabled ? 'bg-green-lt' : 'bg-secondary-lt'}" th:text="${account.enabled ? 'Đang hoạt động' : 'Đã khóa'}">Đang hoạt động</span></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:if="${workspace.accounts.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Không có tài khoản phù hợp', 'Thử thay đổi bộ lọc hoặc tạo tài khoản mới.')}"></div>
+</section>
+</body>
+</html>

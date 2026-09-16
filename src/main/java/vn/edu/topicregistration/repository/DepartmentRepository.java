@@ -10,6 +10,9 @@ import vn.edu.topicregistration.entity.DepartmentEntity;
 
 public interface DepartmentRepository extends JpaRepository<DepartmentEntity, Long> {
     @EntityGraph(attributePaths = "faculty")
+    List<DepartmentEntity> findAllByOrderByFacultyNameAscNameAsc();
+
+    @EntityGraph(attributePaths = "faculty")
     Optional<DepartmentEntity> findByIdAndFacultyId(long id, long facultyId);
 
     @EntityGraph(attributePaths = "faculty")

@@ -45,13 +45,27 @@ public class DashboardService {
             return student(actor);
         }
         if (actor.roles().contains(RoleCode.ADMIN)) {
-            return new DashboardView("Quản trị sự cố", "Tổng quan quản trị",
-                    "Tài khoản quản trị chỉ xử lý sự cố; không có quyền xem hoặc quyết định học vụ.",
-                    List.of(), new Focus("PHẠM VI QUYỀN", "Không có dữ liệu học vụ",
-                    "Đề tài, nhóm và đăng ký thuộc phạm vi giảng viên, trưởng khoa và sinh viên.",
-                    null, null, "bg-secondary-lt"));
+            return admin();
         }
         throw new AccessDeniedException("Unsupported dashboard role");
+    }
+
+    private DashboardView admin() {
+        var statistics = query.countAdminAccounts();
+        return new DashboardView("Quản trị hệ thống", "Tổng quan tài khoản",
+                "Thống kê tài khoản hệ thống; không bao gồm dữ liệu nghiệp vụ học vụ.",
+                List.of(
+                        new Metric("Tổng tài khoản", statistics.total(),
+                                statistics.enabled() + " tài khoản đang hoạt động", null),
+                        new Metric("Sinh viên", statistics.students(),
+                                "Tài khoản STUDENT", "/admin/accounts/students"),
+                        new Metric("Giảng viên", statistics.lecturers(),
+                                "Tài khoản LECTURER", "/admin/accounts/lecturers"),
+                        new Metric("Trưởng khoa", statistics.deans(),
+                                "Tài khoản DEAN", "/admin/accounts/deans")),
+                new Focus("CẤP TÀI KHOẢN", "Tạo tài khoản mới",
+                        "Tạo từng tài khoản hoặc import danh sách Sinh viên, Giảng viên và Trưởng khoa.",
+                        "/admin/accounts/new", "Mở trang tạo tài khoản", "bg-blue-lt"));
     }
 
     private DashboardView dean(ActorIdentity actor) {

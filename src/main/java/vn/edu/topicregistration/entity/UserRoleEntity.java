@@ -27,6 +27,12 @@ public class UserRoleEntity {
     protected UserRoleEntity() {
     }
 
+    public UserRoleEntity(UserAccountEntity user, RoleEntity role) {
+        this.user = user;
+        this.role = role;
+        this.id = new UserRoleId(user.getId(), role.getCode());
+    }
+
     public UserRoleId getId() {
         return id;
     }

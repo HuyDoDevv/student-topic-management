@@ -18,6 +18,7 @@ import org.springframework.security.access.AccessDeniedException;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.repository.DashboardQuery;
 import vn.edu.topicregistration.repository.DashboardQuery.ActiveRegistration;
+import vn.edu.topicregistration.repository.DashboardQuery.AdminAccountStatistics;
 import vn.edu.topicregistration.service.DashboardService;
 import vn.edu.topicregistration.dto.DashboardView;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
@@ -106,15 +107,24 @@ class DashboardServiceTest {
     }
 
     @Test
-    void adminCannotReadAcademicCounters() {
+    void adminSeesAccountStatisticsWithoutAcademicCounters() {
         when(policy.currentActor()).thenReturn(new ActorIdentity(
                 7L, Set.of(RoleCode.ADMIN), null, null));
+        when(query.countAdminAccounts()).thenReturn(
+                new AdminAccountStatistics(33, 30, 20, 10, 2));
 
         DashboardView view = service.current();
 
-        assertEquals("Quản trị sự cố", view.audience());
-        assertEquals(0, view.metrics().size());
-        verifyNoInteractions(query, time);
+        assertEquals("Quản trị hệ thống", view.audience());
+        assertEquals(4, view.metrics().size());
+        assertEquals("Tổng tài khoản", view.metrics().get(0).label());
+        assertEquals("Sinh viên", view.metrics().get(1).label());
+        assertEquals("Giảng viên", view.metrics().get(2).label());
+        assertEquals("Trưởng khoa", view.metrics().get(3).label());
+        assertEquals(33, view.metrics().get(0).value());
+        assertEquals(10, view.metrics().get(2).value());
+        assertEquals("/admin/accounts/new", view.focus().href());
+        verifyNoInteractions(time);
     }
 
     @Test

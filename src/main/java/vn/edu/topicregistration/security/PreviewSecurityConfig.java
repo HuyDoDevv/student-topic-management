@@ -3,6 +3,7 @@ package vn.edu.topicregistration.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,7 +16,11 @@ public class PreviewSecurityConfig {
 
     @Bean
     SecurityFilterChain previewSecurity(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());
+        http
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()
+                        .anyRequest().denyAll())
+                .csrf(csrf -> csrf.disable());
         return http.build();
     }
 

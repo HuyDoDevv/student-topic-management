@@ -109,7 +109,7 @@ class SchemaSeedMigrationIT {
 
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM faculties"));
         assertEquals(2, count(jdbc, "SELECT COUNT(*) FROM departments"));
-        assertEquals(11, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(12, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(6, count(jdbc, "SELECT COUNT(*) FROM topics"));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM student_groups"));
@@ -126,6 +126,24 @@ class SchemaSeedMigrationIT {
                 "SELECT password_hash FROM user_accounts WHERE username = 'dean.demo'",
                 String.class);
         assertTrue(fixture.encoder().matches(fixture.password(), hash));
+        String adminHash = jdbc.queryForObject(
+                "SELECT password_hash FROM user_accounts WHERE username = 'admin.demo'",
+                String.class);
+        assertTrue(fixture.encoder().matches(fixture.password(), adminHash));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM user_roles role_assignment
+                JOIN user_accounts account ON account.id = role_assignment.user_id
+                WHERE account.username = 'admin.demo' AND role_assignment.role_code = 'ADMIN'
+                """));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM user_roles role_assignment
+                JOIN user_accounts account ON account.id = role_assignment.user_id
+                WHERE account.username = 'admin.demo'
+                """));
+        assertEquals(0, count(jdbc, """
+                SELECT COUNT(*) FROM user_accounts
+                WHERE username = 'admin.demo' AND department_id IS NOT NULL
+                """));
 
         Long pendingId = jdbc.queryForObject(
                 "SELECT id FROM registrations WHERE status = 'PENDING' ORDER BY id LIMIT 1",
@@ -178,7 +196,7 @@ class SchemaSeedMigrationIT {
         assertEquals(extendedEnd, jdbc.queryForObject(
                 "SELECT student_end FROM registration_periods WHERE id = ?",
                 Timestamp.class, seededPeriodId));
-        assertEquals(11, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(12, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(9, count(jdbc, "SELECT COUNT(*) FROM registration_members"));
     }

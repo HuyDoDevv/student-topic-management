@@ -26,6 +26,7 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
 | Chấp nhận/từ chối registration | DEAN | PENDING thuộc đợt trong khoa của DEAN; từ chối thủ công cần reason không rỗng sau khi trim; auto-reject khi accept | 11–12 |
 | Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
+| Xem và cấp tài khoản | ADMIN | Xem toàn bộ; tạo/import chỉ nhận STUDENT, LECTURER, DEAN; bộ môn tồn tại; mật khẩu được băm; import nguyên tử theo file mẫu | 01 |
 | Xử lý nội dung vi phạm | ADMIN | Có lý do; ẩn mềm nội dung, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung | 01 |
 
 Với từng dòng, người không có role/quan hệ phải bị từ chối: GVHD không tự có quyền
@@ -34,10 +35,11 @@ thao tác nhóm này; leader cũ mất quyền sau chuyển. Kiểm tra cả tru
 không chỉ POST. Thành viên thường chỉ được tự rời chính nhóm mình. Leader có thành viên khác
 phải chuyển quyền trước khi rời; leader nhóm một người dùng thao tác giải tán. Không tự chọn
 leader thay thế và không để lại nhóm rỗng.
-ADMIN chỉ xử lý khẩn cấp khi có nội dung do kẻ gian đăng: ẩn nội dung khỏi website nhưng
-giữ dữ liệu, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung. ADMIN không được
-sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý role/khoa/bộ môn hoặc chuyển
-giảng viên. Mọi kiểm tra quyền này phải nằm ở backend.
+ADMIN được xem và cấp tài khoản theo ba loại cố định, đồng thời xử lý khẩn cấp khi có nội
+dung do kẻ gian đăng: ẩn nội dung khỏi website nhưng giữ dữ liệu, lưu actor/thời gian/lý do
+và khóa tài khoản đăng nội dung. ADMIN không được tạo thêm ADMIN, thay role tùy ý, sửa/xóa
+tài khoản hiện hữu, sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý danh mục
+khoa/bộ môn hoặc chuyển giảng viên. Mọi kiểm tra quyền này phải nằm ở backend.
 ## Routes and payloads
 
 Path ID chỉ định tài nguyên; backend đọc quan hệ thật. ID, author, role, status và scope
@@ -79,6 +81,14 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/withdraw | version | PENDING → WITHDRAWN | 13 |
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | PENDING → REJECTED khi reason không rỗng sau khi trim; thiếu reason trả lỗi validation và không đổi trạng thái | 12 |
+| GET /admin/accounts | — | Redirect 303 sang `/admin/accounts/students`; không còn workspace gộp chung | 01 |
+| GET /admin/accounts/students | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ STUDENT đã lọc; loại tài khoản do backend khóa theo route | 01 |
+| GET /admin/accounts/lecturers | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ LECTURER không gồm DEAN; loại do backend khóa theo route | 01 |
+| GET /admin/accounts/deans | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ DEAN; loại do backend khóa theo route | 01 |
+| GET /admin/accounts/new | — | ADMIN nhận trang cấp tài khoản riêng gồm form STUDENT/LECTURER/DEAN, import CSV và bảng mã bộ môn | 01 |
+| POST /admin/accounts | accountType,username,fullName,password,departmentId | 303 sau khi tạo một tài khoản; password được băm; DEAN nhận DEAN+LECTURER; username trùng hoặc input sai trả 422 và không ghi | 01 |
+| POST /admin/accounts/import | multipart `file` | CSV UTF-8 tối đa 1 MB/5.000 dòng, header cố định; kiểm tra toàn file trước khi ghi; có lỗi trả 422 kèm số dòng và rollback toàn bộ, hợp lệ trả 303 | 01 |
+| GET /admin/accounts/import-template.csv | — | Tải CSV UTF-8 có BOM với header `account_type,username,full_name,password,department_id`; chỉ ADMIN | 01 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự chuyển sang nhóm khác; SV rời nhóm cũ rồi chỉ tham
@@ -119,6 +129,7 @@ hàng mới. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 | Đề tài | Table, detail card, form, status badge | AS-2.*, AS-3.*, AT-03,12 |
 | Nhóm | Member table, select, action modal | AS-4.*, AT-04,06 |
 | Đăng ký | Topic list, form confirmation, result badge | AS-5.*, AT-05,11 |
+| Quản lý tài khoản | Metric cards, bộ lọc, danh sách responsive, form tạo, import CSV và lỗi theo dòng | AS-1.17, AT-10 |
 
 Menu theo role chỉ hỗ trợ UX. Nút disabled/hidden không thay thế backend.
 Danh sách rỗng hiển thị thông báo; POST đang gửi có chỉ báo và hạn chế double-click;

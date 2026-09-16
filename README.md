@@ -79,13 +79,14 @@ tài khoản mặc định. Khi cần dữ liệu để xem giao diện, bật `
 `DEMO_SEED_PASSWORD` và nếu muốn thì đặt `REPORT_STORAGE_ROOT` tới thư mục PDF riêng trong
 `.env`; chạy ứng dụng một lần rồi tắt cờ.
 
-Các tài khoản được tạo là `dean.demo`, `lecturer1.demo` đến `lecturer5.demo` và
-`student1.demo` đến `student7.demo`. Tài khoản được tạo trong cùng lần seed dùng mật khẩu
-đã nhập. Seeder chỉ thêm fixture còn thiếu; không đổi mật khẩu, ngày, membership hay trạng
-thái workflow đã tồn tại khi khởi động lại. Vì vậy, sau khi thao tác complete/publish trên
-dữ liệu demo, muốn trở lại trạng thái ban đầu thì dùng một database local rỗng mới thay vì
-trông chờ seeder reset dữ liệu.
+Các tài khoản được tạo là `admin.demo`, `dean.demo`, `lecturer1.demo` đến
+`lecturer5.demo` và `student1.demo` đến `student7.demo`. Tài khoản được tạo trong cùng lần
+seed dùng mật khẩu đã nhập. Seeder chỉ thêm fixture còn thiếu; không đổi mật khẩu, ngày,
+membership hay trạng thái workflow đã tồn tại khi khởi động lại. Vì vậy, sau khi thao tác
+complete/publish trên dữ liệu demo, muốn trở lại trạng thái ban đầu thì dùng một database
+local rỗng mới thay vì trông chờ seeder reset dữ liệu.
 
+- `admin.demo`: chỉ có role ADMIN, không thuộc khoa/bộ môn và dùng để cấp tài khoản.
 - `dean.demo`: quản lý hội đồng, xem kết quả trong khoa và publish hội đồng đã hoàn tất.
 - `lecturer1.demo`: Chair của fixture đang chấm; có thể sửa điểm rồi tổng hợp kết quả.
 - `lecturer2.demo`: GVHD của các đề tài review; được xem báo cáo nhưng không được chấm.

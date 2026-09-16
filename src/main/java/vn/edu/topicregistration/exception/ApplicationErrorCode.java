@@ -7,6 +7,7 @@ public enum ApplicationErrorCode {
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy dữ liệu", "Dữ liệu yêu cầu không tồn tại hoặc bạn không thể truy cập."),
     CONFLICT(HttpStatus.CONFLICT, "Dữ liệu đã thay đổi", "Vui lòng tải lại trang và thử lại."),
     VALIDATION_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "Dữ liệu chưa hợp lệ", "Vui lòng kiểm tra các trường được đánh dấu."),
+    ACCOUNT_USERNAME_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Tên đăng nhập đã tồn tại", "Vui lòng chọn tên đăng nhập khác."),
     WINDOW_CLOSED(HttpStatus.UNPROCESSABLE_CONTENT, "Đã hết thời gian thao tác", "Khoảng thời gian cho thao tác này đã đóng."),
     GROUP_FULL(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã đủ thành viên", "Một nhóm chỉ có tối đa ba sinh viên."),
     GROUP_INCOMPLETE(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm chưa đủ thành viên", "Nhóm phải có đúng ba sinh viên trước khi đăng ký đề tài."),

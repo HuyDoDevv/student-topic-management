@@ -16,7 +16,8 @@
         <div class="metric-label"><span th:text="${metric.label}">Số liệu</span><span class="metric-icon bg-blue-lt" aria-hidden="true">▤</span></div>
         <div class="metric-value" th:text="${metric.value}">0</div>
         <p class="text-secondary small mb-3" th:text="${metric.description}">Mô tả</p>
-        <a class="stretched-link" th:href="${metric.href}" th:aria-label="|Xem ${metric.label}|">Xem chi tiết <span aria-hidden="true">→</span></a>
+        <a class="stretched-link" th:if="${metric.href != null}" th:href="${metric.href}"
+           th:aria-label="|Xem ${metric.label}|">Xem chi tiết <span aria-hidden="true">→</span></a>
       </div></div>
     </div>
   </div>

@@ -18,6 +18,35 @@ public class JdbcDashboardQuery implements DashboardQuery {
     }
 
     @Override
+    public AdminAccountStatistics countAdminAccounts() {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) AS total,
+                  COALESCE(SUM(CASE WHEN u.enabled THEN 1 ELSE 0 END), 0) AS enabled,
+                  COALESCE(SUM(CASE WHEN EXISTS (
+                    SELECT 1 FROM user_roles ur JOIN roles r ON r.code = ur.role_code
+                    WHERE ur.user_id = u.id AND r.code = 'STUDENT'
+                  ) THEN 1 ELSE 0 END), 0) AS students,
+                  COALESCE(SUM(CASE WHEN EXISTS (
+                    SELECT 1 FROM user_roles ur JOIN roles r ON r.code = ur.role_code
+                    WHERE ur.user_id = u.id AND r.code = 'LECTURER'
+                  ) AND NOT EXISTS (
+                    SELECT 1 FROM user_roles ur JOIN roles r ON r.code = ur.role_code
+                    WHERE ur.user_id = u.id AND r.code = 'DEAN'
+                  ) THEN 1 ELSE 0 END), 0) AS lecturers,
+                  COALESCE(SUM(CASE WHEN EXISTS (
+                    SELECT 1 FROM user_roles ur JOIN roles r ON r.code = ur.role_code
+                    WHERE ur.user_id = u.id AND r.code = 'DEAN'
+                  ) THEN 1 ELSE 0 END), 0) AS deans
+                FROM user_accounts u
+                """, (rs, rowNum) -> new AdminAccountStatistics(
+                rs.getLong("total"),
+                rs.getLong("enabled"),
+                rs.getLong("students"),
+                rs.getLong("lecturers"),
+                rs.getLong("deans")));
+    }
+
+    @Override
     public long countFacultyTopics(long facultyId, String status, Instant now) {
         return count("""
                 SELECT COUNT(*) FROM topics t

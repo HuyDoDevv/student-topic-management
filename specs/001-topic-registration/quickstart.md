@@ -96,8 +96,8 @@ thay đổi tiếp theo phải tạo migration mới sau V7 và sao lưu trướ
 Seeder chạy sau migration, chỉ profile local, lặp lại không nhân đôi/reset dữ liệu.
 Tạo dữ liệu tổng hợp được mô tả trong data-model; không lấy dữ liệu SV thật.
 Cấp mật khẩu ngoài repository, không ghi password/hash sử dụng được vào fixture commit.
-Tắt seed sau lần tạo. Tài khoản local được seed/import theo Q-18; seeder chỉ phục vụ
-local và không thay thế kiểm tra role/scope ở backend.
+Tắt seed sau lần tạo. Seeder chỉ phục vụ demo local; tài khoản vận hành được ADMIN tạo từng
+người hoặc import CSV theo FR-01 và mọi route vẫn kiểm tra role/scope ở backend.
 
 Các ngày demo được ghi rõ khi seed, không tự dịch ngày ở lần restart.
 Để đi xuyên hai giai đoạn không chồng lấn, chuẩn bị một đợt mới có lịch GV
