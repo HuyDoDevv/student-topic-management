@@ -277,6 +277,13 @@ tài khoản hiện hữu hoặc quản lý danh mục khoa/bộ môn.
 
 - [X] T081 [FR-01] Tách layout workspace ADMIN: chuyển thống kê tài khoản về Dashboard; tạo route/menu/danh sách riêng cho Sinh viên, Giảng viên và Trưởng khoa với loại tài khoản khóa ở backend; gom tạo đơn lẻ và import CSV vào trang Tạo tài khoản riêng; viết test controller/dashboard/preview trước implementation và đồng bộ spec/plan/web contract/acceptance matrix.
 
+## Phase 12: Period history filter feedback 2026-09-17
+
+T082 cập nhật quyết định danh sách của T077 nhưng giữ nguyên cách Dashboard đếm đợt còn
+hiệu lực. Không đổi database, quyền hoặc phạm vi khoa.
+
+- [X] T082 [US1] Cho danh sách Trưởng khoa nhận cả đợt đã qua `student_end`, thêm lựa chọn “Đã quá hạn” vào bộ lọc trạng thái và giữ liên kết chi tiết; viết unit/preview test đỏ trước implementation, đồng bộ spec/plan/web contract/acceptance matrix và chạy test hồi quy.
+
 ## Dependencies & execution order
 
 ```mermaid
@@ -376,6 +383,6 @@ cách gọi `$speckit-implement`.
 
 ## Generation summary
 
-81 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12;
-final 11; architecture maintenance 1; usability feedback 3; ADMIN provisioning/layout 2.
+82 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12;
+final 11; architecture maintenance 1; usability feedback 4; ADMIN provisioning/layout 2.
 Tất cả user stories P1 như spec. 16 task có [P], chỉ trong nhóm dependency đã mô tả.
