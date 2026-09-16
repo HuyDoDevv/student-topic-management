@@ -40,19 +40,20 @@ class DashboardServiceTest {
 
     @Test
     void deanLecturerUsesDeanOnlyAndFacultyScope() {
+        Instant now = Instant.parse("2026-09-14T03:00:00Z");
         when(policy.currentActor()).thenReturn(new ActorIdentity(
                 7L, Set.of(RoleCode.DEAN, RoleCode.LECTURER), 11L, 21L));
-        when(query.countFacultyTopics(21L, "PENDING_APPROVAL")).thenReturn(2L);
-        when(query.countFacultyPendingRegistrations(21L)).thenReturn(1L);
+        when(time.now()).thenReturn(now);
+        when(query.countFacultyTopics(21L, "PENDING_APPROVAL", now)).thenReturn(2L);
+        when(query.countFacultyPendingRegistrations(21L, now)).thenReturn(1L);
 
         DashboardView view = service.current();
 
         assertEquals("Trưởng khoa", view.audience());
         assertEquals(2, view.metrics().getFirst().value());
         assertEquals("Có 1 đăng ký chờ xét", view.focus().title());
-        verify(query).countFacultyTopics(21L, "APPROVED");
-        verify(query).countFacultyPeriods(21L);
-        verifyNoInteractions(time);
+        verify(query).countFacultyTopics(21L, "APPROVED", now);
+        verify(query).countFacultyActivePeriods(21L, now);
     }
 
     @Test

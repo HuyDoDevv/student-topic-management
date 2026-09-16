@@ -80,6 +80,18 @@ class FoundationWebTest {
             .andExpect(content().string(containsString("Sinh viên chưa thể đăng ký")));
     }
 
+    @Test void deanPeriodListShowsActiveWorkflowStatisticsAndFilter() throws Exception {
+        mvc.perform(get("/periods"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Lọc trạng thái đợt")))
+            .andExpect(content().string(containsString("Đề tài chờ duyệt")))
+            .andExpect(content().string(containsString("Nhóm chờ xét")))
+            .andExpect(content().string(containsString("Đề tài chờ công bố")))
+            .andExpect(content().string(containsString("Đang nhận đề tài GV")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("Đợt đã kết thúc"))));
+    }
+
     @Test void registrationPreviewExplainsCompleteGroupAndSubmissionSnapshot() throws Exception {
         mvc.perform(get("/groups/1/registrations/new"))
             .andExpect(status().isOk())

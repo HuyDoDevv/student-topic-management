@@ -39,12 +39,13 @@ public class UiPreviewController {
                     1, "Đồ án chuyên ngành HK1 2026–2027", "Đồ án chuyên ngành",
                     "01/09/2026", "15/09/2026",
                     "20/09/2026", "30/09/2026",
-                    null, null, "Đang nhận đề tài", "bg-green-lt"),
+                    null, null, "Đang nhận đề tài GV", "bg-green-lt", 1, 2, 1),
             new PreviewPeriod(
                     2, "Khóa luận tốt nghiệp HK1 2026–2027", "Khóa luận tốt nghiệp",
-                    "15/08/2026", "30/08/2026",
-                    "05/09/2026", "12/09/2026",
-                    "20/12/2026", "10/01/2027", "Đã đóng", "bg-secondary-lt"));
+                    "01/10/2026", "10/10/2026",
+                    "15/10/2026", "25/10/2026",
+                    "20/12/2026", "10/01/2027",
+                    "Sắp nhận đề tài GV", "bg-azure-lt", 0, 0, 0));
 
     private static final List<PreviewTopic> TOPICS = List.of(
             new PreviewTopic(
@@ -141,7 +142,7 @@ public class UiPreviewController {
                     new Metric("Đề tài chờ duyệt", 1, "Đề xuất chưa được quyết định", "/periods"),
                     new Metric("Đề tài chờ công bố", 2, "Đã duyệt", "/periods"),
                     new Metric("Đăng ký chờ xét", 3, "Nhóm chờ quyết định", "/periods"),
-                    new Metric("Đợt đăng ký", 2, "Đợt của khoa", "/periods")),
+                    new Metric("Đợt còn hiệu lực", 2, "Chưa kết thúc đăng ký sinh viên", "/periods")),
                     new Focus("VIỆC CẦN XỬ LÝ", "Có 3 đăng ký chờ xét",
                             "Mở đợt đăng ký để xét nhóm.", "/periods", "Xem các đợt", "bg-yellow-lt"));
             case "lecturer" -> new DashboardView("Giảng viên", "Tổng quan đề tài của tôi",
@@ -458,7 +459,10 @@ public class UiPreviewController {
             String reviewerScoreDeadline,
             String councilReportDate,
             String status,
-            String statusClass) {
+            String statusClass,
+            long pendingTopicCount,
+            long pendingRegistrationCount,
+            long approvedTopicCount) {
         public String lecturerWindow() {
             return lecturerStart + " – " + lecturerEnd;
         }

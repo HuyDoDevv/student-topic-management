@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -121,6 +122,21 @@ class PeriodServiceTest {
         verify(periods).flush();
     }
 
+    @Test
+    void deanListExcludesPeriodsWhoseStudentWindowHasEnded() {
+        RegistrationPeriodEntity active = period(
+                "Đợt còn hiệu lực", NOW.minusSeconds(300), NOW.plusSeconds(300));
+        RegistrationPeriodEntity expired = period(
+                "Đợt đã kết thúc", NOW.minusSeconds(600), NOW.minusSeconds(1));
+        when(periods.findAllByFacultyIdOrderByLecturerStartDesc(21L))
+                .thenReturn(List.of(active, expired));
+
+        var result = service.listForCurrentDean();
+
+        assertEquals(1, result.size());
+        assertEquals("Đợt còn hiệu lực", result.getFirst().name());
+    }
+
     private void runCreateFactoryInsideTransaction() {
         when(transactions.create(eq(21L), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
@@ -137,6 +153,22 @@ class PeriodServiceTest {
                 LECTURER_END,
                 STUDENT_START,
                 STUDENT_END,
+                null,
+                null);
+    }
+
+    private RegistrationPeriodEntity period(
+            String name,
+            Instant studentStart,
+            Instant studentEnd) {
+        return new RegistrationPeriodEntity(
+                faculty,
+                name,
+                "COURSE",
+                studentStart.minusSeconds(600),
+                studentStart.minusSeconds(300),
+                studentStart,
+                studentEnd,
                 null,
                 null);
     }

@@ -30,6 +30,12 @@ Không mở rộng sang nộp báo cáo, phản biện/hội đồng, chấm đi
 toàn bộ quản trị tài khoản. REQ-06–07 chỉ cấu hình ngày cho giai đoạn sau.
 Giữ nguyên spec, bản phân tích, constitution và PDF.
 
+**Usability feedback 2026-09-16:** triển khai thành ba task tuần tự T077–T079. Trưởng khoa
+chỉ thấy/count đợt chưa qua `student_end`, có bộ lọc, nhãn giai đoạn rõ đối tượng và ba
+thống kê xử lý theo đợt. Giảng viên chỉ được mở form và tạo đề tài mới trong hạn GV nhưng
+vẫn xem/sửa bản nháp cũ theo quy tắc hiện hành. Sinh viên thấy danh sách đợt chia theo
+ba giai đoạn của cửa sổ SV. Không triển khai feedback ADMIN trong nhóm task này.
+
 ## Technical Context
 
 | Thuộc tính | Quyết định |

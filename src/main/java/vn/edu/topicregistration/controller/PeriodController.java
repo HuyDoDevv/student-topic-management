@@ -71,7 +71,7 @@ public class PeriodController {
     String list(Model model) {
         common(model);
         List<PeriodPageView> periods = periodService.listForCurrentDean().stream()
-                .map(this::display)
+                .map(this::displayWithStatistics)
                 .toList();
         model.addAttribute("periods", periods);
         return "periods/list";
@@ -235,6 +235,26 @@ public class PeriodController {
     }
 
     private PeriodPageView display(PeriodView period) {
+        return display(period, 0, 0, 0);
+    }
+
+    private PeriodPageView displayWithStatistics(PeriodView period) {
+        ReviewSummary topics = reviewSummary(topicReviewService.reviewWorkspace(period.id()));
+        long pendingRegistrations = registrationService.listForDeanPeriod(period.id()).stream()
+                .filter(registration -> registration.status() == RegistrationStatus.PENDING)
+                .count();
+        return display(
+                period,
+                topics.pendingCount(),
+                pendingRegistrations,
+                topics.approvedCount());
+    }
+
+    private PeriodPageView display(
+            PeriodView period,
+            long pendingTopicCount,
+            long pendingRegistrationCount,
+            long approvedTopicCount) {
         return new PeriodPageView(
                 period.id(),
                 period.name(),
@@ -249,7 +269,10 @@ public class PeriodController {
                         ? null : DATE.format(period.councilReportDate()),
                 stateLabel(period.state()),
                 stateClass(period.state()),
-                period.version());
+                period.version(),
+                pendingTopicCount,
+                pendingRegistrationCount,
+                approvedTopicCount);
     }
 
     private String format(Instant instant) {
@@ -323,11 +346,11 @@ public class PeriodController {
 
     private static String stateLabel(RegistrationState state) {
         return switch (state) {
-            case BEFORE_LECTURER -> "Chưa mở đề xuất";
-            case LECTURER_OPEN -> "Đang nhận đề tài";
-            case BETWEEN_WINDOWS -> "Chờ đăng ký";
-            case STUDENT_OPEN -> "Đang nhận đăng ký";
-            case REGISTRATION_CLOSED -> "Đã đóng";
+            case BEFORE_LECTURER -> "Sắp nhận đề tài GV";
+            case LECTURER_OPEN -> "Đang nhận đề tài GV";
+            case BETWEEN_WINDOWS -> "Chờ đăng ký SV";
+            case STUDENT_OPEN -> "Đang nhận đăng ký SV";
+            case REGISTRATION_CLOSED -> "Đã kết thúc";
         };
     }
 
@@ -352,7 +375,10 @@ public class PeriodController {
             String councilReportDate,
             String status,
             String statusClass,
-            long version) {
+            long version,
+            long pendingTopicCount,
+            long pendingRegistrationCount,
+            long approvedTopicCount) {
         public String lecturerWindow() {
             return lecturerStart + " – " + lecturerEnd;
         }

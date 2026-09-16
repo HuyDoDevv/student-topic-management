@@ -6,30 +6,47 @@
     <div>
       <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
       <h1 class="page-title">Đợt đăng ký</h1>
-      <p class="text-secondary mt-2 mb-0">Quản lý lịch giảng viên đề xuất và sinh viên đăng ký đề tài trong khoa.</p>
+      <p class="text-secondary mt-2 mb-0">Theo dõi các đợt còn hiệu lực và hồ sơ đang chờ xử lý trong khoa.</p>
     </div>
     <a class="btn btn-primary" th:href="@{/periods/new}"><span aria-hidden="true">＋</span> Tạo đợt</a>
   </div>
 
   <div class="card data-card" th:if="${!periods.isEmpty()}">
-    <div class="card-header">
-      <div>
-        <h2 class="card-title mb-1">Danh sách đợt đăng ký</h2>
-        <div class="text-secondary small">Ngày hiển thị theo múi giờ Việt Nam</div>
+    <div class="card-header table-toolbar">
+      <div class="input-icon flex-fill topic-search">
+        <span class="input-icon-addon" aria-hidden="true">⌕</span>
+        <input class="form-control" type="search" placeholder="Tìm theo tên hoặc loại đợt"
+               aria-label="Tìm đợt đăng ký" data-table-filter>
       </div>
-      <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(periods)} + ' đợt'">2 đợt</span>
+      <div class="ms-md-auto">
+        <select class="form-select" aria-label="Lọc trạng thái đợt" data-status-filter>
+          <option value="">Tất cả trạng thái</option>
+          <option value="Sắp nhận đề tài GV">Sắp nhận đề tài GV</option>
+          <option value="Đang nhận đề tài GV">Đang nhận đề tài GV</option>
+          <option value="Chờ đăng ký SV">Chờ đăng ký SV</option>
+          <option value="Đang nhận đăng ký SV">Đang nhận đăng ký SV</option>
+        </select>
+      </div>
+      <span class="badge bg-blue-lt" th:text="${#lists.size(periods)} + ' đợt còn hiệu lực'">2 đợt còn hiệu lực</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-vcenter card-table responsive-table">
+      <table class="table table-vcenter card-table responsive-table" data-filter-table>
         <thead>
-        <tr><th>Tên đợt</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        <tr>
+          <th>Tên đợt</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th>
+          <th>Đề tài chờ duyệt</th><th>Nhóm chờ xét</th><th>Đề tài chờ công bố</th>
+          <th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th>
+        </tr>
         </thead>
         <tbody>
-        <tr th:each="item : ${periods}">
+        <tr th:each="item : ${periods}" th:attr="data-status=${item.status}">
           <td data-label="Tên đợt"><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đợt HK1</a></td>
           <td data-label="Loại" th:text="${item.type}">Đồ án môn học</td>
           <td data-label="Lịch giảng viên" class="text-secondary" th:text="${item.lecturerWindow}">10/09/2026 – 15/09/2026</td>
           <td data-label="Lịch sinh viên" class="text-secondary" th:text="${item.studentWindow}">16/09/2026 – 30/09/2026</td>
+          <td data-label="Đề tài chờ duyệt" th:text="${item.pendingTopicCount}">0</td>
+          <td data-label="Nhóm chờ xét" th:text="${item.pendingRegistrationCount}">0</td>
+          <td data-label="Đề tài chờ công bố" th:text="${item.approvedTopicCount}">0</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${item.statusClass}" th:text="${item.status}">Chưa mở</span></td>
           <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/periods/{id}(id=${item.id})}">Xem chi tiết</a></td>
         </tr>
@@ -38,7 +55,7 @@
     </div>
   </div>
 
-  <div class="card" th:if="${periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Tạo đợt đầu tiên để bắt đầu quy trình đề tài.')}" ></div>
+  <div class="card" th:if="${periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Không có đợt còn hiệu lực', 'Tạo đợt mới để bắt đầu quy trình đề tài.')}" ></div>
 </section>
 </body>
 </html>

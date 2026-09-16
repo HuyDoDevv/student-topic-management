@@ -18,28 +18,32 @@ public class JdbcDashboardQuery implements DashboardQuery {
     }
 
     @Override
-    public long countFacultyTopics(long facultyId, String status) {
+    public long countFacultyTopics(long facultyId, String status, Instant now) {
         return count("""
                 SELECT COUNT(*) FROM topics t
                 JOIN registration_periods p ON p.id = t.period_id
                 JOIN departments d ON d.id = t.department_id
                 WHERE p.faculty_id = ? AND d.faculty_id = ?
+                  AND p.student_end >= ?
                   AND t.hidden_at IS NULL AND t.status = ?
-                """, facultyId, facultyId, status);
+                """, facultyId, facultyId, Timestamp.from(now), status);
     }
 
     @Override
-    public long countFacultyPendingRegistrations(long facultyId) {
+    public long countFacultyPendingRegistrations(long facultyId, Instant now) {
         return count("""
                 SELECT COUNT(*) FROM registrations r
                 JOIN registration_periods p ON p.id = r.period_id
-                WHERE p.faculty_id = ? AND r.status = 'PENDING'
-                """, facultyId);
+                WHERE p.faculty_id = ? AND p.student_end >= ? AND r.status = 'PENDING'
+                """, facultyId, Timestamp.from(now));
     }
 
     @Override
-    public long countFacultyPeriods(long facultyId) {
-        return count("SELECT COUNT(*) FROM registration_periods WHERE faculty_id = ?", facultyId);
+    public long countFacultyActivePeriods(long facultyId, Instant now) {
+        return count("""
+                SELECT COUNT(*) FROM registration_periods
+                WHERE faculty_id = ? AND student_end >= ?
+                """, facultyId, Timestamp.from(now));
     }
 
     @Override
