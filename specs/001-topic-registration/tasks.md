@@ -265,7 +265,7 @@ sửa đồng thời template preview và tài liệu dùng chung.
 
 - [X] T078 [US2] Chặn mở form và tạo đề tài mới ngoài hạn GV ở UI/backend, vẫn cho xem và sửa bản nháp cũ; chia trang chọn đợt Giảng viên thành còn hiệu lực/đã hết hạn và ẩn nút tạo khi không mở. Viết `TopicAuthorServiceTest` và preview test đỏ trước implementation, sau đó chạy đạt.
 
-- [ ] T079 [US4] Chia trang chọn đợt Sinh viên thành sắp đăng ký, đang đăng ký và đã kết thúc/ngoài thời gian đăng ký theo `student_start`/`student_end`, giữ các lối xem nhóm/lời mời cũ đúng quyền.
+- [X] T079 [US4] Chia trang chọn đợt Sinh viên thành sắp đăng ký, đang đăng ký và đã kết thúc/ngoài thời gian đăng ký theo `student_start`/`student_end`, giữ các lối xem nhóm/lời mời cũ đúng quyền.
 
 ## Dependencies & execution order
 
@@ -325,7 +325,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 | FR-05 | T025–T032,T070,T078 | REQ-08–09; AT-03,06,12 |
 | FR-06 | T025–T032,T069–T070 | REQ-10–11 phần GVHD; AT-03,06 |
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
-| FR-08 | T039–T046,T054,T057–T058,T065–T068,T073 | REQ-12–13; AT-04,06–08 |
+| FR-08 | T039–T046,T054,T057–T058,T065–T068,T073,T079 | REQ-12–13; AT-04,06–08 |
 | FR-09 | T040–T046,T050,T057,T065–T068 | REQ-13; AT-04,07 |
 | FR-10 | T047–T058,T073–T075 | REQ-03,14–15; AT-04–08,11 |
 | FR-11 | T047–T058,T074–T075 | REQ-16 + U Q-10; AT-05–08,11 |

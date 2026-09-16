@@ -105,6 +105,19 @@ class FoundationWebTest {
                     containsString("href=\"/periods/3/topics/new\""))));
     }
 
+    @Test void studentPeriodsAreSeparatedByRegistrationPhase() throws Exception {
+        mvc.perform(get("/groups"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Sắp đăng ký")))
+            .andExpect(content().string(containsString("Đang đăng ký")))
+            .andExpect(content().string(containsString("Đã kết thúc")))
+            .andExpect(content().string(containsString("href=\"/periods/4/groups/new\"")))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("href=\"/periods/2/groups/new\""))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(
+                    containsString("href=\"/periods/3/groups/new\""))));
+    }
+
     @Test void registrationPreviewExplainsCompleteGroupAndSubmissionSnapshot() throws Exception {
         mvc.perform(get("/groups/1/registrations/new"))
             .andExpect(status().isOk())

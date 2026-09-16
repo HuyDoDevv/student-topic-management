@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="row row-cards" th:fragment="cards(periods)">
+  <div class="col-md-6 col-xl-4" th:each="period : ${periods}">
+    <article class="card group-period-card h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge" th:classappend="${period.statusClass}"
+                  th:text="${period.status}">Trạng thái</span>
+            <span class="badge bg-yellow-lt" th:if="${period.hasPendingInvitation}">Có lời mời đang chờ</span>
+          </div>
+          <span class="group-period-icon" aria-hidden="true">👥</span>
+        </div>
+        <h3 class="h4 mb-2" th:text="${period.name}">Tên đợt</h3>
+        <p class="text-secondary mb-4">
+          Thời gian sinh viên:
+          <strong class="text-body" th:text="${period.studentWindow}">01/09/2026 – 10/09/2026</strong>
+        </p>
+        <a class="btn mt-auto" th:if="${!period.actionDisabled}"
+           th:classappend="${period.hasGroup ? 'btn-outline-primary' : (period.hasPendingInvitation ? 'btn-warning' : 'btn-primary')}"
+           th:href="${period.hasGroup
+               ? '/periods/' + period.id + '/groups'
+               : (period.hasPendingInvitation ? '/group-invitations' : '/periods/' + period.id + '/groups/new')}"
+           th:text="${period.actionLabel}">Mở nhóm</a>
+        <span class="btn btn-primary disabled mt-auto" th:if="${period.actionDisabled}"
+              aria-disabled="true" th:text="${period.actionLabel}">Ngoài thời gian</span>
+      </div>
+    </article>
+  </div>
+</div>
+</body>
+</html>

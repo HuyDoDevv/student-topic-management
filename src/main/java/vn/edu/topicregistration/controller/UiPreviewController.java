@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import vn.edu.topicregistration.service.PeriodRules.TopicType;
+import vn.edu.topicregistration.service.GroupService.StudentPeriodPhase;
 import vn.edu.topicregistration.dto.DashboardView.Focus;
 import vn.edu.topicregistration.dto.DashboardView.Metric;
 
@@ -89,7 +90,19 @@ public class UiPreviewController {
             Map.of("id", 203, "code", "23110102", "name", "Lê Hoàng Nam", "role", "Thành viên"));
 
     private static final PreviewGroupPeriod GROUP_PERIOD = new PreviewGroupPeriod(
-            1, "Đồ án chuyên ngành HK1 2026–2027", "20/09/2026", "30/09/2026", true, true, false);
+            1, "Đồ án chuyên ngành HK1 2026–2027", "20/09/2026", "30/09/2026",
+            StudentPeriodPhase.OPEN, true, false);
+    private static final List<PreviewGroupPeriod> GROUP_PERIODS = List.of(
+            new PreviewGroupPeriod(
+                    2, "Khóa luận tốt nghiệp HK1 2026–2027", "15/10/2026", "25/10/2026",
+                    StudentPeriodPhase.UPCOMING, false, false),
+            GROUP_PERIOD,
+            new PreviewGroupPeriod(
+                    4, "Nghiên cứu khoa học HK1 2026–2027", "20/09/2026", "30/09/2026",
+                    StudentPeriodPhase.OPEN, false, false),
+            new PreviewGroupPeriod(
+                    3, "Đồ án chuyên ngành HK2 2025–2026", "20/03/2026", "31/03/2026",
+                    StudentPeriodPhase.ENDED, true, true));
 
     private static final List<PreviewGroupMember> GROUP_MEMBERS = List.of(
             new PreviewGroupMember(201, "Nguyễn Minh Anh", "23110001", 1, true),
@@ -310,7 +323,9 @@ public class UiPreviewController {
     @GetMapping("/groups")
     String groupPeriods(Model model) {
         common(model, "groups", "Nhóm sinh viên");
-        model.addAttribute("periods", List.of(GROUP_PERIOD));
+        model.addAttribute("upcomingPeriods", previewGroupPeriods(StudentPeriodPhase.UPCOMING));
+        model.addAttribute("openPeriods", previewGroupPeriods(StudentPeriodPhase.OPEN));
+        model.addAttribute("endedPeriods", previewGroupPeriods(StudentPeriodPhase.ENDED));
         model.addAttribute("pendingInvitationCount", 1);
         return "groups/list";
     }
@@ -461,6 +476,12 @@ public class UiPreviewController {
                 .orElse(PERIODS.getFirst());
     }
 
+    private List<PreviewGroupPeriod> previewGroupPeriods(StudentPeriodPhase phase) {
+        return GROUP_PERIODS.stream()
+                .filter(period -> period.phase() == phase)
+                .toList();
+    }
+
     private Map<String, Boolean> previewLocks(boolean locked) {
         return Map.of(
                 "base", locked,
@@ -523,7 +544,7 @@ public class UiPreviewController {
             String name,
             String studentStart,
             String studentEnd,
-            boolean studentOpen,
+            StudentPeriodPhase phase,
             boolean hasGroup,
             boolean hasPendingInvitation) {
         public String studentWindow() {
@@ -531,11 +552,41 @@ public class UiPreviewController {
         }
 
         public String status() {
-            return studentOpen ? "Đang mở đăng ký" : "Ngoài thời gian đăng ký";
+            return switch (phase) {
+                case UPCOMING -> "Sắp đăng ký";
+                case OPEN -> "Đang đăng ký";
+                case ENDED -> "Đã kết thúc";
+            };
         }
 
         public String statusClass() {
-            return studentOpen ? "bg-green-lt" : "bg-secondary-lt";
+            return switch (phase) {
+                case UPCOMING -> "bg-azure-lt";
+                case OPEN -> "bg-green-lt";
+                case ENDED -> "bg-secondary-lt";
+            };
+        }
+
+        public boolean studentOpen() {
+            return phase == StudentPeriodPhase.OPEN;
+        }
+
+        public boolean actionDisabled() {
+            return !hasGroup && !hasPendingInvitation && !studentOpen();
+        }
+
+        public String actionLabel() {
+            if (hasGroup) {
+                return "Xem nhóm của tôi";
+            }
+            if (hasPendingInvitation) {
+                return "Phản hồi lời mời";
+            }
+            return switch (phase) {
+                case UPCOMING -> "Chưa đến thời gian";
+                case OPEN -> "Tạo nhóm";
+                case ENDED -> "Đã kết thúc";
+            };
         }
     }
 

@@ -62,6 +62,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /topics/{id}/approve | version | PENDING_APPROVAL → APPROVED | 07,14 |
 | POST /topics/{id}/reject | version | PENDING_APPROVAL → DRAFT; không tự đặt reason bắt buộc | 14 |
 | POST /periods/{id}/topics/publish | — | Khóa đợt; toàn bộ APPROVED của đợt → PUBLISHED nguyên tử; không đổi DRAFT/PENDING_APPROVAL; không có APPROVED thì không ghi | 07,14 |
+| GET /groups | — | 200 danh sách đợt của SV, tách “Sắp đăng ký”, “Đang đăng ký” và “Đã kết thúc” theo cửa sổ SV; chỉ đợt đang mở có lối tạo nhóm mới, nhóm/lời mời đã có vẫn có lối xem đúng quyền | 03,08 |
 | POST /periods/{id}/groups | CSRF | Trong hạn SV; nhóm mới, người tạo là leader và thành viên đầu tiên | 08–09 |
 | GET /groups/{id} | — | Chi tiết nhóm; mọi thành viên hiện tại thấy tên/trạng thái đăng ký PENDING hoặc ACCEPTED và liên kết chi tiết; ACCEPTED có xác nhận đăng ký thành công; các trường khác theo policy | 01,08,10–11 |
 | GET /group-invitations | — | SV chỉ thấy lời mời gửi cho chính mình; PENDING sau hạn hiển thị hết hiệu lực | 01,08 |

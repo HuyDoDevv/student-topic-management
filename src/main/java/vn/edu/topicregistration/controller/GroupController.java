@@ -32,6 +32,7 @@ import vn.edu.topicregistration.service.GroupService.GroupPeriodView;
 import vn.edu.topicregistration.service.GroupService.GroupView;
 import vn.edu.topicregistration.service.GroupService.GroupWorkspace;
 import vn.edu.topicregistration.service.GroupService.InvitationView;
+import vn.edu.topicregistration.service.GroupService.StudentPeriodPhase;
 
 @Controller
 @Profile("!preview & !test")
@@ -61,11 +62,24 @@ public class GroupController {
         List<GroupPeriodPageView> periodViews = groups.listPeriodsForCurrentStudent().stream()
                 .map(this::display)
                 .toList();
-        model.addAttribute("periods", periodViews);
+        model.addAttribute("upcomingPeriods", periodsInPhase(
+                periodViews, StudentPeriodPhase.UPCOMING));
+        model.addAttribute("openPeriods", periodsInPhase(
+                periodViews, StudentPeriodPhase.OPEN));
+        model.addAttribute("endedPeriods", periodsInPhase(
+                periodViews, StudentPeriodPhase.ENDED));
         model.addAttribute("pendingInvitationCount", periodViews.stream()
                 .filter(GroupPeriodPageView::hasPendingInvitation)
                 .count());
         return "groups/list";
+    }
+
+    private static List<GroupPeriodPageView> periodsInPhase(
+            List<GroupPeriodPageView> periods,
+            StudentPeriodPhase phase) {
+        return periods.stream()
+                .filter(period -> period.phase() == phase)
+                .toList();
     }
 
     @GetMapping("/group-invitations")
@@ -254,7 +268,7 @@ public class GroupController {
                 period.name(),
                 DATE.format(projectTime.toBusinessDate(period.studentStart())),
                 DATE.format(projectTime.toBusinessDate(period.studentEnd())),
-                period.studentOpen(),
+                period.phase(),
                 period.hasGroup(),
                 period.hasPendingInvitation());
     }
@@ -322,7 +336,7 @@ public class GroupController {
             String name,
             String studentStart,
             String studentEnd,
-            boolean studentOpen,
+            StudentPeriodPhase phase,
             boolean hasGroup,
             boolean hasPendingInvitation) {
         public String studentWindow() {
@@ -330,11 +344,41 @@ public class GroupController {
         }
 
         public String status() {
-            return studentOpen ? "Đang mở đăng ký" : "Ngoài thời gian đăng ký";
+            return switch (phase) {
+                case UPCOMING -> "Sắp đăng ký";
+                case OPEN -> "Đang đăng ký";
+                case ENDED -> "Đã kết thúc";
+            };
         }
 
         public String statusClass() {
-            return studentOpen ? "bg-green-lt" : "bg-secondary-lt";
+            return switch (phase) {
+                case UPCOMING -> "bg-azure-lt";
+                case OPEN -> "bg-green-lt";
+                case ENDED -> "bg-secondary-lt";
+            };
+        }
+
+        public boolean studentOpen() {
+            return phase == StudentPeriodPhase.OPEN;
+        }
+
+        public boolean actionDisabled() {
+            return !hasGroup && !hasPendingInvitation && !studentOpen();
+        }
+
+        public String actionLabel() {
+            if (hasGroup) {
+                return "Xem nhóm của tôi";
+            }
+            if (hasPendingInvitation) {
+                return "Phản hồi lời mời";
+            }
+            return switch (phase) {
+                case UPCOMING -> "Chưa đến thời gian";
+                case OPEN -> "Tạo nhóm";
+                case ENDED -> "Đã kết thúc";
+            };
         }
     }
 
