@@ -27,7 +27,7 @@ qua tài liệu chính thức; xem [research.md](research.md). Những lựa ch�
 còn lại trong tài liệu là thiết kế đề xuất, không phải yêu cầu mới của khách hàng.
 
 Không mở rộng sang nộp báo cáo, phản biện/hội đồng, chấm điểm, kết quả, thông báo hoặc
-toàn bộ quản trị tài khoản. REQ-06–07 chỉ cấu hình ngày cho giai đoạn sau.
+sửa/xóa/chuyển cơ cấu tài khoản hiện hữu. REQ-06–07 chỉ cấu hình ngày cho giai đoạn sau.
 Giữ nguyên spec, bản phân tích, constitution và PDF.
 
 **Usability feedback 2026-09-16:** triển khai thành ba task tuần tự T077–T079. Trưởng khoa
@@ -35,6 +35,12 @@ chỉ thấy/count đợt chưa qua `student_end`, có bộ lọc, nhãn giai đ
 thống kê xử lý theo đợt. Giảng viên chỉ được mở form và tạo đề tài mới trong hạn GV nhưng
 vẫn xem/sửa bản nháp cũ theo quy tắc hiện hành. Sinh viên thấy danh sách đợt chia theo
 ba giai đoạn của cửa sổ SV. Không triển khai feedback ADMIN trong nhóm task này.
+
+**ADMIN feedback 2026-09-16:** T080 bổ sung workspace chỉ dành cho ADMIN để xem, tìm và
+lọc toàn bộ tài khoản; tạo từng tài khoản STUDENT/LECTURER/DEAN; import CSV UTF-8 nguyên tử
+tối đa 1 MB/5.000 dòng; và tải file mẫu có header cố định. Mật khẩu được băm bằng cấu hình
+`PasswordEncoder`; DEAN được gán DEAN+LECTURER. Backend không nhận role tùy ý từ form/file,
+không cho tạo ADMIN và không cấp thêm quyền học vụ.
 
 ## Technical Context
 
@@ -167,7 +173,8 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
 | 4 | Nhóm, lời mời có xác nhận, thành viên, tự rời/giải tán và chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã chốt lại ngày 2026-09-11 |
 | 5 | Gửi/rút/đăng ký lại, snapshot thành viên lúc gửi, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-04–08,11; G-Registration đã giải phóng ngày 2026-09-11, quy tắc đủ 3/snapshot cập nhật ngày 2026-09-12 |
-| 6 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
+| 6 | Quản lý cấp tài khoản ADMIN: danh sách, tạo từng người, import nguyên tử và file mẫu | FR-01; REQ-28,31–32 | AS-1.17; AT-10; unit/web/preview tests T080 |
+| 7 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 
 Đây là trình tự kế hoạch, không phải tasks.md và không cho phép bỏ qua gate ở mỗi phần.
 
@@ -177,6 +184,8 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
   gửi duyệt, GVHD, quyền trưởng nhóm, chuyển trạng thái hợp lệ/bị cấm.
 - HTTP: MockMvc với session/CSRF; cho phép và từ chối cho từng dòng ma trận;
   giả mạo role/department/author, truy cập ID của nhóm khác, input sai và stale version.
+- Cấp tài khoản: service luôn yêu cầu ADMIN, chỉ ánh xạ ba loại tài khoản cố định;
+  kiểm tra trùng username/bộ môn/header/dòng CSV trước khi ghi và rollback toàn bộ import lỗi.
 - DB: migration từ DB rỗng và nâng từ phiên bản trước với dữ liệu mẫu; kiểm tra
   unique có điều kiện, FK cùng đợt, leader là thành viên và rollback toàn bộ.
 - Đồng thời: nhiều connection/transaction thật, barrier/latch thay sleep tùy ý;

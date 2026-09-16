@@ -103,8 +103,9 @@ period trước thắng khi rút/chấp nhận đồng thời; đăng ký lại 
 không thời hạn. Q-07 đã được khách hàng chốt lại ngày 2026-09-11 thành luồng lời mời có xác nhận,
 giữ chỗ và tự rời/giải tán; thiết kế tương ứng nằm trong data-model. Q-05/Q-06 đã chốt mô hình topic theo đợt, nguồn danh mục
 seed/import và khóa GVHD từ PENDING_APPROVAL; không cần nghiên cứu phương án catalog/reuse
-hoặc thay GVHD trong quá trình thực hiện cho phiên bản đầu. Không bổ sung API quản trị
-tài khoản/catalog hoặc chức năng chuyển giảng viên trong phiên bản đầu.
+hoặc thay GVHD trong quá trình thực hiện cho phiên bản đầu. T080 chỉ bổ sung cấp tài khoản
+mới theo ba loại cố định; không bổ sung API sửa/xóa/chuyển cơ cấu tài khoản, quản trị catalog
+hoặc chức năng chuyển giảng viên trong phiên bản đầu.
 
 Đã có rà soát nghiên cứu độc lập về constraints/khóa; kết luận được tích hợp vào data-model.
 Không có extension hooks before_plan/after_plan trong workspace.

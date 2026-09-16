@@ -54,6 +54,12 @@
           <a class="nav-link" th:href="@{/student/results}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 4h14v16H5zM8 9l2 2 5-5M8 15h8"/></svg></span><span class="nav-link-title">Kết quả của tôi</span></a>
         </li>
       </ul>
+      <div class="nav-section mt-4" th:if="${canManageAccounts}">QUẢN TRỊ HỆ THỐNG</div>
+      <ul class="navbar-nav" th:if="${canManageAccounts}">
+        <li class="nav-item" th:classappend="${activeNav == 'admin-accounts'} ? ' active'">
+          <a class="nav-link" th:href="@{/admin/accounts}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 11a3 3 0 1 0 0-6M3 21v-2a6 6 0 0 1 12 0v2M16 15a5 5 0 0 1 5 5v1"/></svg></span><span class="nav-link-title">Tài khoản</span></a>
+        </li>
+      </ul>
       <div class="sidebar-note">
         <span class="status-dot bg-teal me-2"></span>Cổng đề tài sinh viên
         <p>Một nơi theo dõi hành trình học tập và nghiên cứu.</p>

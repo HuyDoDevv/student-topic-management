@@ -17,9 +17,9 @@ không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã đ
 |---|---|---|
 | Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope của DEAN và của từng đợt đăng ký |
 | Department / departments | id bigint PK, name varchar(255), faculty_id FK | Bộ môn thuộc khoa, được seed/import sẵn; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
-| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Tài khoản được seed/import; mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
+| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | ADMIN tạo từng tài khoản hoặc import CSV; mật khẩu luôn băm, không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
-| UserRole / user_roles | user_id FK, role_code FK | PK hai trường; LECTURER có thể kết hợp DEAN nhưng tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
+| UserRole / user_roles | user_id FK, role_code FK | PK hai trường; provisioning chỉ nhận STUDENT→STUDENT, LECTURER→LECTURER hoặc DEAN→DEAN+LECTURER và không tạo ADMIN. Tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN không có quyền học vụ/đăng ký/cơ cấu tổ chức |
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng bộ môn; chỉ thay đổi khi topic DRAFT |
@@ -32,6 +32,12 @@ không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã đ
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
 Trưởng khoa thao tác dữ liệu trong khoa mình; sinh viên xem đề tài công bố trong khoa và
 chỉ thay đổi nhóm/đăng ký mà quan hệ dữ liệu cho phép. Không bỏ trống scope rồi hiểu là toàn quyền.
+
+Tạo tài khoản đơn lẻ và import CSV dùng cùng một transaction service. CSV có header cố định
+`account_type,username,full_name,password,department_id`, UTF-8, tối đa 1 MB và 5.000 dòng
+dữ liệu. Service kiểm tra toàn bộ loại tài khoản, username, mật khẩu, bộ môn, trùng trong file
+và trùng database trước khi ghi; một dòng lỗi trả danh sách lỗi theo số dòng và không ghi tài
+khoản nào. File mẫu chỉ chứa BOM UTF-8 và header, không chứa mật khẩu hoặc dữ liệu thật.
 
 Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nội dung cần cờ/trạng thái
 ẩn và metadata `hidden_by`, `hidden_at`, `hidden_reason`; mọi thay đổi schema tương ứng phải
@@ -187,8 +193,9 @@ Lỗi unique/FK/check/stale version chuyển thành lỗi nghiệp vụ thích h
 Deadlock/lock timeout trả xung đột có thể thử lại; không tự retry vô hạn hoặc ghi một phần.
 Không coi version từ client là bằng chứng quyền.
 
-Cập nhật role/bộ môn chưa có endpoint. Nếu sau này bổ sung, phải khóa các hàng danh tính
-liên quan hoặc phối hợp cùng protocol để không đổi quyền trong lúc command ghi dữ liệu.
+Không có endpoint sửa role/bộ môn của tài khoản hiện hữu. Endpoint tạo mới chỉ gán tổ hợp role
+cố định theo loại tài khoản và lấy bộ môn tồn tại từ database. Nếu sau này bổ sung cập nhật,
+phải khóa các hàng danh tính liên quan hoặc phối hợp cùng protocol để không đổi quyền trong lúc command ghi dữ liệu.
 Không dựa vào role cache session để vượt kiểm tra service; thay đổi qua SQL ngoài ứng dụng
 trong khi test không đại diện một luồng quản trị đã chốt.
 
@@ -212,6 +219,7 @@ Seed local chủ động, idempotent theo mã fixture; một khoa thử nghiệm
 hai bộ môn, một dean, ba GV, tối thiểu bảy SV, nhóm 1/2/3 người, hai nhóm chờ cùng topic,
 topic ở mỗi trạng thái và các loại đợt. Mật khẩu được cấp qua môi trường rồi hash;
 không lưu mật khẩu sử dụng được trong SQL/docs. Không tự xóa dữ liệu có sẵn hoặc dời
-thời gian đợt mỗi lần restart. Seed là dụng cụ demo, không phải chính sách cấp tài khoản.
+thời gian đợt mỗi lần restart. Seed là dụng cụ demo; màn hình ADMIN mới là luồng cấp tài khoản
+thủ công/import của phiên bản này.
 Giữ lịch sử registration REJECTED/WITHDRAWN không thời hạn; không tạo job purge hoặc
 cascade xóa lịch sử trong phiên bản đầu.

@@ -58,7 +58,8 @@ class FoundationWebTest {
             "/periods/1/edit", "/periods/1/topics", "/periods/1/topics/new",
             "/topics/101", "/topics/101/edit", "/periods/1/topics/review",
             "/periods/1/groups/new", "/groups/1", "/groups/1/registrations/new",
-            "/registrations/1", "/registrations/1/decision"
+            "/registrations/1", "/registrations/1/decision",
+            "/admin/accounts", "/admin/accounts/new"
         };
 
         for (String route : routes) {
@@ -66,6 +67,14 @@ class FoundationWebTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/html"));
         }
+    }
+
+    @Test void adminAccountPreviewShowsCreateImportTemplateAndFilters() throws Exception {
+        mvc.perform(get("/admin/accounts"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Quản lý tài khoản")))
+            .andExpect(content().string(containsString("Tải file mẫu")))
+            .andExpect(content().string(containsString("Tìm và lọc tài khoản")));
     }
 
     @Test void deanPreviewSeparatesStudentRegistrationsFromLecturerProposals() throws Exception {

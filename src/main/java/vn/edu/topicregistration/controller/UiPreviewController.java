@@ -8,6 +8,7 @@ import vn.edu.topicregistration.dto.RegistrationForm;
 import vn.edu.topicregistration.dto.DashboardView;
 import vn.edu.topicregistration.config.TimeConfig;
 import vn.edu.topicregistration.dto.TopicDraftForm;
+import vn.edu.topicregistration.dto.AdminAccountForm;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -26,6 +27,12 @@ import vn.edu.topicregistration.service.PeriodRules.TopicType;
 import vn.edu.topicregistration.service.GroupService.StudentPeriodPhase;
 import vn.edu.topicregistration.dto.DashboardView.Focus;
 import vn.edu.topicregistration.dto.DashboardView.Metric;
+import vn.edu.topicregistration.service.AdminAccountService.AccountFilter;
+import vn.edu.topicregistration.service.AdminAccountService.AccountType;
+import vn.edu.topicregistration.service.AdminAccountService.AccountView;
+import vn.edu.topicregistration.service.AdminAccountService.AccountWorkspace;
+import vn.edu.topicregistration.service.AdminAccountService.DepartmentOption;
+import vn.edu.topicregistration.service.AdminAccountService.FacultyOption;
 
 /**
  * Supplies deterministic sample view models for reviewing Thymeleaf pages.
@@ -330,6 +337,43 @@ public class UiPreviewController {
         return "groups/list";
     }
 
+    @GetMapping("/admin/accounts")
+    String adminAccounts(Model model) {
+        common(model, "admin-accounts", "Quản trị hệ thống");
+        List<FacultyOption> faculties = List.of(new FacultyOption(1L, "Công nghệ thông tin"));
+        List<DepartmentOption> departments = List.of(
+                new DepartmentOption(1L, "Công nghệ phần mềm", 1L, "Công nghệ thông tin"),
+                new DepartmentOption(2L, "Hệ thống thông tin", 1L, "Công nghệ thông tin"));
+        List<AccountView> accountViews = List.of(
+                new AccountView(1L, "dean.demo", "Trưởng khoa Demo", AccountType.DEAN,
+                        AccountType.DEAN.label(), 1L, "Công nghệ phần mềm", 1L,
+                        "Công nghệ thông tin", true),
+                new AccountView(2L, "lecturer1.demo", "Giảng viên Demo", AccountType.LECTURER,
+                        AccountType.LECTURER.label(), 1L, "Công nghệ phần mềm", 1L,
+                        "Công nghệ thông tin", true),
+                new AccountView(3L, "student1.demo", "Sinh viên Demo", AccountType.STUDENT,
+                        AccountType.STUDENT.label(), 2L, "Hệ thống thông tin", 1L,
+                        "Công nghệ thông tin", true));
+        model.addAttribute("workspace", new AccountWorkspace(
+                accountViews, faculties, departments,
+                List.of(AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN),
+                AccountFilter.empty(), 3, 3, 1, 2));
+        model.addAttribute("accountTypeFilters", List.of(AccountType.values()));
+        return "admin/accounts/list";
+    }
+
+    @GetMapping("/admin/accounts/new")
+    String adminAccountForm(Model model) {
+        common(model, "admin-accounts", "Quản trị hệ thống");
+        model.addAttribute("adminAccountForm", new AdminAccountForm());
+        model.addAttribute("accountTypes", List.of(
+                AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN));
+        model.addAttribute("departments", List.of(
+                new DepartmentOption(1L, "Công nghệ phần mềm", 1L, "Công nghệ thông tin"),
+                new DepartmentOption(2L, "Hệ thống thông tin", 1L, "Công nghệ thông tin")));
+        return "admin/accounts/form";
+    }
+
     @GetMapping("/periods/{periodId}/groups/new")
     String groupCreate(@PathVariable long periodId, Model model) {
         common(model, "groups", "Nhóm sinh viên");
@@ -441,6 +485,7 @@ public class UiPreviewController {
         model.addAttribute("canScoreBoards", false);
         model.addAttribute("canViewFacultyResults", false);
         model.addAttribute("canViewStudentResults", false);
+        model.addAttribute("canManageAccounts", true);
         model.addAttribute("previewMode", true);
     }
 

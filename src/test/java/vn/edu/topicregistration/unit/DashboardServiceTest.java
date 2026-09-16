@@ -106,14 +106,15 @@ class DashboardServiceTest {
     }
 
     @Test
-    void adminCannotReadAcademicCounters() {
+    void adminSeesAccountManagementWithoutAcademicCounters() {
         when(policy.currentActor()).thenReturn(new ActorIdentity(
                 7L, Set.of(RoleCode.ADMIN), null, null));
 
         DashboardView view = service.current();
 
-        assertEquals("Quản trị sự cố", view.audience());
+        assertEquals("Quản trị hệ thống", view.audience());
         assertEquals(0, view.metrics().size());
+        assertEquals("/admin/accounts", view.focus().href());
         verifyNoInteractions(query, time);
     }
 

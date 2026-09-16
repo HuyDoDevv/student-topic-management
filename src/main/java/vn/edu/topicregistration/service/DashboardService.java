@@ -45,11 +45,11 @@ public class DashboardService {
             return student(actor);
         }
         if (actor.roles().contains(RoleCode.ADMIN)) {
-            return new DashboardView("Quản trị sự cố", "Tổng quan quản trị",
-                    "Tài khoản quản trị chỉ xử lý sự cố; không có quyền xem hoặc quyết định học vụ.",
-                    List.of(), new Focus("PHẠM VI QUYỀN", "Không có dữ liệu học vụ",
-                    "Đề tài, nhóm và đăng ký thuộc phạm vi giảng viên, trưởng khoa và sinh viên.",
-                    null, null, "bg-secondary-lt"));
+            return new DashboardView("Quản trị hệ thống", "Tổng quan quản trị",
+                    "Cấp tài khoản nội bộ; không có quyền xem hoặc quyết định học vụ.",
+                    List.of(), new Focus("VIỆC QUẢN TRỊ", "Quản lý tài khoản người dùng",
+                    "Tạo từng tài khoản hoặc import danh sách Sinh viên, Giảng viên và Trưởng khoa.",
+                    "/admin/accounts", "Mở quản lý tài khoản", "bg-blue-lt"));
         }
         throw new AccessDeniedException("Unsupported dashboard role");
     }

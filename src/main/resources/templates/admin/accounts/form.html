@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Tạo tài khoản', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">TÀI KHOẢN MỚI</div>
+      <h1 class="page-title">Tạo tài khoản</h1>
+      <p class="text-secondary mt-2 mb-0">Mật khẩu chỉ dùng để cấp ban đầu và luôn được lưu dưới dạng băm.</p>
+    </div>
+    <a class="btn btn-outline-secondary" th:href="@{/admin/accounts}">Quay lại</a>
+  </div>
+
+  <form class="card content-form" method="post" th:action="@{/admin/accounts}"
+        th:object="${adminAccountForm}" data-prevent-double-submit>
+    <div class="card-header"><h2 class="card-title">Thông tin tài khoản</h2></div>
+    <div class="card-body">
+      <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}"
+           th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="accountType">Loại tài khoản</label>
+          <select class="form-select" id="accountType" th:field="*{accountType}" required>
+            <option value="">Chọn loại tài khoản</option>
+            <option th:each="type : ${accountTypes}" th:value="${type}" th:text="${type.label}">Sinh viên</option>
+          </select>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('accountType')}" th:errors="*{accountType}"></div>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('creatableAccountType')}" th:errors="*{creatableAccountType}"></div>
+          <div class="form-hint">Trưởng khoa được cấp đồng thời vai trò Giảng viên để có thể tham gia hướng dẫn/hội đồng.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="departmentId">Bộ môn</label>
+          <select class="form-select" id="departmentId" th:field="*{departmentId}" required>
+            <option value="">Chọn khoa và bộ môn</option>
+            <option th:each="department : ${departments}" th:value="${department.id}"
+                    th:text="${department.facultyName + ' · ' + department.name}">Bộ môn</option>
+          </select>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('departmentId')}" th:errors="*{departmentId}"></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="username">Tên đăng nhập</label>
+          <input class="form-control" id="username" type="text" th:field="*{username}"
+                 maxlength="191" autocomplete="off" required>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="fullName">Họ tên</label>
+          <input class="form-control" id="fullName" type="text" th:field="*{fullName}" maxlength="255" required>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="password">Mật khẩu tạm thời</label>
+          <input class="form-control" id="password" type="password" th:field="*{password}"
+                 minlength="8" maxlength="72" autocomplete="new-password" required>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('passwordWithinBcryptLimit')}" th:errors="*{passwordWithinBcryptLimit}"></div>
+          <div class="form-hint">Ít nhất 8 ký tự và không quá 72 byte UTF-8. Mật khẩu không được hiển thị lại sau khi lưu.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-end">
+      <a class="btn btn-outline-secondary" th:href="@{/admin/accounts}">Hủy</a>
+      <button class="btn btn-primary" type="submit">Tạo tài khoản</button>
+    </div>
+  </form>
+</section>
+</body>
+</html>

@@ -46,6 +46,18 @@ public class UserAccountEntity {
     protected UserAccountEntity() {
     }
 
+    public UserAccountEntity(
+            String fullName,
+            String username,
+            String passwordHash,
+            DepartmentEntity department) {
+        this.fullName = fullName;
+        this.enabled = true;
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.department = department;
+    }
+
     public Long getId() {
         return id;
     }

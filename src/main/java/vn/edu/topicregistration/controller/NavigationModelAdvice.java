@@ -30,6 +30,7 @@ public class NavigationModelAdvice {
             model.addAttribute("canScoreBoards", false);
             model.addAttribute("canViewFacultyResults", false);
             model.addAttribute("canViewStudentResults", false);
+            model.addAttribute("canManageAccounts", false);
             model.addAttribute("previewMode", false);
             return;
         }
@@ -51,6 +52,7 @@ public class NavigationModelAdvice {
         model.addAttribute("canScoreBoards", roles.contains(RoleCode.LECTURER));
         model.addAttribute("canViewFacultyResults", roles.contains(RoleCode.DEAN));
         model.addAttribute("canViewStudentResults", roles.contains(RoleCode.STUDENT));
+        model.addAttribute("canManageAccounts", roles.contains(RoleCode.ADMIN));
         model.addAttribute("previewMode", false);
     }
 

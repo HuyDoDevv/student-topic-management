@@ -50,6 +50,8 @@ class NavigationModelAdviceTest {
             assertEquals(false, admin.get(attribute));
             assertEquals(false, anonymous.get(attribute));
         }
+        assertEquals(true, admin.get("canManageAccounts"));
+        assertEquals(false, anonymous.get("canManageAccounts"));
     }
 
     private ExtendedModelMap modelFor(RoleCode... roles) {

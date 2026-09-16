@@ -60,7 +60,7 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 ### Session 2026-09-09
 
 - Q: Trong phiên bản đầu tiên, hệ thống sẽ cấp tài khoản, kết hợp vai trò và giới hạn phạm vi dữ liệu theo phương án nào? → A: Phương án A và bổ sung ADMIN — Tài khoản được seed/import local; tài khoản nhân sự có thể đồng thời giữ LECTURER và DEAN, STUDENT không kết hợp với vai trò nhân sự. Trưởng khoa quản lý trong khoa mình, giảng viên thao tác đề tài trong bộ môn mình, sinh viên xem đề tài đã công bố trong khoa và chỉ thay đổi nhóm/đăng ký mình có quyền. Thêm role ADMIN để xử lý sự cố website; phạm vi cụ thể được chốt ở các câu tiếp theo trong phiên này. Xác nhận U, làm rõ một phần Q-18; liên quan REQ-28, REQ-31–32.
-- Q: ADMIN có được phép can thiệp trực tiếp vào các nghiệp vụ học vụ như tạo đợt, duyệt đề tài và xét đăng ký không? → A: ADMIN chỉ xử lý sự cố khẩn cấp như nội dung do kẻ gian đăng; không quản lý nghiệp vụ học tập, đăng ký, role, khoa/bộ môn hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên chưa có trong phiên bản đầu và nếu bổ sung sau sẽ thuộc trưởng khoa. Xác nhận U, thay thế phạm vi ADMIN đề xuất trước đó và làm rõ một phần Q-18; liên quan REQ-28, REQ-31–32.
+- Q: ADMIN có được phép can thiệp trực tiếp vào các nghiệp vụ học vụ như tạo đợt, duyệt đề tài và xét đăng ký không? → A: Không. ADMIN không quản lý nghiệp vụ học tập, đăng ký, khoa/bộ môn hoặc chuyển giảng viên; việc duyệt học vụ thuộc trưởng khoa. Quyết định “chỉ xử lý sự cố” ở thời điểm này được mở rộng hẹp ngày 2026-09-16 để ADMIN cấp ba loại tài khoản theo mapping role cố định, nhưng không thay đổi giới hạn học vụ hoặc cho sửa role tùy ý. Xác nhận U, liên quan REQ-28, REQ-31–32.
 - Q: Khi trưởng khoa chuyển một giảng viên đang có đề tài hoặc phân công GVHD sang bộ môn/khoa khác, các trách nhiệm đang hoạt động phải được xử lý thế nào? → A: Bỏ qua trong phiên bản đầu vì là chức năng mở rộng, mức độ không quan trọng. Phiên bản đầu không cung cấp thao tác chuyển giảng viên và giả định thông tin bộ môn/khoa ổn định trong các luồng đang hoạt động; nếu có thời gian sẽ đặc tả và triển khai sau. Xác nhận U, đóng phần chuyển bộ môn của Q-18 bằng quyết định ngoài phạm vi hiện tại.
 - Q: Khi có kẻ gian đăng nội dung, ADMIN nên “xóa” theo cách nào? → A: A — ADMIN ẩn nội dung khỏi website nhưng giữ dữ liệu để kiểm tra hoặc khôi phục; lưu ADMIN thực hiện, thời gian và lý do, đồng thời khóa tài khoản gây sự cố. Đây là quyền xử lý khẩn cấp, không cấp quyền sửa nội dung hoặc thực hiện nghiệp vụ học vụ/đăng ký. Xác nhận U, giải quyết phần còn lại của Q-18; liên quan REQ-28, REQ-31–32.
 - Q: Phiên bản local đầu tiên được nghiệm thu theo mức chất lượng nào? → A: A — Dùng toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; kiểm tra chức năng, phân quyền backend, CSRF, mật khẩu băm, validation, không lộ secret, responsive trên desktop/tablet/mobile và các xung đột dữ liệu chính. Không đặt SLA định lượng cho thời gian phản hồi, số người dùng đồng thời, uptime hoặc backup ở phiên bản local. Xác nhận U, giải quyết Q-20 và G-Acceptance; các Q nghiệp vụ khi đó còn mở đã được chốt trong các phiên sau.
@@ -110,6 +110,7 @@ Phiên làm rõ thứ ba trong ngày 2026-09-08:
 - Q: Trưởng khoa cần nhìn các đợt và trạng thái xử lý thế nào? → A: Dashboard và danh sách đợt chỉ tính/hiển thị đợt còn hiệu lực, nghĩa là thời điểm hiện tại chưa qua `student_end`. Danh sách có bộ lọc trạng thái, dùng nhãn rõ đối tượng “Sắp/Đang nhận đề tài GV”, “Chờ/Đang nhận đăng ký SV”, đồng thời hiển thị số đề tài chờ duyệt, nhóm đăng ký chờ xét và đề tài chờ công bố của từng đợt. Đợt đã kết thúc không bị xóa và vẫn có thể được truy cập bằng liên kết trực tiếp đúng quyền. Xác nhận U từ feedback ngày 2026-09-16; liên quan FR-01/FR-03/FR-07/FR-11.
 - Q: Giảng viên có được tạo đề tài mới ngoài thời gian đề xuất không? → A: Không. Chỉ mở form và tạo bản nháp đề tài mới trong khoảng GV; backend phải kiểm tra lại dưới khóa đợt để chặn request trực tiếp hoặc thời gian đổi giữa GET và POST. Ngoài hạn, Giảng viên vẫn xem đề tài cũ và sửa bản nháp hiện hữu theo quy tắc DRAFT, nhưng chỉ gửi duyệt trong hạn như trước. Trang chọn đợt chia “Đợt còn hiệu lực” theo `student_end` và “Đợt đã hết hạn” để giữ đường xem lịch sử. Xác nhận U từ feedback ngày 2026-09-16; liên quan FR-03/FR-05/FR-14.
 - Q: Sinh viên cần nhìn các đợt đăng ký nhóm thế nào? → A: Trang chọn đợt chia thành “Sắp đăng ký”, “Đang đăng ký” và “Đã kết thúc” theo `student_start`/`student_end`. Chỉ đợt đang đăng ký cho phép tạo nhóm mới; nhóm và lời mời đã có vẫn giữ lối xem/phản hồi phù hợp với quyền và quy tắc thời gian hiện hành. Xác nhận U từ feedback ngày 2026-09-16; liên quan FR-03/FR-08.
+- Q: ADMIN cần quản lý tài khoản ở mức nào? → A: ADMIN có một giao diện xem toàn bộ tài khoản và được tạo tài khoản STUDENT, LECTURER hoặc DEAN từng người hoặc import từ file CSV UTF-8 theo file mẫu tải xuống. Loại DEAN được cấp đồng thời DEAN và LECTURER; không cho tạo thêm ADMIN. Toàn bộ file import phải được kiểm tra trước khi ghi và chỉ cần một dòng lỗi thì không tạo tài khoản nào. Phạm vi này không thêm sửa/xóa tài khoản hiện hữu, thay role tùy ý, quản lý danh mục khoa/bộ môn hoặc quyền học vụ. Xác nhận U từ feedback ngày 2026-09-16; cập nhật FR-01, AS-1.17, AT-10 và CL-04.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -193,6 +194,10 @@ không sau ngày kết thúc. Ngày kết thúc GV phải trước ngày bắt �
     **When** ADMIN xử lý khẩn cấp,
     **Then** nội dung bị ẩn khỏi website nhưng còn trong database, tài khoản gây sự cố
     bị khóa và hệ thống lưu ADMIN, thời gian, lý do để kiểm tra/khôi phục (AS-1.16).
+17. **Given** ADMIN có danh mục khoa/bộ môn hợp lệ và file CSV theo mẫu,
+    **When** ADMIN tạo từng tài khoản hoặc import danh sách STUDENT/LECTURER/DEAN,
+    **Then** mật khẩu được băm, loại tài khoản được gán đúng role cố định, DEAN nhận thêm
+    LECTURER và toàn bộ import không ghi gì nếu bất kỳ dòng nào sai (AS-1.17).
 
 ### User Story 2 - Giảng viên đăng đề tài có hướng dẫn (Priority: P1)
 
@@ -510,7 +515,7 @@ Q-09 và Q-10 đã được giải quyết cho luồng hiện tại.
 
 | ID | Yêu cầu | Căn cứ / trạng thái | Nghiệm thu |
 |---|---|---|---|
-| FR-01 | Nhận diện người dùng qua tài khoản nội bộ cấp sẵn bằng tên đăng nhập và mật khẩu, được seed/import local với các role ADMIN, STUDENT, LECTURER, DEAN. LECTURER có thể kết hợp DEAN; STUDENT không kết hợp với ADMIN, LECTURER hoặc DEAN. Trưởng khoa chỉ quản lý trong khoa mình và không được dùng luồng tác giả đề tài dù đồng thời có role LECTURER; giảng viên không có role DEAN thao tác đề tài trong bộ môn mình; sinh viên xem đề tài đã công bố trong khoa và chỉ thay đổi nhóm/đăng ký mình có quyền. ADMIN chỉ xử lý sự cố khẩn cấp: ẩn nội dung vi phạm, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng dữ liệu, không sửa nội dung và không quản lý nghiệp vụ học tập, đăng ký, role, khoa/bộ môn hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Không cung cấp tự đăng ký và không chấp nhận quyền/phạm vi do bên gọi tự khai. | U: các phiên 2026-09-08, 2026-09-09 và 2026-09-12, Q-18 và quyền tác giả của DEAN đã giải quyết; REQ-28, REQ-31–32, INF-06; constitution III | AS-1.3, 1.5–1.8, 1.14–1.16, 2.4, 3.3, 4.4, 5.6 |
+| FR-01 | Nhận diện người dùng qua tài khoản nội bộ cấp sẵn bằng tên đăng nhập và mật khẩu với các role ADMIN, STUDENT, LECTURER, DEAN. ADMIN xem toàn bộ tài khoản và được tạo STUDENT, LECTURER hoặc DEAN từng người hoặc import CSV UTF-8 theo file mẫu; import kiểm tra toàn bộ trước khi ghi và nguyên tử khi có lỗi. Tạo DEAN gán đồng thời DEAN và LECTURER; không cho tạo ADMIN, sửa/xóa tài khoản hiện hữu, thay role tùy ý hoặc quản lý danh mục khoa/bộ môn. STUDENT không kết hợp với ADMIN, LECTURER hoặc DEAN. Trưởng khoa chỉ quản lý trong khoa mình và không được dùng luồng tác giả đề tài dù đồng thời có role LECTURER; giảng viên không có role DEAN thao tác đề tài trong bộ môn mình; sinh viên xem đề tài đã công bố trong khoa và chỉ thay đổi nhóm/đăng ký mình có quyền. ADMIN còn có quyền xử lý sự cố khẩn cấp: ẩn nội dung vi phạm, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng dữ liệu, không sửa nội dung và không quản lý nghiệp vụ học tập, đăng ký hoặc chuyển giảng viên. Việc duyệt học vụ thuộc trưởng khoa; chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Không cung cấp tự đăng ký và không chấp nhận quyền/phạm vi do bên gọi tự khai. | U: các phiên 2026-09-08, 2026-09-09, 2026-09-12 và feedback ADMIN 2026-09-16; Q-18 và quyền tác giả của DEAN đã giải quyết; REQ-28, REQ-31–32, INF-06; constitution III | AS-1.3, 1.5–1.8, 1.14–1.17, 2.4, 3.3, 4.4, 5.6 |
 | FR-02 | Trưởng khoa tạo đợt có tên và một trong bốn loại môn học/NCKH/TLCN/KLTN. | E: REQ-01, 04 | AS-1.1, 1.4 |
 | FR-03 | Đợt có ngày bắt đầu/kết thúc đăng ký GV và SV theo Asia/Ho_Chi_Minh; form không nhận giờ/phút/giây hoặc ngày trước ngày hiện tại. Trong từng khoảng, ngày bắt đầu không sau ngày kết thúc; ngày kết thúc GV phải trước ngày bắt đầu SV. Tự mở từ đầu ngày bắt đầu và đóng sau cuối ngày kết thúc. Áp dụng khoảng SV cho tạo/sửa nhóm, đăng ký, đăng ký lại và rút chờ xét; đăng ký SV còn phải có danh sách đã công bố. Dashboard và danh sách của Trưởng khoa chỉ tính/hiển thị đợt chưa qua `student_end`, kèm trạng thái rõ giai đoạn và số hồ sơ chờ xử lý theo từng đợt; dữ liệu đợt cũ vẫn được giữ. | E: REQ-02–05; chi tiết xác nhận U, phiên 2 ngày 2026-09-08, các ngày 2026-09-10–11 và feedback 2026-09-16, Q-03–04/Q-07 | AS-1.1, 1.4, 1.9–1.10, 2.2, 4.6–4.12, 5.2, 5.11, 5.13, 5.17–5.18 |
 | FR-04 | Hạn nộp điểm GVPB chỉ cấu hình và bắt buộc cho TLCN/KLTN; ngày báo cáo hội đồng chỉ cấu hình và bắt buộc cho KLTN. Cả hai là ngày lịch theo Asia/Ho_Chi_Minh, không có giờ/phút/giây và khi tạo không được trước ngày hiện tại. Khi đổi loại trước ngày mở GV, tự xóa ngày không còn áp dụng và chỉ lưu nếu đã nhập đủ ngày bắt buộc của loại mới. Khi sửa trực tiếp một ngày đang áp dụng, chỉ được dời sang ngày muộn hơn nếu ngày hiện tại còn trước ngày đang lưu; từ đầu ngày đang lưu thì khóa và không mở lại. | E: REQ-06–07; Q-02 được người dùng giải quyết ngày 2026-09-10 | AS-1.2, 1.4, 1.11–1.12 |
@@ -541,20 +546,21 @@ Q-09 và Q-10 đã được giải quyết cho luồng hiện tại.
 
 Trong phạm vi: FR-01–15, gồm cấu hình hai mốc liên quan giai đoạn sau trong FR-04.
 Nhận diện/phân quyền dùng tài khoản nội bộ cấp sẵn với tên đăng nhập/mật khẩu và vai trò/bộ môn.
-Tài khoản được seed/import local và không cung cấp tự đăng ký. Role ADMIN chỉ xử lý sự cố
-khẩn cấp bằng cách ẩn nội dung, lưu dấu vết và khóa tài khoản gây sự cố; không có quyền học
-vụ, đăng ký hoặc thay đổi cơ cấu tổ chức. Nguồn danh tính cho đợt đầu không phụ thuộc đăng
-nhập của trường.
+Tài khoản được cấp local và không cung cấp tự đăng ký. ADMIN có giao diện xem toàn bộ tài
+khoản, tạo STUDENT/LECTURER/DEAN từng người hoặc import CSV theo file mẫu, đồng thời vẫn có
+quyền xử lý sự cố bằng cách ẩn nội dung, lưu dấu vết và khóa tài khoản gây sự cố. ADMIN không
+có quyền học vụ, đăng ký, sửa/xóa tài khoản hiện hữu, thay role tùy ý hoặc thay đổi cơ cấu tổ
+chức. Nguồn danh tính cho đợt đầu không phụ thuộc đăng nhập của trường.
 
 Ngoài đợt này nhưng vẫn trong tổng thể: nộp báo cáo REQ-17; phân công GVPB thuộc
 REQ-11; phản biện/hội đồng REQ-18–22; chấm điểm REQ-23–25; kết quả REQ-26–27;
-thông báo REQ-29–30; phần quản trị tài khoản REQ-28 chưa nằm trong luồng.
+thông báo REQ-29–30; quản trị tài khoản ngoài phạm vi tạo và import đã chốt ở FR-01.
 REQ-31–32 áp dụng xuyên suốt. Cấu hình REQ-06–07 không kéo nghiệp vụ chấm điểm/hội đồng vào đợt này.
 
 Phụ thuộc nghiệp vụ: danh tính, vai trò và dữ liệu GV/SV/bộ môn được seed/import đáng tin cậy;
 quyền trưởng khoa cho duyệt/công bố, quyết định đăng ký và quy tắc lịch đã xác nhận;
 điều kiện nhóm và một số chuyển trạng thái còn cần xác nhận. Danh tính là tài khoản nội bộ
-cấp sẵn qua seed/import local; phiên bản đầu không có màn hình quản lý danh mục.
+cấp sẵn qua màn hình ADMIN hoặc seed demo local; phiên bản đầu không có màn hình quản lý danh mục.
 Không mặc định tích hợp bên ngoài. Không cần các tính năng triển khai sau để đặc tả luồng này.
 
 ### Authorization and Automated Verification
@@ -573,7 +579,7 @@ Không chỉ định giao thức, framework, database hay công cụ kiểm th�
 | AT-07 | Ca đồng thời thêm thành viên, cùng SV tham gia hai nhóm trong cùng đợt và nhóm đăng ký đề tài; kết quả không vi phạm REQ-12–14. Kiểm tra nhóm ở hai đợt khác nhau không xung đột vì REQ-13. Hai thao tác chấp nhận nhóm khác nhau cho cùng đề tài/đợt không được tạo hai nhóm được chấp nhận. Không gán ưu tiên nghiệp vụ cho nhóm nào; khóa đợt tuần tự hóa kết quả. | FR-08–11, 13; AS-5.8; constitution VI; Q-08–10 đã xác nhận |
 | AT-08 | Ca quyền hoặc dữ liệu liên quan thay đổi trong lúc xử lý quyết định; kết quả vẫn tuân thủ chính sách đã chốt, không ghi trạng thái trái phép. Ca chuyển trưởng nhóm đồng thời với quản lý thành viên/gửi đăng ký phải giữ đúng một trưởng nhóm và không dùng quyền đã mất để thực hiện thao tác trái phép.  Rút và chấp nhận đồng thời không được tạo trạng thái vừa rút vừa chấp nhận; đăng ký lại đồng thời không tạo hai đăng ký có hiệu lực. | FR-01, 07–08, 10–13 |
 | AT-09 | Đầu vào sai tại ranh giới hệ thống bị từ chối và không lưu thay đổi dở dang. | constitution IV; các FR liên quan |
-| AT-10 | Đăng nhập đúng thông tin tài khoản cấp sẵn; từ chối sai mật khẩu/tài khoản không tồn tại và thao tác được bảo vệ khi chưa đăng nhập. Cho phép LECTURER kết hợp DEAN nhưng tổ hợp này không có quyền tác giả đề tài; từ chối STUDENT kết hợp ADMIN, LECTURER hoặc DEAN. Vai trò/khoa/bộ môn đúng dữ liệu được cấp, không thể tự khai để nâng quyền; kiểm tra từ chối truy cập chéo phạm vi và không cung cấp tự đăng ký. Tài khoản ADMIN bị từ chối mọi thao tác học vụ, đăng ký, quản lý role/khoa/bộ môn và chuyển giảng viên. | FR-01; AS-1.5–1.8, 1.14–1.15, 2.4; REQ-31–32 |
+| AT-10 | Đăng nhập đúng thông tin tài khoản cấp sẵn; từ chối sai mật khẩu/tài khoản không tồn tại và thao tác được bảo vệ khi chưa đăng nhập. Cho phép LECTURER kết hợp DEAN nhưng tổ hợp này không có quyền tác giả đề tài; từ chối STUDENT kết hợp ADMIN, LECTURER hoặc DEAN. Vai trò/khoa/bộ môn đúng dữ liệu được cấp, không thể tự khai để nâng quyền; kiểm tra từ chối truy cập chéo phạm vi và không cung cấp tự đăng ký. Chỉ ADMIN được xem/tạo/import tài khoản; tạo chỉ nhận STUDENT/LECTURER/DEAN, băm mật khẩu, gán role cố định và rollback toàn bộ file khi có dòng lỗi. ADMIN vẫn bị từ chối mọi thao tác học vụ, đăng ký, sửa role tùy ý, quản lý khoa/bộ môn và chuyển giảng viên. | FR-01; AS-1.5–1.8, 1.14–1.15, 1.17, 2.4; REQ-31–32 |
 | AT-11 | Chấp nhận một nhóm làm mọi đăng ký khác còn chờ xét cùng đề tài/đợt bị từ chối đúng lý do; không đổi đăng ký đã rút/từ chối. Từ chối đăng ký mới vào đề tài đã nhận nhóm, kể cả tranh chấp gửi/chấp nhận. Nhóm bị tự động từ chối được đăng ký đề tài khác hợp lệ trong hạn. | FR-10–13; AS-5.14–5.16; Q-10 đã xác nhận |
 
 Migration khi sử dụng database, tách nghiệp vụ khỏi controllers và bảo vệ secrets
@@ -608,8 +614,9 @@ dùng được bằng bàn phím và trạng thái không chỉ thể hiện b�
 
 - **Người dùng và vai trò/ngữ cảnh**: danh tính GV/SV/trưởng khoa; quyền trên thao tác
   và quan hệ với nhóm/đề tài. Tài khoản nội bộ cấp sẵn, đăng nhập bằng tên đăng nhập và
-  mật khẩu, được gán vai trò/bộ môn qua seed/import. Không tự đăng ký. ADMIN là vai trò xử lý sự cố:
-  ẩn nội dung, lưu dấu vết và khóa tài khoản gây sự cố, không có quyền học vụ/đăng ký.
+  mật khẩu, được ADMIN tạo từng người hoặc import CSV theo mẫu. Không tự đăng ký. ADMIN
+  quản lý việc cấp tài khoản theo ba loại cố định và xử lý sự cố bằng ẩn nội dung, lưu dấu
+  vết và khóa tài khoản gây sự cố, nhưng không có quyền học vụ/đăng ký.
   Bộ môn của GV là dữ liệu dùng để kiểm tra quyền đăng đề tài và tính hợp lệ của GVHD;
   biểu mẫu chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn với người đăng.
 - **Đợt đăng ký**: tên, loại, bốn ngày đăng ký GV/SV, hai ngày có điều kiện; hai giai đoạn.
@@ -683,8 +690,8 @@ phiên bản local theo quyết định Q-20 ngày 2026-09-09.
 Không đặt giả định nghiệp vụ mặc định. Dùng “đề tài” và “thực hiện đề tài” theo A-01
 của bản phân tích để mô tả luồng; không quyết định thiết kế lưu trữ. Đã xác nhận LECTURER
 có thể kết hợp DEAN, nhưng tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT
-không kết hợp với ADMIN, LECTURER hoặc DEAN. ADMIN
-chỉ xử lý sự cố khẩn cấp và không có quyền học vụ hoặc đăng ký.
+không kết hợp với ADMIN, LECTURER hoặc DEAN. ADMIN được cấp tài khoản STUDENT/LECTURER/DEAN
+theo loại cố định và xử lý sự cố khẩn cấp, nhưng không có quyền học vụ hoặc đăng ký.
 Trưởng khoa đã được xác nhận có quyền
 duyệt/công bố và chấp nhận/từ chối đăng ký. Trưởng nhóm đã được xác nhận quản lý thành viên,
 chuyển quyền trong nhóm, gửi đăng ký và rút đăng ký chờ xét trong hạn SV.
@@ -698,7 +705,7 @@ không bị thay bằng giả định để giới hạn số câu hỏi.
 - **CL-01**: Đã giải quyết thẩm quyền: trưởng khoa duyệt/công bố và chấp nhận/từ chối; trưởng nhóm quản lý thành viên, chuyển quyền cho thành viên cùng nhóm và gửi đăng ký; SV tạo nhóm là trưởng nhóm ban đầu.
 - **CL-02**: Đã xác nhận một nhóm/SV theo từng đợt (Q-08); nhiều nhóm chờ xét nhưng tối đa một nhóm được chấp nhận/đề tài/đợt (Q-10). Đã xác nhận trong hạn SV được rút chờ xét, đăng ký lại đề tài cũ/khác còn nhận đăng ký sau rút/từ chối; không rút đăng ký đã chấp nhận. Lý do từ chối thủ công là bắt buộc. Nếu rút/chấp nhận đồng thời, giao dịch lấy khóa đợt trước quyết định kết quả và giao dịch sau bị từ chối sau khi đọc lại trạng thái. Mỗi lần đăng ký lại tạo hàng mới và giữ không thời hạn các hàng REJECTED/WITHDRAWN cũ; không có tác vụ tự động xóa lịch sử trong phiên bản đầu (Q-09).
 - **CL-03**: Đã giải quyết Q-02. Dùng ngày lịch Asia/Ho_Chi_Minh cho cả bốn ngày GV/SV và hai ngày phụ; không nhập giờ/phút/giây hoặc ngày đã qua. Mở từ đầu ngày bắt đầu và đóng sau cuối ngày kết thúc; ngày bắt đầu SV phải sau ngày kết thúc GV. SV chỉ đăng ký sau công bố và còn hạn. Từ đầu ngày bắt đầu GV, khóa tên, loại và các ngày bắt đầu; chỉ kéo dài ngày kết thúc trước khi giai đoạn hết hạn, không rút ngắn hoặc mở lại. TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc ngày hội đồng; từng ngày phụ chỉ được dời muộn hơn trước ngày đang lưu. Đổi loại trước ngày mở GV tự xóa ngày không còn áp dụng và yêu cầu đủ ngày của loại mới.
-- **CL-04**: Đã chọn seed/import local; LECTURER có thể kết hợp DEAN nhưng tài khoản có DEAN không được tạo/sửa/gửi duyệt đề tài, STUDENT không kết hợp ADMIN/vai trò nhân sự; quyền trưởng khoa/giảng viên/sinh viên giới hạn theo khoa, bộ môn và quan hệ dữ liệu. Mỗi khoa có một trưởng khoa trong phạm vi hiện tại; trong vòng đời đề tài, trưởng khoa thực hiện duyệt/công bố và vẫn có thể được chọn làm GVHD phối hợp cho đề tài của giảng viên khác. ADMIN chỉ xử lý sự cố bằng cách ẩn nội dung, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng, sửa nội dung hoặc quản lý nghiệp vụ/role/cơ cấu tổ chức. Chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Q-18 và quyền tác giả của DEAN đã giải quyết cho phạm vi hiện tại.
+- **CL-04**: Đã chọn tài khoản local; ADMIN xem toàn bộ tài khoản, tạo STUDENT/LECTURER/DEAN từng người hoặc import CSV UTF-8 nguyên tử theo file mẫu. DEAN nhận đồng thời DEAN và LECTURER; không cho tạo ADMIN, sửa/xóa tài khoản hiện hữu, thay role tùy ý hoặc quản lý danh mục khoa/bộ môn. Tài khoản có DEAN không được tạo/sửa/gửi duyệt đề tài, STUDENT không kết hợp ADMIN/vai trò nhân sự; quyền trưởng khoa/giảng viên/sinh viên giới hạn theo khoa, bộ môn và quan hệ dữ liệu. Mỗi khoa có một trưởng khoa trong phạm vi hiện tại; trong vòng đời đề tài, trưởng khoa thực hiện duyệt/công bố và vẫn có thể được chọn làm GVHD phối hợp cho đề tài của giảng viên khác. ADMIN còn xử lý sự cố bằng cách ẩn nội dung, lưu người xử lý/thời gian/lý do và khóa tài khoản gây sự cố; không xóa cứng, sửa nội dung hoặc làm nghiệp vụ học vụ. Chuyển giảng viên là chức năng mở rộng chưa có trong phiên bản đầu. Q-18 và quyền tác giả của DEAN đã giải quyết cho phạm vi hiện tại.
 - **CL-05**: Đã xác nhận toàn bộ AS/SC hiện tại làm chuẩn nghiệm thu; bảo mật nền tảng, responsive và xung đột dữ liệu chính phải được kiểm tra. Không đặt SLA định lượng về tải, thời gian phản hồi, uptime hoặc backup cho phiên bản local. Q-20 và G-Acceptance đã giải quyết; các Q nghiệp vụ còn lại cũng đã được đóng trong các phiên sau.
 - **CL-06**: Đã giải quyết Q-05 cho phạm vi hiện tại. Mỗi đề tài chỉ thuộc một đợt và không có chức năng dùng lại hoặc sao chép sang đợt khác; GV tự tạo đề tài mới ở đợt mới. Bộ môn và tài khoản GV được seed/import; biểu mẫu chỉ chọn tài khoản LECTURER đang hoạt động cùng bộ môn. Không có màn hình quản lý danh mục hoặc luồng SV đề xuất đề tài trong phiên bản đầu.
 - **CL-07**: Đã giải quyết Q-06 cho phạm vi hiện tại. Chỉ tác giả được thay đổi GVHD khi đề tài ở Nháp; từ Chờ duyệt trở đi danh sách bị khóa. Nếu trưởng khoa từ chối đề tài về Nháp thì tác giả được sửa và gửi lại trong hạn GV. Phiên bản đầu không hỗ trợ thay GVHD trong quá trình thực hiện.
