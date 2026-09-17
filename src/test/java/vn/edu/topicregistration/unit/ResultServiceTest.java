@@ -26,6 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.EvaluationEntity;
@@ -92,6 +93,32 @@ class ResultServiceTest {
         verify(fixture.council()).transitionTo(CouncilStatus.COMPLETED);
         assertEquals(CouncilStatus.COMPLETED, completed.status());
         assertEquals(1, completed.resultCount());
+    }
+
+    @Test
+    void assignedGraderCompletesDirectAssignmentFromOneSubmittedScore() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, CouncilStatus.ACTIVE, 4L);
+        when(fixture.council().getMode()).thenReturn(CouncilMode.DIRECT);
+        CouncilMemberEntity onlyMember = mock(CouncilMemberEntity.class);
+        when(onlyMember.getLecturer()).thenReturn(fixture.chair());
+        when(dependencies.members().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(onlyMember));
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(fixture.evaluations().getFirst()));
+        when(dependencies.results().saveAll(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultService.BoardResultView completed = dependencies.service().complete(41L, 4L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<FinalResultEntity>> saved = ArgumentCaptor.forClass(Iterable.class);
+        verify(dependencies.results()).saveAll(saved.capture());
+        List<FinalResultEntity> created = new ArrayList<>();
+        saved.getValue().forEach(created::add);
+        assertEquals(1, created.size());
+        assertEquals(new BigDecimal("8.50"), created.getFirst().getFinalScore());
+        assertEquals(CouncilStatus.COMPLETED, completed.status());
     }
 
     @Test

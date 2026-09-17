@@ -33,12 +33,12 @@ class SchemaSeedMigrationIT {
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV8WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV9WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
-        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8"),
+        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8", "9"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -48,7 +48,7 @@ class SchemaSeedMigrationIT {
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(56, constraintCount(jdbc, "CHECK"));
+        assertEquals(57, constraintCount(jdbc, "CHECK"));
         assertEquals(50, constraintCount(jdbc, "FOREIGN KEY"));
         assertEquals(21, constraintCount(jdbc, "UNIQUE"));
         assertEquals(23, constraintCount(jdbc, "PRIMARY KEY"));
@@ -82,6 +82,7 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_project_reports_current_registration", "UNIQUE");
         assertConstraint(jdbc, "chk_project_reports_content_type", "CHECK");
         assertConstraint(jdbc, "fk_councils_department", "FOREIGN KEY");
+        assertConstraint(jdbc, "chk_councils_grading_mode_officers", "CHECK");
         assertConstraint(jdbc, "uq_council_topics_registration", "UNIQUE");
         assertConstraint(jdbc, "chk_evaluations_lifecycle", "CHECK");
         assertConstraint(jdbc, "chk_final_results_lifecycle", "CHECK");
@@ -202,7 +203,7 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void v6WithExistingFixtureUpgradesThroughV8WithoutLosingHistory() {
+    void v6WithExistingFixtureUpgradesThroughV9WithoutLosingHistory() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV6 = Flyway.configure()
                 .dataSource(database.dataSource())
@@ -239,7 +240,7 @@ class SchemaSeedMigrationIT {
                 .filter(entry -> Integer.parseInt(entry.getKey()) <= 6)
                 .collect(java.util.stream.Collectors.toMap(
                         Map.Entry::getKey, Map.Entry::getValue)));
-        assertEquals(8, count(jdbc,
+        assertEquals(9, count(jdbc,
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(7, count(jdbc, "SELECT COUNT(*) FROM registration_members"));

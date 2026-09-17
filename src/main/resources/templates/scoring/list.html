@@ -6,8 +6,8 @@
   <div class="page-header">
     <div>
       <div class="page-pretitle">GIẢNG VIÊN</div>
-      <h1 class="page-title">Chấm điểm hội đồng</h1>
-      <p class="text-secondary mt-2 mb-0">Các nhóm thuộc hội đồng đang hoạt động mà bạn được phân công.</p>
+      <h1 class="page-title">Chấm điểm</h1>
+      <p class="text-secondary mt-2 mb-0">Các đề tài thuộc hội đồng hoặc lượt chấm độc lập đang hoạt động mà bạn được phân công.</p>
     </div>
   </div>
 
@@ -24,7 +24,7 @@
           </dl>
         </div>
         <div class="card-footer d-flex flex-wrap justify-content-end gap-2">
-          <a class="btn btn-outline-primary" th:if="${assignment.currentChair}"
+          <a class="btn btn-outline-primary" th:if="${assignment.currentChair and !assignment.directGrading}"
              th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
           <a class="btn btn-primary" th:href="@{/lecturer/scoring/{councilId}/{registrationId}(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}">Mở phiếu chấm</a>
         </div>
@@ -33,7 +33,7 @@
   </div>
 
   <div class="card" th:if="${assignments.isEmpty()}"
-       th:insert="~{fragments/feedback :: empty('Chưa có lượt chấm', 'Bạn không có đề tài thuộc hội đồng đang hoạt động.')}"></div>
+       th:insert="~{fragments/feedback :: empty('Chưa có lượt chấm', 'Bạn không có đề tài đang hoạt động được phân công chấm.')}"></div>
 </section>
 </body>
 </html>

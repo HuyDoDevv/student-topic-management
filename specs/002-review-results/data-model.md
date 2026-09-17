@@ -2,7 +2,8 @@
 
 ## Existing dependencies
 
-- `registration_periods`: council chỉ dùng khi `topic_type IN ('TLCN','KLTN')`.
+- `registration_periods`: `COUNCIL` chỉ dùng cho TLCN/KLTN; `DIRECT` chỉ dùng cho
+  COURSE/NCKH.
 - `registrations`: chỉ row `ACCEPTED` được có report/council/result.
 - `registration_members`: snapshot sinh viên dùng cho upload ownership và result visibility.
 - `topics` + `topic_supervisors`: department scope và danh sách cấm chấm.
@@ -36,6 +37,7 @@ lại null; unique guard đảm bảo tối đa một báo cáo hiện hành/reg
 | name | Bắt buộc, trim, tối đa 255 |
 | chair | Active LECTURER trong department, là member slot 1 |
 | secretary | Active LECTURER khác chair, là member slot 2 |
+| gradingMode | `COUNCIL` hoặc `DIRECT` |
 | status | DRAFT, ASSIGNED, SCHEDULED, ACTIVE, COMPLETED, PUBLISHED |
 | createdAt | UTC instant |
 | version | Optimistic version |
@@ -52,12 +54,21 @@ COMPLETED --DEAN publish tất cả READY result--> PUBLISHED
 
 Member và assignment chỉ sửa trước ACTIVE. Không có transition lùi trong feature này.
 
+Với `COUNCIL`, Chair và Secretary khác nhau và có 3–5 member. Với `DIRECT`, Chair và
+Secretary cùng trỏ tới người chấm để tái sử dụng quyền complete, trigger chỉ tạo một member
+slot 1, có đúng một CouncilTopic và vòng đời được đưa thẳng tới ACTIVE trong transaction
+phân công. Quy tắc service chỉ cho `DIRECT` với COURSE/NCKH, có báo cáo hiện hành và người
+chấm khác mọi TopicSupervisor.
+
 ## CouncilMember
 
 Composite key `(council_id, lecturer_id)`, unique `(council_id, slot)`, slot 1..5. Một
 council phải có 3..5 member trước ASSIGNED; chair/secretary khác nhau và đều thuộc member.
 Mọi member active LECTURER cùng department; không member nào là supervisor của một topic
 đã gán vào council.
+
+Ngoại lệ có chủ đích cho `DIRECT`: đúng một member slot 1 là người chấm. Đây không phải hội
+đồng và không xuất hiện trong danh sách hội đồng TLCN/KLTN.
 
 ## CouncilTopic
 
@@ -111,6 +122,13 @@ Migration backfill trạng thái bảo thủ cho row cũ: report mới nhất/re
 council hiện có bắt đầu DRAFT; evaluation hiện có được coi SUBMITTED; final result có
 `published_at` thì PUBLISHED, ngược lại READY. Dữ liệu legacy vi phạm invariant mới phải làm
 migration fail rõ ràng thay vì tự xóa.
+
+## Migration V9
+
+V9 thêm `councils.grading_mode`, backfill mặc định `COUNCIL`, thay check officer cũ bằng
+check kết hợp mode/officer và tạo lại trigger officer. `COUNCIL` vẫn bắt buộc Chair khác
+Secretary; `DIRECT` bắt buộc hai FK officer cùng trỏ một người và trigger chỉ tạo một row
+membership. Không sửa V1–V8 và không thêm bảng nghiệp vụ mới.
 
 ## Lock order
 

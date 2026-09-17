@@ -129,6 +129,26 @@ thật và ma trận nghiệm thu đã hoàn tất. Trên MySQL 8.4.11 test cô 
 157/157, integration/concurrency đạt 18/18 và E2E đạt 2/2. Browser journey xác nhận upload,
 submit điểm có CSRF, complete, publish và privacy 404; `git diff --check` đạt.
 
+## Phase 9: Direct grading for COURSE/NCKH
+
+- [X] T009 [US2A] TDD quy tắc và service phân công đúng một grader khác mọi GVHD cho đăng ký
+  COURSE/NCKH ACCEPTED đã có report; thêm V9 `grading_mode`/trigger one-member, trang riêng
+  cho Trưởng khoa, reuse scoring/complete/publish và khóa report ngay khi phân công; giữ
+  nguyên hội đồng TLCN/KLTN 3–5 người; cập nhật spec/plan/data-model/contracts/acceptance,
+  chạy targeted/regression/migration checks và `git diff --check`. (FR-26; AS-7.7–7.10;
+  SC-017)
+
+**Checkpoint**: COURSE/NCKH có đúng một grader ACTIVE khác GVHD; TLCN/KLTN chỉ đi qua
+`COUNCIL`; một điểm SUBMITTED có thể complete/publish và report không còn được thay.
+
+**T009 evidence (2026-09-17)**: Rules/service/web tests được chạy đỏ trước vì API chấm độc
+lập chưa tồn tại. Sau implementation, targeted rules/service/controller/schema/result và
+regression council/scoring đạt 53/53. Trên MySQL 8.4.11 test cô lập, migration V9 từ database
+rỗng, V6 và V7 đạt 4/4; toàn integration/concurrency đạt 17/18, còn một assertion baseline
+`ReviewWorkflowIT` kỳ vọng 13 tài khoản trong khi fixture hiện seed 14. Suite mặc định với
+MySQL đạt 192/193; lỗi duy nhất là dashboard ADMIN cũ kỳ vọng 0 metrics nhưng nhận 4. Hai lỗi
+ngoài phạm vi không chạm mã T009; `git diff --check` đạt.
+
 ## Dependencies & execution order
 
 ```mermaid
@@ -141,6 +161,7 @@ flowchart TD
   T005 --> T006["T006 Complete + publish"]
   T006 --> T007["T007 Student results"]
   T007 --> T008["T008 Acceptance"]
+  T008 --> T009["T009 Direct COURSE/NCKH grading"]
 ```
 
 - T003 phải có trước activate ở T004 vì activate revalidate report hiện hành.
@@ -159,6 +180,7 @@ flowchart TD
 | US4 / FR-21–22 | T002,T006,T008 | calculator/service/web/concurrency |
 | US5 / FR-23 | T007–T008 | service/web/E2E privacy |
 | FR-24–25 | T002–T008 | authorization/error/storage matrix |
+| US2A / FR-26 | T009 | rules/service/web/schema/final-score regression |
 
 ## Implementation strategy
 
@@ -169,6 +191,6 @@ Playwright phải ghi BLOCKED, không dùng database có dữ liệu thật và 
 
 ## Generation summary
 
-8 tasks: design 1; foundation 1; reports 1; councils 1; scoring 1; result publication 1;
-student privacy 1; cross-cutting acceptance 1. Tất cả checklist task có ID, story label khi
+9 tasks: design 1; foundation 1; reports 1; councils 1; direct grading 1; scoring 1;
+result publication 1; student privacy 1; cross-cutting acceptance 1. Tất cả checklist task có ID, story label khi
 áp dụng và đường dẫn.

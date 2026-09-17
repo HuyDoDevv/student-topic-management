@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.service.FinalScoreRules;
 import vn.edu.topicregistration.service.FinalScoreRules.CompletionContext;
@@ -53,6 +54,18 @@ class FinalScoreRulesTest {
                         CouncilStatus.ACTIVE, true, 2, 3, 5, false)));
 
         assertEquals(FinalScoreFailure.EVALUATIONS_INCOMPLETE, exception.failure());
+    }
+
+    @Test
+    void directGradingCompletesWithExactlyOneAssignmentMemberAndScore() {
+        FinalScoreRules.validateCompletion(new CompletionContext(
+                CouncilStatus.ACTIVE, true, 1, 1, 1, true, CouncilMode.DIRECT));
+
+        FinalScoreRuleException extraMember = assertThrows(
+                FinalScoreRuleException.class,
+                () -> FinalScoreRules.validateCompletion(new CompletionContext(
+                        CouncilStatus.ACTIVE, true, 1, 2, 2, true, CouncilMode.DIRECT)));
+        assertEquals(FinalScoreFailure.EVALUATIONS_INCOMPLETE, extraMember.failure());
     }
 
     @Test

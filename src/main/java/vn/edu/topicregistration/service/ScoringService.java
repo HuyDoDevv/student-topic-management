@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.EvaluationEntity;
@@ -265,7 +266,8 @@ public class ScoringService {
                 assignment.getScheduledAt(),
                 assignment.getLocation(),
                 Objects.equals(assignment.getCouncil().getChair().getId(), actorId),
-                assignment.getCouncil().getVersion());
+                assignment.getCouncil().getVersion(),
+                assignment.getCouncil().getMode() == CouncilMode.DIRECT);
     }
 
     private static EvaluationView toView(EvaluationEntity evaluation) {
@@ -308,7 +310,22 @@ public class ScoringService {
             Instant scheduledAt,
             String location,
             boolean currentChair,
-            long councilVersion) {
+            long councilVersion,
+            boolean directGrading) {
+        public ScoringAssignmentView(
+                Long councilId,
+                String councilName,
+                Long registrationId,
+                Long groupId,
+                String topicTitle,
+                Instant scheduledAt,
+                String location,
+                boolean currentChair,
+                long councilVersion) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, currentChair, councilVersion, false);
+        }
+
         public ScoringAssignmentView(
                 Long councilId,
                 String councilName,
@@ -318,7 +335,7 @@ public class ScoringService {
                 Instant scheduledAt,
                 String location) {
             this(councilId, councilName, registrationId, groupId, topicTitle,
-                    scheduledAt, location, false, 0L);
+                    scheduledAt, location, false, 0L, false);
         }
     }
 

@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 
 public final class FinalScoreRules {
@@ -40,9 +41,12 @@ public final class FinalScoreRules {
             throw failure(FinalScoreFailure.INVALID_STATE);
         }
         long expectedEvaluations = (long) context.assignmentCount() * context.memberCount();
-        if (context.assignmentCount() < 1
-                || context.memberCount() < 3
-                || context.memberCount() > 5
+        boolean validCardinality = context.mode() == CouncilMode.DIRECT
+                ? context.assignmentCount() == 1 && context.memberCount() == 1
+                : context.assignmentCount() >= 1
+                        && context.memberCount() >= 3
+                        && context.memberCount() <= 5;
+        if (!validCardinality
                 || expectedEvaluations != context.submittedEvaluationCount()
                 || !context.exactSubmittedMatrix()) {
             throw failure(FinalScoreFailure.EVALUATIONS_INCOMPLETE);
@@ -85,7 +89,18 @@ public final class FinalScoreRules {
             int assignmentCount,
             int memberCount,
             int submittedEvaluationCount,
-            boolean exactSubmittedMatrix) {
+            boolean exactSubmittedMatrix,
+            CouncilMode mode) {
+        public CompletionContext(
+                CouncilStatus status,
+                boolean currentChair,
+                int assignmentCount,
+                int memberCount,
+                int submittedEvaluationCount,
+                boolean exactSubmittedMatrix) {
+            this(status, currentChair, assignmentCount, memberCount,
+                    submittedEvaluationCount, exactSubmittedMatrix, CouncilMode.COUNCIL);
+        }
     }
 
     public record PublicationContext(

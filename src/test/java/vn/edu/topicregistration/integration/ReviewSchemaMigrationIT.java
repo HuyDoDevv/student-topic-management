@@ -22,7 +22,7 @@ import vn.edu.topicregistration.seed.DemoSeedProperties;
 import vn.edu.topicregistration.seed.LocalDemoSeeder;
 import vn.edu.topicregistration.util.ProjectTime;
 
-/** T008: verifies V8 against both an empty database and representative V7 rows. */
+/** T008/T009: verifies review migrations against representative V7 rows. */
 class ReviewSchemaMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
     private static final Instant NOW = Instant.parse("2026-09-14T08:00:00Z");
@@ -125,11 +125,13 @@ class ReviewSchemaMigrationIT {
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
                 .load();
-        assertEquals(1, allVersions.migrate().migrationsExecuted);
+        assertEquals(2, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);
 
         assertEquals("DRAFT", jdbc.queryForObject(
                 "SELECT status FROM councils WHERE id = ?", String.class, councilId));
+        assertEquals("COUNCIL", jdbc.queryForObject(
+                "SELECT grading_mode FROM councils WHERE id = ?", String.class, councilId));
         assertEquals(requiredLong(jdbc, """
                 SELECT department_id FROM user_accounts WHERE id = ?
                 """, chairId), requiredLong(jdbc,
@@ -163,6 +165,27 @@ class ReviewSchemaMigrationIT {
         assertThrows(DataAccessException.class, () -> jdbc.update(
                 "UPDATE final_results SET final_score = 8.123 WHERE registration_id = ?",
                 registrationId));
+
+        long departmentId = requiredLong(jdbc,
+                "SELECT department_id FROM councils WHERE id = ?", councilId);
+        jdbc.update("""
+                INSERT INTO councils(
+                    period_id, department_id, name, chair_id, secretary_id,
+                    grading_mode, status, created_at, version)
+                VALUES (?, ?, 'Direct grading fixture', ?, ?,
+                        'DIRECT', 'ACTIVE', CURRENT_TIMESTAMP(6), 0)
+                """, periodId, departmentId, memberId, memberId);
+        long directId = requiredLong(jdbc,
+                "SELECT id FROM councils WHERE name = 'Direct grading fixture'");
+        assertEquals(1, requiredLong(jdbc,
+                "SELECT COUNT(*) FROM council_members WHERE council_id = ?", directId));
+        assertThrows(DataAccessException.class, () -> jdbc.update("""
+                INSERT INTO councils(
+                    period_id, department_id, name, chair_id, secretary_id,
+                    grading_mode, status, created_at, version)
+                VALUES (?, ?, 'Invalid regular council', ?, ?,
+                        'COUNCIL', 'DRAFT', CURRENT_TIMESTAMP(6), 0)
+                """, periodId, departmentId, memberId, memberId));
     }
 
     private static long account(JdbcTemplate jdbc, String username) {

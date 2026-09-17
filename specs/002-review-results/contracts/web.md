@@ -33,6 +33,21 @@ Create form: `periodId`, `departmentId`, `name`, `chairId`, `secretaryId`,
 `version`. Service revalidates TLCN/KLTN, faculty/department, active LECTURER, 3–5 unique,
 chair != secretary, accepted registration và supervisor exclusion.
 
+## Direct grading — DEAN / assigned LECTURER
+
+| Method | Route | Actor | Purpose |
+|---|---|---|---|
+| GET | `/faculty/direct-grading` | scoped DEAN | List COURSE/NCKH có report chờ phân công và các lượt đã tạo |
+| POST | `/faculty/direct-grading` | scoped DEAN | Chọn một grader và tạo lượt DIRECT ACTIVE |
+| POST | `/lecturer/direct-grading/{id}/complete` | assigned grader | ACTIVE → COMPLETED sau khi đã submit điểm |
+| POST | `/faculty/direct-grading/{id}/publish` | scoped DEAN | COMPLETED → PUBLISHED |
+
+Form phân công chỉ nhận `registrationId`, `graderId`. Service khóa period rồi registration,
+revalidate COURSE/NCKH, ACCEPTED, current report, chưa có assignment, grader active LECTURER
+cùng department và không thuộc bất kỳ TopicSupervisor nào. Thành công tạo một membership,
+một assignment với nhãn `Chấm độc lập`, chuyển ngay ACTIVE và vì vậy khóa report. Không
+dùng `student_end` làm hạn báo cáo; Trưởng khoa chỉ thao tác sau khi xác nhận kỳ nộp đã hết.
+
 ## Scoring — assigned LECTURER
 
 | Method | Route | Purpose |
@@ -56,8 +71,9 @@ lại khi vẫn ACTIVE; complete khóa toàn bộ.
 | POST | `/faculty/boards/{id}/publish` | scoped DEAN | COMPLETED → PUBLISHED nguyên tử |
 
 Complete yêu cầu mỗi `(CouncilTopic, CouncilMember)` có đúng một SUBMITTED evaluation.
-Điểm cuối là mean, scale 2 HALF_UP. Publish lặp, thiếu READY result hoặc stale version trả
-conflict và không đổi một phần.
+Với `COUNCIL` ma trận có 3–5 member; với `DIRECT` có đúng một assignment/member/evaluation
+nên điểm cuối bằng điểm của grader. Điểm cuối dùng scale 2 HALF_UP. Publish lặp, thiếu READY
+result hoặc stale version trả conflict và không đổi một phần.
 
 ## Student results
 

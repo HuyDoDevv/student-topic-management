@@ -38,6 +38,15 @@ database có dữ liệu thật cho integration/concurrency.
 3. Chair complete board; kiểm tra result READY từng group và arithmetic mean scale 2.
 4. DEAN publish; kiểm tra board/result PUBLISHED và không sửa được score/report.
 
+## Scenario 3A — Direct grading for COURSE/NCKH
+
+1. Chuẩn bị registration COURSE hoặc NCKH ở trạng thái ACCEPTED và nộp báo cáo hiện hành.
+2. DEAN mở `/faculty/direct-grading`, chọn một LECTURER cùng bộ môn không phải bất kỳ GVHD
+   nào; xác nhận lượt chấm chuyển ACTIVE và leader không thể thay báo cáo nữa.
+3. Thử chọn GVHD, tài khoản khóa/khác bộ môn hoặc registration TLCN/KLTN; mong đợi từ chối.
+4. Grader mở **Chấm điểm**, submit một điểm rồi **Hoàn tất chấm**; DEAN quay lại trang phân
+   công để publish. Final score phải bằng đúng điểm đã submit và sinh viên xem như kết quả cũ.
+
 ## Scenario 4 — Student privacy
 
 1. Đăng nhập từng snapshot member, mở `/student/results`; thấy result group mình.
@@ -64,7 +73,8 @@ cấu hình; tài khoản đã tồn tại không bị đổi mật khẩu.
 1. Đăng nhập `lecturer4.demo` hoặc `lecturer5.demo`, vào **Chấm điểm** để xem/sửa evaluation.
 2. Đăng nhập `lecturer1.demo`, vào **Chấm điểm**, mở một đề tài rồi dùng liên kết hội đồng;
    fixture đã đủ evaluation nên Chair có thể **Tổng hợp kết quả**.
-3. Đăng nhập `dean.demo`, vào **Hội đồng** để publish board vừa hoàn tất, hoặc vào
+3. Đăng nhập `dean.demo`, vào **Hội đồng** để publish board vừa hoàn tất, **Phân công chấm**
+   để quản lý lượt COURSE/NCKH, hoặc vào
    **Kết quả hội đồng** để xem fixture đã công bố.
 4. Đăng nhập `student1.demo`, vào **Kết quả của tôi** để xem kết quả PUBLISHED; sinh viên
    khác nhóm không đọc được URL chi tiết đó.

@@ -140,7 +140,9 @@ public class ScoringController {
                 assignment.topicTitle(),
                 format(assignment.scheduledAt()),
                 assignment.location(),
-                assignment.currentChair());
+                assignment.currentChair(),
+                assignment.councilVersion(),
+                assignment.directGrading());
     }
 
     private String format(Instant value) {
@@ -165,6 +167,8 @@ public class ScoringController {
             String topicTitle,
             String scheduledAt,
             String location,
-            boolean currentChair) {
+            boolean currentChair,
+            long councilVersion,
+            boolean directGrading) {
     }
 }

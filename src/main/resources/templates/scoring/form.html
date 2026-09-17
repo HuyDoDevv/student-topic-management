@@ -11,9 +11,16 @@
     </div>
     <div class="btn-list">
       <a class="btn btn-outline-secondary" th:href="@{/lecturer/scoring}">Quay lại</a>
-      <a class="btn btn-outline-secondary" th:if="${assignment.currentChair}"
+      <a class="btn btn-outline-secondary" th:if="${assignment.currentChair and !assignment.directGrading}"
          th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
       <a class="btn btn-outline-primary" th:href="@{/reports/{id}(id=${assignment.registrationId})}">Xem báo cáo</a>
+      <form th:if="${assignment.directGrading and submitted}" method="post"
+            th:action="@{/lecturer/direct-grading/{id}/complete(id=${assignment.councilId})}"
+            data-prevent-double-submit>
+        <input type="hidden" name="version" th:value="${assignment.councilVersion}">
+        <button class="btn btn-success" type="submit"
+                data-confirm="Hoàn tất lượt chấm này? Điểm và báo cáo sẽ bị khóa để chờ Trưởng khoa công bố.">Hoàn tất chấm</button>
+      </form>
     </div>
   </div>
 
@@ -21,7 +28,8 @@
         th:action="@{/lecturer/scoring/{councilId}/{registrationId}/draft(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}"
         th:object="${scoreForm}" data-prevent-double-submit>
     <input type="hidden" th:field="*{version}">
-    <div class="card-header"><h2 class="card-title">Điểm hội đồng</h2></div>
+    <div class="card-header"><h2 class="card-title"
+         th:text="${assignment.directGrading ? 'Điểm chấm độc lập' : 'Điểm hội đồng'}">Điểm hội đồng</h2></div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-4">

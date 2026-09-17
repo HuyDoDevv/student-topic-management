@@ -43,6 +43,10 @@ public class CouncilEntity {
     private UserAccountEntity secretary;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "grading_mode", nullable = false, length = 16)
+    private CouncilMode mode;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private CouncilStatus status;
 
@@ -63,13 +67,41 @@ public class CouncilEntity {
             UserAccountEntity chair,
             UserAccountEntity secretary,
             Instant createdAt) {
+        this(period, department, name, chair, secretary, CouncilMode.COUNCIL, createdAt);
+    }
+
+    private CouncilEntity(
+            RegistrationPeriodEntity period,
+            DepartmentEntity department,
+            String name,
+            UserAccountEntity chair,
+            UserAccountEntity secretary,
+            CouncilMode mode,
+            Instant createdAt) {
         this.period = Objects.requireNonNull(period, "period");
         this.department = Objects.requireNonNull(department, "department");
         this.name = Objects.requireNonNull(name, "name");
         this.chair = Objects.requireNonNull(chair, "chair");
         this.secretary = Objects.requireNonNull(secretary, "secretary");
+        this.mode = Objects.requireNonNull(mode, "mode");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.status = CouncilStatus.DRAFT;
+    }
+
+    public static CouncilEntity directGrading(
+            RegistrationPeriodEntity period,
+            DepartmentEntity department,
+            String name,
+            UserAccountEntity grader,
+            Instant createdAt) {
+        return new CouncilEntity(
+                period,
+                department,
+                name,
+                grader,
+                grader,
+                CouncilMode.DIRECT,
+                createdAt);
     }
 
     public void transitionTo(CouncilStatus target) {
@@ -109,6 +141,10 @@ public class CouncilEntity {
 
     public UserAccountEntity getSecretary() {
         return secretary;
+    }
+
+    public CouncilMode getMode() {
+        return mode;
     }
 
     public CouncilStatus getStatus() {

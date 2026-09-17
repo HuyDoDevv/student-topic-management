@@ -57,10 +57,11 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
   để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
   đăng ký GV/SV; các migration V4–V7 bổ sung moderation, lời mời nhóm, metadata từ chối
   và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. V8 hoàn thiện vòng đời báo cáo,
-  hội đồng, evaluation và kết quả công bố. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ
+  hội đồng, evaluation và kết quả công bố; V9 thêm chế độ phân công một người chấm cho
+  COURSE/NCKH mà không thay đổi hội đồng TLCN/KLTN. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ
   đầu ngày, ngày kết thúc tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
   `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới sau `V8__...sql`; không
+- Các thay đổi schema tiếp theo phải là migration mới sau `V9__...sql`; không
   sửa migration đã được dùng trên database chung.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway
@@ -74,7 +75,8 @@ và hạ tầng unit/integration/E2E. Profile `local` dùng MySQL và Hibernate 
 profile `preview` chỉ hiển thị catalogue UI mà không truy cập database.
 
 Các luồng đợt đăng ký, đề xuất/duyệt đề tài, nhóm sinh viên, đăng ký đề tài, báo cáo,
-hội đồng, chấm điểm và kết quả đã kết nối MySQL trên profile `local`. Dự án không tự tạo
+hội đồng, phân công chấm COURSE/NCKH, chấm điểm và kết quả đã kết nối MySQL trên profile
+`local`. Dự án không tự tạo
 tài khoản mặc định. Khi cần dữ liệu để xem giao diện, bật `DEMO_SEED_ENABLED=true`, đặt
 `DEMO_SEED_PASSWORD` và nếu muốn thì đặt `REPORT_STORAGE_ROOT` tới thư mục PDF riêng trong
 `.env`; chạy ứng dụng một lần rồi tắt cờ.

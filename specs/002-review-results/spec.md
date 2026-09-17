@@ -37,6 +37,16 @@ thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi c
   còn ACTIVE, kể cả sau submit; sau COMPLETED thì khóa. Điểm cuối là trung bình cộng điểm
   SUBMITTED của mọi thành viên, làm tròn HALF_UP đến hai chữ số thập phân.
 
+### Session 2026-09-17
+
+- Người dùng chốt Môn học và NCKH không lập hội đồng: sau khi nhóm đã nộp báo cáo cuối,
+  Trưởng khoa phân công đúng một giảng viên cùng bộ môn, khác mọi GVHD, để chấm. TLCN tiếp
+  tục do GVPB khác GVHD chấm qua hội đồng; KLTN tiếp tục do GVPB/thành viên hội đồng khác
+  GVHD chấm theo luồng hội đồng hiện có.
+- Phiên bản hiện tại chưa có trường hạn nộp báo cáo riêng. Để không mở rộng schema/lịch đợt,
+  thao tác phân công chấm độc lập của Trưởng khoa là mốc xác nhận báo cáo hiện tại đã cuối
+  kỳ và khóa thay thế báo cáo. Không dùng `student_end` vì đây là hạn đăng ký đề tài.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Mỗi story được kiểm thử độc lập bằng fixture ở trạng thái tiền điều kiện phù hợp. Thứ tự story
@@ -103,6 +113,32 @@ lệ rồi thử 2/6 người, trùng người, thiếu chức danh, người ng
 6. **Given** một hội đồng thuộc đúng đợt và bộ môn, **When** Trưởng khoa gán nhiều đăng ký
    ACCEPTED của đợt đó, **Then** các nhóm cùng bộ môn được xếp lịch riêng trong hội đồng;
    đăng ký từ đợt/bộ môn khác hoặc loại môn học/NCKH bị từ chối (AS-7.6).
+
+---
+
+### User Story 2A - Trưởng khoa phân công chấm độc lập Môn học/NCKH (Priority: P1)
+
+Là Trưởng khoa, tôi muốn phân công một giảng viên khác GVHD chấm báo cáo Môn học/NCKH
+sau khi nhóm đã nộp bản cuối để hai loại đề tài này có kết quả mà không phải lập hội đồng.
+
+**Independent Test**: Chuẩn bị đăng ký ACCEPTED loại COURSE/NCKH có báo cáo; phân công một
+LECTURER cùng bộ môn không phải GVHD, thử GVHD/người ngoài bộ môn/tài khoản khóa/TLCN/KLTN,
+sau đó chấm, complete một điểm và publish bằng luồng kết quả hiện có.
+
+**Acceptance Scenarios**:
+
+1. **Given** đăng ký COURSE/NCKH đã ACCEPTED, có báo cáo hiện hành và chưa được phân công,
+   **When** Trưởng khoa đúng phạm vi chọn một LECTURER đang hoạt động cùng bộ môn và khác
+   mọi GVHD, **Then** tạo đúng một lượt chấm ACTIVE và khóa thay thế báo cáo (AS-7.7).
+2. **Given** người được chọn là tác giả/GVHD chính/GVHD phối hợp, không có role LECTURER,
+   đã khóa hoặc khác bộ môn, **When** phân công, **Then** backend từ chối nguyên tử
+   (AS-7.8).
+3. **Given** đăng ký TLCN/KLTN, chưa ACCEPTED, chưa có báo cáo hoặc đã thuộc một lượt chấm/
+   hội đồng, **When** dùng route chấm độc lập, **Then** backend từ chối; luồng hội đồng
+   TLCN/KLTN không thay đổi (AS-7.9).
+4. **Given** lượt chấm độc lập ACTIVE, **When** giảng viên được phân công submit một điểm
+   hợp lệ và hoàn tất, rồi Trưởng khoa publish, **Then** final score bằng đúng điểm đó và
+   sinh viên xem qua luồng kết quả hiện có (AS-7.10).
 
 ---
 
@@ -203,6 +239,8 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
 - Publish lặp lại không được tạo bản kết quả thứ hai hoặc thay đổi người/thời điểm công bố.
 - Thành viên rời nhóm sau khi đăng ký: quyền xem kết quả dùng snapshot bất biến của lần gửi,
   nhất quán với feature 001, không dùng membership hiện tại.
+- Hai Trưởng khoa cùng phân công chấm độc lập một đăng ký: unique assignment và khóa
+  registration/period phải bảo đảm chỉ một thao tác thành công.
 
 ## Requirements *(mandatory)*
 
@@ -242,6 +280,11 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
 - **FR-25**: Mọi validation hoặc lỗi lưu file/database phải rollback phần nghiệp vụ liên quan;
   filename tải xuống phải an toàn, storage key không do client quyết định, và phản hồi lỗi
   không lộ đường dẫn máy, SQL hoặc secret. (REQ-31–32; constitution IV, VII, IX)
+- **FR-26**: Với đăng ký ACCEPTED loại COURSE/NCKH đã có báo cáo, Trưởng khoa đúng phạm vi
+  được phân công đúng một LECTURER đang hoạt động cùng bộ môn và khác mọi GVHD để chấm độc
+  lập. Phân công chuyển ngay sang ACTIVE và khóa báo cáo; người chấm submit một điểm, tự
+  complete; Trưởng khoa publish qua lifecycle kết quả hiện có. TLCN/KLTN không được đi qua
+  luồng này và tiếp tục dùng hội đồng 3–5 người. (U 2026-09-17; AS-7.7–7.10)
 
 ### Key Entities
 
@@ -249,6 +292,9 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   thời điểm; có thể được trưởng nhóm thay trước khi hội đồng ACTIVE.
 - **Council**: hội đồng thuộc một period và bộ môn, có tên, trạng thái, version, Chair,
   Secretary và 3–5 thành viên; cấu hình lịch/địa điểm và assignment tới đăng ký được chấp nhận.
+- **Direct Grading Assignment**: biến thể `DIRECT` dùng chung hạ tầng council/evaluation/result,
+  có đúng một đăng ký và một người chấm; người chấm được lưu ở cả officer fields để giữ
+  lifecycle complete/publish nhưng không được hiển thị như hội đồng.
 - **Council Assignment**: liên kết hội đồng với một hoặc nhiều đăng ký ACCEPTED cùng đợt/bộ môn
   TLCN/KLTN và lịch review riêng cho từng nhóm.
 - **Evaluation**: điểm/nhận xét của một evaluator cho một đăng ký và thành phần điểm;
@@ -274,15 +320,17 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   số kết quả nhóm khác hoặc chưa publish bị tiết lộ trong test bằng 0.
 - **SC-015**: Trong các ca submit/complete/publish đồng thời, không có trạng thái cuối vi
   phạm lifecycle, không có điểm bị thay đổi sau complete và không tạo result trùng.
-- **SC-016**: 100% FR-16–25 có ánh xạ REQ/U, acceptance scenario, automated test và bằng
+- **SC-016**: 100% FR-16–26 có ánh xạ REQ/U, acceptance scenario, automated test và bằng
   chứng pass trước khi feature được đánh dấu hoàn thành.
+- **SC-017**: 100% ca COURSE/NCKH hợp lệ tạo đúng một lượt chấm ACTIVE và khóa báo cáo;
+  số ca TLCN/KLTN, GVHD, người ngoài bộ môn hoặc thiếu báo cáo được phân công trực tiếp bằng 0.
 
 ## Assumptions
 
 - Tái sử dụng đăng nhập, role, khoa/bộ môn, period, topic, supervisor, group, registration
   ACCEPTED và registration-member snapshot của feature 001.
-- Không bổ sung quản trị tài khoản, announcements, email/push, export PDF/Excel thống kê,
-  reviewer assignment độc lập hoặc thay đổi quy tắc đăng ký trong feature này.
+- Không bổ sung quản trị tài khoản, announcements, email/push, export PDF/Excel thống kê
+  hoặc thay đổi quy tắc đăng ký trong feature này.
 - Q-11, Q-12/Q-15 và Q-13 đã được người dùng xác nhận ngày 2026-09-14 theo các phương án
   A, C, A; các quyết định này là nguồn U bổ sung, không sửa nội dung PDF gốc.
 - Giao diện tiếp tục responsive và toàn bộ mutation dùng CSRF như NFR-01–02 của feature 001.

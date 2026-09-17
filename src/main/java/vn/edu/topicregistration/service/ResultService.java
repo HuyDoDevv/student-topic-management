@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.EvaluationEntity;
@@ -101,7 +102,8 @@ public class ResultService {
                 lockedAssignments.size(),
                 lockedMembers.size(),
                 submittedCount(lockedEvaluations),
-                exactMatrix)));
+                exactMatrix,
+                council.getMode() == null ? CouncilMode.COUNCIL : council.getMode())));
         if (!existingResults.isEmpty()) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
