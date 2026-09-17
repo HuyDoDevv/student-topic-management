@@ -205,9 +205,7 @@ public class UiPreviewController {
     @GetMapping("/periods")
     String periodList(Model model) {
         common(model, "periods", "Quản lý học vụ");
-        model.addAttribute("periods", PERIODS.stream()
-                .filter(PreviewPeriod::active)
-                .toList());
+        model.addAttribute("periods", PERIODS);
         return "periods/list";
     }
 

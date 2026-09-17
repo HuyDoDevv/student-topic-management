@@ -6,7 +6,7 @@
     <div>
       <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
       <h1 class="page-title">Đợt đăng ký</h1>
-      <p class="text-secondary mt-2 mb-0">Theo dõi các đợt còn hiệu lực và hồ sơ đang chờ xử lý trong khoa.</p>
+      <p class="text-secondary mt-2 mb-0">Theo dõi các đợt đăng ký, gồm cả lịch sử đã quá hạn trong khoa.</p>
     </div>
     <a class="btn btn-primary" th:href="@{/periods/new}"><span aria-hidden="true">＋</span> Tạo đợt</a>
   </div>
@@ -25,9 +25,10 @@
           <option value="Đang nhận đề tài GV">Đang nhận đề tài GV</option>
           <option value="Chờ đăng ký SV">Chờ đăng ký SV</option>
           <option value="Đang nhận đăng ký SV">Đang nhận đăng ký SV</option>
+          <option value="Đã kết thúc">Đã quá hạn</option>
         </select>
       </div>
-      <span class="badge bg-blue-lt" th:text="${#lists.size(periods)} + ' đợt còn hiệu lực'">2 đợt còn hiệu lực</span>
+      <span class="badge bg-blue-lt" th:text="${#lists.size(periods)} + ' đợt'">3 đợt</span>
     </div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table" data-filter-table>
@@ -55,7 +56,7 @@
     </div>
   </div>
 
-  <div class="card" th:if="${periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Không có đợt còn hiệu lực', 'Tạo đợt mới để bắt đầu quy trình đề tài.')}" ></div>
+  <div class="card" th:if="${periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Tạo đợt mới để bắt đầu quy trình đề tài.')}" ></div>
 </section>
 </body>
 </html>

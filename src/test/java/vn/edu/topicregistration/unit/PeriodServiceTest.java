@@ -123,7 +123,7 @@ class PeriodServiceTest {
     }
 
     @Test
-    void deanListExcludesPeriodsWhoseStudentWindowHasEnded() {
+    void deanListIncludesExpiredPeriodsForStatusFiltering() {
         RegistrationPeriodEntity active = period(
                 "Đợt còn hiệu lực", NOW.minusSeconds(300), NOW.plusSeconds(300));
         RegistrationPeriodEntity expired = period(
@@ -133,8 +133,10 @@ class PeriodServiceTest {
 
         var result = service.listForCurrentDean();
 
-        assertEquals(1, result.size());
+        assertEquals(2, result.size());
         assertEquals("Đợt còn hiệu lực", result.getFirst().name());
+        assertEquals("Đợt đã kết thúc", result.getLast().name());
+        assertEquals(RegistrationState.REGISTRATION_CLOSED, result.getLast().state());
     }
 
     private void runCreateFactoryInsideTransaction() {

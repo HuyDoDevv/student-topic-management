@@ -114,7 +114,7 @@ class FoundationWebTest {
             .andExpect(content().string(containsString("Sinh viên chưa thể đăng ký")));
     }
 
-    @Test void deanPeriodListShowsActiveWorkflowStatisticsAndFilter() throws Exception {
+    @Test void deanPeriodListShowsWorkflowStatisticsAndExpiredFilter() throws Exception {
         mvc.perform(get("/periods"))
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("Lọc trạng thái đợt")))
@@ -122,8 +122,9 @@ class FoundationWebTest {
             .andExpect(content().string(containsString("Nhóm chờ xét")))
             .andExpect(content().string(containsString("Đề tài chờ công bố")))
             .andExpect(content().string(containsString("Đang nhận đề tài GV")))
-            .andExpect(content().string(org.hamcrest.Matchers.not(
-                    containsString("Đợt đã kết thúc"))));
+            .andExpect(content().string(containsString("Đã quá hạn")))
+            .andExpect(content().string(containsString("Đồ án chuyên ngành HK2 2025–2026")))
+            .andExpect(content().string(containsString("data-status=\"Đã kết thúc\"")));
     }
 
     @Test void lecturerPeriodsAreSplitAndExpiredPeriodDoesNotOfferCreateAction() throws Exception {
