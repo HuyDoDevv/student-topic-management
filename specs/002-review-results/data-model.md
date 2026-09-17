@@ -123,12 +123,13 @@ council hiện có bắt đầu DRAFT; evaluation hiện có được coi SUBMIT
 `published_at` thì PUBLISHED, ngược lại READY. Dữ liệu legacy vi phạm invariant mới phải làm
 migration fail rõ ràng thay vì tự xóa.
 
-## Migration V9
+## Migration V9/V10
 
-V9 thêm `councils.grading_mode`, backfill mặc định `COUNCIL`, thay check officer cũ bằng
+V9 giữ nguyên migration tên khoa/bộ môn duy nhất đã từng được áp dụng trên database local.
+V10 thêm `councils.grading_mode`, backfill mặc định `COUNCIL`, thay check officer cũ bằng
 check kết hợp mode/officer và tạo lại trigger officer. `COUNCIL` vẫn bắt buộc Chair khác
 Secretary; `DIRECT` bắt buộc hai FK officer cùng trỏ một người và trigger chỉ tạo một row
-membership. Không sửa V1–V8 và không thêm bảng nghiệp vụ mới.
+membership. Không sửa V1–V9 và không thêm bảng nghiệp vụ mới.
 
 ## Lock order
 

@@ -132,7 +132,7 @@ submit điểm có CSRF, complete, publish và privacy 404; `git diff --check` �
 ## Phase 9: Direct grading for COURSE/NCKH
 
 - [X] T009 [US2A] TDD quy tắc và service phân công đúng một grader khác mọi GVHD cho đăng ký
-  COURSE/NCKH ACCEPTED đã có report; thêm V9 `grading_mode`/trigger one-member, trang riêng
+  COURSE/NCKH ACCEPTED đã có report; thêm V10 `grading_mode`/trigger one-member, trang riêng
   cho Trưởng khoa, reuse scoring/complete/publish và khóa report ngay khi phân công; giữ
   nguyên hội đồng TLCN/KLTN 3–5 người; cập nhật spec/plan/data-model/contracts/acceptance,
   chạy targeted/regression/migration checks và `git diff --check`. (FR-26; AS-7.7–7.10;
@@ -143,11 +143,17 @@ submit điểm có CSRF, complete, publish và privacy 404; `git diff --check` �
 
 **T009 evidence (2026-09-17)**: Rules/service/web tests được chạy đỏ trước vì API chấm độc
 lập chưa tồn tại. Sau implementation, targeted rules/service/controller/schema/result và
-regression council/scoring đạt 53/53. Trên MySQL 8.4.11 test cô lập, migration V9 từ database
+regression council/scoring đạt 53/53. Trên MySQL 8.4.11 test cô lập, migration V10 từ database
 rỗng, V6 và V7 đạt 4/4; toàn integration/concurrency đạt 17/18, còn một assertion baseline
 `ReviewWorkflowIT` kỳ vọng 13 tài khoản trong khi fixture hiện seed 14. Suite mặc định với
 MySQL đạt 192/193; lỗi duy nhất là dashboard ADMIN cũ kỳ vọng 0 metrics nhưng nhận 4. Hai lỗi
 ngoài phạm vi không chạm mã T009; `git diff --check` đạt.
+
+**T009 migration follow-up (2026-09-17)**: Database local đã có V9
+`enforce organization catalog uniqueness`, nên migration chấm độc lập được chuyển sang V10
+và V9 cũ được khôi phục nguyên checksum. `./run.sh` validate 10 migration, nâng schema hiện
+hữu từ V9 lên V10 và khởi động thành công mà không `repair`/xóa dữ liệu; migration test từ
+database rỗng, V6 và V7 tiếp tục đạt 4/4.
 
 ## Dependencies & execution order
 

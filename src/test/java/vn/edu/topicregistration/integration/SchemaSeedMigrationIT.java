@@ -33,12 +33,12 @@ class SchemaSeedMigrationIT {
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV9WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV10WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
-        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8", "9"),
+        assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -50,7 +50,7 @@ class SchemaSeedMigrationIT {
                 """));
         assertEquals(57, constraintCount(jdbc, "CHECK"));
         assertEquals(50, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(21, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(23, constraintCount(jdbc, "UNIQUE"));
         assertEquals(23, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
@@ -203,7 +203,7 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void v6WithExistingFixtureUpgradesThroughV9WithoutLosingHistory() {
+    void v6WithExistingFixtureUpgradesThroughV10WithoutLosingHistory() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV6 = Flyway.configure()
                 .dataSource(database.dataSource())
@@ -240,7 +240,7 @@ class SchemaSeedMigrationIT {
                 .filter(entry -> Integer.parseInt(entry.getKey()) <= 6)
                 .collect(java.util.stream.Collectors.toMap(
                         Map.Entry::getKey, Map.Entry::getValue)));
-        assertEquals(9, count(jdbc,
+        assertEquals(10, count(jdbc,
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(7, count(jdbc, "SELECT COUNT(*) FROM registration_members"));

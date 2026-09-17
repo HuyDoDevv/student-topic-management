@@ -11,7 +11,7 @@ phân phối PDF báo cáo; phân công một người chấm độc lập cho C
 TLCN/KLTN 3–5 giảng viên cùng bộ môn cho nhiều nhóm;
 thành viên hội đồng chấm một điểm tổng 0–10; Chair tổng hợp điểm trung bình; Trưởng khoa
 công bố; sinh viên snapshot chỉ xem kết quả nhóm mình. Dùng các bảng placeholder từ V1
-nhưng bổ sung vòng đời, version và ràng buộc bằng migration V8/V9; không sửa V1–V8.
+nhưng bổ sung vòng đời, version và ràng buộc bằng migration V8/V10; giữ nguyên V1–V9.
 
 ## Technical Context
 
@@ -52,7 +52,7 @@ nhiều đăng ký cùng period/department; COURSE/NCKH có một lượt chấm
 | IV. Boundary validation | PASS | PDF, dung lượng, điểm, ID, version và state đều kiểm tra server-side |
 | V. Tách controllers | PASS | controller → DTO → service/rules → repository/entity/storage |
 | VI. Đồng thời | PASS về thiết kế | mutation khóa period rồi council/child; unique và version là lớp bảo vệ cuối |
-| VII. Migration | PASS | V8/V9 giữ nguyên migration cũ, có test nâng cấp schema và trigger membership DIRECT |
+| VII. Migration | PASS | Khôi phục nguyên trạng V9 đã chạy trên database local; V10 thêm mode và trigger membership DIRECT |
 | VIII. Tests | PASS về kế hoạch | unit/HTTP/storage/DB/concurrency/E2E được ghi trong tasks |
 | IX. Secrets | PASS | storage root qua env; không ghi credentials hoặc absolute path |
 | X. Nghiệm thu | PASS về kế hoạch | chỉ đánh dấu hoàn thành sau test và acceptance evidence |
@@ -66,8 +66,9 @@ Các quyết định và phương án bị loại được ghi tại [research.m
 
 ## Phase 1: Design
 
-- [data-model.md](data-model.md): schema V8/V9, thực thể, quan hệ và state transition.
-- V9 thêm `grading_mode` để phân biệt hội đồng và lượt chấm độc lập một người.
+- [data-model.md](data-model.md): schema V8/V10, thực thể, quan hệ và state transition.
+- V10 thêm `grading_mode` để phân biệt hội đồng và lượt chấm độc lập một người; V9 cũ được
+  giữ nguyên để các database đã áp dụng không bị checksum mismatch.
 - [contracts/web.md](contracts/web.md): route HTML/multipart, quyền, validation và lỗi.
 - [quickstart.md](quickstart.md): cách cấu hình storage/test và luồng nghiệm thu.
 
@@ -108,7 +109,8 @@ src/main/java/vn/edu/topicregistration/
 
 src/main/resources/
 ├── db/migration/V8__implement_review_and_results.sql
-├── db/migration/V9__support_direct_grading_assignments.sql
+├── db/migration/V9__enforce_organization_catalog_uniqueness.sql
+├── db/migration/V10__support_direct_grading_assignments.sql
 ├── templates/reports/
 ├── templates/councils/
 ├── templates/scoring/
@@ -143,7 +145,7 @@ Không tạo feature-level `application/` hoặc executable thứ hai.
   direct-grader eligibility, mean and rounding, role/relationship decisions.
 - HTTP: multipart + CSRF, forms, stale version, direct ID access, allowed/denied matrix.
 - Storage: PDF signature, 20 MB limit, generated key, canonical path, replacement and cleanup.
-- MySQL: V8/V9 from empty and V7 fixture, checks/unique/FK, officer trigger cho DIRECT,
+- MySQL: V8–V10 from empty and V7 fixture, checks/unique/FK, officer trigger cho DIRECT,
   one current report, one assignment per registration, evaluation uniqueness và result state.
 - Concurrency: report replacement, activate vs upload, score vs complete, double complete,
   complete vs publish; period-first lock order.
