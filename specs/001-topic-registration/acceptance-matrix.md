@@ -29,7 +29,7 @@ chứng test; không được hiểu là đạt.
 | FR-14 Vòng đời đề tài | REQ-02–03,08–11,15,31 + U | AS-2.1–2.3,2.7–2.9,3.1,3.4–3.5; AT-12; SC-002 | TopicReviewRulesTest, TopicPublicationIT | CONFIRMED | T025 giải phóng vòng đời tác giả/GVHD; tests NOT RUN |
 | FR-15 Khóa sửa lịch | REQ-03–05,31 + U | AS-1.11–1.13; AT-13; SC-001,003,005 | PeriodRulesTest, PeriodContractTest, PeriodScheduleIT | CONFIRMED | US1 PASS T018–T024: FOR UPDATE, version, khóa theo thời gian sau chờ và chỉ gia hạn mốc còn hiệu lực |
 | NFR-01 Bảo mật nền tảng | Constitution III,IV,IX + U | AT-06,09,10,14; SC-004,007 | AuthenticationTest, AuthorizationPolicyTest, WebExceptionHandlerTest, TestDatabaseSafetyTest | CONFIRMED | FOUNDATION PASS 2026-09-10; T023 period contract PASS cho CSRF/role/scope/input/version; route story khác còn NOT RUN |
-| NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; T075 sửa flex-grow nhóm sidebar, preview tại 750px và E2E desktop 1280px đo khoảng cách hai nhóm menu PASS; T081 visual QA trang tạo/import tại desktop 1440px và mobile 390px PASS; toàn bộ viewport AT-15 chưa chạy |
+| NFR-02 Responsive | U 2026-09-09 | AT-15; SC-009 | AssetPortabilityE2ETest, viewport E2E | CONFIRMED | T023 template responsive render PASS trong FoundationWebTest; T075 sửa flex-grow nhóm sidebar, preview tại 750px và E2E desktop 1280px đo khoảng cách hai nhóm menu PASS; T081 visual QA trang tạo/import tại desktop 1440px và mobile 390px PASS; T062 chạy 26 route ở 360/768/1280 px, không tràn ngang toàn trang và bảng rộng cuộn trong vùng chứa: PASS |
 
 ## Gate status
 
@@ -132,3 +132,13 @@ database local của người dùng.
 | Role, scope và quan hệ | PASS | Request trực tiếp xác nhận DEAN/LECTURER/STUDENT không đi qua ranh giới role; role giả trong request không vượt qua role persisted. Thay đổi khoa, tác giả hoặc trưởng nhóm trong DB có hiệu lực ngay; tài nguyên ngoài scope trả 404 chống dò, quan hệ không hợp lệ trả 403. |
 | Secret | PASS | Mật khẩu tạo tài khoản không xuất hiện trong response/log; DB chỉ lưu BCrypt hash và hash cũng không bị ghi log. |
 | Kiểm thử mục tiêu | PASS | `AuthorizationMatrixTest`: 5 test, 0 failure/error trên MySQL 8.4.11 cô lập với Flyway V1–V11. |
+
+## Bằng chứng JAR/assets/responsive T062 — 2026-09-22
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Portability và asset | PASS | Executable `topic-registration.jar` khởi động bằng profile preview với working directory tạm nằm ngoài repository; browser chỉ request CSS/JS/image cùng origin, không dùng CDN hay file từ source tree. |
+| Đóng gói notices | PASS | JAR chứa `THIRD_PARTY_NOTICES.md`, license Tabler/Bootstrap/Popper và bundle Tabler 1.4.0 dưới `META-INF`/`BOOT-INF`. |
+| Responsive AT-15 / SC-009 | PASS | 26 route chính được render ở 360, 768 và 1280 px mà không tràn ngang toàn trang; bảng đợt 9 cột tại 768 px cuộn trong `.table-responsive`, vùng bảng mobile không làm rộng document. |
+| Accessibility và trạng thái | PASS | Skip link, menu mobile, thông báo rỗng và thao tác chính dùng được bằng bàn phím; form control có label, action có accessible name; badge có chữ và trang lỗi 404 hiển thị mã/tiêu đề, không chỉ biểu đạt bằng màu. |
+| Kiểm thử mục tiêu | PASS | `AssetPortabilityE2ETest`: 4 test, 0 failure/error trên executable JAR và Chromium; đồng thời phát hiện/sửa view-model preview thiếu `canViewGroup` ở trang lời mời. |

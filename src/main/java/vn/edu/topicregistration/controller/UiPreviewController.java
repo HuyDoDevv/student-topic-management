@@ -147,7 +147,7 @@ public class UiPreviewController {
                     1, 1, 1, "Đồ án chuyên ngành HK1 2026–2027",
                     "Lê Hoàng Nam", "23110102", "Nguyễn Minh Anh", 3,
                     "Đang chờ phản hồi", "bg-yellow-lt", "11/09/2026 09:30", null,
-                    0, true, true, true, true));
+                    0, true, false, true, true, false));
 
     @GetMapping("/login")
     String login() {
@@ -744,6 +744,7 @@ public class UiPreviewController {
             String respondedAt,
             long version,
             boolean groupActive,
+            boolean canViewGroup,
             boolean canAccept,
             boolean canReject,
             boolean canCancel) {

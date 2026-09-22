@@ -242,7 +242,7 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ, gồm ADMIN không có quyền học vụ (FR-01–15; AT-06,08–10,14; SC-004,007).
 
-- [ ] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
+- [X] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
 
 - [ ] T063 Thực hiện quickstart trên DB local bằng DBeaver, ghi lệnh thực tế/phiên bản/env/migration/seed/backup và kết quả tại `specs/001-topic-registration/quickstart.md`, `README.md`; không chỉnh schema ứng dụng thủ công và không ghi secrets vào tài liệu.
 
