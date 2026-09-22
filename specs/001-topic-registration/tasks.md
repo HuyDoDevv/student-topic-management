@@ -240,7 +240,7 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T060 Viết/chạy schema/seed tests trên MySQL từ DB rỗng và từ V trước có fixture; DB test riêng, kiểm tra đủ bảng/constraint/trigger và không sửa SQL phiên bản đã chạy.
 
-- [ ] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ, gồm ADMIN không có quyền học vụ (FR-01–15; AT-06,08–10,14; SC-004,007).
+- [X] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ, gồm ADMIN không có quyền học vụ (FR-01–15; AT-06,08–10,14; SC-004,007).
 
 - [ ] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
 

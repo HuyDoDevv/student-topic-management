@@ -122,3 +122,13 @@ database local của người dùng.
 | Visual QA | PASS | Preview desktop 1440px cho Dashboard, ba danh sách và trang tạo/import tách biệt; Playwright viewport 390px xác nhận form, nút, file input và bảng mã bộ môn xếp dọc, không tràn ngang. |
 | Kiểm thử mục tiêu | PASS | `env -u JAVA_HOME ./mvnw -Dtest=DashboardServiceTest,AdminAccountControllerTest,FoundationWebTest test`: 26 test, 0 failure/error. |
 | Full unit/web suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test`: 179 test, 172 đạt; 7 lỗi đều thuộc `PeriodContractTest` vì thiếu `TEST_DATABASE_URL`, không liên quan T081. Không dùng database local có dữ liệu thật. |
+
+## Bằng chứng ma trận phân quyền T061 — 2026-09-22
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Xác thực và chống CSRF | PASS | Request chưa đăng nhập bị chuyển tới `/login`; POST thiếu CSRF nhận 403 và không làm thay đổi đăng ký. |
+| Ranh giới ADMIN/học vụ | PASS | ADMIN được mở dashboard, quản lý tài khoản và moderation nhưng nhận 403 ở các GET/POST học vụ; dashboard ADMIN không lộ dữ liệu đợt hoặc đề tài. |
+| Role, scope và quan hệ | PASS | Request trực tiếp xác nhận DEAN/LECTURER/STUDENT không đi qua ranh giới role; role giả trong request không vượt qua role persisted. Thay đổi khoa, tác giả hoặc trưởng nhóm trong DB có hiệu lực ngay; tài nguyên ngoài scope trả 404 chống dò, quan hệ không hợp lệ trả 403. |
+| Secret | PASS | Mật khẩu tạo tài khoản không xuất hiện trong response/log; DB chỉ lưu BCrypt hash và hash cũng không bị ghi log. |
+| Kiểm thử mục tiêu | PASS | `AuthorizationMatrixTest`: 5 test, 0 failure/error trên MySQL 8.4.11 cô lập với Flyway V1–V11. |
