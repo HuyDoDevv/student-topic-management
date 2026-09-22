@@ -91,6 +91,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const search = document.querySelector("[data-table-filter]");
   const status = document.querySelector("[data-status-filter]");
+  const exactFilters = [...document.querySelectorAll("[data-row-filter]")];
+  const positiveFilters = [...document.querySelectorAll("[data-positive-filter]")];
   const rows = [...document.querySelectorAll("[data-filter-table] tbody tr")];
   const filterRows = () => {
     const query = search?.value.trim().toLocaleLowerCase("vi") ?? "";
@@ -98,9 +100,21 @@ document.addEventListener("DOMContentLoaded", () => {
     rows.forEach((row) => {
       const matchesText = row.textContent.toLocaleLowerCase("vi").includes(query);
       const matchesStatus = !selectedStatus || row.dataset.status === selectedStatus;
-      row.hidden = !(matchesText && matchesStatus);
+      const matchesExactFilters = exactFilters.every((filter) => {
+        const value = filter.value;
+        return !value || row.dataset[filter.dataset.rowFilter] === value;
+      });
+      const matchesPositiveFilters = positiveFilters.every((filter) => {
+        const key = filter.value;
+        return !key || Number(row.dataset[key] ?? "0") > 0;
+      });
+      row.hidden = !(
+        matchesText && matchesStatus && matchesExactFilters && matchesPositiveFilters
+      );
     });
   };
   search?.addEventListener("input", filterRows);
   status?.addEventListener("change", filterRows);
+  exactFilters.forEach((filter) => filter.addEventListener("change", filterRows));
+  positiveFilters.forEach((filter) => filter.addEventListener("change", filterRows));
 });
