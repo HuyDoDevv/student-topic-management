@@ -1,23 +1,21 @@
-> Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS, cổng mặc định 3306.
-> Flyway tự áp dụng V1 để tạo 20 bảng, V2–V6 cho các ràng buộc tiếp theo và V7 để
-> tạo snapshot thành viên/trưởng nhóm lúc gửi đăng ký khi chạy
-> profile local. DBeaver dùng để tạo database/tài khoản và kiểm tra schema.
+> Kiểm chứng ngày 2026-09-22: Java 21.0.12.1, Maven Wrapper 3.9.11,
+> Spring Boot 4.1.1, MySQL 8.4.11 và DBeaver 24.2.0. Profile local đã khởi động executable JAR,
+> Flyway xác nhận đủ V1–V11, 22 bảng nghiệp vụ và 9 trigger. DBeaver chỉ là công cụ
+> kết nối/quan sát; ứng dụng và Flyway quản lý schema.
 
-# Quickstart — Kế hoạch chạy và kiểm chứng local
+# Quickstart — Chạy và kiểm chứng local
 
-**Đã có nền tảng giới hạn.** Hướng dẫn chạy hiện tại ở [README](../../README.md)
-và bằng chứng ở [foundation-report.md](foundation-report.md). Nội dung dưới đây là
-kế hoạch toàn tính năng: profiles integration/e2e, seed nghiệp vụ và các luồng đăng ký
-chưa được triển khai. Không dùng chúng làm bằng chứng tính năng đã hoàn thành.
-Không cần máy chủ/hosting. Xem [plan](plan.md), [contracts](contracts/web.md),
-[data model](data-model.md). Các ca phụ thuộc Q chỉ nghiệm thu sau xác nhận.
+Hướng dẫn chạy nhanh nằm ở [README](../../README.md); thiết kế chi tiết nằm trong
+[plan](plan.md), [contracts](contracts/web.md) và [data model](data-model.md).
+Không cần máy chủ/hosting hoặc thư mục Tabler nguồn để chạy bản local.
 
 ## Prerequisites
 
 - JDK 21; kiểm tra `java -version`.
-- MySQL 8.4 local, service đang chạy trên 127.0.0.1:3306; không coi DBeaver là server.
+- MySQL 8.4 local; ví dụ dùng `127.0.0.1:3306`, nhưng có thể đổi port trong JDBC URL.
+  Không coi DBeaver là MySQL server.
 - DBeaver với MySQL JDBC driver; tải driver lần đầu có thể cần mạng.
-- Maven Wrapper được tạo khi triển khai; lần build đầu cần mạng để tải dependencies.
+- Maven Wrapper 3.9.11; lần build đầu cần mạng để tải dependencies.
 - Chromium được Playwright Java cài cho E2E. Không yêu cầu Node hoặc thư mục Tabler
   nguồn để chạy JAR. PowerShell phục vụ Spec Kit, không bắt buộc để chạy app.
 
@@ -34,19 +32,19 @@ Vì V1 tạo trigger, nếu MySQL local bật binary log thì tài khoản quả
 Thực hiện provisioning database/user bằng UI/SQL quản trị; đây không phải thay thế
 migration cho bảng ứng dụng. Không ghi password thật vào SQL file trong repository.
 
-Tạo connection thứ hai bằng tài khoản ứng dụng, database topic_registration_local.
+Tạo connection thứ hai bằng tài khoản ứng dụng, database `topic_registration_local`.
 Chạy ứng dụng bằng profile local để Flyway tạo schema, rồi Refresh database trong
-DBeaver để kiểm tra Tables/Indexes/Constraints. DBeaver dùng cùng
+DBeaver để kiểm tra Tables/Indexes/Constraints/Triggers và bảng
+`flyway_schema_history`. DBeaver dùng cùng
 host/port/database/user/password như cấu hình ứng dụng và không tự đọc `.env`.
 
 Nguồn: [DBeaver Create Connection](https://dbeaver.com/docs/dbeaver/Create-Connection/).
 
 ## 2. Biến môi trường
 
-| Biến | Giá trị/cách cấp dự kiến |
+| Biến | Giá trị/cách cấp |
 |---|---|
 | SPRING_PROFILES_ACTIVE | local |
-| SERVER_ADDRESS | 127.0.0.1 |
 | SERVER_PORT | 8088 |
 | SPRING_DATASOURCE_URL | jdbc:mysql://127.0.0.1:3306/topic_registration_local?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true |
 | SPRING_DATASOURCE_USERNAME | Tài khoản local tự tạo |
@@ -88,9 +86,11 @@ java -jar target/topic-registration.jar
 Tên JAR cố định trên phải được cấu hình trong build. Không dùng skipTests làm bằng
 chứng nghiệm thu; lệnh package trên chỉ tạo bản chạy sau unit test.
 
-Kiểm tra đủ 22 bảng, generated columns, unique keys và 9 triggers trong DBeaver.
+Kiểm tra đủ 22 bảng nghiệp vụ, 11 hàng migration thành công, generated columns,
+unique keys và 9 triggers trong DBeaver. Phiên bản mới nhất hiện tại là
+`V11__grade_each_registration_student.sql`.
 Restart ứng dụng không tạo lại schema hoặc xóa dữ liệu. Không sửa file SQL đã áp dụng;
-thay đổi tiếp theo phải tạo migration mới sau V7 và sao lưu trước khi chạy.
+thay đổi tiếp theo phải tạo migration mới sau V11 và sao lưu trước khi chạy.
 
 Để demo, bật DEMO_SEED_ENABLED và nhập DEMO_SEED_PASSWORD bằng cơ chế nhập kín tương tự.
 Seeder chạy sau migration, chỉ profile local, lặp lại không nhân đôi/reset dữ liệu.
@@ -104,7 +104,26 @@ Các ngày demo được ghi rõ khi seed, không tự dịch ngày ở lần re
 từ ngày hiện tại hoặc sau đó, gửi/duyệt topic, rồi đợi tới lịch SV. Automated E2E dùng clock
 cố định thay vì đợi thời gian thực. Không có endpoint đổi giờ hoặc mở lại đợt đã khóa.
 
-## 4. Automated validation dự kiến
+### Backup trước migration hoặc dữ liệu quan trọng
+
+Dùng tính năng **Tools → Dump database** của DBeaver, hoặc chạy `mysqldump` từ terminal.
+Không lưu dump có dữ liệu/mật khẩu thật trong repository:
+
+```sh
+read -rs 'MYSQL_PWD?Mật khẩu database: '
+export MYSQL_PWD
+backup_file=/absolute/path/outside-repository/topic-registration-backup.sql
+mysqldump -h 127.0.0.1 -P 3306 -u topic_local \
+  --single-transaction --routines --triggers --no-tablespaces \
+  topic_registration_local > "$backup_file"
+unset MYSQL_PWD
+```
+
+Xác nhận dump không rỗng, có 23 câu `CREATE TABLE` nếu tính cả
+`flyway_schema_history` và có đủ 9 trigger. Bản kiểm chứng T063 tạo dump tạm 70 KiB,
+23 bảng, 20 nhóm INSERT và 9 trigger; file nằm ngoài repository và không được commit.
+
+## 4. Automated validation
 
 ```sh
 ./mvnw test
@@ -113,7 +132,7 @@ cố định thay vì đợi thời gian thực. Không có endpoint đổi gi�
 ./mvnw verify -Pe2e
 ```
 
-Các Maven profiles integration/e2e và TEST_DATABASE_* là contract cần triển khai;
+Các Maven profiles integration/e2e và `TEST_DATABASE_*` đã được cấu hình;
 integration khởi tạo/migrate DB test riêng, E2E tự khởi động app test.
 Trước thao tác reset fixture, harness phải kiểm tra rõ tên DB test và từ chối DB local;
 không cung cấp lệnh xóa DB demo mặc định. Tests không dùng mật khẩu hardcode.
@@ -122,8 +141,8 @@ Nếu chưa có biến DB test, fail cấu hình thay vì skip rồi báo thành
 - Unit: AT-01–05,12–13 với clock giả; test nghiệp vụ không cần web server.
 - HTTP/security: AT-06,09–10, từng route có ca sai role/quan hệ/CSRF và dữ liệu không đổi.
 - MySQL: AT-07–08,11, nhiều connection thật và barrier; kiểm tra invariants ở commit.
-- E2E: US1–5 từ login tới accept, thêm rejected/withdrawn/reapply; ánh xạ FR/REQ/AS
-  trong tên hoặc metadata của test. Q còn mở phải được báo blocked, không passed.
+- E2E: login, luồng review/kết quả, đăng ký từ reject/withdraw/reapply tới accept và
+  portability/responsive của executable JAR.
 - Migration: DB rỗng → mới nhất; phiên bản trước có dữ liệu → mới nhất; restart ổn định.
 
 ## 5. Kịch bản nghiệm thu và DBeaver
@@ -155,7 +174,7 @@ Trong DBeaver kiểm tra read-only:
 - Ca denied/rollback không thay đổi số hàng/trạng thái nghiệp vụ.
 Không sửa status trực tiếp để mô phỏng một ca nghiệp vụ đã đạt.
 
-## 6. Portability và hoàn thành
+## 6. Portability và kết quả kiểm chứng
 
 Build JAR, chạy ở thư mục khác với MySQL local; browser tải CSS/JS/ảnh cần thiết
 từ ứng dụng, không cần đường dẫn Tabler gốc/CDN. Kiểm tra layout bảng/form/modal,
@@ -164,3 +183,16 @@ tab keyboard và thông báo lỗi. Giấy phép đi cùng artifact; không bỏ
 Ghi báo cáo môi trường Java/Boot/MySQL thực dùng, lệnh và kết quả tests, AS/AT đã
 chứng minh, gate còn mở. Chỉ kết luận hoàn thành khi tiêu chí nghiệm thu đã được
 xác nhận và tests liên quan đạt theo constitution X.
+
+Kết quả chạy T063 ngày 2026-09-22 trên database test local cô lập:
+
+| Kiểm tra | Kết quả |
+|---|---|
+| JAR + profile local | PASS; HTTP `/login` trả 200 trên port kiểm chứng riêng |
+| Flyway/Hibernate | PASS; schema ở V11, 11/11 migration hợp lệ, Hibernate validate thành công |
+| Schema | PASS; 22 bảng nghiệp vụ và 9 trigger trên MySQL 8.4.11 |
+| Demo seed | PASS; 14 tài khoản `*.demo`; restart giữ nguyên số account/period/registration/snapshot |
+| Backup | PASS; dump tạm chứa 23 bảng tính cả history và đủ 9 trigger |
+| DBeaver UI | PASS; DBeaver 24.2.0 mở đúng connection `topic_registration_local` và nhận diện các bảng nghiệp vụ cùng `flyway_schema_history` |
+
+Không database local có dữ liệu thật nào bị reset; không secret hoặc dump được ghi vào Git.
