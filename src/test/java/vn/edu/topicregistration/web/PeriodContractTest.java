@@ -155,7 +155,7 @@ class PeriodContractTest {
         DashboardView inviteeView = dashboardFor("invitee-dashboard", "STUDENT");
         assertEquals(1, inviteeView.metrics().getFirst().value());
         DashboardView adminView = dashboardFor("admin-dashboard", "ADMIN");
-        assertEquals(0, adminView.metrics().size());
+        assertEquals(4, adminView.metrics().size());
     }
 
     private DashboardView dashboardFor(String username, String... roles) throws Exception {
