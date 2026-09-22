@@ -2,8 +2,8 @@
 
 Java 21 · Spring Boot 4.1.1 · Thymeleaf/Tabler · MySQL 8.4 LTS.
 
-Các phiên bản đã kiểm chứng trong bộ test nền tảng: Maven Wrapper 3.9.11,
-MySQL 8.4.11 và Playwright Java 1.62.0 (Chromium).
+Các phiên bản đã kiểm chứng ngày 2026-09-22: Java 21.0.12.1, Maven Wrapper 3.9.11,
+Spring Boot 4.1.1, MySQL 8.4.11, DBeaver 24.2.0 và Playwright Java 1.62.0 (Chromium).
 
 ## Quy trình phát triển
 
@@ -59,14 +59,19 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
   và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. V8 hoàn thiện vòng đời báo cáo,
   hội đồng, evaluation và kết quả công bố; V9 giữ ràng buộc tên khoa/bộ môn duy nhất và
   V10 thêm chế độ phân công một người chấm cho COURSE/NCKH mà không thay đổi hội đồng
-  TLCN/KLTN. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ
+  TLCN/KLTN; V11 lưu điểm và nhận xét riêng cho từng sinh viên trong cùng đăng ký.
+  Schema hiện có 22 bảng nghiệp vụ và 9 trigger. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ
   đầu ngày, ngày kết thúc tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
   `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới sau `V10__...sql`; không
+- Các thay đổi schema tiếp theo phải là migration mới sau `V11__...sql`; không
   sửa migration đã được dùng trên database chung.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway
 đầu tiên. Ứng dụng không tự xóa hoặc tự chuyển đổi database cũ.
+
+Quy trình tạo connection DBeaver, kiểm tra migration/trigger, bật seed và tạo backup
+được ghi đầy đủ trong [quickstart local](specs/001-topic-registration/quickstart.md).
+Không commit file dump; sao lưu database trước khi áp dụng migration mới trên dữ liệu quan trọng.
 
 ## Trạng thái thực tế
 

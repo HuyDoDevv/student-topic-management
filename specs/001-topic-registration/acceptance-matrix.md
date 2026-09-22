@@ -142,3 +142,13 @@ database local của người dùng.
 | Responsive AT-15 / SC-009 | PASS | 26 route chính được render ở 360, 768 và 1280 px mà không tràn ngang toàn trang; bảng đợt 9 cột tại 768 px cuộn trong `.table-responsive`, vùng bảng mobile không làm rộng document. |
 | Accessibility và trạng thái | PASS | Skip link, menu mobile, thông báo rỗng và thao tác chính dùng được bằng bàn phím; form control có label, action có accessible name; badge có chữ và trang lỗi 404 hiển thị mã/tiêu đề, không chỉ biểu đạt bằng màu. |
 | Kiểm thử mục tiêu | PASS | `AssetPortabilityE2ETest`: 4 test, 0 failure/error trên executable JAR và Chromium; đồng thời phát hiện/sửa view-model preview thiếu `canViewGroup` ở trang lời mời. |
+
+## Bằng chứng quickstart local T063 — 2026-09-22
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Môi trường | PASS | Java 21.0.12.1, Maven Wrapper 3.9.11, Spring Boot 4.1.1, MySQL 8.4.11 và DBeaver 24.2.0. |
+| Local startup | PASS | Executable JAR chạy profile local, Hibernate validate và HTTP `/login` trả 200; restart không áp lại migration hoặc xóa dữ liệu. |
+| Migration/schema | PASS | Flyway V1–V11 có 11/11 migration thành công; live schema có 22 bảng nghiệp vụ và 9 trigger. DBeaver mở connection `topic_registration_local`, nhận diện bảng nghiệp vụ và `flyway_schema_history`. |
+| Seed | PASS | Bật seed chủ động tạo 14 tài khoản `*.demo`; chạy lại giữ nguyên số account, period, registration và registration snapshot. Không secret xuất hiện trong tài liệu. |
+| Backup | PASS | `mysqldump --single-transaction --routines --triggers --no-tablespaces` tạo dump tạm 70 KiB với 23 bảng tính cả history và đủ 9 trigger; dump nằm ngoài repository. |

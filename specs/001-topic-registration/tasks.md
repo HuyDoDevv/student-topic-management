@@ -244,7 +244,7 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
 
-- [ ] T063 Thực hiện quickstart trên DB local bằng DBeaver, ghi lệnh thực tế/phiên bản/env/migration/seed/backup và kết quả tại `specs/001-topic-registration/quickstart.md`, `README.md`; không chỉnh schema ứng dụng thủ công và không ghi secrets vào tài liệu.
+- [X] T063 Thực hiện quickstart trên DB local bằng DBeaver, ghi lệnh thực tế/phiên bản/env/migration/seed/backup và kết quả tại `specs/001-topic-registration/quickstart.md`, `README.md`; không chỉnh schema ứng dụng thủ công và không ghi secrets vào tài liệu.
 
 - [ ] T064 Đối chiếu mọi FR-01–15, NFR-01–02, AS, AT-01–15 và SC-001–009 trong `specs/001-topic-registration/acceptance-matrix.md`; chạy ./mvnw test, verify -Pintegration và verify -Pe2e, ghi pass/fail/blocked, rà constitution I–X tại `specs/001-topic-registration/validation-report.md`; chỉ đánh dấu feature hoàn thành nếu các Q/AC trong phạm vi đã chốt và tests đều đạt.
 
