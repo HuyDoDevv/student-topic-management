@@ -26,6 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.EvaluationEntity;
@@ -34,6 +35,7 @@ import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.FinalResultEntity;
 import vn.edu.topicregistration.entity.FinalResultStatus;
 import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
@@ -48,6 +50,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -92,6 +95,32 @@ class ResultServiceTest {
         verify(fixture.council()).transitionTo(CouncilStatus.COMPLETED);
         assertEquals(CouncilStatus.COMPLETED, completed.status());
         assertEquals(1, completed.resultCount());
+    }
+
+    @Test
+    void assignedGraderCompletesDirectAssignmentFromOneSubmittedScore() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, CouncilStatus.ACTIVE, 4L);
+        when(fixture.council().getMode()).thenReturn(CouncilMode.DIRECT);
+        CouncilMemberEntity onlyMember = mock(CouncilMemberEntity.class);
+        when(onlyMember.getLecturer()).thenReturn(fixture.chair());
+        when(dependencies.members().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(onlyMember));
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(fixture.evaluations().getFirst()));
+        when(dependencies.results().saveAll(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResultService.BoardResultView completed = dependencies.service().complete(41L, 4L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<FinalResultEntity>> saved = ArgumentCaptor.forClass(Iterable.class);
+        verify(dependencies.results()).saveAll(saved.capture());
+        List<FinalResultEntity> created = new ArrayList<>();
+        saved.getValue().forEach(created::add);
+        assertEquals(1, created.size());
+        assertEquals(new BigDecimal("8.50"), created.getFirst().getFinalScore());
+        assertEquals(CouncilStatus.COMPLETED, completed.status());
     }
 
     @Test
@@ -148,6 +177,7 @@ class ResultServiceTest {
         Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
         FinalResultEntity result = mock(FinalResultEntity.class);
         when(result.getRegistration()).thenReturn(fixture.registration());
+        when(result.getStudent()).thenReturn(fixture.student());
         when(result.getCouncil()).thenReturn(fixture.council());
         when(result.getStatus()).thenReturn(FinalResultStatus.READY);
         when(dependencies.results().findAllByCouncilIdForUpdate(41L)).thenReturn(List.of(result));
@@ -194,6 +224,8 @@ class ResultServiceTest {
 
         FinalResultEntity published = mock(FinalResultEntity.class);
         when(published.getRegistration()).thenReturn(fixture.registration());
+        when(published.getStudent()).thenReturn(fixture.student());
+        when(published.getCouncil()).thenReturn(fixture.council());
         when(published.getStatus()).thenReturn(FinalResultStatus.PUBLISHED);
         when(dependencies.results().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(published));
@@ -211,19 +243,23 @@ class ResultServiceTest {
                 new ActorIdentity(31L, Set.of(RoleCode.DEAN), 4L, 2L));
         FinalResultEntity result = result(fixture, FinalResultStatus.READY);
         when(dependencies.results()
-                .findAllByCouncilPeriodFacultyIdOrderByConsolidatedAtDescRegistrationIdDesc(2L))
+                .findAllByCouncilPeriodFacultyIdOrderByConsolidatedAtDescIdRegistrationIdDesc(2L))
                 .thenReturn(List.of(result));
-        when(dependencies.results().findDetailedByRegistrationId(51L))
+        when(dependencies.results().findDetailedByRegistrationIdAndStudentId(51L, 101L))
                 .thenReturn(Optional.of(result));
         when(dependencies.evaluations()
-                .findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(41L, 51L))
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        41L, 51L, 101L))
                 .thenReturn(fixture.evaluations());
 
         assertEquals(1, dependencies.service().listForCurrentDean().size());
         ResultService.FacultyResultDetailView detail =
-                dependencies.service().detailForCurrentDean(51L);
+                dependencies.service().detailForCurrentDean(51L, 101L);
 
         assertEquals(51L, detail.result().registrationId());
+        assertEquals(7L, detail.result().periodId());
+        assertEquals("Đợt KLTN 2026", detail.result().periodName());
+        assertEquals(3, detail.result().lecturers().size());
         assertEquals(3, detail.evaluations().size());
         verify(dependencies.authorization()).requireDeanOfFaculty(2L);
     }
@@ -231,7 +267,9 @@ class ResultServiceTest {
     private static FinalResultEntity result(Fixture fixture, FinalResultStatus status) {
         FinalResultEntity result = mock(FinalResultEntity.class);
         when(result.getRegistrationId()).thenReturn(51L);
+        when(result.getStudentId()).thenReturn(101L);
         when(result.getRegistration()).thenReturn(fixture.registration());
+        when(result.getStudent()).thenReturn(fixture.student());
         when(result.getCouncil()).thenReturn(fixture.council());
         when(result.getStatus()).thenReturn(status);
         when(result.getFinalScore()).thenReturn(new BigDecimal("8.50"));
@@ -250,6 +288,7 @@ class ResultServiceTest {
         when(faculty.getId()).thenReturn(2L);
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
         when(period.getId()).thenReturn(7L);
+        when(period.getName()).thenReturn("Đợt KLTN 2026");
         when(period.getFaculty()).thenReturn(faculty);
 
         UserAccountEntity chair = account(11L, "Chủ tịch");
@@ -274,6 +313,11 @@ class ResultServiceTest {
         when(assignment.getCouncil()).thenReturn(council);
         when(assignment.getRegistration()).thenReturn(registration);
 
+        UserAccountEntity student = account(101L, "Sinh viên A");
+        RegistrationMemberEntity snapshotStudent = mock(RegistrationMemberEntity.class);
+        when(snapshotStudent.getRegistration()).thenReturn(registration);
+        when(snapshotStudent.getStudent()).thenReturn(student);
+
         List<UserAccountEntity> lecturers = List.of(
                 chair,
                 account(12L, "Thư ký"),
@@ -294,6 +338,7 @@ class ResultServiceTest {
         for (int index = 0; index < lecturers.size(); index++) {
             EvaluationEntity evaluation = mock(EvaluationEntity.class);
             when(evaluation.getRegistration()).thenReturn(registration);
+            when(evaluation.getStudent()).thenReturn(student);
             when(evaluation.getEvaluator()).thenReturn(lecturers.get(index));
             when(evaluation.getComponent()).thenReturn(component);
             when(evaluation.getCouncil()).thenReturn(council);
@@ -313,10 +358,13 @@ class ResultServiceTest {
         when(dependencies.assignments().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(assignment));
         when(dependencies.members().findAllByCouncilIdForUpdate(41L)).thenReturn(members);
+        when(dependencies.members().findAllByCouncilIdOrderBySlot(41L)).thenReturn(members);
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(List.of(snapshotStudent));
         when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(evaluations);
         when(dependencies.results().findAllByCouncilIdForUpdate(41L)).thenReturn(List.of());
-        return new Fixture(period, council, chair, registration, evaluations);
+        return new Fixture(period, council, chair, student, registration, evaluations);
     }
 
     private static UserAccountEntity account(long id, String name) {
@@ -333,6 +381,7 @@ class ResultServiceTest {
                 mock(CouncilRepository.class),
                 mock(CouncilTopicRepository.class),
                 mock(CouncilMemberRepository.class),
+                mock(RegistrationMemberRepository.class),
                 mock(EvaluationRepository.class),
                 mock(FinalResultRepository.class),
                 mock(UserAccountRepository.class),
@@ -344,6 +393,7 @@ class ResultServiceTest {
             CouncilRepository councils,
             CouncilTopicRepository assignments,
             CouncilMemberRepository members,
+            RegistrationMemberRepository registrationMembers,
             EvaluationRepository evaluations,
             FinalResultRepository results,
             UserAccountRepository accounts,
@@ -354,6 +404,7 @@ class ResultServiceTest {
                     councils,
                     assignments,
                     members,
+                    registrationMembers,
                     evaluations,
                     results,
                     accounts,
@@ -366,6 +417,7 @@ class ResultServiceTest {
             RegistrationPeriodEntity period,
             CouncilEntity council,
             UserAccountEntity chair,
+            UserAccountEntity student,
             RegistrationEntity registration,
             List<EvaluationEntity> evaluations) {
     }

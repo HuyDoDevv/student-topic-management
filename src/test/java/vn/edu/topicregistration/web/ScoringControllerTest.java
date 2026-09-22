@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.web;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -26,11 +27,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import vn.edu.topicregistration.controller.ScoringController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
+import vn.edu.topicregistration.dto.ScoreForm;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.service.ScoringService;
 import vn.edu.topicregistration.service.ScoringService.EvaluationView;
 import vn.edu.topicregistration.service.ScoringService.ScoreWorkspace;
 import vn.edu.topicregistration.service.ScoringService.ScoringAssignmentView;
+import vn.edu.topicregistration.service.ScoringService.StudentScoreView;
+import vn.edu.topicregistration.service.ScoringService.StudentScoreWorkspace;
 import vn.edu.topicregistration.util.ProjectTime;
 
 class ScoringControllerTest {
@@ -60,31 +64,47 @@ class ScoringControllerTest {
     }
 
     @Test
-    void scoreFormUsesCurrentOwnEvaluation() throws Exception {
+    void assignmentPageListsEveryRegistrationStudent() throws Exception {
         when(scoring.workspace(41L, 51L)).thenReturn(workspace());
 
         mvc.perform(get("/lecturer/scoring/41/51"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("scoring/form"))
-                .andExpect(model().attribute("evaluation", workspace().evaluation()))
-                .andExpect(model().attributeExists("scoreForm"));
+                .andExpect(model().attribute("students", workspace().students()));
+    }
+
+    @Test
+    void studentScoreFormUsesThatStudentsOwnEvaluation() throws Exception {
+        when(scoring.studentWorkspace(41L, 51L, 31L)).thenReturn(studentWorkspace());
+
+        var response = mvc.perform(get("/lecturer/scoring/41/51/students/31"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("scoring/student-form"))
+                .andExpect(model().attribute("student", studentWorkspace().student()))
+                .andExpect(model().attributeExists("scoreForm"))
+                .andReturn();
+
+        ScoreForm form = (ScoreForm) response.getModelAndView()
+                .getModel().get("scoreForm");
+        assertEquals("8", form.getScore().toPlainString());
     }
 
     @Test
     void draftRouteWhitelistsFieldsAndRedirectsWithSeeOther() throws Exception {
-        when(scoring.saveDraft(eq(41L), eq(51L), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(workspace().evaluation());
+        when(scoring.saveDraft(eq(41L), eq(51L), eq(31L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(studentWorkspace().student().evaluation());
 
-        mvc.perform(post("/lecturer/scoring/41/51/draft")
+        mvc.perform(post("/lecturer/scoring/41/51/students/31/draft")
                         .param("score", "8.50")
                         .param("feedback", "Nhận xét")
                         .param("version", "3")
                         .param("evaluatorId", "999")
                         .param("status", "SUBMITTED"))
                 .andExpect(status().isSeeOther())
-                .andExpect(redirectedUrl("/lecturer/scoring/41/51"));
+                .andExpect(redirectedUrl("/lecturer/scoring/41/51/students/31"));
 
-        verify(scoring).saveDraft(eq(41L), eq(51L), argThat(command ->
+        verify(scoring).saveDraft(eq(41L), eq(51L), eq(31L), argThat(command ->
                 command.score().equals(new BigDecimal("8.50"))
                         && command.feedback().equals("Nhận xét")
                         && command.expectedVersion() == 3L));
@@ -92,46 +112,56 @@ class ScoringControllerTest {
 
     @Test
     void submitRouteChoosesSubmittedStateOnServer() throws Exception {
-        when(scoring.submit(eq(41L), eq(51L), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(workspace().evaluation());
+        when(scoring.submit(eq(41L), eq(51L), eq(31L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(studentWorkspace().student().evaluation());
 
-        mvc.perform(post("/lecturer/scoring/41/51/submit")
+        mvc.perform(post("/lecturer/scoring/41/51/students/31/submit")
                         .param("score", "9.00")
                         .param("feedback", "Đạt")
                         .param("version", "3")
                         .param("status", "DRAFT"))
                 .andExpect(status().isSeeOther())
-                .andExpect(redirectedUrl("/lecturer/scoring/41/51"));
+                .andExpect(redirectedUrl("/lecturer/scoring/41/51/students/31"));
 
-        verify(scoring).submit(eq(41L), eq(51L), argThat(command ->
+        verify(scoring).submit(eq(41L), eq(51L), eq(31L), argThat(command ->
                 command.score().equals(new BigDecimal("9.00"))));
     }
 
     @Test
     void invalidScoreReturnsUnprocessableWithoutWriting() throws Exception {
-        when(scoring.workspace(41L, 51L)).thenReturn(workspace());
+        when(scoring.studentWorkspace(41L, 51L, 31L)).thenReturn(studentWorkspace());
 
-        mvc.perform(post("/lecturer/scoring/41/51/submit")
+        mvc.perform(post("/lecturer/scoring/41/51/students/31/submit")
                         .param("score", "8.555")
                         .param("feedback", "Sai precision"))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(view().name("scoring/form"));
+                .andExpect(view().name("scoring/student-form"));
 
         verify(scoring, never()).submit(
-                eq(41L), eq(51L), org.mockito.ArgumentMatchers.any());
+                eq(41L), eq(51L), eq(31L), org.mockito.ArgumentMatchers.any());
     }
 
     private static ScoreWorkspace workspace() {
         return new ScoreWorkspace(
                 assignment(),
-                new EvaluationView(
+                List.of(new StudentScoreView(
+                        31L,
+                        "Sinh viên A",
+                        1,
+                        true,
+                        new EvaluationView(
                         71L,
                         new BigDecimal("8.00"),
                         "Bản cũ",
                         EvaluationStatus.SUBMITTED,
                         NOW,
                         NOW,
-                        3L));
+                        3L))));
+    }
+
+    private static StudentScoreWorkspace studentWorkspace() {
+        return new StudentScoreWorkspace(assignment(), workspace().students().getFirst());
     }
 
     private static ScoringAssignmentView assignment() {

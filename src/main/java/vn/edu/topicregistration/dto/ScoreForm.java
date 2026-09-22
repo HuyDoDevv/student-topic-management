@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import vn.edu.topicregistration.service.ScoringService.EvaluationView;
 import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
+import vn.edu.topicregistration.util.ScoreFormat;
 
 public class ScoreForm {
     @NotNull(message = "Vui lòng nhập điểm.")
@@ -26,7 +27,7 @@ public class ScoreForm {
     public static ScoreForm from(EvaluationView evaluation) {
         ScoreForm form = new ScoreForm();
         if (evaluation != null) {
-            form.score = evaluation.score();
+            form.score = ScoreFormat.normalize(evaluation.score());
             form.feedback = evaluation.feedback();
             form.version = evaluation.version();
         }

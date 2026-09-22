@@ -97,20 +97,20 @@ class ReviewWorkflowIT {
     @Test
     void demoSeedAndServicesCompleteTheReviewJourneyWithoutLeakingOtherResults()
             throws Exception {
-        assertEquals(13, count("SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(14, count("SELECT COUNT(*) FROM user_accounts"));
         assertEquals(6, count("SELECT COUNT(*) FROM registration_periods"));
         assertEquals(2, count("SELECT COUNT(*) FROM councils"));
         assertEquals(3, count("SELECT COUNT(*) FROM project_reports"));
-        assertEquals(9, count("SELECT COUNT(*) FROM evaluations"));
-        assertEquals(1, count("SELECT COUNT(*) FROM final_results"));
+        assertEquals(27, count("SELECT COUNT(*) FROM evaluations"));
+        assertEquals(3, count("SELECT COUNT(*) FROM final_results"));
         long filesBeforeSecondSeed = reportFileCount();
 
         fixtureSupport.seed(FIXTURE_PASSWORD);
 
-        assertEquals(13, count("SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(14, count("SELECT COUNT(*) FROM user_accounts"));
         assertEquals(2, count("SELECT COUNT(*) FROM councils"));
         assertEquals(3, count("SELECT COUNT(*) FROM project_reports"));
-        assertEquals(9, count("SELECT COUNT(*) FROM evaluations"));
+        assertEquals(27, count("SELECT COUNT(*) FROM evaluations"));
         assertEquals(filesBeforeSecondSeed, reportFileCount(),
                 "Idempotent seed must not create orphan report files");
 
@@ -144,25 +144,27 @@ class ReviewWorkflowIT {
         authenticate("lecturer4.demo", RoleCode.LECTURER);
         ScoringService.ScoreWorkspace scoreWorkspace = scoring.workspace(
                 fixture.activeCouncilId(), fixture.activeRegistrationOneId());
+        var studentScore = scoreWorkspace.students().getFirst();
         scoring.submit(
                 fixture.activeCouncilId(),
                 fixture.activeRegistrationOneId(),
+                studentScore.studentId(),
                 new ScoreCommand(
                         new BigDecimal("9.25"),
                         "Integration score update",
-                        scoreWorkspace.evaluation().version()));
+                        studentScore.evaluation().version()));
 
         authenticate("lecturer1.demo", RoleCode.LECTURER);
         ResultService.BoardResultView completed = results.complete(
                 fixture.activeCouncilId(), 0L);
         assertEquals(CouncilStatus.COMPLETED, completed.status());
-        assertEquals(2, completed.resultCount());
+        assertEquals(6, completed.resultCount());
 
         authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
         ResultService.BoardResultView published = results.publish(
                 fixture.activeCouncilId(), completed.version());
         assertEquals(CouncilStatus.PUBLISHED, published.status());
-        assertEquals(2, count("""
+        assertEquals(6, count("""
                 SELECT COUNT(*) FROM final_results
                 WHERE council_id = ? AND status = 'PUBLISHED'
                 """, fixture.activeCouncilId()));
@@ -177,6 +179,15 @@ class ReviewWorkflowIT {
         assertEquals(0, activeResult.finalScore().compareTo(new BigDecimal("8.75")));
         assertEquals(3, results.detailForCurrentStudent(
                 fixture.activeRegistrationOneId()).evaluations().size());
+
+        authenticate("student2.demo", RoleCode.STUDENT);
+        ResultService.StudentResultDetailView sameGroupResult = results
+                .detailForCurrentStudent(fixture.activeRegistrationOneId());
+        assertEquals(0, sameGroupResult.result().finalScore()
+                .compareTo(new BigDecimal("8.50")));
+        assertTrue(sameGroupResult.evaluations().stream()
+                .noneMatch(item -> "Integration score update".equals(item.feedback())),
+                "A snapshot member must not receive a teammate's individual feedback");
 
         authenticate("student4.demo", RoleCode.STUDENT);
         assertThrows(ApplicationException.class,

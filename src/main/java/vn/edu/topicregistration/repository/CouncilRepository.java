@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 
 public interface CouncilRepository extends JpaRepository<CouncilEntity, Long> {
     @Query("select council.period.id from CouncilEntity council where council.id = :id")
@@ -29,5 +30,7 @@ public interface CouncilRepository extends JpaRepository<CouncilEntity, Long> {
     Optional<CouncilEntity> findByIdForUpdate(@Param("id") long id);
 
     @EntityGraph(attributePaths = {"period", "department", "chair", "secretary"})
-    List<CouncilEntity> findAllByPeriodFacultyIdOrderByCreatedAtDescIdDesc(long facultyId);
+    List<CouncilEntity> findAllByPeriodFacultyIdAndModeOrderByCreatedAtDescIdDesc(
+            long facultyId,
+            CouncilMode mode);
 }

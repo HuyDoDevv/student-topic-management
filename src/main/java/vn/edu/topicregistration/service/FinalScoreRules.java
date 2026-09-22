@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 
 public final class FinalScoreRules {
@@ -39,10 +40,16 @@ public final class FinalScoreRules {
         if (context.status() != CouncilStatus.ACTIVE) {
             throw failure(FinalScoreFailure.INVALID_STATE);
         }
-        long expectedEvaluations = (long) context.assignmentCount() * context.memberCount();
-        if (context.assignmentCount() < 1
-                || context.memberCount() < 3
-                || context.memberCount() > 5
+        long expectedEvaluations = (long) context.studentCount() * context.memberCount();
+        boolean validCardinality = context.mode() == CouncilMode.DIRECT
+                ? context.assignmentCount() == 1
+                        && context.memberCount() == 1
+                        && context.studentCount() >= 1
+                : context.assignmentCount() >= 1
+                        && context.studentCount() >= context.assignmentCount()
+                        && context.memberCount() >= 3
+                        && context.memberCount() <= 5;
+        if (!validCardinality
                 || expectedEvaluations != context.submittedEvaluationCount()
                 || !context.exactSubmittedMatrix()) {
             throw failure(FinalScoreFailure.EVALUATIONS_INCOMPLETE);
@@ -54,8 +61,8 @@ public final class FinalScoreRules {
         if (context.status() != CouncilStatus.COMPLETED) {
             throw failure(FinalScoreFailure.INVALID_STATE);
         }
-        if (context.assignmentCount() < 1
-                || context.assignmentCount() != context.resultCount()
+        if (context.studentCount() < 1
+                || context.studentCount() != context.resultCount()
                 || !context.exactReadyResults()) {
             throw failure(FinalScoreFailure.RESULT_NOT_READY);
         }
@@ -84,13 +91,27 @@ public final class FinalScoreRules {
             boolean currentChair,
             int assignmentCount,
             int memberCount,
+            int studentCount,
             int submittedEvaluationCount,
-            boolean exactSubmittedMatrix) {
+            boolean exactSubmittedMatrix,
+            CouncilMode mode) {
+        public CompletionContext(
+                CouncilStatus status,
+                boolean currentChair,
+                int assignmentCount,
+                int memberCount,
+                int studentCount,
+                int submittedEvaluationCount,
+                boolean exactSubmittedMatrix) {
+            this(status, currentChair, assignmentCount, memberCount,
+                    studentCount, submittedEvaluationCount, exactSubmittedMatrix,
+                    CouncilMode.COUNCIL);
+        }
     }
 
     public record PublicationContext(
             CouncilStatus status,
-            int assignmentCount,
+            int studentCount,
             int resultCount,
             boolean exactReadyResults) {
     }

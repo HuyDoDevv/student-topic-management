@@ -14,28 +14,39 @@ import vn.edu.topicregistration.entity.EvaluationEntity;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 
 public interface EvaluationRepository extends JpaRepository<EvaluationEntity, Long> {
-    @EntityGraph(attributePaths = {"registration", "evaluator", "component", "council"})
-    Optional<EvaluationEntity> findByRegistrationIdAndEvaluatorIdAndComponentId(
+    @EntityGraph(attributePaths = {
+            "registration", "student", "evaluator", "component", "council"
+    })
+    Optional<EvaluationEntity> findByRegistrationIdAndStudentIdAndEvaluatorIdAndComponentId(
             long registrationId,
+            long studentId,
             long evaluatorId,
             long componentId);
 
-    @EntityGraph(attributePaths = {"registration", "evaluator", "component", "council"})
-    Optional<EvaluationEntity> findByCouncilIdAndRegistrationIdAndEvaluatorId(
+    @EntityGraph(attributePaths = {
+            "registration", "student", "evaluator", "component", "council"
+    })
+    Optional<EvaluationEntity> findByCouncilIdAndRegistrationIdAndStudentIdAndEvaluatorId(
             long councilId,
             long registrationId,
+            long studentId,
             long evaluatorId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"registration", "evaluator", "component", "council"})
+    @EntityGraph(attributePaths = {
+            "registration", "student", "evaluator", "component", "council"
+    })
     @Query("select evaluation from EvaluationEntity evaluation "
             + "where evaluation.council.id = :councilId order by evaluation.id")
     List<EvaluationEntity> findAllByCouncilIdForUpdate(@Param("councilId") long councilId);
 
-    @EntityGraph(attributePaths = {"evaluator", "component"})
-    List<EvaluationEntity> findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(
-            long councilId,
-            long registrationId);
+    @EntityGraph(attributePaths = {"student", "evaluator", "component"})
+    List<EvaluationEntity> findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+            long councilId, long registrationId, long studentId);
+
+    @EntityGraph(attributePaths = {"student", "evaluator", "component"})
+    List<EvaluationEntity> findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+            long councilId, long registrationId, long evaluatorId);
 
     long countByCouncilIdAndStatus(long councilId, EvaluationStatus status);
 }

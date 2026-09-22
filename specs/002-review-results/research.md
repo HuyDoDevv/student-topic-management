@@ -53,11 +53,13 @@ complete tranh chấp submit).
 ## R-05 — Một điểm tổng trên component mặc định
 
 **Decision**: Mỗi period TLCN/KLTN có đúng một component hệ thống tên `Điểm hội đồng`,
-min 0, max 10. Mỗi council member có một evaluation/registration; score DECIMAL tối đa hai
-chữ số thập phân, DRAFT hoặc SUBMITTED. Final score là mean của toàn bộ member scores,
+min 0, max 10. Mỗi council member có một evaluation/registration/student; score DECIMAL
+theo bước 0.25, DRAFT hoặc SUBMITTED. Giao diện bỏ số 0 thập phân dư. Final score là mean
+của toàn bộ member scores,
 làm tròn số học HALF_UP hai chữ số.
 
-**Rationale**: Khớp Q3:A và ví dụ 8.50/9.00/8.00 → 8.50, đồng thời tái sử dụng bảng
+**Rationale**: Khớp Q3:A và xác nhận bước 0.25 ngày 2026-09-21; ví dụ
+8.5/9/8 → 8.5, đồng thời tái sử dụng bảng
 `score_components` V1 mà không thêm weighted rubric ngoài phạm vi.
 
 **Alternatives considered**: nhiều component (người dùng không chọn); Chair nhập điểm thủ

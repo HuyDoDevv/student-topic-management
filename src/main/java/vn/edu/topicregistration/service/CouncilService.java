@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
@@ -215,7 +216,8 @@ public class CouncilService {
     @Transactional(readOnly = true)
     public List<CouncilSummaryView> listForCurrentDean() {
         ActorIdentity dean = currentDean();
-        return councils.findAllByPeriodFacultyIdOrderByCreatedAtDescIdDesc(dean.facultyId())
+        return councils.findAllByPeriodFacultyIdAndModeOrderByCreatedAtDescIdDesc(
+                        dean.facultyId(), CouncilMode.COUNCIL)
                 .stream()
                 .map(CouncilService::toSummary)
                 .toList();
@@ -270,6 +272,9 @@ public class CouncilService {
         CouncilEntity council = councils.findDetailedById(councilId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (council.getMode() != CouncilMode.COUNCIL) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
         ActorIdentity actor = authorization.currentActor();
         long facultyId = requiredFacultyId(council.getPeriod());
         boolean scopedDean = actor.roles().contains(RoleCode.DEAN)

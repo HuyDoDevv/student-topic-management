@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Phân công chấm độc lập', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
+      <h1 class="page-title">Phân công chấm độc lập</h1>
+      <p class="text-secondary mt-2 mb-0">Dành cho đề tài Môn học và NCKH sau khi đã có báo cáo cuối cùng.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-info" role="status">
+    Người chấm phải là giảng viên cùng bộ môn và khác tất cả GVHD. Hệ thống hiện không có
+    mốc hạn nộp báo cáo riêng; khi Trưởng khoa xác nhận phân công, báo cáo hiện tại được khóa
+    ngay và trở thành bản dùng để chấm.
+  </div>
+
+  <div th:object="${directGradingAssignmentForm}">
+    <div class="alert alert-danger" role="alert"
+         th:if="${#fields.hasGlobalErrors()}"
+         th:each="error : ${#fields.globalErrors()}" th:text="${error}">
+      Phân công chưa hợp lệ.
+    </div>
+  </div>
+
+  <article class="card mb-3">
+    <div class="card-header">
+      <h2 class="card-title">Đề tài sẵn sàng phân công</h2>
+      <span class="badge bg-blue-lt ms-auto"
+            th:text="${#lists.size(availableRegistrations)} + ' đề tài'">0 đề tài</span>
+    </div>
+    <div class="table-responsive" th:if="${!availableRegistrations.isEmpty()}">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead><tr><th>Đề tài</th><th>Đợt</th><th>Bộ môn</th><th>Người chấm</th></tr></thead>
+        <tbody>
+        <tr th:each="registration : ${availableRegistrations}">
+          <td data-label="Đề tài">
+            <a class="fw-semibold" th:href="@{/reports/{id}(id=${registration.registrationId})}"
+               th:text="${registration.topicTitle}">Đề tài</a>
+            <div class="small text-secondary"
+                 th:text="${'Nhóm N' + #numbers.formatInteger(registration.groupId, 3)}">Nhóm N001</div>
+          </td>
+          <td data-label="Đợt">
+            <span th:text="${registration.periodName}">Đợt</span>
+            <span class="badge bg-azure-lt ms-1" th:text="${registration.topicType}">COURSE</span>
+          </td>
+          <td data-label="Bộ môn" th:text="${registration.departmentName}">Bộ môn</td>
+          <td data-label="Người chấm">
+            <form class="d-flex flex-wrap gap-2" method="post"
+                  th:action="@{/faculty/direct-grading}" data-prevent-double-submit>
+              <input type="hidden" name="registrationId" th:value="${registration.registrationId}">
+              <select class="form-select form-select-sm flex-grow-1" name="graderId" required>
+                <option value="">Chọn giảng viên khác GVHD</option>
+                <option th:each="grader : ${registration.eligibleGraders}"
+                        th:value="${grader.id}"
+                        th:text="${grader.fullName + ' · ' + grader.username}">Giảng viên</option>
+              </select>
+              <button class="btn btn-sm btn-primary" type="submit"
+                      data-confirm="Phân công người chấm và khóa báo cáo hiện tại của nhóm này?">Phân công</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-body text-secondary" th:if="${availableRegistrations.isEmpty()}">
+      Chưa có đề tài Môn học/NCKH nào đã được chấp nhận, có báo cáo và còn chờ phân công.
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Các lượt chấm đã phân công</h2>
+        <div class="small text-secondary mt-1">Mỗi dòng là một nhóm trong một đợt; gồm cả lịch sử đã công bố.</div>
+      </div>
+      <span class="badge bg-blue-lt ms-auto"
+            th:text="${#lists.size(assignments)} + ' lượt'">0 lượt</span>
+    </div>
+    <div class="table-responsive" th:if="${!assignments.isEmpty()}">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead><tr><th>Đề tài</th><th>Người chấm</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+        <tbody>
+        <tr th:each="assignment : ${assignments}">
+          <td data-label="Đề tài">
+            <strong th:text="${assignment.topicTitle}">Đề tài</strong>
+            <div class="small text-secondary"
+                 th:text="${assignment.periodName + ' · ' + assignment.topicType + ' · Nhóm N' + #numbers.formatInteger(assignment.groupId, 3)}">Đợt · Nhóm</div>
+          </td>
+          <td data-label="Người chấm" th:text="${assignment.graderName}">Giảng viên</td>
+          <td data-label="Trạng thái"><span class="badge"
+              th:classappend="${assignment.statusClass}"
+              th:text="${assignment.statusLabel}">Đang chấm</span></td>
+          <td data-label="Thao tác" class="text-end">
+            <div class="btn-list justify-content-end">
+              <a class="btn btn-sm btn-ghost-primary"
+                 th:href="@{/reports/{id}(id=${assignment.registrationId})}">Báo cáo</a>
+              <a class="btn btn-sm btn-outline-primary"
+                 th:if="${assignment.status.name() == 'COMPLETED' || assignment.status.name() == 'PUBLISHED'}"
+                 th:href="@{/faculty/results(periodId=${assignment.periodId},registrationId=${assignment.registrationId})}"
+                 th:text="${assignment.status.name() == 'COMPLETED' ? 'Xem điểm từng sinh viên' : 'Xem kết quả từng sinh viên'}">Xem điểm từng sinh viên</a>
+              <form method="post" th:if="${assignment.status.name() == 'COMPLETED'}"
+                    th:action="@{/faculty/direct-grading/{id}/publish(id=${assignment.id})}"
+                    data-prevent-double-submit>
+                <input type="hidden" name="version" th:value="${assignment.version}">
+                <button class="btn btn-sm btn-primary" type="submit"
+                        data-confirm="Đã kiểm tra điểm từng sinh viên và muốn công bố cho nhóm này?">Công bố</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-body text-secondary" th:if="${assignments.isEmpty()}">
+      Chưa có lượt chấm độc lập nào được phân công.
+    </div>
+  </article>
+</section>
+</body>
+</html>

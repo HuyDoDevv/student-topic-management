@@ -24,6 +24,7 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.ScoringService;
 import vn.edu.topicregistration.service.ScoringService.ScoreWorkspace;
 import vn.edu.topicregistration.service.ScoringService.ScoringAssignmentView;
+import vn.edu.topicregistration.service.ScoringService.StudentScoreWorkspace;
 import vn.edu.topicregistration.util.ProjectTime;
 
 @Controller
@@ -60,36 +61,61 @@ public class ScoringController {
             @PathVariable long registrationId,
             Model model) {
         ScoreWorkspace workspace = scoring.workspace(councilId, registrationId);
-        return render(model, workspace, ScoreForm.from(workspace.evaluation()));
+        common(model);
+        model.addAttribute("assignment", display(workspace.assignment()));
+        model.addAttribute("students", workspace.students());
+        model.addAttribute("allSubmitted", !workspace.students().isEmpty()
+                && workspace.students().stream().allMatch(student ->
+                        student.evaluation() != null
+                                && student.evaluation().status()
+                                == vn.edu.topicregistration.entity.EvaluationStatus.SUBMITTED));
+        return "scoring/form";
     }
 
-    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/draft")
+    @GetMapping("/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}")
+    public String studentForm(
+            @PathVariable long councilId,
+            @PathVariable long registrationId,
+            @PathVariable long studentId,
+            Model model) {
+        StudentScoreWorkspace workspace = scoring.studentWorkspace(
+                councilId, registrationId, studentId);
+        return renderStudent(model, workspace,
+                ScoreForm.from(workspace.student().evaluation()));
+    }
+
+    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}/draft")
     public Object saveDraft(
             @PathVariable long councilId,
             @PathVariable long registrationId,
+            @PathVariable long studentId,
             @Valid @ModelAttribute("scoreForm") ScoreForm form,
             BindingResult bindingResult,
             HttpServletResponse response,
             Model model) {
         return mutate(
-                councilId, registrationId, form, bindingResult, response, model, false);
+                councilId, registrationId, studentId,
+                form, bindingResult, response, model, false);
     }
 
-    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/submit")
+    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}/submit")
     public Object submit(
             @PathVariable long councilId,
             @PathVariable long registrationId,
+            @PathVariable long studentId,
             @Valid @ModelAttribute("scoreForm") ScoreForm form,
             BindingResult bindingResult,
             HttpServletResponse response,
             Model model) {
         return mutate(
-                councilId, registrationId, form, bindingResult, response, model, true);
+                councilId, registrationId, studentId,
+                form, bindingResult, response, model, true);
     }
 
     private Object mutate(
             long councilId,
             long registrationId,
+            long studentId,
             ScoreForm form,
             BindingResult bindingResult,
             HttpServletResponse response,
@@ -97,38 +123,42 @@ public class ScoringController {
             boolean submit) {
         if (bindingResult.hasErrors()) {
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return render(model, scoring.workspace(councilId, registrationId), form);
+            return renderStudent(model,
+                    scoring.studentWorkspace(councilId, registrationId, studentId), form);
         }
         try {
             if (submit) {
-                scoring.submit(councilId, registrationId, form.toCommand());
+                scoring.submit(councilId, registrationId, studentId, form.toCommand());
             } else {
-                scoring.saveDraft(councilId, registrationId, form.toCommand());
+                scoring.saveDraft(councilId, registrationId, studentId, form.toCommand());
             }
-            return redirect(councilId, registrationId);
+            return redirect(councilId, registrationId, studentId);
         } catch (ApplicationException exception) {
             if (exception.code() != ApplicationErrorCode.INVALID_SCORE) {
                 throw exception;
             }
             bindingResult.rejectValue("score", "score.invalid",
-                    "Điểm phải từ 0 đến 10 và có tối đa hai chữ số thập phân.");
+                    "Điểm phải từ 0 đến 10 và tăng theo bước 0,25.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return render(model, scoring.workspace(councilId, registrationId), form);
+            return renderStudent(model,
+                    scoring.studentWorkspace(councilId, registrationId, studentId), form);
         }
     }
 
-    private String render(Model model, ScoreWorkspace workspace, ScoreForm form) {
+    private String renderStudent(
+            Model model, StudentScoreWorkspace workspace, ScoreForm form) {
         common(model);
         if (!model.containsAttribute("scoreForm")) {
             model.addAttribute("scoreForm", form);
         }
         model.addAttribute("assignment", display(workspace.assignment()));
-        model.addAttribute("evaluation", workspace.evaluation());
+        model.addAttribute("student", workspace.student());
+        model.addAttribute("evaluation", workspace.student().evaluation());
         model.addAttribute("submitted",
-                workspace.evaluation() != null
-                        && workspace.evaluation().status()
+                workspace.student().evaluation() != null
+                        && workspace.student().evaluation().status()
                                 == vn.edu.topicregistration.entity.EvaluationStatus.SUBMITTED);
-        return "scoring/form";
+        return "scoring/student-form";
     }
 
     private AssignmentPageView display(ScoringAssignmentView assignment) {
@@ -140,16 +170,19 @@ public class ScoringController {
                 assignment.topicTitle(),
                 format(assignment.scheduledAt()),
                 assignment.location(),
-                assignment.currentChair());
+                assignment.currentChair(),
+                assignment.councilVersion(),
+                assignment.directGrading());
     }
 
     private String format(Instant value) {
         return value == null ? null : DATE_TIME.format(projectTime.toBusinessTime(value));
     }
 
-    private static Object redirect(long councilId, long registrationId) {
+    private static Object redirect(long councilId, long registrationId, long studentId) {
         return WebRedirects.seeOther(
-                "/lecturer/scoring/" + councilId + "/" + registrationId);
+                "/lecturer/scoring/" + councilId + "/" + registrationId
+                        + "/students/" + studentId);
     }
 
     private static void common(Model model) {
@@ -165,6 +198,8 @@ public class ScoringController {
             String topicTitle,
             String scheduledAt,
             String location,
-            boolean currentChair) {
+            boolean currentChair,
+            long councilVersion,
+            boolean directGrading) {
     }
 }

@@ -6,11 +6,13 @@
 
 ## Summary
 
-Mở rộng monolith Spring MVC hiện tại cho REQ-17–27 bằng năm lát cắt nghiệp vụ: lưu và
-phân phối PDF báo cáo; lập hội đồng TLCN/KLTN 3–5 giảng viên cùng bộ môn cho nhiều nhóm;
-thành viên hội đồng chấm một điểm tổng 0–10; Chair tổng hợp điểm trung bình; Trưởng khoa
-công bố; sinh viên snapshot chỉ xem kết quả nhóm mình. Dùng các bảng placeholder từ V1
-nhưng bổ sung vòng đời, version và ràng buộc bằng migration V8; không sửa V1–V7.
+Mở rộng monolith Spring MVC hiện tại cho REQ-17–27 và quyết định U ngày 2026-09-17: lưu và
+phân phối PDF báo cáo; phân công một người chấm độc lập cho COURSE/NCKH; lập hội đồng
+TLCN/KLTN 3–5 giảng viên cùng bộ môn cho nhiều nhóm;
+thành viên hội đồng chấm một điểm tổng 0–10 riêng cho từng sinh viên snapshot; Chair tổng
+hợp điểm trung bình theo từng sinh viên; Trưởng khoa công bố; sinh viên snapshot chỉ xem
+kết quả của chính mình. Dùng các bảng placeholder từ V1 nhưng bổ sung vòng đời, version và
+ràng buộc bằng migration V8/V10/V11; giữ nguyên V1–V10.
 
 ## Technical Context
 
@@ -32,12 +34,13 @@ Playwright Java cho E2E khi profile tương ứng có môi trường
 **Performance Goals**: không thêm SLA tải; upload được giới hạn 20 MB và xử lý streaming
 để tránh giữ nhiều bản sao trong bộ nhớ
 
-**Constraints**: backend authorization; CSRF; report PDF tối đa 20 MB; không path traversal;
+**Constraints**: backend authorization; CSRF; điểm 0–10 theo bước 0.25; report PDF tối đa
+20 MB; không path traversal;
 transaction nhất quán; một tiến trình; Asia/Ho_Chi_Minh cho hiển thị thời gian; không secret
 hoặc đường dẫn máy cá nhân trong source
 
-**Scale/Scope**: FR-16–25, AS-6.*–10.*, năm màn hình nghiệp vụ; hội đồng chỉ TLCN/KLTN,
-mỗi hội đồng 3–5 người và nhiều đăng ký cùng period/department
+**Scale/Scope**: FR-16–27, AS-6.*–10.*; hội đồng chỉ TLCN/KLTN, mỗi hội đồng 3–5 người và
+nhiều đăng ký cùng period/department; COURSE/NCKH có một lượt chấm DIRECT/một registration
 
 ## Constitution Check
 
@@ -51,7 +54,7 @@ mỗi hội đồng 3–5 người và nhiều đăng ký cùng period/departmen
 | IV. Boundary validation | PASS | PDF, dung lượng, điểm, ID, version và state đều kiểm tra server-side |
 | V. Tách controllers | PASS | controller → DTO → service/rules → repository/entity/storage |
 | VI. Đồng thời | PASS về thiết kế | mutation khóa period rồi council/child; unique và version là lớp bảo vệ cuối |
-| VII. Migration | PASS | V8 mới, giữ nguyên V1–V7, có test nâng cấp schema |
+| VII. Migration | PASS | Giữ nguyên V1–V10; V11 thêm khóa sinh viên và backfill điểm/kết quả lịch sử theo snapshot |
 | VIII. Tests | PASS về kế hoạch | unit/HTTP/storage/DB/concurrency/E2E được ghi trong tasks |
 | IX. Secrets | PASS | storage root qua env; không ghi credentials hoặc absolute path |
 | X. Nghiệm thu | PASS về kế hoạch | chỉ đánh dấu hoàn thành sau test và acceptance evidence |
@@ -65,7 +68,10 @@ Các quyết định và phương án bị loại được ghi tại [research.m
 
 ## Phase 1: Design
 
-- [data-model.md](data-model.md): schema V8, thực thể, quan hệ và state transition.
+- [data-model.md](data-model.md): schema V8/V10/V11, thực thể, quan hệ và state transition.
+- V10 thêm `grading_mode` để phân biệt hội đồng và lượt chấm độc lập một người; V11 chuyển
+  evaluation/final result sang từng sinh viên snapshot; V9 cũ được
+  giữ nguyên để các database đã áp dụng không bị checksum mismatch.
 - [contracts/web.md](contracts/web.md): route HTML/multipart, quyền, validation và lỗi.
 - [quickstart.md](quickstart.md): cách cấu hình storage/test và luồng nghiệm thu.
 
@@ -106,6 +112,9 @@ src/main/java/vn/edu/topicregistration/
 
 src/main/resources/
 ├── db/migration/V8__implement_review_and_results.sql
+├── db/migration/V9__enforce_organization_catalog_uniqueness.sql
+├── db/migration/V10__support_direct_grading_assignments.sql
+├── db/migration/V11__grade_each_registration_student.sql
 ├── templates/reports/
 ├── templates/councils/
 ├── templates/scoring/
@@ -132,15 +141,19 @@ Không tạo feature-level `application/` hoặc executable thứ hai.
 5. TDD Chair complete/average và Dean publish.
 6. TDD student/dean result list/detail cùng privacy.
 7. Navigation, seed fixture, integration/concurrency/E2E và acceptance evidence.
+8. TDD phân công chấm độc lập COURSE/NCKH, tái sử dụng scoring/result và giữ nguyên council.
+9. TDD chấm và công bố kết quả riêng cho từng sinh viên snapshot, backfill điểm nhóm cũ cho
+   từng thành viên để không mất dữ liệu đã có.
 
 ## Verification Strategy
 
-- Unit: report validation, council cardinality/type/scope/transitions, score scale/precision,
-  mean and rounding, role/relationship decisions.
+- Unit: report validation, council cardinality/type/scope/transitions, score range/bước 0.25,
+  direct-grader eligibility, mean and rounding, role/relationship decisions.
 - HTTP: multipart + CSRF, forms, stale version, direct ID access, allowed/denied matrix.
 - Storage: PDF signature, 20 MB limit, generated key, canonical path, replacement and cleanup.
-- MySQL: V8 from empty and V7 fixture, checks/unique/FK, one current report, one council per
-  registration, evaluation uniqueness and result state consistency.
+- MySQL: V8–V11 từ database rỗng và fixture cũ, checks/unique/FK, officer trigger cho DIRECT,
+  one current report, one assignment per registration, evaluation/result uniqueness theo
+  sinh viên snapshot và result state.
 - Concurrency: report replacement, activate vs upload, score vs complete, double complete,
   complete vs publish; period-first lock order.
 - Browser: leader upload → Dean board → members score → Chair complete → Dean publish →

@@ -17,18 +17,21 @@ import vn.edu.topicregistration.service.ScoreRules.ScoreRuleException;
 
 class ScoreRulesTest {
     @Test
-    void acceptsBoundariesAndTwoDecimalScoresForAssignedMember() {
+    void acceptsBoundariesAndQuarterPointScoresForAssignedMember() {
         assertDoesNotThrow(() -> ScoreRules.validate(valid(new BigDecimal("0.00"))));
-        assertDoesNotThrow(() -> ScoreRules.validate(valid(new BigDecimal("8.55"))));
+        assertDoesNotThrow(() -> ScoreRules.validate(valid(new BigDecimal("5.5"))));
+        assertDoesNotThrow(() -> ScoreRules.validate(valid(new BigDecimal("5.75"))));
         assertDoesNotThrow(() -> ScoreRules.validate(valid(new BigDecimal("10.00"))));
     }
 
     @Test
-    void rejectsMissingOutOfRangeAndOverPreciseScores() {
+    void rejectsMissingOutOfRangeOverPreciseAndNonQuarterScores() {
         assertFailure(Failure.INVALID_SCORE, valid(null));
         assertFailure(Failure.INVALID_SCORE, valid(new BigDecimal("-0.01")));
         assertFailure(Failure.INVALID_SCORE, valid(new BigDecimal("10.01")));
         assertFailure(Failure.INVALID_SCORE, valid(new BigDecimal("8.555")));
+        assertFailure(Failure.INVALID_SCORE, valid(new BigDecimal("5.6")));
+        assertFailure(Failure.INVALID_SCORE, valid(new BigDecimal("8.55")));
     }
 
     @Test

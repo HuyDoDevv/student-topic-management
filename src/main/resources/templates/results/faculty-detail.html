@@ -7,6 +7,7 @@
     <div>
       <div class="page-pretitle" th:text="${result.councilName + ' · Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">Hội đồng · N001</div>
       <h1 class="page-title" th:text="${result.topicTitle}">Đề tài</h1>
+      <p class="text-secondary mt-2 mb-0" th:text="${'Sinh viên: ' + result.studentName}">Sinh viên: A</p>
       <span class="badge mt-2" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span>
     </div>
     <div class="btn-list">

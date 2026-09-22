@@ -109,7 +109,7 @@ class ReviewWorkflowConcurrencyIT {
 
         assertOneSuccessAndOneStaleFailure(completions);
         assertEquals("COMPLETED", councilStatus());
-        assertEquals(2, count("SELECT COUNT(*) FROM final_results WHERE council_id = ?",
+        assertEquals(6, count("SELECT COUNT(*) FROM final_results WHERE council_id = ?",
                 fixture.activeCouncilId()));
 
         List<Outcome> publications = race(
@@ -120,7 +120,7 @@ class ReviewWorkflowConcurrencyIT {
 
         assertOneSuccessAndOneStaleFailure(publications);
         assertEquals("PUBLISHED", councilStatus());
-        assertEquals(2, count("""
+        assertEquals(6, count("""
                 SELECT COUNT(*) FROM final_results
                 WHERE council_id = ? AND status = 'PUBLISHED'
                 """, fixture.activeCouncilId()));
@@ -129,16 +129,17 @@ class ReviewWorkflowConcurrencyIT {
     @Test
     void scoreRacingCompleteIsEitherIncludedOrRejectedBeforeTheSnapshot() throws Exception {
         authenticate("lecturer4.demo", RoleCode.LECTURER);
-        long evaluationVersion = scoring.workspace(
+        var studentScore = scoring.workspace(
                 fixture.activeCouncilId(), fixture.activeRegistrationOneId())
-                .evaluation()
-                .version();
+                .students().getFirst();
+        long evaluationVersion = studentScore.evaluation().version();
         SecurityContextHolder.clearContext();
 
         List<Outcome> outcomes = race(
                 call("lecturer4.demo", () -> scoring.submit(
                         fixture.activeCouncilId(),
                         fixture.activeRegistrationOneId(),
+                        studentScore.studentId(),
                         new ScoreCommand(
                                 new BigDecimal("10.00"),
                                 "Concurrent update",
@@ -159,12 +160,16 @@ class ReviewWorkflowConcurrencyIT {
 
         BigDecimal expectedMean = jdbc.queryForObject("""
                 SELECT ROUND(AVG(score), 2) FROM evaluations
-                WHERE council_id = ? AND registration_id = ? AND status = 'SUBMITTED'
+                WHERE council_id = ? AND registration_id = ? AND student_id = ?
+                  AND status = 'SUBMITTED'
                 """, BigDecimal.class,
-                fixture.activeCouncilId(), fixture.activeRegistrationOneId());
+                fixture.activeCouncilId(), fixture.activeRegistrationOneId(),
+                studentScore.studentId());
         BigDecimal storedScore = jdbc.queryForObject("""
-                SELECT final_score FROM final_results WHERE registration_id = ?
-                """, BigDecimal.class, fixture.activeRegistrationOneId());
+                SELECT final_score FROM final_results
+                WHERE registration_id = ? AND student_id = ?
+                """, BigDecimal.class, fixture.activeRegistrationOneId(),
+                studentScore.studentId());
         assertTrue(expectedMean != null && storedScore != null);
         assertEquals(0, expectedMean.compareTo(storedScore),
                 "Final score must use one consistent submitted-evaluation snapshot");

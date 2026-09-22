@@ -284,6 +284,10 @@ hiệu lực. Không đổi database, quyền hoặc phạm vi khoa.
 
 - [X] T082 [US1] Cho danh sách Trưởng khoa nhận cả đợt đã qua `student_end`, thêm lựa chọn “Đã quá hạn” vào bộ lọc trạng thái và giữ liên kết chi tiết; viết unit/preview test đỏ trước implementation, đồng bộ spec/plan/web contract/acceptance matrix và chạy test hồi quy.
 
+Follow-up giao diện ngày 2026-09-21 cho T082: bổ sung bộ lọc loại đợt và công việc chờ
+xử lý, cho phép kết hợp cùng tìm kiếm/bộ lọc trạng thái, đồng thời nhấn màu các số chờ khác
+0 và giữ số 0 trung tính; `FoundationWebTest` kiểm tra contract render tương ứng.
+
 ## Dependencies & execution order
 
 ```mermaid
@@ -338,7 +342,7 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 |---|---|---|
 | FR-01 | T006,T008–T011,T016,T061,T070,T075,T077,T080–T081 | REQ-28,31–32; AT-06,09–10,14 |
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
-| FR-03 | T018–T024,T026,T029,T048,T052,T077–T079 | REQ-02–05; AT-02,13 |
+| FR-03 | T018–T024,T026,T029,T048,T052,T077–T079,T082 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
 | FR-05 | T025–T032,T070,T078 | REQ-08–09; AT-03,06,12 |
 | FR-06 | T025–T032,T069–T070 | REQ-10–11 phần GVHD; AT-03,06 |
