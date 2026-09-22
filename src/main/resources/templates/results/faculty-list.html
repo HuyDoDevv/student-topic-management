@@ -9,39 +9,85 @@
       <h1 class="page-title">Kết quả hội đồng</h1>
       <p class="text-secondary mt-2 mb-0">Điểm đã tổng hợp và trạng thái công bố trong phạm vi khoa.</p>
     </div>
-    <a class="btn btn-outline-secondary" th:href="@{/faculty/boards}">Xem hội đồng</a>
   </div>
 
-  <div class="card data-card" th:if="${!results.isEmpty()}">
+  <div class="card data-card" th:if="${!periodOptions.isEmpty()}">
     <div class="card-header">
       <h2 class="card-title">Danh sách kết quả</h2>
       <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(results)} + ' kết quả'">1 kết quả</span>
     </div>
-    <div class="table-responsive">
+    <div class="card-body border-bottom py-3">
+      <form method="get" th:action="@{/faculty/results}" class="row g-2 align-items-end">
+        <input th:if="${selectedRegistrationId != null}" type="hidden" name="registrationId"
+               th:value="${selectedRegistrationId}">
+        <div class="col-md-4">
+          <label class="form-label" for="periodId">Đợt đăng ký</label>
+          <select class="form-select" id="periodId" name="periodId" onchange="this.form.submit()">
+            <option value="" th:selected="${selectedPeriodId == null}">Tất cả đợt</option>
+            <option th:each="period : ${periodOptions}"
+                    th:value="${period.id}"
+                    th:text="${period.name}"
+                    th:selected="${period.id == selectedPeriodId}">Đợt đăng ký</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="lecturerId">Giảng viên chấm</label>
+          <select class="form-select" id="lecturerId" name="lecturerId" onchange="this.form.submit()">
+            <option value="" th:selected="${selectedLecturerId == null}">Tất cả giảng viên</option>
+            <option th:each="lecturer : ${lecturerOptions}"
+                    th:value="${lecturer.id}"
+                    th:text="${lecturer.name}"
+                    th:selected="${lecturer.id == selectedLecturerId}">Giảng viên</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="status">Trạng thái công bố</label>
+          <select class="form-select" id="status" name="status" onchange="this.form.submit()">
+            <option value="" th:selected="${selectedStatus == null}">Tất cả trạng thái</option>
+            <option value="READY"
+                    th:selected="${selectedStatus != null and selectedStatus.name() == 'READY'}">Chưa công bố</option>
+            <option value="PUBLISHED"
+                    th:selected="${selectedStatus != null and selectedStatus.name() == 'PUBLISHED'}">Đã công bố</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="card-body py-2 bg-azure-lt" th:if="${selectedRegistrationId != null && selectedGroupId != null}">
+      Đang xem điểm từng sinh viên của
+      <strong th:text="${'Nhóm N' + #numbers.formatInteger(selectedGroupId, 3)}">Nhóm N001</strong>
+      trước khi công bố.
+      <a class="ms-2" th:href="@{/faculty/results(periodId=${selectedPeriodId})}">Xem tất cả nhóm trong đợt</a>
+    </div>
+    <div class="table-responsive" th:if="${!results.isEmpty()}">
       <table class="table table-vcenter card-table responsive-table">
         <thead>
-        <tr><th>Nhóm / đề tài</th><th>Hội đồng</th><th>Điểm cuối</th><th>Trạng thái</th><th>Thời điểm</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        <tr><th>Sinh viên / nhóm</th><th>Đợt đăng ký</th><th>Đề tài</th><th>Hội đồng</th><th>Điểm cuối</th><th>Trạng thái</th><th>Thời điểm</th><th><span class="visually-hidden">Thao tác</span></th></tr>
         </thead>
         <tbody>
         <tr th:each="result : ${results}">
-          <td data-label="Nhóm / đề tài">
-            <strong th:text="${'N' + #numbers.formatInteger(result.groupId, 3)}">N001</strong>
-            <div class="small text-secondary" th:text="${result.topicTitle}">Đề tài</div>
+          <td data-label="Sinh viên / nhóm">
+            <strong th:text="${result.studentName}">Sinh viên A</strong>
+            <div class="small text-secondary" th:text="${'Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">N001</div>
           </td>
+          <td data-label="Đợt đăng ký" th:text="${result.periodName}">Đợt KLTN 2026</td>
+          <td data-label="Đề tài" th:text="${result.topicTitle}">Đề tài</td>
           <td data-label="Hội đồng" th:text="${result.councilName}">Hội đồng KLTN</td>
           <td data-label="Điểm cuối"><span class="fs-3 fw-bold" th:text="${result.finalScore}">8.50</span></td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span></td>
           <td data-label="Thời điểm">
             <span th:text="${result.publishedAt != null ? result.publishedAt : result.consolidatedAt}">21/09/2026 09:00</span>
           </td>
-          <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/faculty/results/{id}(id=${result.registrationId})}">Xem chi tiết</a></td>
+          <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/faculty/results/{registrationId}/{studentId}(registrationId=${result.registrationId},studentId=${result.studentId})}">Xem chi tiết</a></td>
         </tr>
         </tbody>
       </table>
     </div>
+    <div class="card-body text-secondary" th:if="${results.isEmpty()}">
+      Không có kết quả phù hợp với nhóm hoặc đợt đã chọn.
+    </div>
   </div>
 
-  <div class="card" th:if="${results.isEmpty()}"
+  <div class="card" th:if="${periodOptions.isEmpty()}"
        th:insert="~{fragments/feedback :: empty('Chưa có kết quả', 'Chủ tịch hội đồng cần tổng hợp đủ điểm trước khi kết quả xuất hiện tại đây.')}"></div>
 </section>
 </body>

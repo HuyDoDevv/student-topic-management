@@ -65,10 +65,10 @@ lock period→council→children và report hiện hành khi activate. Regressio
 
 ## Phase 5: User Story 3 — Thành viên hội đồng chấm điểm (P1)
 
-**Goal**: Mỗi assigned member lưu/submit một score 0–10 scale <=2 khi board ACTIVE.
+**Goal**: Mỗi assigned member lưu/submit một score 0–10 theo bước 0.25 khi board ACTIVE.
 
 **Independent Test**: Fixture ACTIVE board; member, outsider, supervisor và evaluator khác;
-biên 0/10/10.01/scale 3, DRAFT/SUBMITTED/resubmit và state lock.
+biên 0/10, mức hợp lệ 5.5/5.75, mức sai 5.6/8.55/10.01, DRAFT/SUBMITTED/resubmit và state lock.
 
 - [X] T005 [US3] Viết `ScoreRulesTest.java`, `ScoringServiceTest.java`, `ScoringControllerTest.java` trước; cài `ScoreForm`, `ScoringService`, `ScoringController` và templates `src/main/resources/templates/scoring/`; tự bảo đảm component `Điểm hội đồng`, kiểm tra assignment/supervisor/status/version và cho sửa SUBMITTED khi còn ACTIVE; chạy tests và commit riêng scoring. (FR-20,24–25; AS-8.1–8.5; SC-012)
 
@@ -155,6 +155,38 @@ và V9 cũ được khôi phục nguyên checksum. `./run.sh` validate 10 migrat
 hữu từ V9 lên V10 và khởi động thành công mà không `repair`/xóa dữ liệu; migration test từ
 database rỗng, V6 và V7 tiếp tục đạt 4/4.
 
+## Phase 10: Individual grading per registration student
+
+- [X] T010 [US3–US5] TDD chấm điểm riêng cho từng sinh viên snapshot: thêm V11 và composite
+  FK/unique cho evaluation/final result, backfill điểm nhóm cũ cho từng thành viên; đổi UI
+  chấm sang danh sách sinh viên + phiếu từng người; chỉ complete khi đủ ma trận
+  registration × student × evaluator; tạo/publish/result detail riêng từng sinh viên và
+  chặn sinh viên xem điểm cùng nhóm của nhau; cập nhật spec/plan/data-model/contracts/
+  quickstart/acceptance, chạy targeted/regression/migration checks và `git diff --check`.
+  (FR-27; AS-8.6,9.6,10.5; SC-018)
+
+**T010 evidence (2026-09-22, acceptance PASS)**: Test đỏ ban đầu xác nhận thiếu V11 và
+rules chưa hỗ trợ ma trận sinh viên. Sau implementation cùng các follow-up, targeted
+unit/web đạt 47/47; suite mặc định đạt 200/200. Trên MySQL 8.4 test cô lập, Flyway áp dụng
+đủ 11 migration, integration/concurrency đạt 18/18 và E2E Playwright đạt 2/2. Hành trình
+browser xác nhận hai sinh viên cùng registration nhận điểm riêng, không thấy nhận xét của
+nhau; sinh viên ngoài snapshot nhận 404. Migration V10→V11, backfill, Hibernate schema
+validation, `./run.sh` và `git diff --check` đều đạt; không dùng database phát triển để chạy
+test phá dữ liệu.
+
+**T010 scoring follow-up (2026-09-21)**: Theo xác nhận bổ sung của người dùng, test đỏ chứng
+minh backend còn nhận `5.6`/`8.55` và UI render `8.00`/`8.50`. Rule đã đổi sang bước 0.25,
+form HTML dùng `step=0.25`, điểm input/list/result dùng định dạng gọn không có số 0 dư;
+targeted rules/format/controller đạt 18/18 và toàn targeted T010 đạt 47/47. Gate
+integration/E2E sau đó đạt trên database test cô lập như bằng chứng acceptance ở trên.
+
+**T010 result-period follow-up (2026-09-21)**: Danh sách kết quả Trưởng khoa đã mang thêm
+`periodId/periodName`, hiển thị cột Đợt đăng ký và lọc GET theo đợt trong tập kết quả đã được
+service giới hạn theo khoa. Follow-up kiểm tra trước công bố bổ sung lọc `registrationId` và
+nút xem điểm từng sinh viên ngay ở lượt COMPLETED, nên không trộn nhóm khác. Targeted tests
+liên quan đạt 26/26 sau khi bổ sung lọc kết hợp giảng viên/trạng thái và loại bỏ các nút
+điều hướng chéo ở header; suite đầy đủ sau đó đạt 200/200 cùng các gate integration/E2E.
+
 ## Dependencies & execution order
 
 ```mermaid
@@ -168,6 +200,7 @@ flowchart TD
   T006 --> T007["T007 Student results"]
   T007 --> T008["T008 Acceptance"]
   T008 --> T009["T009 Direct COURSE/NCKH grading"]
+  T009 --> T010["T010 Individual student grading"]
 ```
 
 - T003 phải có trước activate ở T004 vì activate revalidate report hiện hành.
@@ -187,6 +220,7 @@ flowchart TD
 | US5 / FR-23 | T007–T008 | service/web/E2E privacy |
 | FR-24–25 | T002–T008 | authorization/error/storage matrix |
 | US2A / FR-26 | T009 | rules/service/web/schema/final-score regression |
+| US3–US5 / FR-27 | T010 | scoring/result/web/schema/privacy regression |
 
 ## Implementation strategy
 
@@ -197,6 +231,6 @@ Playwright phải ghi BLOCKED, không dùng database có dữ liệu thật và 
 
 ## Generation summary
 
-9 tasks: design 1; foundation 1; reports 1; councils 1; direct grading 1; scoring 1;
+10 tasks: design 1; foundation 1; reports 1; councils 1; direct grading 1; individual grading 1; scoring 1;
 result publication 1; student privacy 1; cross-cutting acceptance 1. Tất cả checklist task có ID, story label khi
 áp dụng và đường dẫn.

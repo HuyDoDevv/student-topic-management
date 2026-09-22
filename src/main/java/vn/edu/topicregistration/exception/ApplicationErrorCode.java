@@ -26,7 +26,7 @@ public enum ApplicationErrorCode {
     INVALID_COUNCIL_MEMBERS(HttpStatus.UNPROCESSABLE_CONTENT, "Thành viên hội đồng chưa hợp lệ", "Hội đồng phải có từ ba đến năm giảng viên hợp lệ."),
     INVALID_COUNCIL_ASSIGNMENT(HttpStatus.UNPROCESSABLE_CONTENT, "Phân công hội đồng chưa hợp lệ", "Đăng ký không thể được phân công cho hội đồng này."),
     INVALID_COUNCIL_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái hội đồng không hợp lệ", "Hội đồng chưa đủ điều kiện thực hiện thao tác này."),
-    INVALID_SCORE(HttpStatus.UNPROCESSABLE_CONTENT, "Điểm chưa hợp lệ", "Điểm phải từ 0 đến 10 và có tối đa hai chữ số thập phân."),
+    INVALID_SCORE(HttpStatus.UNPROCESSABLE_CONTENT, "Điểm chưa hợp lệ", "Điểm phải từ 0 đến 10 và tăng theo bước 0,25."),
     EVALUATIONS_INCOMPLETE(HttpStatus.UNPROCESSABLE_CONTENT, "Chưa đủ điểm", "Mọi thành viên hội đồng phải nộp điểm trước khi tổng hợp."),
     RESULT_NOT_READY(HttpStatus.UNPROCESSABLE_CONTENT, "Kết quả chưa sẵn sàng", "Kết quả chưa đủ điều kiện để công bố.");
 

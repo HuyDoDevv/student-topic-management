@@ -33,9 +33,12 @@ database có dữ liệu thật cho integration/concurrency.
 
 ## Scenario 3 — Scoring and results
 
-1. Lần lượt đăng nhập mọi council member; mỗi người nhập một điểm 0..10 và submit cho mọi group.
-2. Thử 10.01, -0.01, ba chữ số thập phân, người ngoài board và supervisor; mong đợi từ chối.
-3. Chair complete board; kiểm tra result READY từng group và arithmetic mean scale 2.
+1. Lần lượt đăng nhập mọi council member; mỗi người nhập một điểm 0..10 theo bước 0.25
+   riêng cho từng sinh viên của mọi group; kiểm tra `5`, `6.5`, `7.75` hiển thị không có số
+   0 thập phân dư.
+2. Thử 10.01, -0.01, 5.6, 8.55, người ngoài board và supervisor; mong đợi từ chối.
+3. Chair complete board; kiểm tra result READY từng sinh viên và arithmetic mean scale 2
+   chỉ từ các evaluation của sinh viên đó.
 4. DEAN publish; kiểm tra board/result PUBLISHED và không sửa được score/report.
 
 ## Scenario 3A — Direct grading for COURSE/NCKH
@@ -44,13 +47,15 @@ database có dữ liệu thật cho integration/concurrency.
 2. DEAN mở `/faculty/direct-grading`, chọn một LECTURER cùng bộ môn không phải bất kỳ GVHD
    nào; xác nhận lượt chấm chuyển ACTIVE và leader không thể thay báo cáo nữa.
 3. Thử chọn GVHD, tài khoản khóa/khác bộ môn hoặc registration TLCN/KLTN; mong đợi từ chối.
-4. Grader mở **Chấm điểm**, submit một điểm rồi **Hoàn tất chấm**; DEAN quay lại trang phân
-   công để publish. Final score phải bằng đúng điểm đã submit và sinh viên xem như kết quả cũ.
+4. Grader mở **Chấm điểm**, submit điểm cho đủ từng sinh viên rồi **Hoàn tất chấm**; DEAN
+   quay lại trang phân công để publish. Final score của mỗi sinh viên phải bằng đúng điểm
+   riêng đã submit.
 
 ## Scenario 4 — Student privacy
 
-1. Đăng nhập từng snapshot member, mở `/student/results`; thấy result group mình.
-2. Sinh viên group khác gọi URL detail trực tiếp; mong đợi 403/404 và không lộ score.
+1. Đăng nhập từng snapshot member, mở `/student/results`; mỗi người chỉ thấy result cá nhân.
+2. Sinh viên cùng nhóm hoặc nhóm khác không nhận được điểm/nhận xét của người còn lại;
+   direct URL ngoài quyền trả 403/404 và không lộ score.
 3. Result READY không xuất hiện cho student.
 4. DEAN chỉ thấy result trong faculty; ADMIN không thấy academic result.
 

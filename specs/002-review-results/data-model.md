@@ -87,22 +87,23 @@ Một row tên `Điểm hội đồng` cho mỗi period, min 0.00, max 10.00. Un
 |---|---|
 | id | Primary key |
 | registration/period/council | Phải khớp CouncilTopic ACCEPTED |
+| student | Phải thuộc `registration_members` snapshot của registration |
 | evaluator | Phải là CouncilMember và không là TopicSupervisor |
 | component | `Điểm hội đồng` cùng period |
-| score | 0.00..10.00, scale <= 2 |
+| score | 0.00..10.00, bội số của 0.25; lưu DECIMAL, hiển thị bỏ số 0 dư |
 | feedback | Tùy chọn |
 | status | DRAFT hoặc SUBMITTED |
 | evaluatedAt/submittedAt | UTC instant; submittedAt bắt buộc khi SUBMITTED |
 | version | Optimistic version |
 
-Unique hiện có `(registration_id, evaluator_id, component_id)` giữ một điểm tổng/evaluator.
-Chỉ ghi khi council ACTIVE; khóa sau COMPLETED.
+Unique `(registration_id, student_id, evaluator_id, component_id)` giữ một điểm cho mỗi
+sinh viên/evaluator. Chỉ ghi khi council ACTIVE; khóa sau COMPLETED.
 
 ## FinalResult
 
 | Field | Rule |
 |---|---|
-| registration | Primary key, ACCEPTED và thuộc council |
+| registration + student | Composite primary key; student thuộc snapshot registration ACCEPTED |
 | council | Council đã complete |
 | status | READY hoặc PUBLISHED |
 | consolidatedBy/At | Chair và thời điểm complete |
@@ -112,8 +113,8 @@ Chỉ ghi khi council ACTIVE; khóa sau COMPLETED.
 | publishedBy/At | DEAN và thời điểm publish; null khi READY |
 | version | Optimistic version |
 
-READY được tạo cho mọi CouncilTopic trong cùng transaction complete. Publish đổi mọi READY
-của council và council sang PUBLISHED trong cùng transaction.
+READY được tạo cho mọi sinh viên snapshot của mọi CouncilTopic trong cùng transaction
+complete. Publish đổi mọi READY của council và council sang PUBLISHED trong cùng transaction.
 
 ## Migration V8
 
@@ -130,6 +131,13 @@ V10 thêm `councils.grading_mode`, backfill mặc định `COUNCIL`, thay check 
 check kết hợp mode/officer và tạo lại trigger officer. `COUNCIL` vẫn bắt buộc Chair khác
 Secretary; `DIRECT` bắt buộc hai FK officer cùng trỏ một người và trigger chỉ tạo một row
 membership. Không sửa V1–V9 và không thêm bảng nghiệp vụ mới.
+
+## Migration V11
+
+V11 thêm `student_id` vào `evaluations` và `final_results`, đổi unique/primary key sang phạm
+vi từng sinh viên và thêm composite foreign key tới `registration_members`. Dữ liệu điểm
+nhóm từ V10 trở về trước được sao chép cho từng thành viên snapshot để bảo toàn kết quả lịch
+sử; từ V11 mọi điểm mới bắt buộc gắn đúng một sinh viên snapshot. Không sửa V1–V10.
 
 ## Lock order
 

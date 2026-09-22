@@ -1,33 +1,38 @@
 package vn.edu.topicregistration.entity;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "final_results")
 public class FinalResultEntity {
-    @Id
-    @Column(name = "registration_id")
-    private Long registrationId;
+    @EmbeddedId
+    private FinalResultId id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId("registrationId")
     @JoinColumn(name = "registration_id", nullable = false)
     private RegistrationEntity registration;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @MapsId("studentId")
+    @JoinColumn(name = "student_id", nullable = false)
+    private UserAccountEntity student;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -72,12 +77,15 @@ public class FinalResultEntity {
 
     public FinalResultEntity(
             RegistrationEntity registration,
+            UserAccountEntity student,
             CouncilEntity council,
             UserAccountEntity consolidatedBy,
             Instant completedAt,
             String evaluationSummary,
             BigDecimal finalScore) {
         this.registration = Objects.requireNonNull(registration, "registration");
+        this.student = Objects.requireNonNull(student, "student");
+        this.id = new FinalResultId(registration.getId(), student.getId());
         this.council = Objects.requireNonNull(council, "council");
         this.consolidatedBy = Objects.requireNonNull(consolidatedBy, "consolidatedBy");
         this.consolidatedAt = Objects.requireNonNull(completedAt, "completedAt");
@@ -98,11 +106,19 @@ public class FinalResultEntity {
     }
 
     public Long getRegistrationId() {
-        return registrationId;
+        return id == null ? null : id.registrationId;
+    }
+
+    public Long getStudentId() {
+        return id == null ? null : id.studentId;
     }
 
     public RegistrationEntity getRegistration() {
         return registration;
+    }
+
+    public UserAccountEntity getStudent() {
+        return student;
     }
 
     public FinalResultStatus getStatus() {
@@ -147,5 +163,47 @@ public class FinalResultEntity {
 
     public long getVersion() {
         return version;
+    }
+
+    @Embeddable
+    public static class FinalResultId implements Serializable {
+        @Column(name = "registration_id")
+        private Long registrationId;
+
+        @Column(name = "student_id")
+        private Long studentId;
+
+        protected FinalResultId() {
+        }
+
+        public FinalResultId(Long registrationId, Long studentId) {
+            this.registrationId = registrationId;
+            this.studentId = studentId;
+        }
+
+        public Long getRegistrationId() {
+            return registrationId;
+        }
+
+        public Long getStudentId() {
+            return studentId;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof FinalResultId that)) {
+                return false;
+            }
+            return Objects.equals(registrationId, that.registrationId)
+                    && Objects.equals(studentId, that.studentId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(registrationId, studentId);
+        }
     }
 }

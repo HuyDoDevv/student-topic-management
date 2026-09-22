@@ -63,13 +63,13 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
         assertTrue(link("Chấm điểm").isVisible());
         page().navigate(url("/lecturer/scoring/"
                 + fixture.activeCouncilId() + "/" + fixture.activeRegistrationOneId()));
+        page().locator("a.btn-primary").first().click();
+        String studentScoreUrl = page().url();
         page().getByLabel("Điểm tổng").fill("9.25");
-        page().getByLabel("Nhận xét").fill("Browser acceptance score");
+        page().getByLabel("Nhận xét riêng cho sinh viên").fill("Browser acceptance score");
         acceptNextConfirmation();
         button("Nộp điểm").click();
-        assertEquals(url("/lecturer/scoring/"
-                + fixture.activeCouncilId() + "/" + fixture.activeRegistrationOneId()),
-                page().url(), page().locator("body").innerText());
+        assertEquals(studentScoreUrl, page().url(), page().locator("body").innerText());
         assertTrue(page().getByText("Đã nộp điểm", new Page.GetByTextOptions()
                 .setExact(true)).isVisible());
 
@@ -90,13 +90,19 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
         acceptNextConfirmation();
         button("Công bố kết quả").click();
         page().waitForURL(url("/faculty/results"));
-        assertTrue(page().getByText(ReviewFixtureSupport.ACTIVE_TOPIC_ONE).isVisible());
+        assertEquals(3, page().getByText(ReviewFixtureSupport.ACTIVE_TOPIC_ONE).count());
 
         logout();
         login("student1.demo");
         page().navigate(url("/student/results/" + fixture.activeRegistrationOneId()));
         assertEquals("8.75", page().locator(".display-1").textContent().strip());
         assertEquals(3, page().locator("tbody tr").count());
+
+        logout();
+        login("student2.demo");
+        page().navigate(url("/student/results/" + fixture.activeRegistrationOneId()));
+        assertEquals("8.5", page().locator(".display-1").textContent().strip());
+        assertFalse(page().content().contains("Browser acceptance score"));
 
         logout();
         login("student4.demo");

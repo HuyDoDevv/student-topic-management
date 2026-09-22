@@ -36,6 +36,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -75,7 +76,8 @@ class StudentResultServiceTest {
         when(evaluation.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
         when(evaluation.getSubmittedAt()).thenReturn(NOW.minusSeconds(60));
         when(dependencies.evaluations()
-                .findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(41L, 51L))
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        41L, 51L, 31L))
                 .thenReturn(List.of(evaluation));
 
         var detail = dependencies.service().detailForCurrentStudent(51L);
@@ -96,7 +98,8 @@ class StudentResultServiceTest {
 
         assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, exception.code());
         verify(dependencies.evaluations(), never())
-                .findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(41L, 51L);
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        41L, 51L, 31L);
     }
 
     @Test
@@ -151,6 +154,7 @@ class StudentResultServiceTest {
                 mock(CouncilRepository.class),
                 mock(CouncilTopicRepository.class),
                 mock(CouncilMemberRepository.class),
+                mock(RegistrationMemberRepository.class),
                 mock(EvaluationRepository.class),
                 mock(FinalResultRepository.class),
                 mock(UserAccountRepository.class),
@@ -162,13 +166,15 @@ class StudentResultServiceTest {
             CouncilRepository councils,
             CouncilTopicRepository assignments,
             CouncilMemberRepository members,
+            RegistrationMemberRepository registrationMembers,
             EvaluationRepository evaluations,
             FinalResultRepository results,
             UserAccountRepository accounts,
             AuthorizationPolicy authorization) {
         ResultService service() {
             return new ResultService(
-                    periods, councils, assignments, members, evaluations, results,
+                    periods, councils, assignments, members, registrationMembers,
+                    evaluations, results,
                     accounts, authorization, Clock.fixed(NOW, ZoneOffset.UTC));
         }
     }

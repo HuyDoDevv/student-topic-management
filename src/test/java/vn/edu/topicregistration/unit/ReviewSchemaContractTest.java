@@ -14,6 +14,8 @@ class ReviewSchemaContractTest {
             "src/main/resources/db/migration/V8__implement_review_and_results.sql");
     private static final Path DIRECT_GRADING_MIGRATION = Path.of(
             "src/main/resources/db/migration/V10__support_direct_grading_assignments.sql");
+    private static final Path INDIVIDUAL_GRADING_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V11__grade_each_registration_student.sql");
 
     @Test
     void v8AddsLifecycleAndConsistencyGuardsToPlaceholderTables() throws IOException {
@@ -42,5 +44,19 @@ class ReviewSchemaContractTest {
                 () -> assertTrue(sql.contains("chk_councils_grading_mode_officers")),
                 () -> assertTrue(sql.contains("trg_councils_add_officers")),
                 () -> assertTrue(sql.contains("NEW.secretary_id <> NEW.chair_id")));
+    }
+
+    @Test
+    void v11ScopesEvaluationsAndResultsToRegistrationStudents() throws IOException {
+        String sql = Files.readString(INDIVIDUAL_GRADING_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("student_id")),
+                () -> assertTrue(sql.contains("uq_evaluations_student_actor_component")),
+                () -> assertTrue(sql.contains("fk_evaluations_registration_student")),
+                () -> assertTrue(sql.contains("PRIMARY KEY (registration_id, student_id)")),
+                () -> assertTrue(sql.contains("fk_final_results_registration_student")),
+                () -> assertTrue(sql.contains("INSERT INTO evaluations")),
+                () -> assertTrue(sql.contains("INSERT INTO final_results")));
     }
 }

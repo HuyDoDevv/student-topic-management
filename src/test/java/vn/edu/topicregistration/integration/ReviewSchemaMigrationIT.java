@@ -22,7 +22,7 @@ import vn.edu.topicregistration.seed.DemoSeedProperties;
 import vn.edu.topicregistration.seed.LocalDemoSeeder;
 import vn.edu.topicregistration.util.ProjectTime;
 
-/** T008/T009: verifies review migrations against representative V7 rows. */
+/** T008–T010: verifies review migrations against representative V7 rows. */
 class ReviewSchemaMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
     private static final Instant NOW = Instant.parse("2026-09-14T08:00:00Z");
@@ -125,7 +125,7 @@ class ReviewSchemaMigrationIT {
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
                 .load();
-        assertEquals(3, allVersions.migrate().migrationsExecuted);
+        assertEquals(4, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);
 
         assertEquals("DRAFT", jdbc.queryForObject(
@@ -136,13 +136,21 @@ class ReviewSchemaMigrationIT {
                 SELECT department_id FROM user_accounts WHERE id = ?
                 """, chairId), requiredLong(jdbc,
                 "SELECT department_id FROM councils WHERE id = ?", councilId));
-        assertEquals(3, requiredLong(jdbc, """
+        assertEquals(9, requiredLong(jdbc, """
                 SELECT COUNT(*) FROM evaluations
                 WHERE council_id = ? AND status = 'SUBMITTED' AND submitted_at IS NOT NULL
                 """, councilId));
-        assertEquals("READY", jdbc.queryForObject(
-                "SELECT status FROM final_results WHERE registration_id = ?",
-                String.class, registrationId));
+        assertEquals(3, requiredLong(jdbc, """
+                SELECT COUNT(*) FROM final_results
+                WHERE registration_id = ? AND status = 'READY'
+                """, registrationId));
+        assertEquals(0, requiredLong(jdbc, """
+                SELECT COUNT(*) FROM evaluations evaluation
+                LEFT JOIN registration_members member
+                  ON member.registration_id = evaluation.registration_id
+                 AND member.student_id = evaluation.student_id
+                WHERE evaluation.council_id = ? AND member.student_id IS NULL
+                """, councilId));
         assertEquals(1, requiredLong(jdbc, """
                 SELECT COUNT(*) FROM project_reports
                 WHERE registration_id = ? AND replaced_at IS NULL

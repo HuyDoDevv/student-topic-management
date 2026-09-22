@@ -672,25 +672,35 @@ public class LocalDemoSeeder implements ApplicationRunner {
             String score,
             String feedback,
             Instant submittedAt) {
-        if (!exists(
-                "SELECT COUNT(*) FROM evaluations "
-                        + "WHERE registration_id = ? AND evaluator_id = ? AND component_id = ?",
-                registrationId, evaluatorId, componentId)) {
-            jdbc.update(
-                    "INSERT INTO evaluations("
-                            + "registration_id, period_id, registration_status, evaluator_id, "
-                            + "component_id, council_id, score, feedback, status, evaluated_at, "
-                            + "submitted_at, version) "
-                            + "VALUES (?, ?, 'ACCEPTED', ?, ?, ?, ?, ?, 'SUBMITTED', ?, ?, 0)",
-                    registrationId,
-                    periodId,
-                    evaluatorId,
-                    componentId,
-                    councilId,
-                    new BigDecimal(score),
-                    feedback,
-                    Timestamp.from(submittedAt),
-                    Timestamp.from(submittedAt));
+        List<Long> studentIds = jdbc.queryForList(
+                "SELECT student_id FROM registration_members "
+                        + "WHERE registration_id = ? ORDER BY slot",
+                Long.class,
+                registrationId);
+        for (Long studentId : studentIds) {
+            if (!exists(
+                    "SELECT COUNT(*) FROM evaluations "
+                            + "WHERE registration_id = ? AND student_id = ? "
+                            + "AND evaluator_id = ? AND component_id = ?",
+                    registrationId, studentId, evaluatorId, componentId)) {
+                jdbc.update(
+                        "INSERT INTO evaluations("
+                                + "registration_id, student_id, period_id, registration_status, "
+                                + "evaluator_id, component_id, council_id, score, feedback, "
+                                + "status, evaluated_at, submitted_at, version) "
+                                + "VALUES (?, ?, ?, 'ACCEPTED', ?, ?, ?, ?, ?, 'SUBMITTED', "
+                                + "?, ?, 0)",
+                        registrationId,
+                        studentId,
+                        periodId,
+                        evaluatorId,
+                        componentId,
+                        councilId,
+                        new BigDecimal(score),
+                        feedback,
+                        Timestamp.from(submittedAt),
+                        Timestamp.from(submittedAt));
+            }
         }
     }
 
@@ -702,26 +712,36 @@ public class LocalDemoSeeder implements ApplicationRunner {
             Instant completedAt,
             Instant publishedAt,
             BigDecimal finalScore) {
-        if (!exists(
-                "SELECT COUNT(*) FROM final_results WHERE registration_id = ?",
-                registrationId)) {
-            jdbc.update(
-                    "INSERT INTO final_results("
-                            + "registration_id, registration_status, council_id, consolidated_by, "
-                            + "consolidated_at, evaluation_summary, final_score, "
-                            + "review_completed_at, grading_completed_at, published_by, "
-                            + "published_at, status, version) "
-                            + "VALUES (?, 'ACCEPTED', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED', 0)",
-                    registrationId,
-                    councilId,
-                    consolidatedBy,
-                    Timestamp.from(completedAt),
-                    "3/3 đánh giá đã gửi; điểm cuối là trung bình cộng.",
-                    finalScore,
-                    Timestamp.from(completedAt),
-                    Timestamp.from(completedAt),
-                    publishedBy,
-                    Timestamp.from(publishedAt));
+        List<Long> studentIds = jdbc.queryForList(
+                "SELECT student_id FROM registration_members "
+                        + "WHERE registration_id = ? ORDER BY slot",
+                Long.class,
+                registrationId);
+        for (Long studentId : studentIds) {
+            if (!exists(
+                    "SELECT COUNT(*) FROM final_results "
+                            + "WHERE registration_id = ? AND student_id = ?",
+                    registrationId, studentId)) {
+                jdbc.update(
+                        "INSERT INTO final_results("
+                                + "registration_id, student_id, registration_status, council_id, "
+                                + "consolidated_by, consolidated_at, evaluation_summary, "
+                                + "final_score, review_completed_at, grading_completed_at, "
+                                + "published_by, published_at, status, version) "
+                                + "VALUES (?, ?, 'ACCEPTED', ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                                + "'PUBLISHED', 0)",
+                        registrationId,
+                        studentId,
+                        councilId,
+                        consolidatedBy,
+                        Timestamp.from(completedAt),
+                        "3/3 đánh giá đã gửi; điểm cuối là trung bình cộng.",
+                        finalScore,
+                        Timestamp.from(completedAt),
+                        Timestamp.from(completedAt),
+                        publishedBy,
+                        Timestamp.from(publishedAt));
+            }
         }
     }
 

@@ -9,7 +9,6 @@
       <h1 class="page-title">Phân công chấm độc lập</h1>
       <p class="text-secondary mt-2 mb-0">Dành cho đề tài Môn học và NCKH sau khi đã có báo cáo cuối cùng.</p>
     </div>
-    <a class="btn btn-outline-secondary" th:href="@{/faculty/boards}">Hội đồng TLCN/KLTN</a>
   </div>
 
   <div class="alert alert-info" role="status">
@@ -73,7 +72,10 @@
 
   <article class="card">
     <div class="card-header">
-      <h2 class="card-title">Các lượt chấm đã phân công</h2>
+      <div>
+        <h2 class="card-title">Các lượt chấm đã phân công</h2>
+        <div class="small text-secondary mt-1">Mỗi dòng là một nhóm trong một đợt; gồm cả lịch sử đã công bố.</div>
+      </div>
       <span class="badge bg-blue-lt ms-auto"
             th:text="${#lists.size(assignments)} + ' lượt'">0 lượt</span>
     </div>
@@ -95,15 +97,17 @@
             <div class="btn-list justify-content-end">
               <a class="btn btn-sm btn-ghost-primary"
                  th:href="@{/reports/{id}(id=${assignment.registrationId})}">Báo cáo</a>
+              <a class="btn btn-sm btn-outline-primary"
+                 th:if="${assignment.status.name() == 'COMPLETED' || assignment.status.name() == 'PUBLISHED'}"
+                 th:href="@{/faculty/results(periodId=${assignment.periodId},registrationId=${assignment.registrationId})}"
+                 th:text="${assignment.status.name() == 'COMPLETED' ? 'Xem điểm từng sinh viên' : 'Xem kết quả từng sinh viên'}">Xem điểm từng sinh viên</a>
               <form method="post" th:if="${assignment.status.name() == 'COMPLETED'}"
                     th:action="@{/faculty/direct-grading/{id}/publish(id=${assignment.id})}"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${assignment.version}">
                 <button class="btn btn-sm btn-primary" type="submit"
-                        data-confirm="Công bố điểm cho nhóm sinh viên?">Công bố</button>
+                        data-confirm="Đã kiểm tra điểm từng sinh viên và muốn công bố cho nhóm này?">Công bố</button>
               </form>
-              <a class="btn btn-sm btn-success" th:if="${assignment.status.name() == 'PUBLISHED'}"
-                 th:href="@{/faculty/results/{id}(id=${assignment.registrationId})}">Xem kết quả</a>
             </div>
           </td>
         </tr>

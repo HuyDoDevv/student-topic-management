@@ -40,10 +40,13 @@ public final class FinalScoreRules {
         if (context.status() != CouncilStatus.ACTIVE) {
             throw failure(FinalScoreFailure.INVALID_STATE);
         }
-        long expectedEvaluations = (long) context.assignmentCount() * context.memberCount();
+        long expectedEvaluations = (long) context.studentCount() * context.memberCount();
         boolean validCardinality = context.mode() == CouncilMode.DIRECT
-                ? context.assignmentCount() == 1 && context.memberCount() == 1
+                ? context.assignmentCount() == 1
+                        && context.memberCount() == 1
+                        && context.studentCount() >= 1
                 : context.assignmentCount() >= 1
+                        && context.studentCount() >= context.assignmentCount()
                         && context.memberCount() >= 3
                         && context.memberCount() <= 5;
         if (!validCardinality
@@ -58,8 +61,8 @@ public final class FinalScoreRules {
         if (context.status() != CouncilStatus.COMPLETED) {
             throw failure(FinalScoreFailure.INVALID_STATE);
         }
-        if (context.assignmentCount() < 1
-                || context.assignmentCount() != context.resultCount()
+        if (context.studentCount() < 1
+                || context.studentCount() != context.resultCount()
                 || !context.exactReadyResults()) {
             throw failure(FinalScoreFailure.RESULT_NOT_READY);
         }
@@ -88,6 +91,7 @@ public final class FinalScoreRules {
             boolean currentChair,
             int assignmentCount,
             int memberCount,
+            int studentCount,
             int submittedEvaluationCount,
             boolean exactSubmittedMatrix,
             CouncilMode mode) {
@@ -96,16 +100,18 @@ public final class FinalScoreRules {
                 boolean currentChair,
                 int assignmentCount,
                 int memberCount,
+                int studentCount,
                 int submittedEvaluationCount,
                 boolean exactSubmittedMatrix) {
             this(status, currentChair, assignmentCount, memberCount,
-                    submittedEvaluationCount, exactSubmittedMatrix, CouncilMode.COUNCIL);
+                    studentCount, submittedEvaluationCount, exactSubmittedMatrix,
+                    CouncilMode.COUNCIL);
         }
     }
 
     public record PublicationContext(
             CouncilStatus status,
-            int assignmentCount,
+            int studentCount,
             int resultCount,
             boolean exactReadyResults) {
     }

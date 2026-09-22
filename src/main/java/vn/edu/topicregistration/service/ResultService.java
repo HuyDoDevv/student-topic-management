@@ -28,6 +28,7 @@ import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FinalResultEntity;
 import vn.edu.topicregistration.entity.FinalResultStatus;
 import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
@@ -40,12 +41,14 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.FinalScoreRules.CompletionContext;
 import vn.edu.topicregistration.service.FinalScoreRules.FinalScoreRuleException;
 import vn.edu.topicregistration.service.FinalScoreRules.PublicationContext;
+import vn.edu.topicregistration.util.ScoreFormat;
 
 @Service
 @Profile("!preview & !test")
@@ -54,6 +57,7 @@ public class ResultService {
     private final CouncilRepository councils;
     private final CouncilTopicRepository assignments;
     private final CouncilMemberRepository members;
+    private final RegistrationMemberRepository registrationMembers;
     private final EvaluationRepository evaluations;
     private final FinalResultRepository results;
     private final UserAccountRepository accounts;
@@ -65,6 +69,7 @@ public class ResultService {
             CouncilRepository councils,
             CouncilTopicRepository assignments,
             CouncilMemberRepository members,
+            RegistrationMemberRepository registrationMembers,
             EvaluationRepository evaluations,
             FinalResultRepository results,
             UserAccountRepository accounts,
@@ -74,6 +79,7 @@ public class ResultService {
         this.councils = councils;
         this.assignments = assignments;
         this.members = members;
+        this.registrationMembers = registrationMembers;
         this.evaluations = evaluations;
         this.results = results;
         this.accounts = accounts;
@@ -89,18 +95,21 @@ public class ResultService {
                 .findAllByCouncilIdForUpdate(councilId);
         List<CouncilMemberEntity> lockedMembers = members
                 .findAllByCouncilIdForUpdate(councilId);
+        List<RegistrationMemberEntity> snapshotStudents = snapshotStudents(lockedAssignments);
         List<EvaluationEntity> lockedEvaluations = evaluations
                 .findAllByCouncilIdForUpdate(councilId);
         List<FinalResultEntity> existingResults = results
                 .findAllByCouncilIdForUpdate(councilId);
 
         boolean exactMatrix = exactSubmittedMatrix(
-                board.period(), council, lockedAssignments, lockedMembers, lockedEvaluations);
+                board.period(), council, lockedAssignments, lockedMembers,
+                snapshotStudents, lockedEvaluations);
         applyRules(() -> FinalScoreRules.validateCompletion(new CompletionContext(
                 council.getStatus(),
                 Objects.equals(council.getChair().getId(), board.actor().accountId()),
                 lockedAssignments.size(),
                 lockedMembers.size(),
+                snapshotStudents.size(),
                 submittedCount(lockedEvaluations),
                 exactMatrix,
                 council.getMode() == null ? CouncilMode.COUNCIL : council.getMode())));
@@ -109,23 +118,31 @@ public class ResultService {
         }
 
         Instant completedAt = clock.instant();
-        Map<Long, List<EvaluationEntity>> byRegistration = evaluationsByRegistration(
+        Map<StudentKey, List<EvaluationEntity>> byStudent = evaluationsByStudent(
                 lockedEvaluations);
-        List<FinalResultEntity> created = new ArrayList<>(lockedAssignments.size());
+        List<FinalResultEntity> created = new ArrayList<>(snapshotStudents.size());
         for (CouncilTopicEntity assignment : lockedAssignments) {
             RegistrationEntity registration = assignment.getRegistration();
-            List<EvaluationEntity> registrationEvaluations = byRegistration
-                    .getOrDefault(registration.getId(), List.of());
-            BigDecimal finalScore = FinalScoreRules.mean(registrationEvaluations.stream()
-                    .map(EvaluationEntity::getScore)
-                    .toList());
-            created.add(new FinalResultEntity(
-                    registration,
-                    council,
-                    council.getChair(),
-                    completedAt,
-                    summary(registrationEvaluations.size(), finalScore),
-                    finalScore));
+            snapshotStudents.stream()
+                    .filter(snapshot -> Objects.equals(
+                            snapshot.getRegistration().getId(), registration.getId()))
+                    .forEach(snapshot -> {
+                        StudentKey key = new StudentKey(
+                                registration.getId(), snapshot.getStudent().getId());
+                        List<EvaluationEntity> studentEvaluations = byStudent
+                                .getOrDefault(key, List.of());
+                        BigDecimal finalScore = FinalScoreRules.mean(studentEvaluations.stream()
+                                .map(EvaluationEntity::getScore)
+                                .toList());
+                        created.add(new FinalResultEntity(
+                                registration,
+                                snapshot.getStudent(),
+                                council,
+                                council.getChair(),
+                                completedAt,
+                                summary(studentEvaluations.size(), finalScore),
+                                finalScore));
+                    });
         }
 
         results.saveAll(created);
@@ -146,15 +163,16 @@ public class ResultService {
         List<CouncilTopicEntity> lockedAssignments = assignments
                 .findAllByCouncilIdForUpdate(councilId);
         members.findAllByCouncilIdForUpdate(councilId);
+        List<RegistrationMemberEntity> snapshotStudents = snapshotStudents(lockedAssignments);
         evaluations.findAllByCouncilIdForUpdate(councilId);
         List<FinalResultEntity> lockedResults = results
                 .findAllByCouncilIdForUpdate(councilId);
 
         boolean exactReadyResults = exactReadyResults(
-                council, lockedAssignments, lockedResults);
+                council, snapshotStudents, lockedResults);
         applyRules(() -> FinalScoreRules.validatePublication(new PublicationContext(
                 council.getStatus(),
-                lockedAssignments.size(),
+                snapshotStudents.size(),
                 lockedResults.size(),
                 exactReadyResults)));
 
@@ -176,29 +194,36 @@ public class ResultService {
     @Transactional(readOnly = true)
     public List<FacultyResultSummaryView> listForCurrentDean() {
         ActorIdentity dean = currentDean();
+        Map<Long, List<FacultyResultLecturerView>> lecturersByCouncil = new LinkedHashMap<>();
         return results
-                .findAllByCouncilPeriodFacultyIdOrderByConsolidatedAtDescRegistrationIdDesc(
+                .findAllByCouncilPeriodFacultyIdOrderByConsolidatedAtDescIdRegistrationIdDesc(
                         dean.facultyId())
                 .stream()
-                .map(ResultService::toSummary)
+                .map(result -> toSummary(
+                        result,
+                        lecturersByCouncil.computeIfAbsent(
+                                result.getCouncil().getId(),
+                                ignored -> lecturersFor(result.getCouncil()))))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public FacultyResultDetailView detailForCurrentDean(long registrationId) {
-        FinalResultEntity result = results.findDetailedByRegistrationId(registrationId)
+    public FacultyResultDetailView detailForCurrentDean(
+            long registrationId, long studentId) {
+        FinalResultEntity result = results
+                .findDetailedByRegistrationIdAndStudentId(registrationId, studentId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         long facultyId = requiredFacultyId(result.getCouncil().getPeriod());
         authorization.requireDeanOfFaculty(facultyId);
         List<EvaluationResultView> evaluationViews = evaluations
-                .findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(
-                        result.getCouncil().getId(), registrationId)
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        result.getCouncil().getId(), registrationId, studentId)
                 .stream()
                 .map(ResultService::toEvaluationView)
                 .toList();
         return new FacultyResultDetailView(
-                toSummary(result),
+                toSummary(result, lecturersFor(result.getCouncil())),
                 result.getEvaluationSummary(),
                 displayName(result.getConsolidatedBy()),
                 result.getPublishedBy() == null
@@ -226,8 +251,8 @@ public class ResultService {
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         List<EvaluationResultView> evaluationViews = evaluations
-                .findAllByCouncilIdAndRegistrationIdOrderByEvaluatorId(
-                        result.getCouncil().getId(), registrationId)
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        result.getCouncil().getId(), registrationId, student.accountId())
                 .stream()
                 .filter(evaluation -> evaluation.getStatus() == EvaluationStatus.SUBMITTED)
                 .map(ResultService::toEvaluationView)
@@ -297,6 +322,7 @@ public class ResultService {
             CouncilEntity council,
             List<CouncilTopicEntity> assignments,
             List<CouncilMemberEntity> members,
+            List<RegistrationMemberEntity> snapshotStudents,
             List<EvaluationEntity> evaluations) {
         Set<Long> registrationIds = new HashSet<>();
         for (CouncilTopicEntity assignment : assignments) {
@@ -318,12 +344,32 @@ public class ResultService {
                 return false;
             }
         }
+        Set<StudentKey> studentKeys = new HashSet<>();
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            if (snapshot.getRegistration() == null
+                    || snapshot.getRegistration().getId() == null
+                    || !registrationIds.contains(snapshot.getRegistration().getId())
+                    || snapshot.getStudent() == null
+                    || snapshot.getStudent().getId() == null
+                    || !studentKeys.add(new StudentKey(
+                            snapshot.getRegistration().getId(),
+                            snapshot.getStudent().getId()))) {
+                return false;
+            }
+        }
+        if (studentKeys.size() < registrationIds.size()) {
+            return false;
+        }
         Set<EvaluationKey> keys = new HashSet<>();
         for (EvaluationEntity evaluation : evaluations) {
             if (evaluation.getCouncil() == null
                     || !Objects.equals(evaluation.getCouncil().getId(), council.getId())
                     || evaluation.getRegistration() == null
                     || !registrationIds.contains(evaluation.getRegistration().getId())
+                    || evaluation.getStudent() == null
+                    || !studentKeys.contains(new StudentKey(
+                            evaluation.getRegistration().getId(),
+                            evaluation.getStudent().getId()))
                     || evaluation.getEvaluator() == null
                     || !memberIds.contains(evaluation.getEvaluator().getId())
                     || evaluation.getComponent() == null
@@ -336,39 +382,41 @@ public class ResultService {
                     || evaluation.getSubmittedAt() == null
                     || !keys.add(new EvaluationKey(
                             evaluation.getRegistration().getId(),
+                            evaluation.getStudent().getId(),
                             evaluation.getEvaluator().getId()))) {
                 return false;
             }
         }
-        return keys.size() == (long) registrationIds.size() * memberIds.size();
+        return keys.size() == (long) studentKeys.size() * memberIds.size();
     }
 
     private static boolean exactReadyResults(
             CouncilEntity council,
-            List<CouncilTopicEntity> assignments,
+            List<RegistrationMemberEntity> snapshotStudents,
             List<FinalResultEntity> results) {
-        Set<Long> registrationIds = assignments.stream()
-                .map(CouncilTopicEntity::getRegistration)
-                .filter(Objects::nonNull)
-                .map(RegistrationEntity::getId)
-                .filter(Objects::nonNull)
+        Set<StudentKey> expectedKeys = snapshotStudents.stream()
+                .filter(snapshot -> snapshot.getRegistration() != null)
+                .filter(snapshot -> snapshot.getStudent() != null)
+                .map(snapshot -> new StudentKey(
+                        snapshot.getRegistration().getId(), snapshot.getStudent().getId()))
                 .collect(java.util.stream.Collectors.toSet());
-        if (registrationIds.size() != assignments.size()) {
-            return false;
-        }
-        Set<Long> resultRegistrationIds = new HashSet<>();
+        Set<StudentKey> resultKeys = new HashSet<>();
         for (FinalResultEntity result : results) {
             if (result.getRegistration() == null
                     || result.getRegistration().getId() == null
-                    || !registrationIds.contains(result.getRegistration().getId())
+                    || result.getStudent() == null
+                    || result.getStudent().getId() == null
+                    || !expectedKeys.contains(new StudentKey(
+                            result.getRegistration().getId(), result.getStudent().getId()))
                     || result.getCouncil() == null
                     || !Objects.equals(result.getCouncil().getId(), council.getId())
                     || result.getStatus() != FinalResultStatus.READY
-                    || !resultRegistrationIds.add(result.getRegistration().getId())) {
+                    || !resultKeys.add(new StudentKey(
+                            result.getRegistration().getId(), result.getStudent().getId()))) {
                 return false;
             }
         }
-        return resultRegistrationIds.equals(registrationIds);
+        return !expectedKeys.isEmpty() && resultKeys.equals(expectedKeys);
     }
 
     private static int submittedCount(List<EvaluationEntity> evaluations) {
@@ -377,28 +425,67 @@ public class ResultService {
                 .count());
     }
 
-    private static Map<Long, List<EvaluationEntity>> evaluationsByRegistration(
+    private static Map<StudentKey, List<EvaluationEntity>> evaluationsByStudent(
             List<EvaluationEntity> evaluations) {
-        Map<Long, List<EvaluationEntity>> grouped = new LinkedHashMap<>();
+        Map<StudentKey, List<EvaluationEntity>> grouped = new LinkedHashMap<>();
         for (EvaluationEntity evaluation : evaluations) {
             grouped.computeIfAbsent(
-                    evaluation.getRegistration().getId(), ignored -> new ArrayList<>())
+                    new StudentKey(
+                            evaluation.getRegistration().getId(),
+                            evaluation.getStudent().getId()),
+                    ignored -> new ArrayList<>())
                     .add(evaluation);
         }
         return grouped;
     }
 
-    private static String summary(int evaluationCount, BigDecimal mean) {
-        return evaluationCount + " điểm đã nộp; trung bình " + mean.toPlainString();
+    private List<RegistrationMemberEntity> snapshotStudents(
+            List<CouncilTopicEntity> councilAssignments) {
+        List<RegistrationMemberEntity> snapshots = new ArrayList<>();
+        for (CouncilTopicEntity assignment : councilAssignments) {
+            snapshots.addAll(registrationMembers.findAllByRegistrationId(
+                    assignment.getRegistration().getId()));
+        }
+        return snapshots;
     }
 
-    private static FacultyResultSummaryView toSummary(FinalResultEntity result) {
+    private static String summary(int evaluationCount, BigDecimal mean) {
+        return evaluationCount + " điểm đã nộp; trung bình " + ScoreFormat.display(mean);
+    }
+
+    private List<FacultyResultLecturerView> lecturersFor(CouncilEntity council) {
+        Map<Long, FacultyResultLecturerView> lecturers = new LinkedHashMap<>();
+        addLecturer(lecturers, council.getChair());
+        addLecturer(lecturers, council.getSecretary());
+        members.findAllByCouncilIdOrderBySlot(council.getId()).stream()
+                .map(CouncilMemberEntity::getLecturer)
+                .forEach(lecturer -> addLecturer(lecturers, lecturer));
+        return List.copyOf(lecturers.values());
+    }
+
+    private static void addLecturer(
+            Map<Long, FacultyResultLecturerView> lecturers,
+            UserAccountEntity lecturer) {
+        if (lecturer != null && lecturer.getId() != null) {
+            lecturers.putIfAbsent(lecturer.getId(), new FacultyResultLecturerView(
+                    lecturer.getId(), displayName(lecturer)));
+        }
+    }
+
+    private static FacultyResultSummaryView toSummary(
+            FinalResultEntity result,
+            List<FacultyResultLecturerView> lecturers) {
         return new FacultyResultSummaryView(
                 result.getRegistrationId(),
+                result.getStudentId(),
+                displayName(result.getStudent()),
                 result.getRegistration().getGroup().getId(),
+                result.getRegistration().getPeriod().getId(),
+                result.getRegistration().getPeriod().getName(),
                 result.getRegistration().getTopic().getTitle(),
                 result.getCouncil().getId(),
                 result.getCouncil().getName(),
+                lecturers,
                 result.getStatus(),
                 result.getFinalScore(),
                 result.getConsolidatedAt(),
@@ -466,7 +553,10 @@ public class ResultService {
             ActorIdentity actor) {
     }
 
-    private record EvaluationKey(Long registrationId, Long evaluatorId) {
+    private record StudentKey(Long registrationId, Long studentId) {
+    }
+
+    private record EvaluationKey(Long registrationId, Long studentId, Long evaluatorId) {
     }
 
     public record BoardResultView(
@@ -478,15 +568,26 @@ public class ResultService {
 
     public record FacultyResultSummaryView(
             Long registrationId,
+            Long studentId,
+            String studentName,
             Long groupId,
+            Long periodId,
+            String periodName,
             String topicTitle,
             Long councilId,
             String councilName,
+            List<FacultyResultLecturerView> lecturers,
             FinalResultStatus status,
             BigDecimal finalScore,
             Instant consolidatedAt,
             Instant publishedAt,
             long version) {
+        public FacultyResultSummaryView {
+            lecturers = List.copyOf(lecturers);
+        }
+    }
+
+    public record FacultyResultLecturerView(Long id, String name) {
     }
 
     public record EvaluationResultView(

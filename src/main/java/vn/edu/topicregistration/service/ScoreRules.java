@@ -9,6 +9,7 @@ import vn.edu.topicregistration.entity.RegistrationStatus;
 public final class ScoreRules {
     private static final BigDecimal MINIMUM = new BigDecimal("0.00");
     private static final BigDecimal MAXIMUM = new BigDecimal("10.00");
+    private static final BigDecimal STEP = new BigDecimal("0.25");
 
     private ScoreRules() {
     }
@@ -26,7 +27,8 @@ public final class ScoreRules {
         if (score == null
                 || score.compareTo(MINIMUM) < 0
                 || score.compareTo(MAXIMUM) > 0
-                || score.scale() > 2) {
+                || score.scale() > 2
+                || score.remainder(STEP).compareTo(BigDecimal.ZERO) != 0) {
             throw failure(Failure.INVALID_SCORE);
         }
     }

@@ -3,6 +3,7 @@ package vn.edu.topicregistration.controller;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import vn.edu.topicregistration.dto.ResultActionForm;
 import vn.edu.topicregistration.entity.EvaluationStatus;
@@ -27,10 +29,12 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
+import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
 import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
 import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
+import vn.edu.topicregistration.util.ScoreFormat;
 
 @Controller
 @Profile("!preview & !test")
@@ -52,17 +56,52 @@ public class ResultController {
     }
 
     @GetMapping("/faculty/results")
-    public String list(Model model) {
+    public String list(
+            @RequestParam(required = false) Long periodId,
+            @RequestParam(required = false) Long registrationId,
+            @RequestParam(required = false) Long lecturerId,
+            @RequestParam(required = false) FinalResultStatus status,
+            Model model) {
         common(model);
-        model.addAttribute("results", results.listForCurrentDean().stream()
+        var allResults = results.listForCurrentDean().stream()
                 .map(this::display)
+                .toList();
+        model.addAttribute("periodOptions", allResults.stream()
+                .map(result -> new FacultyResultPeriodOption(
+                        result.periodId(), result.periodName()))
+                .distinct()
                 .toList());
+        model.addAttribute("lecturerOptions", allResults.stream()
+                .flatMap(result -> result.lecturers().stream())
+                .map(lecturer -> new FacultyResultLecturerOption(
+                        lecturer.id(), lecturer.name()))
+                .distinct()
+                .toList());
+        model.addAttribute("selectedPeriodId", periodId);
+        model.addAttribute("selectedRegistrationId", registrationId);
+        model.addAttribute("selectedLecturerId", lecturerId);
+        model.addAttribute("selectedStatus", status);
+        var filteredResults = allResults.stream()
+                .filter(result -> periodId == null || periodId.equals(result.periodId()))
+                .filter(result -> registrationId == null
+                        || registrationId.equals(result.registrationId()))
+                .filter(result -> lecturerId == null || result.lecturers().stream()
+                        .anyMatch(lecturer -> lecturerId.equals(lecturer.id())))
+                .filter(result -> status == null || status == result.status())
+                .toList();
+        model.addAttribute("results", filteredResults);
+        model.addAttribute("selectedGroupId", registrationId == null || filteredResults.isEmpty()
+                ? null : filteredResults.getFirst().groupId());
         return "results/faculty-list";
     }
 
-    @GetMapping("/faculty/results/{registrationId}")
-    public String detail(@PathVariable long registrationId, Model model) {
-        FacultyResultDetailView detail = results.detailForCurrentDean(registrationId);
+    @GetMapping("/faculty/results/{registrationId}/{studentId}")
+    public String detail(
+            @PathVariable long registrationId,
+            @PathVariable long studentId,
+            Model model) {
+        FacultyResultDetailView detail = results.detailForCurrentDean(
+                registrationId, studentId);
         common(model);
         model.addAttribute("result", display(detail.result()));
         model.addAttribute("evaluationSummary", detail.evaluationSummary());
@@ -129,10 +168,17 @@ public class ResultController {
     private FacultyResultPageView display(FacultyResultSummaryView result) {
         return new FacultyResultPageView(
                 result.registrationId(),
+                result.studentId(),
+                result.studentName(),
                 result.groupId(),
+                result.periodId(),
+                result.periodName(),
                 result.topicTitle(),
                 result.councilId(),
                 result.councilName(),
+                result.lecturers().stream()
+                        .map(this::display)
+                        .toList(),
                 result.status(),
                 statusLabel(result.status()),
                 statusClass(result.status()),
@@ -140,6 +186,10 @@ public class ResultController {
                 format(result.consolidatedAt()),
                 format(result.publishedAt()),
                 result.version());
+    }
+
+    private FacultyResultLecturerPageView display(FacultyResultLecturerView lecturer) {
+        return new FacultyResultLecturerPageView(lecturer.id(), lecturer.name());
     }
 
     private EvaluationResultPageView display(EvaluationResultView evaluation) {
@@ -169,7 +219,7 @@ public class ResultController {
     }
 
     private static String score(BigDecimal value) {
-        return value == null ? null : value.setScale(2).toPlainString();
+        return ScoreFormat.display(value);
     }
 
     private static String statusLabel(FinalResultStatus status) {
@@ -187,10 +237,15 @@ public class ResultController {
 
     public record FacultyResultPageView(
             Long registrationId,
+            Long studentId,
+            String studentName,
             Long groupId,
+            Long periodId,
+            String periodName,
             String topicTitle,
             Long councilId,
             String councilName,
+            List<FacultyResultLecturerPageView> lecturers,
             FinalResultStatus status,
             String statusLabel,
             String statusClass,
@@ -198,6 +253,18 @@ public class ResultController {
             String consolidatedAt,
             String publishedAt,
             long version) {
+        public FacultyResultPageView {
+            lecturers = List.copyOf(lecturers);
+        }
+    }
+
+    public record FacultyResultPeriodOption(Long id, String name) {
+    }
+
+    public record FacultyResultLecturerOption(Long id, String name) {
+    }
+
+    public record FacultyResultLecturerPageView(Long id, String name) {
     }
 
     public record EvaluationResultPageView(

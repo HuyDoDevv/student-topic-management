@@ -31,6 +31,7 @@ import vn.edu.topicregistration.entity.EvaluationEntity;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 import vn.edu.topicregistration.entity.RoleCode;
@@ -46,6 +47,7 @@ import vn.edu.topicregistration.repository.CouncilRepository;
 import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.ScoreComponentRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -65,6 +67,7 @@ class ScoringServiceTest {
         ScoringService.EvaluationView result = dependencies.service().saveDraft(
                 41L,
                 51L,
+                101L,
                 new ScoreCommand(new BigDecimal("8.50"), "Nhận xét", null));
 
         InOrder order = inOrder(
@@ -73,12 +76,14 @@ class ScoringServiceTest {
                 dependencies.councils(),
                 dependencies.councilTopics(),
                 dependencies.members(),
+                dependencies.registrationMembers(),
                 dependencies.evaluations());
         order.verify(dependencies.periods()).findByIdForUpdate(7L);
         order.verify(dependencies.authorization()).requireRole(RoleCode.LECTURER);
         order.verify(dependencies.councils()).findByIdForUpdate(41L);
         order.verify(dependencies.councilTopics()).findAllByCouncilIdForUpdate(41L);
         order.verify(dependencies.members()).findAllByCouncilIdForUpdate(41L);
+        order.verify(dependencies.registrationMembers()).findAllByRegistrationId(51L);
         order.verify(dependencies.evaluations()).findAllByCouncilIdForUpdate(41L);
 
         ArgumentCaptor<EvaluationEntity> saved = ArgumentCaptor.forClass(EvaluationEntity.class);
@@ -102,6 +107,7 @@ class ScoringServiceTest {
         ScoringService.EvaluationView result = dependencies.service().submit(
                 41L,
                 51L,
+                101L,
                 new ScoreCommand(new BigDecimal("9.00"), "Đạt", null));
 
         verify(dependencies.components()).saveAndFlush(any(ScoreComponentEntity.class));
@@ -117,8 +123,10 @@ class ScoringServiceTest {
         RegistrationEntity registration = registration(dependencies);
         UserAccountEntity evaluator = evaluator(dependencies);
         ScoreComponentEntity component = component(dependencies);
+        UserAccountEntity student = student(dependencies);
         when(existing.getRegistration()).thenReturn(registration);
         when(existing.getEvaluator()).thenReturn(evaluator);
+        when(existing.getStudent()).thenReturn(student);
         when(existing.getComponent()).thenReturn(component);
         when(existing.getVersion()).thenReturn(3L);
         when(existing.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
@@ -130,6 +138,7 @@ class ScoringServiceTest {
         dependencies.service().submit(
                 41L,
                 51L,
+                101L,
                 new ScoreCommand(new BigDecimal("9.25"), "Đã sửa", 3L));
 
         verify(existing).submit(new BigDecimal("9.25"), "Đã sửa", NOW);
@@ -144,8 +153,10 @@ class ScoringServiceTest {
         RegistrationEntity registration = registration(dependencies);
         UserAccountEntity evaluator = evaluator(dependencies);
         ScoreComponentEntity component = component(dependencies);
+        UserAccountEntity student = student(dependencies);
         when(existing.getRegistration()).thenReturn(registration);
         when(existing.getEvaluator()).thenReturn(evaluator);
+        when(existing.getStudent()).thenReturn(student);
         when(existing.getComponent()).thenReturn(component);
         when(existing.getVersion()).thenReturn(4L);
         when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
@@ -155,6 +166,7 @@ class ScoringServiceTest {
                 () -> dependencies.service().saveDraft(
                         41L,
                         51L,
+                        101L,
                         new ScoreCommand(new BigDecimal("7.50"), null, 3L)));
 
         verify(existing, never()).saveDraft(any(), any(), any());
@@ -170,7 +182,8 @@ class ScoringServiceTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> outsiderDependencies.service().submit(
-                        41L, 51L, new ScoreCommand(new BigDecimal("8.00"), null, null)));
+                        41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
         verify(outsiderDependencies.evaluations(), never()).saveAndFlush(any());
 
         Dependencies supervisorDependencies = dependencies();
@@ -181,7 +194,8 @@ class ScoringServiceTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> supervisorDependencies.service().submit(
-                        41L, 51L, new ScoreCommand(new BigDecimal("8.00"), null, null)));
+                        41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
         verify(supervisorDependencies.evaluations(), never()).saveAndFlush(any());
     }
 
@@ -194,6 +208,7 @@ class ScoringServiceTest {
                 () -> dependencies.service().saveDraft(
                         41L,
                         51L,
+                        101L,
                         new ScoreCommand(new BigDecimal("8.00"), null, null)));
 
         assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, exception.code());
@@ -234,6 +249,15 @@ class ScoringServiceTest {
         when(assignment.getCouncil()).thenReturn(council);
         when(assignment.getRegistration()).thenReturn(registration);
 
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(101L);
+        when(student.getFullName()).thenReturn("Sinh viên A");
+        RegistrationMemberEntity snapshotStudent = mock(RegistrationMemberEntity.class);
+        when(snapshotStudent.getRegistration()).thenReturn(registration);
+        when(snapshotStudent.getStudent()).thenReturn(student);
+        when(snapshotStudent.getSlot()).thenReturn(1);
+        when(snapshotStudent.isLeaderAtSubmission()).thenReturn(true);
+
         ScoreComponentEntity component = mock(ScoreComponentEntity.class);
         when(component.getId()).thenReturn(61L);
         when(component.getPeriod()).thenReturn(period);
@@ -248,6 +272,8 @@ class ScoringServiceTest {
                 .thenReturn(List.of(assignment));
         when(dependencies.members().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(member));
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(List.of(snapshotStudent));
         when(dependencies.components().findByPeriodIdAndName(
                 7L, ScoreComponentEntity.COUNCIL_SCORE_NAME))
                 .thenReturn(Optional.of(component));
@@ -267,6 +293,11 @@ class ScoringServiceTest {
                 .getFirst().getLecturer();
     }
 
+    private static UserAccountEntity student(Dependencies dependencies) {
+        return dependencies.registrationMembers().findAllByRegistrationId(51L)
+                .getFirst().getStudent();
+    }
+
     private static ScoreComponentEntity component(Dependencies dependencies) {
         return dependencies.components().findByPeriodIdAndName(
                 7L, ScoreComponentEntity.COUNCIL_SCORE_NAME).orElseThrow();
@@ -278,6 +309,7 @@ class ScoringServiceTest {
                 mock(CouncilRepository.class),
                 mock(CouncilTopicRepository.class),
                 mock(CouncilMemberRepository.class),
+                mock(RegistrationMemberRepository.class),
                 mock(ScoreComponentRepository.class),
                 mock(EvaluationRepository.class),
                 mock(AuthorizationPolicy.class));
@@ -288,6 +320,7 @@ class ScoringServiceTest {
             CouncilRepository councils,
             CouncilTopicRepository councilTopics,
             CouncilMemberRepository members,
+            RegistrationMemberRepository registrationMembers,
             ScoreComponentRepository components,
             EvaluationRepository evaluations,
             AuthorizationPolicy authorization) {
@@ -297,6 +330,7 @@ class ScoringServiceTest {
                     councils,
                     councilTopics,
                     members,
+                    registrationMembers,
                     components,
                     evaluations,
                     authorization,

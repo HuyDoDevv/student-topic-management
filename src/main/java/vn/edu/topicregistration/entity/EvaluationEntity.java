@@ -29,6 +29,10 @@ public class EvaluationEntity {
     private RegistrationEntity registration;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "student_id", nullable = false)
+    private UserAccountEntity student;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "period_id", nullable = false)
     private RegistrationPeriodEntity period;
 
@@ -69,6 +73,7 @@ public class EvaluationEntity {
 
     public EvaluationEntity(
             RegistrationEntity registration,
+            UserAccountEntity student,
             UserAccountEntity evaluator,
             ScoreComponentEntity component,
             CouncilEntity council,
@@ -76,6 +81,7 @@ public class EvaluationEntity {
             String feedback,
             Instant evaluatedAt) {
         this.registration = Objects.requireNonNull(registration, "registration");
+        this.student = Objects.requireNonNull(student, "student");
         this.period = Objects.requireNonNull(registration.getPeriod(), "registration.period");
         this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
         this.component = Objects.requireNonNull(component, "component");
@@ -117,6 +123,10 @@ public class EvaluationEntity {
 
     public RegistrationEntity getRegistration() {
         return registration;
+    }
+
+    public UserAccountEntity getStudent() {
+        return student;
     }
 
     public RegistrationPeriodEntity getPeriod() {

@@ -102,6 +102,7 @@ class DirectGradingServiceTest {
         verify(dependencies.councilTopics()).saveAndFlush(assignmentCaptor.capture());
         assertEquals(NOW, assignmentCaptor.getValue().getScheduledAt());
         assertEquals("Chấm độc lập", assignmentCaptor.getValue().getLocation());
+        assertEquals(7L, assigned.periodId());
         assertEquals(CouncilStatus.ACTIVE, assigned.status());
     }
 

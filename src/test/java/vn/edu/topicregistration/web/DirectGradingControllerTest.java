@@ -22,6 +22,7 @@ import vn.edu.topicregistration.controller.DirectGradingController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.service.DirectGradingService;
+import vn.edu.topicregistration.service.DirectGradingService.DirectAssignmentView;
 import vn.edu.topicregistration.service.DirectGradingService.DirectGradingWorkspace;
 import vn.edu.topicregistration.service.ResultService;
 
@@ -41,14 +42,36 @@ class DirectGradingControllerTest {
 
     @Test
     void deanOpensSeparateDirectGradingWorkspace() throws Exception {
-        when(directGrading.workspaceForCurrentDean()).thenReturn(
-                new DirectGradingWorkspace(List.of(), List.of()));
+        when(directGrading.workspaceForCurrentDean()).thenReturn(new DirectGradingWorkspace(
+                List.of(),
+                List.of(new DirectAssignmentView(
+                        41L,
+                        51L,
+                        21L,
+                        7L,
+                        "Đề tài thử nghiệm",
+                        "Đợt COURSE",
+                        "COURSE",
+                        "Công nghệ phần mềm",
+                        11L,
+                        "Giảng viên B",
+                        CouncilStatus.COMPLETED,
+                        5L))));
 
-        mvc.perform(get("/faculty/direct-grading"))
+        var response = mvc.perform(get("/faculty/direct-grading"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("direct-grading/list"))
                 .andExpect(model().attributeExists("availableRegistrations"))
-                .andExpect(model().attributeExists("assignments"));
+                .andExpect(model().attributeExists("assignments"))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<DirectGradingController.DirectAssignmentPageView> assignments =
+                (List<DirectGradingController.DirectAssignmentPageView>) response
+                        .getModelAndView().getModel().get("assignments");
+        org.junit.jupiter.api.Assertions.assertEquals(7L, assignments.getFirst().periodId());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                51L, assignments.getFirst().registrationId());
     }
 
     @Test

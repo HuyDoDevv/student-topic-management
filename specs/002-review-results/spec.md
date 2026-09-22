@@ -35,7 +35,8 @@ thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi c
 - Q-13: Người dùng chọn phương án A — mỗi thành viên hội đồng nhập một điểm tổng từ 0 đến
   10 với tối đa hai chữ số thập phân. Thành viên được sửa điểm của chính mình khi hội đồng
   còn ACTIVE, kể cả sau submit; sau COMPLETED thì khóa. Điểm cuối là trung bình cộng điểm
-  SUBMITTED của mọi thành viên, làm tròn HALF_UP đến hai chữ số thập phân.
+  SUBMITTED của mọi thành viên, làm tròn HALF_UP đến hai chữ số thập phân. Phạm vi giá trị
+  evaluator sau đó được siết thành bước 0.25 theo xác nhận ngày 2026-09-21.
 
 ### Session 2026-09-17
 
@@ -46,6 +47,22 @@ thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi c
 - Phiên bản hiện tại chưa có trường hạn nộp báo cáo riêng. Để không mở rộng schema/lịch đợt,
   thao tác phân công chấm độc lập của Trưởng khoa là mốc xác nhận báo cáo hiện tại đã cuối
   kỳ và khóa thay thế báo cáo. Không dùng `student_end` vì đây là hạn đăng ký đề tài.
+
+### Session 2026-09-21
+
+- Người dùng xác nhận báo cáo vẫn nộp chung theo nhóm nhưng mọi điểm chấm và kết quả cuối
+  phải tách theo từng sinh viên trong snapshot đăng ký, vì mức đóng góp giữa các thành viên
+  có thể khác nhau. Mỗi người chấm phải nộp đủ điểm cho từng sinh viên trước khi lượt chấm
+  được hoàn tất; mỗi sinh viên chỉ xem kết quả đã công bố của chính mình.
+- Người dùng chốt điểm evaluator chỉ nhận các mức tăng `0.25` trong khoảng 0–10, ví dụ
+  `5.5`, `5.75`; giao diện phải bỏ số 0 thập phân dư và hiển thị gọn như `5`, `6.5`, `7.75`.
+- Danh sách kết quả của Trưởng khoa phải hiển thị và lọc theo đợt đăng ký để phân biệt cùng
+  một sinh viên tham gia các nhóm khác nhau ở những đợt khác nhau.
+- Trước khi công bố lượt chấm độc lập, Trưởng khoa phải mở được điểm từng sinh viên của đúng
+  đăng ký/nhóm đang xử lý; đường dẫn không được trộn kết quả của nhóm hoặc đợt khác.
+- Header các trang học vụ không đặt nút điều hướng trùng với sidebar; chỉ giữ thao tác tạo
+  mới tại chỗ như Tạo đợt/Lập hội đồng. Danh sách kết quả hỗ trợ kết hợp bộ lọc theo đợt,
+  giảng viên chấm và trạng thái chưa/đã công bố.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -139,6 +156,9 @@ sau đó chấm, complete một điểm và publish bằng luồng kết quả h
 4. **Given** lượt chấm độc lập ACTIVE, **When** giảng viên được phân công submit một điểm
    hợp lệ và hoàn tất, rồi Trưởng khoa publish, **Then** final score bằng đúng điểm đó và
    sinh viên xem qua luồng kết quả hiện có (AS-7.10).
+5. **Given** lượt chấm độc lập đã COMPLETED và còn chờ công bố, **When** Trưởng khoa chọn
+   xem điểm, **Then** danh sách chỉ hiển thị kết quả từng sinh viên của đúng đăng ký đó để
+   kiểm tra trước khi publish (AS-7.11).
 
 ---
 
@@ -156,10 +176,10 @@ hợp lệ, thử điểm ngoài thang, người ngoài hội đồng, sửa đi
 **Acceptance Scenarios**:
 
 1. **Given** hội đồng ACTIVE và người gọi là thành viên được phân công, **When** lưu điểm
-   tổng 0–10 với tối đa hai chữ số thập phân và nhận xét, **Then** evaluation của chính
+   tổng 0–10 theo bước 0.25 và nhận xét, **Then** evaluation của chính
    người đó được lưu ở DRAFT; khi
    submit thì chuyển SUBMITTED (AS-8.1).
-2. **Given** điểm thiếu, nhỏ hơn 0, lớn hơn 10 hoặc có quá hai chữ số thập phân,
+2. **Given** điểm thiếu, nhỏ hơn 0, lớn hơn 10 hoặc không phải bội số của 0.25,
    **When** submit, **Then** bị từ chối và không tạo evaluation SUBMITTED (AS-8.2).
 3. **Given** người gọi không thuộc hội đồng, cố sửa đánh giá của người khác hoặc là GVHD
    của đề tài, **When** lưu/submit, **Then** backend từ chối và dữ liệu không đổi (AS-8.3).
@@ -168,6 +188,9 @@ hợp lệ, thử điểm ngoài thang, người ngoài hội đồng, sửa đi
    luôn bị khóa (AS-8.4).
 5. **Given** một giảng viên thuộc nhiều hội đồng hợp lệ, **When** chấm từng đề tài được
    phân công, **Then** các evaluation tách biệt và không ghi đè lẫn nhau (AS-8.5).
+6. **Given** một đăng ký có nhiều sinh viên snapshot, **When** người chấm nhập điểm,
+   **Then** mỗi sinh viên có một evaluation riêng của người chấm đó; điểm/nhận xét của
+   sinh viên này không ghi đè sinh viên khác (AS-8.6).
 
 ---
 
@@ -198,6 +221,9 @@ tính trung bình, publish, giao dịch lỗi và phạm vi khoa.
    quyền/phạm vi, **When** publish, **Then** bị từ chối và trạng thái không đổi (AS-9.4).
 5. **Given** hai thao tác complete/publish đồng thời, **When** xử lý, **Then** chỉ có một
    trạng thái cuối hợp lệ và điểm cuối dựa trên một snapshot evaluation nhất quán (AS-9.5).
+6. **Given** đăng ký có nhiều sinh viên, **When** complete, **Then** chỉ thành công khi mọi
+   người chấm đã SUBMITTED cho mọi sinh viên và tạo một kết quả cuối riêng cho từng sinh
+   viên bằng trung bình điểm của sinh viên đó (AS-9.6).
 
 ---
 
@@ -223,6 +249,14 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
    khác, **Then** backend từ chối và không tiết lộ metadata, điểm hoặc nhận xét (AS-10.3).
 4. **Given** Trưởng khoa, **When** xem kết quả, **Then** chỉ thấy dữ liệu trong khoa mình;
    role ADMIN tiếp tục không có quyền đọc học vụ theo quyết định feature 001 (AS-10.4).
+5. **Given** hai sinh viên cùng snapshot đăng ký có điểm khác nhau, **When** mỗi người xem
+   chi tiết, **Then** chỉ thấy điểm/nhận xét và kết quả cuối của chính mình (AS-10.5).
+6. **Given** khoa có kết quả từ nhiều đợt và một sinh viên có thể xuất hiện ở các nhóm khác
+   nhau giữa các đợt, **When** Trưởng khoa xem hoặc lọc danh sách kết quả, **Then** mỗi dòng
+   hiển thị rõ đợt đăng ký và bộ lọc chỉ giữ kết quả của đợt đã chọn (AS-10.6).
+7. **Given** danh sách có nhiều hội đồng/lượt chấm và trạng thái, **When** Trưởng khoa kết hợp
+   bộ lọc đợt, giảng viên chấm và trạng thái công bố, **Then** chỉ các kết quả thỏa tất cả
+   điều kiện được hiển thị và dữ liệu vẫn nằm trong phạm vi khoa (AS-10.7).
 
 ### Edge Cases
 
@@ -241,6 +275,8 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   nhất quán với feature 001, không dùng membership hiện tại.
 - Hai Trưởng khoa cùng phân công chấm độc lập một đăng ký: unique assignment và khóa
   registration/period phải bảo đảm chỉ một thao tác thành công.
+- Một snapshot đăng ký không có sinh viên hoặc evaluation trỏ tới sinh viên ngoài snapshot:
+  complete phải bị từ chối và không tạo kết quả dở dang.
 
 ## Requirements *(mandatory)*
 
@@ -262,8 +298,8 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   phát hiện thao tác cũ. (REQ-18–22,26; U Human Workflow)
 - **FR-20**: Chỉ thành viên hội đồng ACTIVE được lưu DRAFT và SUBMIT evaluation của chính
   mình cho đề tài được phân công; GVHD và người ngoài hội đồng không được chấm. Mỗi evaluator
-  nhập một điểm tổng 0–10 với tối đa hai chữ số thập phân và được sửa khi còn ACTIVE.
-  (REQ-22,24–25; U Q-13)
+  nhập một điểm tổng 0–10 theo bước 0.25 và được sửa khi còn ACTIVE. Điểm hiển thị bỏ số 0
+  thập phân dư, ví dụ `5`, `6.5`, `7.75`. (REQ-22,24–25; U Q-13, 2026-09-21)
 - **FR-21**: Điểm cuối là trung bình cộng của tập điểm hợp lệ, đầy đủ và nhất quán theo
   mọi thành viên hội đồng, làm tròn HALF_UP đến hai chữ số thập phân; không complete khi
   thiếu bất kỳ evaluation SUBMITTED nào. (REQ-23; U Q-13)
@@ -285,6 +321,14 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   lập. Phân công chuyển ngay sang ACTIVE và khóa báo cáo; người chấm submit một điểm, tự
   complete; Trưởng khoa publish qua lifecycle kết quả hiện có. TLCN/KLTN không được đi qua
   luồng này và tiếp tục dùng hội đồng 3–5 người. (U 2026-09-17; AS-7.7–7.10)
+- **FR-27**: Báo cáo và phân công chấm vẫn theo đăng ký/nhóm, nhưng mỗi evaluator phải lưu
+  và SUBMIT một evaluation riêng cho từng sinh viên trong snapshot đăng ký. Complete chỉ
+  thành công khi ma trận `registration × snapshot student × evaluator` đầy đủ; hệ thống tạo
+  một Final Result cho từng sinh viên bằng trung bình các điểm SUBMITTED của chính sinh viên
+  đó. Sinh viên chỉ xem kết quả/nhận xét đã công bố mang đúng student ID của mình; Trưởng khoa
+  xem được từng kết quả sinh viên trong phạm vi khoa, kèm đợt đăng ký và bộ lọc theo đợt.
+  Danh sách cho phép lọc kết hợp theo giảng viên thuộc lượt chấm và trạng thái READY/PUBLISHED.
+  (U 2026-09-21; AS-8.6,9.6,10.5–10.7)
 
 ### Key Entities
 
@@ -298,11 +342,11 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
 - **Council Assignment**: liên kết hội đồng với một hoặc nhiều đăng ký ACCEPTED cùng đợt/bộ môn
   TLCN/KLTN và lịch review riêng cho từng nhóm.
 - **Evaluation**: điểm/nhận xét của một evaluator cho một đăng ký và thành phần điểm;
-  trạng thái DRAFT/SUBMITTED, không được sửa sau khi hội đồng hoàn tất.
-- **Score Component**: thành phần điểm tổng duy nhất của đợt, có khoảng 0–10 và độ chính xác
-  tối đa hai chữ số thập phân.
-- **Final Result**: kết quả duy nhất của đăng ký, hội đồng, người/thời điểm tổng hợp và công
-  bố, summary, điểm cuối cùng cùng mốc review/grading complete.
+  gắn thêm đúng một sinh viên snapshot; trạng thái DRAFT/SUBMITTED, không được sửa sau khi
+  hội đồng hoàn tất.
+- **Score Component**: thành phần điểm tổng duy nhất của đợt, có khoảng 0–10 và bước 0.25.
+- **Final Result**: kết quả duy nhất theo cặp đăng ký–sinh viên snapshot, hội đồng,
+  người/thời điểm tổng hợp và công bố, summary, điểm cuối cùng cùng mốc review/grading complete.
 
 ## Success Criteria *(mandatory)*
 
@@ -320,10 +364,13 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   số kết quả nhóm khác hoặc chưa publish bị tiết lộ trong test bằng 0.
 - **SC-015**: Trong các ca submit/complete/publish đồng thời, không có trạng thái cuối vi
   phạm lifecycle, không có điểm bị thay đổi sau complete và không tạo result trùng.
-- **SC-016**: 100% FR-16–26 có ánh xạ REQ/U, acceptance scenario, automated test và bằng
+- **SC-016**: 100% FR-16–27 có ánh xạ REQ/U, acceptance scenario, automated test và bằng
   chứng pass trước khi feature được đánh dấu hoàn thành.
 - **SC-017**: 100% ca COURSE/NCKH hợp lệ tạo đúng một lượt chấm ACTIVE và khóa báo cáo;
   số ca TLCN/KLTN, GVHD, người ngoài bộ môn hoặc thiếu báo cáo được phân công trực tiếp bằng 0.
+- **SC-018**: 100% kết quả được tính riêng theo sinh viên; complete bị từ chối nếu thiếu bất
+  kỳ ô nào trong ma trận sinh viên–người chấm và không sinh viên nào xem được điểm của thành
+  viên khác cùng nhóm.
 
 ## Assumptions
 

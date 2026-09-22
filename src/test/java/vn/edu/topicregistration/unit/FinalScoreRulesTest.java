@@ -41,7 +41,7 @@ class FinalScoreRulesTest {
         FinalScoreRuleException exception = assertThrows(
                 FinalScoreRuleException.class,
                 () -> FinalScoreRules.validateCompletion(new CompletionContext(
-                        CouncilStatus.ACTIVE, false, 1, 3, 3, true)));
+                        CouncilStatus.ACTIVE, false, 1, 3, 3, 9, true)));
 
         assertEquals(FinalScoreFailure.ACCESS_DENIED, exception.failure());
     }
@@ -51,21 +51,31 @@ class FinalScoreRulesTest {
         FinalScoreRuleException exception = assertThrows(
                 FinalScoreRuleException.class,
                 () -> FinalScoreRules.validateCompletion(new CompletionContext(
-                        CouncilStatus.ACTIVE, true, 2, 3, 5, false)));
+                        CouncilStatus.ACTIVE, true, 2, 3, 6, 17, false)));
 
         assertEquals(FinalScoreFailure.EVALUATIONS_INCOMPLETE, exception.failure());
     }
 
     @Test
-    void directGradingCompletesWithExactlyOneAssignmentMemberAndScore() {
+    void directGradingRequiresOneScoreForEveryRegistrationStudent() {
         FinalScoreRules.validateCompletion(new CompletionContext(
-                CouncilStatus.ACTIVE, true, 1, 1, 1, true, CouncilMode.DIRECT));
+                CouncilStatus.ACTIVE, true, 1, 1, 3, 3, true, CouncilMode.DIRECT));
 
         FinalScoreRuleException extraMember = assertThrows(
                 FinalScoreRuleException.class,
                 () -> FinalScoreRules.validateCompletion(new CompletionContext(
-                        CouncilStatus.ACTIVE, true, 1, 2, 2, true, CouncilMode.DIRECT)));
+                        CouncilStatus.ACTIVE, true, 1, 2, 3, 6, true, CouncilMode.DIRECT)));
         assertEquals(FinalScoreFailure.EVALUATIONS_INCOMPLETE, extraMember.failure());
+    }
+
+    @Test
+    void completionRejectsMissingScoreForOneStudent() {
+        FinalScoreRuleException exception = assertThrows(
+                FinalScoreRuleException.class,
+                () -> FinalScoreRules.validateCompletion(new CompletionContext(
+                        CouncilStatus.ACTIVE, true, 1, 3, 3, 8, false)));
+
+        assertEquals(FinalScoreFailure.EVALUATIONS_INCOMPLETE, exception.failure());
     }
 
     @Test
@@ -73,13 +83,13 @@ class FinalScoreRulesTest {
         FinalScoreRuleException wrongState = assertThrows(
                 FinalScoreRuleException.class,
                 () -> FinalScoreRules.validatePublication(new PublicationContext(
-                        CouncilStatus.ACTIVE, 2, 2, true)));
+                        CouncilStatus.ACTIVE, 6, 6, true)));
         assertEquals(FinalScoreFailure.INVALID_STATE, wrongState.failure());
 
         FinalScoreRuleException partial = assertThrows(
                 FinalScoreRuleException.class,
                 () -> FinalScoreRules.validatePublication(new PublicationContext(
-                        CouncilStatus.COMPLETED, 2, 1, false)));
+                        CouncilStatus.COMPLETED, 6, 5, false)));
         assertEquals(FinalScoreFailure.RESULT_NOT_READY, partial.failure());
     }
 }

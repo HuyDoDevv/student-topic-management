@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.web;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -32,6 +33,7 @@ import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ResultService.BoardResultView;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
+import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
 import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
 import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
@@ -57,20 +59,153 @@ class ResultControllerTest {
     void listsOnlyFacultyResultsReturnedByService() throws Exception {
         when(results.listForCurrentDean()).thenReturn(List.of(summary()));
 
-        mvc.perform(get("/faculty/results"))
+        var response = mvc.perform(get("/faculty/results"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("results/faculty-list"))
-                .andExpect(model().attributeExists("results"));
+                .andExpect(model().attributeExists("results"))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultPageView> pageResults =
+                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
+                        .getModel().get("results");
+        assertEquals("8.5", pageResults.getFirst().finalScore());
+        assertEquals("Đợt KLTN 2026", pageResults.getFirst().periodName());
+    }
+
+    @Test
+    void filtersFacultyResultsByPeriodAndKeepsAllPeriodOptions() throws Exception {
+        FacultyResultSummaryView anotherPeriod = new FacultyResultSummaryView(
+                52L,
+                31L,
+                "Sinh viên A",
+                22L,
+                8L,
+                "Đợt môn học 2026",
+                "Đề tài môn học",
+                42L,
+                "Chấm độc lập",
+                List.of(new FacultyResultLecturerView(12L, "Giảng viên B")),
+                FinalResultStatus.PUBLISHED,
+                new BigDecimal("7.75"),
+                NOW,
+                NOW,
+                1L);
+        when(results.listForCurrentDean()).thenReturn(List.of(summary(), anotherPeriod));
+
+        var response = mvc.perform(get("/faculty/results").param("periodId", "8"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("results/faculty-list"))
+                .andExpect(model().attribute("selectedPeriodId", 8L))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultPageView> pageResults =
+                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
+                        .getModel().get("results");
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultPeriodOption> periodOptions =
+                (List<ResultController.FacultyResultPeriodOption>) response.getModelAndView()
+                        .getModel().get("periodOptions");
+        assertEquals(1, pageResults.size());
+        assertEquals(8L, pageResults.getFirst().periodId());
+        assertEquals(2, periodOptions.size());
+    }
+
+    @Test
+    void filtersFacultyResultsToTheSelectedRegistrationBeforePublication() throws Exception {
+        FacultyResultSummaryView anotherGroup = new FacultyResultSummaryView(
+                53L,
+                32L,
+                "Sinh viên B",
+                23L,
+                7L,
+                "Đợt KLTN 2026",
+                "Đề tài khác",
+                43L,
+                "Chấm độc lập khác",
+                List.of(new FacultyResultLecturerView(12L, "Giảng viên B")),
+                FinalResultStatus.READY,
+                new BigDecimal("6.5"),
+                NOW,
+                null,
+                0L);
+        when(results.listForCurrentDean()).thenReturn(List.of(summary(), anotherGroup));
+
+        var response = mvc.perform(get("/faculty/results")
+                        .param("periodId", "7")
+                        .param("registrationId", "51"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedPeriodId", 7L))
+                .andExpect(model().attribute("selectedRegistrationId", 51L))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultPageView> pageResults =
+                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
+                        .getModel().get("results");
+        assertEquals(1, pageResults.size());
+        assertEquals(51L, pageResults.getFirst().registrationId());
+        assertEquals(FinalResultStatus.READY, pageResults.getFirst().status());
+    }
+
+    @Test
+    void combinesLecturerAndPublicationStatusFilters() throws Exception {
+        FacultyResultSummaryView publishedByAnotherLecturer = new FacultyResultSummaryView(
+                52L,
+                32L,
+                "Sinh viên B",
+                22L,
+                8L,
+                "Đợt môn học 2026",
+                "Đề tài khác",
+                42L,
+                "Chấm độc lập khác",
+                List.of(new FacultyResultLecturerView(12L, "Giảng viên B")),
+                FinalResultStatus.PUBLISHED,
+                new BigDecimal("7.75"),
+                NOW,
+                NOW,
+                1L);
+        when(results.listForCurrentDean()).thenReturn(List.of(
+                summary(), publishedByAnotherLecturer));
+
+        var response = mvc.perform(get("/faculty/results")
+                        .param("lecturerId", "11")
+                        .param("status", "READY"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedLecturerId", 11L))
+                .andExpect(model().attribute("selectedStatus", FinalResultStatus.READY))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultPageView> pageResults =
+                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
+                        .getModel().get("results");
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultLecturerOption> lecturerOptions =
+                (List<ResultController.FacultyResultLecturerOption>) response.getModelAndView()
+                        .getModel().get("lecturerOptions");
+        assertEquals(1, pageResults.size());
+        assertEquals(51L, pageResults.getFirst().registrationId());
+        assertEquals(2, lecturerOptions.size());
     }
 
     @Test
     void rendersFacultyResultDetailWithEvaluations() throws Exception {
-        when(results.detailForCurrentDean(51L)).thenReturn(detail());
+        when(results.detailForCurrentDean(51L, 31L)).thenReturn(detail());
 
-        mvc.perform(get("/faculty/results/51"))
+        var response = mvc.perform(get("/faculty/results/51/31"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("results/faculty-detail"))
-                .andExpect(model().attributeExists("result", "evaluations"));
+                .andExpect(model().attributeExists("result", "evaluations"))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ResultController.EvaluationResultPageView> evaluations =
+                (List<ResultController.EvaluationResultPageView>) response.getModelAndView()
+                        .getModel().get("evaluations");
+        assertEquals("8.5", evaluations.getFirst().score());
     }
 
     @Test
@@ -151,10 +286,15 @@ class ResultControllerTest {
     private static FacultyResultSummaryView summary() {
         return new FacultyResultSummaryView(
                 51L,
+                31L,
+                "Sinh viên A",
                 21L,
+                7L,
+                "Đợt KLTN 2026",
                 "Đề tài thử nghiệm",
                 41L,
                 "Hội đồng KLTN",
+                List.of(new FacultyResultLecturerView(11L, "Giảng viên A")),
                 FinalResultStatus.READY,
                 new BigDecimal("8.50"),
                 NOW,
