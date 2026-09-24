@@ -20,6 +20,9 @@
       </ul>
       <div class="nav-section mt-4">QUẢN LÝ HỌC VỤ</div>
       <ul class="navbar-nav">
+        <li class="nav-item" th:if="${canManageAnnouncements}" th:classappend="${activeNav == 'announcements'} ? ' active'">
+          <a class="nav-link" th:href="@{/announcements/manage}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v12H4zM4 7l8 6 8-6M18 3v4M15 5h6"/></svg></span><span class="nav-link-title">Thông báo chính thức</span></a>
+        </li>
         <li class="nav-item" th:if="${canManagePeriods}" th:classappend="${activeNav == 'periods'} ? ' active'">
           <a class="nav-link" th:href="@{/periods}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 5h14a2 2 0 0 1 2 2v12H3V7a2 2 0 0 1 2-2zM7 3v4M17 3v4M3 10h18M7 14h2M12 14h2M17 14h1"/></svg></span><span class="nav-link-title">Đợt đăng ký</span></a>
         </li>

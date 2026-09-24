@@ -31,6 +31,7 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.AnnouncementRepository;
 import vn.edu.topicregistration.repository.FacultyRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
+import vn.edu.topicregistration.repository.UserNotificationRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.AnnouncementService;
@@ -45,6 +46,7 @@ class AnnouncementServiceTest {
     UserAccountRepository accounts;
     FacultyRepository faculties;
     NotificationService notifications;
+    UserNotificationRepository userNotifications;
     AuthorizationPolicy authorization;
     AnnouncementService service;
 
@@ -54,12 +56,14 @@ class AnnouncementServiceTest {
         accounts = mock(UserAccountRepository.class);
         faculties = mock(FacultyRepository.class);
         notifications = mock(NotificationService.class);
+        userNotifications = mock(UserNotificationRepository.class);
         authorization = mock(AuthorizationPolicy.class);
         service = new AnnouncementService(
                 announcements,
                 accounts,
                 faculties,
                 notifications,
+                userNotifications,
                 authorization,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -177,6 +181,27 @@ class AnnouncementServiceTest {
         assertEquals(List.of(11L, 12L), command.getValue().recipientIds().stream().sorted().toList());
         assertEquals(NotificationTargetType.ANNOUNCEMENT, command.getValue().targetType());
         assertEquals(31L, command.getValue().targetId());
+    }
+
+    @Test
+    void publishedDetailIsVisibleOnlyToItsPersistedRecipient() {
+        AnnouncementEntity published = schoolAnnouncement(true, 4L);
+        when(published.getId()).thenReturn(31L);
+        when(published.getTitle()).thenReturn("Thông báo");
+        when(published.getBody()).thenReturn("Nội dung");
+        when(published.getSourceName()).thenReturn("Nhà trường");
+        when(announcements.findById(31L)).thenReturn(Optional.of(published));
+        when(authorization.currentActor()).thenReturn(actor(11L, 21L, RoleCode.STUDENT));
+        when(userNotifications.existsByRecipientIdAndEventAnnouncementId(11L, 31L))
+                .thenReturn(true);
+
+        assertEquals(31L, service.getVisible(31L).id());
+
+        when(userNotifications.existsByRecipientIdAndEventAnnouncementId(11L, 31L))
+                .thenReturn(false);
+        ApplicationException hidden = assertThrows(ApplicationException.class,
+                () -> service.getVisible(31L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, hidden.code());
     }
 
     private static AnnouncementEntity schoolAnnouncement(boolean published, long version) {

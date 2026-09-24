@@ -538,6 +538,7 @@ public class UiPreviewController {
         model.addAttribute("canViewFacultyResults", false);
         model.addAttribute("canViewStudentResults", false);
         model.addAttribute("canManageAccounts", true);
+        model.addAttribute("canManageAnnouncements", false);
         model.addAttribute("previewMode", true);
     }
 

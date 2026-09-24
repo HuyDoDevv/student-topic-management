@@ -24,6 +24,7 @@ class NavigationModelAdviceTest {
         assertEquals(true, model.get("canViewFacultyResults"));
         assertEquals(false, model.get("canViewStudentResults"));
         assertEquals(false, model.get("canAuthorTopics"));
+        assertEquals(true, model.get("canManageAnnouncements"));
     }
 
     @Test
@@ -51,7 +52,9 @@ class NavigationModelAdviceTest {
             assertEquals(false, anonymous.get(attribute));
         }
         assertEquals(true, admin.get("canManageAccounts"));
+        assertEquals(true, admin.get("canManageAnnouncements"));
         assertEquals(false, anonymous.get("canManageAccounts"));
+        assertEquals(false, anonymous.get("canManageAnnouncements"));
     }
 
     private ExtendedModelMap modelFor(RoleCode... roles) {
