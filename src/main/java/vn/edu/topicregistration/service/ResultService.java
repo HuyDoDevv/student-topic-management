@@ -27,6 +27,8 @@ import vn.edu.topicregistration.entity.EvaluationEntity;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FinalResultEntity;
 import vn.edu.topicregistration.entity.FinalResultStatus;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -48,6 +50,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.FinalScoreRules.CompletionContext;
 import vn.edu.topicregistration.service.FinalScoreRules.FinalScoreRuleException;
 import vn.edu.topicregistration.service.FinalScoreRules.PublicationContext;
+import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 import vn.edu.topicregistration.util.ScoreFormat;
 
 @Service
@@ -62,6 +65,7 @@ public class ResultService {
     private final FinalResultRepository results;
     private final UserAccountRepository accounts;
     private final AuthorizationPolicy authorization;
+    private final NotificationService notifications;
     private final Clock clock;
 
     public ResultService(
@@ -74,6 +78,7 @@ public class ResultService {
             FinalResultRepository results,
             UserAccountRepository accounts,
             AuthorizationPolicy authorization,
+            NotificationService notifications,
             Clock clock) {
         this.periods = periods;
         this.councils = councils;
@@ -84,6 +89,7 @@ public class ResultService {
         this.results = results;
         this.accounts = accounts;
         this.authorization = authorization;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -184,6 +190,29 @@ public class ResultService {
         council.transitionTo(CouncilStatus.PUBLISHED);
         results.flush();
         councils.flush();
+        Map<Long, List<FinalResultEntity>> resultsByRegistration = lockedResults.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        FinalResultEntity::getRegistrationId,
+                        LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()));
+        for (Map.Entry<Long, List<FinalResultEntity>> entry
+                : resultsByRegistration.entrySet()) {
+            long registrationId = entry.getKey();
+            List<Long> recipientIds = entry.getValue().stream()
+                    .map(FinalResultEntity::getStudentId)
+                    .distinct()
+                    .toList();
+            notifications.emit(new EmissionCommand(
+                    NotificationEventType.RESULT_PUBLISHED,
+                    registrationId,
+                    dean.getId(),
+                    recipientIds,
+                    "Kết quả chấm điểm đã được công bố",
+                    "Kết quả cá nhân của bạn đã được công bố. Vui lòng xem chi tiết.",
+                    null,
+                    NotificationTargetType.RESULT,
+                    registrationId));
+        }
         return new BoardResultView(
                 councilId,
                 CouncilStatus.PUBLISHED,

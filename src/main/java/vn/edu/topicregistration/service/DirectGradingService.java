@@ -19,6 +19,8 @@ import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
@@ -37,6 +39,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.DirectGradingRules.AssignmentContext;
 import vn.edu.topicregistration.service.DirectGradingRules.DirectGradingRuleException;
+import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
 @Profile("!preview & !test")
@@ -50,6 +53,7 @@ public class DirectGradingService {
     private final CouncilTopicRepository councilTopics;
     private final ProjectReportRepository reports;
     private final AuthorizationPolicy authorization;
+    private final NotificationService notifications;
     private final EntityManager entityManager;
     private final Clock clock;
 
@@ -61,6 +65,7 @@ public class DirectGradingService {
             CouncilTopicRepository councilTopics,
             ProjectReportRepository reports,
             AuthorizationPolicy authorization,
+            NotificationService notifications,
             EntityManager entityManager,
             Clock clock) {
         this.periods = periods;
@@ -70,6 +75,7 @@ public class DirectGradingService {
         this.councilTopics = councilTopics;
         this.reports = reports;
         this.authorization = authorization;
+        this.notifications = notifications;
         this.entityManager = entityManager;
         this.clock = clock;
     }
@@ -83,7 +89,7 @@ public class DirectGradingService {
         RegistrationPeriodEntity period = periods.findByIdForUpdate(periodId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        authorization.requireDeanOfFaculty(requiredFacultyId(period));
+        ActorIdentity dean = authorization.requireDeanOfFaculty(requiredFacultyId(period));
         RegistrationEntity registration = registrations
                 .findByIdForUpdate(command.registrationId())
                 .orElseThrow(() -> new ApplicationException(
@@ -139,6 +145,16 @@ public class DirectGradingService {
         directAssignment.transitionTo(CouncilStatus.ACTIVE);
         councils.flush();
         entityManager.flush();
+        notifications.emit(new EmissionCommand(
+                NotificationEventType.DIRECT_GRADER_ASSIGNED,
+                directAssignment.getId(),
+                dean.accountId(),
+                List.of(grader.getId()),
+                "Bạn được phân công chấm đề tài",
+                "Trưởng khoa đã phân công bạn chấm trực tiếp một đề tài.",
+                null,
+                NotificationTargetType.DIRECT_GRADING,
+                directAssignment.getId()));
         return toView(directAssignment, assignment);
     }
 

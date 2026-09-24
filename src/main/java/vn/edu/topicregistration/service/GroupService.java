@@ -34,6 +34,9 @@ import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistrati
 import vn.edu.topicregistration.service.GroupRules.GroupRuleException;
 import vn.edu.topicregistration.service.GroupRules.MutationContext;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
+import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
 @Profile("!preview & !test")
@@ -45,6 +48,7 @@ public class GroupService {
     private final UserAccountRepository accounts;
     private final ActiveRegistrationQuery activeRegistrations;
     private final AuthorizationPolicy authorization;
+    private final NotificationService notifications;
     private final Clock clock;
 
     public GroupService(
@@ -55,6 +59,7 @@ public class GroupService {
             UserAccountRepository accounts,
             ActiveRegistrationQuery activeRegistrations,
             AuthorizationPolicy authorization,
+            NotificationService notifications,
             Clock clock) {
         this.periods = periods;
         this.groups = groups;
@@ -63,6 +68,7 @@ public class GroupService {
         this.accounts = accounts;
         this.activeRegistrations = activeRegistrations;
         this.authorization = authorization;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -109,12 +115,22 @@ public class GroupService {
                 eligibleStudent,
                 alreadyMember || alreadyPending));
 
-        invitations.saveAndFlush(new GroupInvitationEntity(
+        GroupInvitationEntity invitation = invitations.saveAndFlush(new GroupInvitationEntity(
                 locked.group(),
                 candidate,
                 requiredAccount(locked.actor().accountId()),
                 slot,
                 locked.now()));
+        notifications.emit(new EmissionCommand(
+                NotificationEventType.GROUP_INVITATION_CREATED,
+                invitation.getId(),
+                locked.actor().accountId(),
+                List.of(candidate.getId()),
+                "Bạn nhận được lời mời vào nhóm",
+                "Một trưởng nhóm đã mời bạn tham gia nhóm sinh viên.",
+                null,
+                NotificationTargetType.GROUP_INVITATION,
+                invitation.getId()));
         incrementVersion(locked.group(), expectedGroupVersion);
         return reloadVisibleGroup(groupId, locked.actor().accountId());
     }
@@ -148,6 +164,16 @@ public class GroupService {
         memberships.saveAndFlush(new GroupMembershipEntity(
                 group, invitation.getStudent(), invitation.getSlot()));
         incrementVersion(group, group.getVersion());
+        notifications.emit(new EmissionCommand(
+                NotificationEventType.GROUP_INVITATION_ACCEPTED,
+                invitation.getId(),
+                student.accountId(),
+                List.of(invitation.getInvitedBy().getId()),
+                "Lời mời nhóm đã được chấp nhận",
+                "Sinh viên được mời đã tham gia nhóm của bạn.",
+                null,
+                NotificationTargetType.GROUP,
+                group.getId()));
         return group.getId();
     }
 
@@ -169,6 +195,16 @@ public class GroupService {
         invitation.reject(clock.instant());
         invitations.saveAndFlush(invitation);
         activeGroup.ifPresent(group -> incrementVersion(group, group.getVersion()));
+        notifications.emit(new EmissionCommand(
+                NotificationEventType.GROUP_INVITATION_REJECTED,
+                invitation.getId(),
+                student.accountId(),
+                List.of(invitation.getInvitedBy().getId()),
+                "Lời mời nhóm đã bị từ chối",
+                "Sinh viên được mời đã từ chối tham gia nhóm của bạn.",
+                null,
+                NotificationTargetType.GROUP,
+                route.groupId()));
         return route.periodId();
     }
 

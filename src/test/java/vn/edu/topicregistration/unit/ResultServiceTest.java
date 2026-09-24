@@ -54,6 +54,7 @@ import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.ResultService;
 
 class ResultServiceTest {
@@ -409,6 +410,7 @@ class ResultServiceTest {
                     results,
                     accounts,
                     authorization,
+                    mock(NotificationService.class),
                     Clock.fixed(NOW, ZoneOffset.UTC));
         }
     }

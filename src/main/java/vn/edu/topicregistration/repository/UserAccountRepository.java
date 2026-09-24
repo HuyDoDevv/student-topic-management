@@ -17,6 +17,16 @@ import org.springframework.data.repository.query.Param;
 public interface UserAccountRepository extends JpaRepository<UserAccountEntity, Long> {
     boolean existsByUsernameIgnoreCase(String username);
 
+    @Query("select account from UserAccountEntity account "
+            + "where account.enabled = true order by account.id")
+    List<UserAccountEntity> findAllEnabled();
+
+    @Query("select account from UserAccountEntity account "
+            + "where account.enabled = true "
+            + "and account.department.faculty.id = :facultyId "
+            + "order by account.id")
+    List<UserAccountEntity> findAllEnabledByFacultyId(@Param("facultyId") long facultyId);
+
     @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account order by account.username")
     List<UserAccountEntity> findAllDetailed();
