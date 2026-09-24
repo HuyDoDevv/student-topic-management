@@ -31,7 +31,7 @@ theo `AGENTS.md`; chỉ đánh dấu `[X]` sau khi test và bằng chứng của
 **⚠️ CRITICAL**: T002–T003 phải hoàn tất trước mọi user story.
 
 - [X] T002 Tạo Flyway `src/main/resources/db/migration/V12__implement_in_app_notifications.sql`, entities/repositories notification tại `src/main/java/vn/edu/topicregistration/entity/` và `repository/`, kèm migration/persistence tests tại `src/test/java/vn/edu/topicregistration/integration/NotificationPersistenceIT.java`
-- [ ] T003 Viết test trước rồi triển khai event-key, recipient fan-out, inbox query, target resolver và transaction-safe emission tại `src/test/java/vn/edu/topicregistration/unit/NotificationServiceTest.java`, `src/main/java/vn/edu/topicregistration/service/NotificationService.java`, `NotificationEventKey.java`, `NotificationTargetResolver.java`
+- [X] T003 Viết test trước rồi triển khai event-key, recipient fan-out, inbox query, target resolver và transaction-safe emission tại `src/test/java/vn/edu/topicregistration/unit/NotificationServiceTest.java`, `src/main/java/vn/edu/topicregistration/service/NotificationService.java`, `NotificationEventKey.java`, `NotificationTargetResolver.java`
 
 **Checkpoint**: Có thể tạo một event bất biến, fan-out duy nhất theo recipient, truy vấn inbox của
 một account và resolve target đóng; rollback/unique được schema bảo vệ.
