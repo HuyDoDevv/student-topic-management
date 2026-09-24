@@ -73,7 +73,7 @@ stale version và duplicate publish bị backend từ chối không ghi dở.
 **Independent Test**: Kích hoạt từng transition, kiểm chứng recipient snapshot, target, actor exclusion,
 rollback và retry; người ngoài scope không nhận.
 
-- [ ] T007 [P] [US3] Viết regression/integration test trước rồi tích hợp group invitation, topic moderation và registration decisions vào notification emitter tại `src/test/java/vn/edu/topicregistration/integration/RegistrationNotificationIT.java`, `src/main/java/vn/edu/topicregistration/service/GroupService.java`, `TopicReviewService.java`, `RegistrationService.java`
+- [X] T007 [P] [US3] Viết regression/integration test trước rồi tích hợp group invitation, topic moderation và registration decisions vào notification emitter tại `src/test/java/vn/edu/topicregistration/integration/RegistrationNotificationIT.java`, `src/main/java/vn/edu/topicregistration/service/GroupService.java`, `TopicReviewService.java`, `RegistrationService.java`
 - [ ] T008 [US3] Viết regression/integration test trước rồi tích hợp direct-grader assignment, council membership và result publication vào notification emitter tại `src/test/java/vn/edu/topicregistration/integration/ReviewResultNotificationIT.java`, `src/main/java/vn/edu/topicregistration/service/DirectGradingService.java`, `CouncilService.java`, `ResultService.java`
 
 **Checkpoint**: Toàn bộ ma trận sự kiện trong spec có test recipient/rollback/dedup và target hợp lệ.
