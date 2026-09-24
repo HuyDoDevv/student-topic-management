@@ -83,12 +83,14 @@ WHERE id=-2;
 INSERT INTO registrations(period_id, group_id, topic_id) VALUES (-1, -2, -2);
 
 INSERT INTO reviewer_assignments(registration_id, lecturer_id) VALUES (-1, -2);
-INSERT INTO project_reports(registration_id, submitted_by, file_name, storage_key)
-VALUES (-1, -3, 'report.pdf', 'test/report.pdf');
+INSERT INTO project_reports(
+    registration_id, submitted_by, file_name, storage_key, content_type, size_bytes
+)
+VALUES (-1, -3, 'report.pdf', 'test/report.pdf', 'application/pdf', 128);
 
 -- Inserting councils automatically creates chair slot 1 and secretary slot 2.
-INSERT INTO councils(id, period_id, name, chair_id, secretary_id)
-VALUES (-1, -1, 'Test council', -1, -2);
+INSERT INTO councils(id, period_id, department_id, name, chair_id, secretary_id)
+VALUES (-1, -1, -1, 'Test council', -1, -2);
 INSERT INTO council_members(council_id, lecturer_id, slot) VALUES (-1, -8, 3);
 CALL expect_failure('INSERT INTO council_members(council_id,lecturer_id,slot) VALUES (-1,-7,6)');
 CALL expect_failure('UPDATE councils SET chair_id=-7 WHERE id=-1');
@@ -98,17 +100,36 @@ INSERT INTO council_topics(council_id, registration_id, period_id) VALUES (-1, -
 INSERT INTO score_components(id, period_id, name) VALUES
     (-1, -1, 'Review'), (-2, -2, 'Other');
 INSERT INTO evaluations(
-    registration_id, period_id, evaluator_id, component_id, council_id, score
-) VALUES (-1, -1, -2, -1, -1, 8.0);
-INSERT INTO final_results(registration_id, council_id) VALUES (-1, -1);
-INSERT INTO announcements(title, body, source_name) VALUES ('Test', 'Content', 'Khoa');
+    registration_id, student_id, period_id, evaluator_id, component_id, council_id, score
+) VALUES (-1, -3, -1, -2, -1, -1, 8.0);
+INSERT INTO final_results(
+    registration_id, student_id, council_id, consolidated_by, consolidated_at,
+    evaluation_summary, final_score, review_completed_at, grading_completed_at
+) VALUES (
+    -1, -3, -1, -1, CURRENT_TIMESTAMP(6),
+    'Test summary', 8.0, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+);
+INSERT INTO announcements(id, title, body, source_name)
+VALUES (900000001, 'Test', 'Content', 'Khoa');
+INSERT INTO notification_events(
+    id, event_key, category, event_type, title, body,
+    announcement_id, target_type, target_id
+) VALUES (
+    900000001, 'ANNOUNCEMENT:900000001:PUBLISHED', 'ANNOUNCEMENT',
+    'ANNOUNCEMENT_PUBLISHED', 'Test', 'Content',
+    900000001, 'ANNOUNCEMENT', 900000001
+);
+INSERT INTO user_notifications(id, event_id, recipient_id)
+VALUES (900000001, 900000001, -3);
 
 CALL expect_failure('INSERT INTO reviewer_assignments(registration_id,lecturer_id) VALUES (-2,-8)');
-CALL expect_failure('INSERT INTO project_reports(registration_id,submitted_by,file_name,storage_key) VALUES (-2,-6,''report.pdf'',''path'')');
-CALL expect_failure('INSERT INTO evaluations(registration_id,period_id,evaluator_id,component_id,score) VALUES (-1,-1,-8,-2,8)');
-CALL expect_failure('INSERT INTO evaluations(registration_id,period_id,evaluator_id,component_id,council_id,score) VALUES (-1,-1,-7,-1,-1,8)');
+CALL expect_failure('INSERT INTO project_reports(registration_id,submitted_by,file_name,storage_key,content_type,size_bytes) VALUES (-2,-6,''report.pdf'',''path'',''application/pdf'',128)');
+CALL expect_failure('INSERT INTO evaluations(registration_id,student_id,period_id,evaluator_id,component_id,council_id,score) VALUES (-1,-3,-1,-8,-2,-1,8)');
+CALL expect_failure('INSERT INTO evaluations(registration_id,student_id,period_id,evaluator_id,component_id,council_id,score) VALUES (-1,-3,-1,-7,-1,-1,8)');
 CALL expect_failure('UPDATE final_results SET published_at=CURRENT_TIMESTAMP(6) WHERE registration_id=-1');
 CALL expect_failure('INSERT INTO user_roles(user_id,role_code) VALUES (-1,''UNKNOWN'')');
+CALL expect_failure('INSERT INTO notification_events(event_key,category,event_type,title,body,announcement_id,target_type,target_id) VALUES (''ANNOUNCEMENT:900000001:PUBLISHED'',''ANNOUNCEMENT'',''ANNOUNCEMENT_PUBLISHED'',''Duplicate'',''Duplicate'',900000001,''ANNOUNCEMENT'',900000001)');
+CALL expect_failure('INSERT INTO user_notifications(event_id,recipient_id) VALUES (900000001,-3)');
 
 ROLLBACK;
 DROP PROCEDURE expect_failure;
