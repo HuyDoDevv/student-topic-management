@@ -2,7 +2,6 @@ package vn.edu.topicregistration.integration;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Locale;
 import java.util.Map;
 
 import javax.sql.DataSource;
@@ -14,6 +13,11 @@ public final class MySqlTestSupport {
     private static final String URL_VARIABLE = "TEST_DATABASE_URL";
     private static final String USERNAME_VARIABLE = "TEST_DATABASE_USERNAME";
     private static final String PASSWORD_VARIABLE = "TEST_DATABASE_PASSWORD";
+    private static final String SAFE_HOST = "127.0.0.1";
+    private static final int SAFE_PORT = 3306;
+    private static final String SAFE_DATABASE = "topic_registration_test";
+    private static final String SAFE_AUTHORITY = SAFE_HOST + ":" + SAFE_PORT;
+    private static final String SAFE_PATH = "/" + SAFE_DATABASE;
 
     private final String url;
     private final String username;
@@ -39,7 +43,7 @@ public final class MySqlTestSupport {
     }
 
     public String databaseName() {
-        return databaseName(url);
+        return databaseName(parseJdbcUri(url));
     }
 
     public Map<String, Object> springApplicationProperties() {
@@ -66,27 +70,40 @@ public final class MySqlTestSupport {
 
     public static String assertSafeTestDatabaseUrl(String url) {
         String value = requireVariable(URL_VARIABLE, url);
-        if (!value.startsWith("jdbc:mysql://")) {
-            throw new IllegalArgumentException("TEST_DATABASE_URL must use jdbc:mysql");
-        }
-        String database = databaseName(value).toLowerCase(Locale.ROOT);
-        if (!database.contains("test")) {
-            throw new IllegalArgumentException("Refusing to reset a database whose name does not contain 'test'");
+        URI uri = parseJdbcUri(value);
+        String database = databaseName(uri);
+        if (!"mysql".equals(uri.getScheme())
+                || !SAFE_AUTHORITY.equals(uri.getRawAuthority())
+                || !SAFE_HOST.equals(uri.getHost())
+                || uri.getPort() != SAFE_PORT
+                || uri.getRawUserInfo() != null
+                || uri.getRawFragment() != null
+                || !SAFE_PATH.equals(uri.getRawPath())
+                || !SAFE_DATABASE.equals(database)
+                || (uri.getRawQuery() != null && uri.getRawQuery().isBlank())) {
+            throw new IllegalArgumentException(
+                    "TEST_DATABASE_URL must target the approved local test database");
         }
         return value;
     }
 
-    private static String databaseName(String jdbcUrl) {
+    private static URI parseJdbcUri(String jdbcUrl) {
+        if (!jdbcUrl.startsWith("jdbc:mysql://")) {
+            throw new IllegalArgumentException("TEST_DATABASE_URL must use jdbc:mysql");
+        }
         try {
-            URI uri = new URI(jdbcUrl.substring("jdbc:".length()));
-            String path = uri.getPath();
-            if (path == null || path.length() <= 1 || path.substring(1).contains("/")) {
-                throw new IllegalArgumentException("TEST_DATABASE_URL must name exactly one database");
-            }
-            return path.substring(1);
+            return new URI(jdbcUrl.substring("jdbc:".length()));
         } catch (URISyntaxException | IndexOutOfBoundsException exception) {
             throw new IllegalArgumentException("TEST_DATABASE_URL is invalid", exception);
         }
+    }
+
+    private static String databaseName(URI uri) {
+        String rawPath = uri.getRawPath();
+        if (rawPath == null || rawPath.length() <= 1 || rawPath.substring(1).contains("/")) {
+            throw new IllegalArgumentException("TEST_DATABASE_URL must name exactly one database");
+        }
+        return rawPath.substring(1);
     }
 
     private static String requireVariable(String variable, String value) {
