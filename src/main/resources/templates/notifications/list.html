@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Thông báo', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">HỘP THƯ CÁ NHÂN</div>
+      <h1 class="page-title">Thông báo</h1>
+      <p class="text-secondary mt-2 mb-0">Theo dõi thông báo học vụ và các cập nhật liên quan trực tiếp đến bạn.</p>
+    </div>
+    <span class="badge bg-blue-lt" th:if="${headerUnreadCount > 0}"
+          th:text="${headerUnreadCount + ' chưa đọc'}">2 chưa đọc</span>
+  </div>
+
+  <div class="card" th:if="${!notifications.isEmpty()}">
+    <div class="list-group list-group-flush">
+      <article class="list-group-item" th:each="item : ${notifications}"
+               th:classappend="${item.unread()} ? ' bg-blue-lt'">
+        <div class="d-flex align-items-start justify-content-between gap-3">
+          <div class="min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <span class="badge" th:classappend="${item.unread()} ? ' bg-blue text-blue-fg' : ' bg-secondary-lt'"
+                    th:text="${item.unread()} ? 'Chưa đọc' : 'Đã đọc'">Chưa đọc</span>
+              <span class="badge bg-purple-lt" th:if="${item.category().name() == 'ANNOUNCEMENT'}">Thông báo chung</span>
+              <span class="badge bg-azure-lt" th:if="${item.category().name() == 'ACADEMIC_EVENT'}">Cập nhật học vụ</span>
+            </div>
+            <h2 class="h3 mb-2" th:text="${item.title()}">Tiêu đề thông báo</h2>
+            <p class="text-secondary mb-2 topic-text" th:text="${item.body()}">Nội dung thông báo</p>
+            <time class="small text-secondary" th:datetime="${item.deliveredAt()}"
+                  th:text="${item.deliveredAt()}">2026-09-24T08:15:00Z</time>
+          </div>
+        </div>
+      </article>
+    </div>
+    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+         th:if="${notificationPage.totalElements > 0}">
+      <span class="text-secondary" th:text="${'Trang ' + displayedPage + ' / ' + displayedTotalPages}">Trang 1 / 1</span>
+      <nav aria-label="Phân trang thông báo" th:if="${displayedTotalPages > 1}">
+        <div class="btn-list">
+          <a class="btn btn-outline-secondary" th:if="${notificationPage.hasPrevious()}"
+             th:href="@{/notifications(page=${currentPage - 1})}">Trang trước</a>
+          <a class="btn btn-outline-secondary" th:if="${notificationPage.hasNext()}"
+             th:href="@{/notifications(page=${currentPage + 1})}">Trang sau</a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <div class="card" th:if="${notifications.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Bạn chưa có thông báo', 'Các cập nhật học vụ dành cho bạn sẽ xuất hiện tại đây.')}"></div>
+</section>
+</body>
+</html>

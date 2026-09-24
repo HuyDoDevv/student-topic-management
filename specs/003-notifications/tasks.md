@@ -45,7 +45,7 @@ một account và resolve target đóng; rollback/unique được schema bảo v
 **Independent Test**: Seed notification cho hai account; account A thấy đúng badge/top 5/inbox,
 account B không thể xem row của A; empty state và `99+` render đúng.
 
-- [ ] T004 [US1] Viết MockMvc/UI test trước rồi triển khai inbox read-only, header model advice và Tabler UI tại `src/test/java/vn/edu/topicregistration/web/NotificationInboxWebTest.java`, `src/main/java/vn/edu/topicregistration/controller/NotificationController.java`, `NotificationModelAdvice.java`, `src/main/resources/templates/notifications/list.html`, `fragments/header.html`
+- [X] T004 [US1] Viết MockMvc/UI test trước rồi triển khai inbox read-only, header model advice và Tabler UI tại `src/test/java/vn/edu/topicregistration/web/NotificationInboxWebTest.java`, `src/main/java/vn/edu/topicregistration/controller/NotificationController.java`, `NotificationModelAdvice.java`, `src/main/resources/templates/notifications/list.html`, `fragments/header.html`
 
 **Checkpoint**: US1 hoạt động độc lập với fixture notification, chưa cần publisher hoặc event integrations.
 
