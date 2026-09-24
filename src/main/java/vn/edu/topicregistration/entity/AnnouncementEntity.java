@@ -121,4 +121,22 @@ public class AnnouncementEntity {
     public boolean isPublished() {
         return publishedAt != null;
     }
+
+    public void revise(String title, String body, Instant updatedAt) {
+        if (isPublished()) {
+            throw new IllegalStateException("Published announcements are immutable");
+        }
+        this.title = Objects.requireNonNull(title, "title");
+        this.body = Objects.requireNonNull(body, "body");
+        this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
+    }
+
+    public void publish(UserAccountEntity publisher, Instant publishedAt) {
+        if (isPublished()) {
+            throw new IllegalStateException("Announcement is already published");
+        }
+        this.publishedBy = Objects.requireNonNull(publisher, "publisher");
+        this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt");
+        this.updatedAt = publishedAt;
+    }
 }

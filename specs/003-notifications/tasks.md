@@ -59,7 +59,7 @@ và snapshot tài khoản enabled.
 **Independent Test**: ADMIN/DEAN tạo–sửa–publish; đúng tập recipient nhận một lần; wrong role/scope,
 stale version và duplicate publish bị backend từ chối không ghi dở.
 
-- [ ] T005 [P] [US2] Viết unit/integration test trước rồi triển khai announcement validation, scope, optimistic version và atomic publish/fan-out tại `src/test/java/vn/edu/topicregistration/unit/AnnouncementServiceTest.java`, `src/test/java/vn/edu/topicregistration/integration/AnnouncementPublicationIT.java`, `src/main/java/vn/edu/topicregistration/service/AnnouncementService.java`, `entity/Announcement.java`, `repository/AnnouncementRepository.java`
+- [X] T005 [P] [US2] Viết unit/integration test trước rồi triển khai announcement validation, scope, optimistic version và atomic publish/fan-out tại `src/test/java/vn/edu/topicregistration/unit/AnnouncementServiceTest.java`, `src/test/java/vn/edu/topicregistration/integration/AnnouncementPublicationIT.java`, `src/main/java/vn/edu/topicregistration/service/AnnouncementService.java`, `entity/Announcement.java`, `repository/AnnouncementRepository.java`
 - [ ] T006 [US2] Viết web contract test trước rồi triển khai create/edit/publish/detail/list endpoints và UI tại `src/test/java/vn/edu/topicregistration/web/AnnouncementWebTest.java`, `src/main/java/vn/edu/topicregistration/controller/AnnouncementController.java`, `src/main/java/vn/edu/topicregistration/dto/AnnouncementForm.java`, `src/main/resources/templates/announcements/form.html`, `list.html`, `detail.html`, cùng navigation trong `fragments/sidebar.html`
 
 **Checkpoint**: REQ-29–30 hoàn thành độc lập; announcement chính thức xuất hiện trong inbox US1.
