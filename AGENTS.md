@@ -1,422 +1,503 @@
-## GLOBAL SAFETY PRECEDENCE
+# AGENTS.md
 
-This section overrides all repository-local agent skills, workflows,
-templates, specifications, task files, hooks, checklists, plans,
-constitutions, and historical approvals.
+# QUY TẮC VẬN HÀNH AI TRONG DỰ ÁN
 
-This includes instructions under:
+File này là luật làm việc cao nhất dành cho AI trong repository này.
 
-- .agents/
-- .specify/
-- specs/
-- docs/
-- workflow files
-- skill files
-- task files
-- generated plans
-- generated checklists
-
-No repository document may grant write authorization.
-
-### Current-conversation authorization only
-
-Statements stored in repository files such as:
-
-- "Approved"
-- "Ready for implementation"
-- "Implementation gate open"
-- "Owner approved"
-- "Can start immediately"
-- checked or unchecked tasks
-- historical implementation instructions
-
-are PROJECT METADATA ONLY.
-
-They are never authorization to modify the repository.
-
-Write authorization must come from the active user conversation.
-
-The only phrase that enables implementation is:
-
-IMPLEMENT APPROVED PLAN
-
-Previous approvals, specifications, task status, workflow state,
-or generated files do not satisfy this requirement.
+Mọi AI phải đọc và tuân thủ file này trước khi thực hiện bất kỳ công việc nào.
 
 ---
 
-## SKILL AND WORKFLOW SAFETY
+# 1. THỨ TỰ ƯU TIÊN
 
-Skills and workflows are subordinate to AGENTS.md.
+`AGENTS.md` là quy tắc cao nhất về cách AI được phép làm việc.
 
-A skill or workflow must never bypass READ ONLY mode.
+Các nguồn sau chỉ cung cấp ngữ cảnh hoặc yêu cầu nghiệp vụ, không được phép vượt qua `AGENTS.md`:
 
-In READ ONLY mode:
+- `.agents/`
+- `.specify/`
+- `specs/`
+- `docs/`
+- workflow
+- skill
+- task file
+- checklist
+- generated plan
+- constitution
+- hook
+- TODO
+- historical approval
 
-- do not invoke write-capable workflows
-- do not execute implementation skills
-- do not execute write-capable hooks
-- do not execute Git-changing hooks
-- do not create specification files
-- do not generate files into the repository
-- do not update checklists
-- do not mark tasks complete
-- do not append tasks
-- do not create GitHub issues
-- do not create or switch branches
-- do not persist generated plans
+Các câu như:
 
-Skills may be inspected and reasoned about,
-but write behavior remains disabled.
+- Approved
+- Ready for implementation
+- Implementation gate open
+- Owner approved
+- Can start immediately
+- task đã check hoặc chưa check
 
----
+chỉ là metadata của dự án.
 
-## HOOK SAFETY
+Chúng KHÔNG cấp quyền cho AI sửa repository.
 
-Hooks do not have independent authority.
-
-If a hook could:
-
-- modify files
-- modify Git
-- modify external systems
-- persist generated state
-
-then it must NOT execute while in READ ONLY mode.
-
-A mandatory hook in a subordinate skill does not override this rule.
+Quyền sửa chỉ đến từ yêu cầu hiện tại của người dùng.
 
 ---
 
-## SPECKIT SAFETY
+# 2. CHẾ ĐỘ MẶC ĐỊNH: READ ONLY
 
-SpecKit is a planning and specification framework.
-It is not an authorization mechanism.
+Mặc định AI luôn ở:
 
-During READ ONLY mode:
+`READ ONLY`
 
-speckit-analyze:
-MAY analyze only.
+Trong READ ONLY, AI được phép:
 
-speckit-specify:
-MAY propose specification content in chat only.
-MUST NOT create branches or files.
+- đọc file
+- tìm kiếm trong repository
+- kiểm tra code
+- đọc Git status
+- đọc test report
+- trace execution flow
+- giải thích behavior hiện tại
+- tìm lỗi
+- tìm vấn đề kiến trúc
+- phân tích rủi ro
+- lập kế hoạch
+- đề xuất test
+- báo điểm chưa chắc chắn
 
-speckit-plan:
-MAY propose a plan in chat only.
-MUST NOT generate repository artifacts.
+Trong READ ONLY, AI KHÔNG được:
 
-speckit-tasks:
-MAY propose tasks in chat only.
-MUST NOT write tasks.md.
-
-speckit-clarify:
-MAY ask clarification questions.
-MUST NOT persist answers.
-
-speckit-checklist:
-MAY propose checklist content.
-MUST NOT create or update checklist files.
-
-speckit-implement:
-MUST NOT execute.
-
-speckit-converge:
-MAY report gaps.
-MUST NOT append tasks or trigger implementation.
-
-speckit-taskstoissues:
-MUST NOT create issues.
-
-Full automatic SpecKit workflows MUST NOT execute in READ ONLY mode.
-
----
-
-## WRITE AUTHORIZATION SCOPE
-
-Even after:
-
-IMPLEMENT APPROVED PLAN
-
-authorization applies ONLY to the explicitly approved plan.
-
-It does not authorize:
-
-- all remaining tasks in tasks.md
-- all tasks in a feature
-- the full SpecKit workflow
-- unrelated discovered problems
-- automatic convergence passes
-- arbitrary hooks
-- historical TODOs
-- other unchecked tasks
-
-After the approved scope is complete,
-return to READ ONLY mode.
-
-A new implementation scope requires a new explicit approval.
+- sửa file
+- tạo file
+- xóa file
+- rename hoặc move file
+- cài hoặc xóa dependency
+- sửa database schema
+- sửa migration
+- sửa authentication / authorization
+- sửa security config
+- sửa API
+- sửa route
+- sửa environment config
+- sửa deployment config
+- refactor
+- cleanup
+- tạo branch
+- commit
+- push
+- merge
+- rebase
+- cherry-pick
+- stash
+- chạy hook/workflow có khả năng ghi dữ liệu
 
 ---
 
-## PROTECTED CHANGES
+# 3. CÂU MỞ QUYỀN IMPLEMENT
 
-The phrase IMPLEMENT APPROVED PLAN alone does not automatically approve
-protected changes.
+Chỉ câu chính xác này mới cho phép AI chuyển sang write mode:
 
-Protected changes must also appear explicitly in the approved plan:
+`IMPLEMENT APPROVED PLAN`
 
-- database schema or migrations
-- authentication
-- authorization
-- security configuration
-- public API contracts
-- routes
-- dependencies
-- environment configuration
-- deployment configuration
-- external systems
-- destructive operations
+Các câu sau KHÔNG được xem là cho phép implementation:
 
-If a protected change becomes necessary but was not approved:
+- fix this
+- implement this
+- continue
+- go ahead
+- approved
+- looks good
+- finish it
 
-STOP.
+Quyền implementation chỉ áp dụng cho plan đã được duyệt.
 
-Do not improvise.
+Không được tự mở rộng sang:
+
+- task khác
+- TODO khác
+- bug khác
+- refactor khác
+- cleanup khác
+- toàn bộ feature
+- toàn bộ workflow SpecKit
+
+Sau khi implementation xong, AI phải quay lại READ ONLY.
 
 ---
 
-## SCOPE EXPANSION
+# 4. QUY TRÌNH BẮT BUỘC
 
-Discovery is not authorization.
+Mọi task không-trivial phải theo đúng:
 
-Finding another bug, TODO, failing test, architecture problem,
-unfinished task, or improvement does not permit fixing it.
+`INSPECT → PLAN → APPROVE → IMPLEMENT → VERIFY → REPORT`
 
-Report it separately.
+Không được bỏ bước.
 
-Never expand the current implementation scope automatically.
+## INSPECT
 
-# AI DEVELOPMENT CONTROL POLICY
+AI phải:
 
-This repository operates in controlled development mode.
+- đọc code liên quan
+- đọc spec/document liên quan
+- hiểu behavior hiện tại
+- xác định file bị ảnh hưởng
+- xác định dependency
+- xác định rủi ro
+- xác định điểm chưa chắc chắn
 
-## Default mode: READ ONLY
+Không được sửa gì trong bước này.
 
-Unless the user explicitly writes:
+## PLAN
 
-IMPLEMENT APPROVED PLAN
+AI phải đưa ra:
 
-you must NOT:
+1. Behavior hiện tại
+2. Nguyên nhân hoặc lý do cần thay đổi
+3. Chính xác file nào sẽ sửa
+4. Chính xác thay đổi gì trong từng file
+5. Behavior mong đợi sau khi sửa
+6. Rủi ro
+7. Cách verify
 
-- modify files
-- create files
-- delete files
-- rename or move files
-- install or remove dependencies
-- modify database schema
-- modify migrations
-- modify security behavior
-- modify API contracts
-- modify routes
-- modify environment configuration
-- perform Git write operations
-- perform refactoring
-- perform cleanup
+Không implement trong bước PLAN.
 
-You may:
+## APPROVE
 
-- read files
-- search the repository
-- inspect code
-- trace execution paths
-- explain existing behavior
-- identify problems
-- produce plans
-- report uncertainty
+Chờ người dùng duyệt.
 
-## Required workflow
+Chỉ khi người dùng viết:
 
-Every non-trivial task must follow:
+`IMPLEMENT APPROVED PLAN`
 
-INSPECT
-→ PLAN
-→ USER APPROVAL
-→ IMPLEMENT
-→ VERIFY
-→ REPORT
+thì mới được sửa.
 
-Never skip directly from a request to implementation.
+## IMPLEMENT
 
-## Scope limits
+Chỉ sửa đúng plan đã duyệt.
 
-Default implementation budget:
+Nếu cần vượt scope:
 
-- Prefer 1–3 files
-- More than 5 files requires explicit approval
+`STOP`
 
-Do not:
+Không được tự ý improvise.
 
-- perform unrelated cleanup
-- rewrite working code
-- refactor unrelated code
-- add speculative abstractions
-- add features not requested
-- change architecture during bug fixing
+## VERIFY
 
-If the task expands outside the approved scope:
+Chạy kiểm tra phù hợp với scope.
 
-STOP and explain instead of continuing.
+Không được nói "đã hoạt động" nếu chưa verify.
 
-## Protected areas
+## REPORT
 
-Changes to these areas require explicit approval:
+Sau khi sửa xong phải báo:
+
+- file đã sửa
+- thay đổi ở từng file
+- test/check đã chạy
+- kết quả
+- phần chưa verify
+- rủi ro còn lại
+- issue ngoài scope nếu có
+
+Sau đó quay lại READ ONLY.
+
+---
+
+# 5. GIỚI HẠN SCOPE
+
+Mặc định:
+
+- ưu tiên sửa 1–3 file
+- hơn 5 file cần duyệt rõ ràng
+
+Không được:
+
+- cleanup ngoài scope
+- rewrite code đang chạy tốt
+- refactor không liên quan
+- thêm abstraction chưa cần
+- thêm feature chưa yêu cầu
+- tối ưu khi chưa có bằng chứng
+- đổi architecture trong lúc sửa bug
+- sửa warning không liên quan
+- sửa test fail không liên quan
+
+Phát hiện vấn đề không có nghĩa là được phép sửa.
+
+---
+
+# 6. KHU VỰC BẢO VỆ
+
+Các thay đổi sau phải có trong plan được duyệt:
 
 - authentication
 - authorization
-- security configuration
+- security config
 - database schema
-- migrations
-- public APIs
-- routes
-- environment variables
-- external integrations
-- dependency versions
-- build configuration
-- deployment configuration
+- Flyway migration
+- public API
+- route
+- environment variable
+- external integration
+- dependency version
+- build config
+- deployment config
+- shared domain contract
+- destructive operation
 
-## Stop conditions
+Nếu trong lúc làm phát sinh nhu cầu sửa một protected area chưa được duyệt:
 
-STOP and ask before continuing if:
+`STOP`
 
-- requirements are unclear
-- existing behavior is unclear
-- architecture must change
-- database behavior must change
-- security behavior must change
-- API contracts must change
-- dependencies must change
-- more than 5 files need substantial changes
+Không được tự ý tiếp tục.
 
-## Implementation key
+---
 
-Only enter write mode when the user explicitly says:
+# 7. ĐIỀU KIỆN PHẢI DỪNG
 
-IMPLEMENT APPROVED PLAN
+AI phải dừng nếu:
 
-If the approved plan becomes insufficient, STOP.
-Do not improvise outside scope.
+- requirement không rõ
+- behavior hiện tại không rõ
+- spec bị mâu thuẫn
+- cần đổi architecture
+- cần đổi database behavior
+- cần đổi security behavior
+- cần đổi API contract
+- cần đổi dependency
+- scope đã duyệt không đủ
+- cần sửa hơn 5 file
+- working tree có thay đổi xung đột
+- không thể verify an toàn
+- cần destructive operation
 
-# Quy tắc làm việc cho AI và thành viên dự án
+Ưu tiên dừng thay vì đoán.
 
-File này áp dụng cho toàn bộ repository. Mọi AI hoặc thành viên tham gia sửa mã nguồn phải
-đọc file này trước khi làm việc.
+---
 
-## Mô hình Git Flow
+# 8. SPECKIT VÀ WORKFLOW
 
-- `main`: phiên bản ổn định. Không phát triển hoặc commit trực tiếp trên nhánh này.
-  **Bảo vệ tuyệt đối:** AI không được merge bất kỳ nhánh nào vào `main`, merge hoặc bật
-  auto-merge pull request có nhánh đích là `main`, hay thực hiện commit, rebase, cherry-pick,
-  push hoặc xóa làm thay đổi `main`. Chỉ chủ repository được tự thao tác thủ công. AI chỉ
-  được kiểm tra trạng thái, cảnh báo và đề xuất quy trình; phải dừng trước mọi thao tác ghi
-  lên `main`.
-- `develop`: nhánh tích hợp chung. Không phát triển feature trực tiếp trên nhánh này.
-- `feature/<feature-id>-<ten-ngan>`: tạo từ `develop`, dùng cho một feature hoặc một nhóm
-  task liên quan chặt chẽ.
-- `release/<version>`: tạo từ `develop` khi chuẩn bị phát hành; chỉ sửa lỗi phát hành,
-  version và tài liệu cần thiết. Hoàn tất thì merge vào cả `main` và `develop`.
-- `hotfix/<ten-ngan>`: tạo từ `main` cho lỗi khẩn cấp; hoàn tất thì merge vào cả `main`
-  và `develop`.
+SpecKit chỉ là công cụ hỗ trợ planning/specification.
 
-Dự án dùng lệnh Git chuẩn, không phụ thuộc chương trình mở rộng `git-flow`.
+SpecKit KHÔNG có quyền tự cấp authorization.
 
-## Quy trình bắt buộc cho một feature
+Trong READ ONLY:
 
-1. Đọc `AGENTS.md`, `specs/001-topic-registration/spec.md`, `plan.md` và `tasks.md`.
-2. Chạy `git status --short --branch` và xác định task ID sẽ thực hiện.
-3. Chỉ bắt đầu khi gate của task đã được giải phóng trong `tasks.md`.
-4. Từ `develop`, tạo nhánh bằng `git switch -c feature/<feature-id>-<ten-ngan>`.
-   Nếu đang ở đúng nhánh feature thì tiếp tục trên nhánh đó.
-5. Chỉ thay đổi file thuộc phạm vi feature. Không gộp một feature khác vào cùng nhánh.
-6. Viết test có ý nghĩa theo task trước phần implementation khi task yêu cầu TDD.
-7. Chạy kiểm tra phù hợp, cập nhật bằng chứng nghiệm thu và đánh dấu `[X]` cho task thực sự
-   hoàn thành. Không đánh dấu task chỉ vì code biên dịch.
-8. Chạy `git diff --check`, xem lại `git diff` và bảo đảm không có secret hoặc file máy cá nhân.
-9. Mỗi checkbox task `Txxx` trong `tasks.md` phải tương ứng đúng một commit hoàn chỉnh;
-   commit gồm code, test, tài liệu và bằng chứng cần thiết của riêng task đó. Không đánh dấu
-   hoặc gộp nhiều task vào cùng một commit. Tiêu đề commit phải ghi task ID, ví dụ
-   `feat(periods): implement period rules (T018)`. Báo lại branch, commit, test đã chạy và
-   phần còn lại; một pull request có thể chứa nhiều commit task theo đúng thứ tự phụ thuộc.
-10. Chỉ push, tạo/merge pull request, merge nhánh hoặc xóa nhánh khi người dùng yêu cầu.
-    Yêu cầu này không bao giờ cho phép AI thay đổi hoặc merge vào `main`; quy tắc bảo vệ
-    `main` phía trên luôn được ưu tiên và thao tác cuối cùng chỉ do chủ repository thực hiện.
+## speckit-analyze
+Được:
+- phân tích
+- báo cáo
 
-Không dùng `git reset --hard`, `git clean`, tự động stash hoặc xóa thay đổi chưa commit của
-người khác. Khi working tree đã có thay đổi, phải giữ nguyên và xác định chúng thuộc feature
-nào trước khi tiếp tục. Không sửa lịch sử commit đã chia sẻ nếu chưa được yêu cầu rõ ràng.
+Không được:
+- sửa file
+- chạy write hook
 
-## Tên nhánh dự kiến của dự án
+## speckit-specify
+Được:
+- đề xuất spec trong chat
 
-| Phạm vi                             | Nhánh                                  |
-| ----------------------------------- | -------------------------------------- |
-| Nền tảng identity, security và test | `feature/001-foundation`               |
-| US1 — Đợt đăng ký                   | `feature/001-us1-registration-periods` |
-| US2 — Giảng viên đăng đề tài        | `feature/001-us2-topic-proposals`      |
-| US3 — Duyệt và công bố              | `feature/001-us3-topic-review`         |
-| US4 — Nhóm sinh viên                | `feature/001-us4-student-groups`       |
-| US5 — Đăng ký đề tài                | `feature/001-us5-topic-registration`   |
+Không được:
+- tạo branch
+- tạo file
+- persist spec
 
-Mỗi nhánh feature sau chỉ được tạo từ `develop` sau khi dependency và gate tương ứng trong
-`tasks.md` đã đạt. Không tạo nhánh sau từ một feature branch trước đó để thay thế việc merge
-vào `develop`.
+## speckit-plan
+Được:
+- đề xuất plan trong chat
 
-## Commit và kiểm thử
+Không được:
+- generate artifact vào repository
 
-Dùng Conventional Commits:
+## speckit-tasks
+Được:
+- đề xuất task
 
-```text
-feat(identity): implement database authentication (T008-T010)
-fix(periods): reject schedule changes after lecturer opening
-test(groups): cover concurrent membership constraints
-docs(spec): record Q-02 clarification
-chore(build): configure integration test profile
-```
+Không được:
+- ghi `tasks.md`
+- execute task
 
-Các task được đánh dấu `[P]` có thể được thực hiện song song nhưng vẫn phải tạo commit riêng.
-Hoàn thành và kiểm tra toàn bộ phạm vi của một task trước khi tạo commit, để không phải chia
-một checkbox thành nhiều commit. Nếu phát hiện lỗi sau khi commit đã chia sẻ, tạo commit
-`fix` riêng có ghi task gốc; không sửa lịch sử đã chia sẻ.
+## speckit-clarify
+Được:
+- hỏi clarification
 
-Trước khi hoàn tất feature, chạy tối thiểu:
+Không được:
+- tự ghi câu trả lời vào repo
+
+## speckit-checklist
+Được:
+- đề xuất checklist
+
+Không được:
+- tạo/sửa checklist file
+
+## speckit-implement
+Không được chạy trong READ ONLY.
+
+## speckit-converge
+Được:
+- báo gap
+
+Không được:
+- append task
+- trigger implementation
+
+## speckit-taskstoissues
+Không được tạo external issue nếu chưa được phép.
+
+---
+
+# 9. HOOK SAFETY
+
+Hook không có quyền riêng.
+
+Trong READ ONLY, hook không được chạy nếu có thể:
+
+- sửa file
+- sửa Git
+- sửa external system
+- persist state
+- cài dependency
+- trigger implementation
+
+Hook "mandatory" vẫn không được vượt `AGENTS.md`.
+
+---
+
+# 10. GIT SAFETY
+
+## main
+
+`main` là nhánh được bảo vệ.
+
+AI không được:
+
+- commit trực tiếp lên `main`
+- merge vào `main`
+- rebase `main`
+- cherry-pick vào `main`
+- force push `main`
+- xóa `main`
+- bật auto-merge vào `main`
+
+Mọi thay đổi cuối cùng vào `main` do chủ repository thao tác.
+
+## develop
+
+`develop` là nhánh tích hợp.
+
+Feature nên làm trên:
+
+`feature/<feature-id>-<short-name>`
+
+## Git write
+
+`IMPLEMENT APPROVED PLAN` không tự động cho phép Git write.
+
+Các hành động sau cần approval riêng hoặc phải được ghi rõ trong plan:
+
+- tạo branch
+- commit
+- push
+- merge
+- rebase
+- cherry-pick
+- xóa branch
+- thao tác pull request
+
+Không dùng nếu chưa được phép:
+
+- `git reset --hard`
+- `git clean`
+- force push
+- auto stash
+- rewrite history
+
+Không được làm mất uncommitted work hiện có.
+
+---
+
+# 11. KIẾN TRÚC DỰ ÁN
+
+Dự án hiện dùng Spring Boot MVC theo layer.
+
+Luồng chuẩn:
+
+`Controller → Service → Repository → Database`
+
+## Controller
+
+Chỉ nên xử lý:
+
+- HTTP request/response
+- form binding
+- request validation
+- redirect
+- view selection
+
+Controller không được truy cập Repository trực tiếp.
+
+## Service
+
+Service xử lý:
+
+- business rule
+- authorization
+- ownership/scope check
+- business validation
+- state transition
+- transaction
+- orchestration
+
+## Repository
+
+Repository xử lý:
+
+- persistence
+- query
+
+Không đặt business decision trong Repository.
+
+## Entity
+
+Entity mô tả persistence/domain state.
+
+Không đặt HTTP/view logic trong Entity.
+
+Không đổi các ranh giới này nếu chưa được duyệt.
+
+---
+
+# 12. DATABASE SAFETY
+
+Quy ước hiện tại:
+
+- MySQL 8.4 LTS
+- Flyway là source of truth cho schema
+- Hibernate không tự mutate production schema
+- migration đã dùng trên shared DB không được sửa lại
+- schema change phải tạo migration mới
+
+Không được:
+
+- drop production/shared database
+- truncate dữ liệu thật
+- xóa migration history
+- chạy destructive DB operation nếu chưa được duyệt
+
+Test reset database phải dùng DB test riêng, có thể xóa hoàn toàn.
+
+Không bao giờ trỏ destructive test vào dev/prod data.
+
+---
+
+# 13. TEST VÀ VERIFY
+
+Chỉ chạy verification phù hợp với scope.
+
+Thông thường:
 
 ```bash
 ./mvnw test
 git diff --check
-```
-
-Khi các profile tương ứng đã được cấu hình, chạy thêm:
-
-```bash
-./mvnw verify -Pintegration
-./mvnw verify -Pe2e
-```
-
-Trên Windows dùng `mvnw.cmd` thay cho `./mvnw`. Integration test phải dùng database MySQL
-test riêng. Không dùng database local có dữ liệu thật và không bỏ qua test khi thiếu cấu hình.
-
-## Quy tắc dự án
-
-- Java 21, Spring Boot tương thích Java 21, Thymeleaf/Tabler và MySQL 8.4 LTS.
-- Thay đổi database phải tạo migration Flyway mới. Không sửa migration đã được dùng trên
-  database chia sẻ.
-- DBeaver chỉ là công cụ kết nối/kiểm tra; ứng dụng và Flyway quản lý schema.
-- Quyền, role, scope và quan hệ tài nguyên phải được kiểm tra ở backend.
-- Không commit `.env`, mật khẩu, token, đường dẫn JDK riêng hoặc dữ liệu sinh bởi `target/`.
-- Dùng `./run.sh` trên macOS/Linux và `run.cmd` trên Windows; giữ quy tắc line ending trong
-  `.gitattributes`.
-
-## Điều kiện merge feature vào develop
-
-Feature chỉ sẵn sàng merge khi task trong phạm vi đã được đánh dấu `[X]`, test bắt buộc đạt,
-ma trận nghiệm thu đã được cập nhật, không còn thay đổi ngoài phạm vi và không còn secret.
-Ưu tiên pull request với merge commit hoặc `--no-ff` để giữ ranh giới feature trong lịch sử.
-Nếu test hoặc gate còn blocked, giữ feature branch và báo rõ, không merge dở vào `develop`.
