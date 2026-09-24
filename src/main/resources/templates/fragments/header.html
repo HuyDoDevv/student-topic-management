@@ -12,13 +12,13 @@
     <div class="header-actions d-flex align-items-center gap-3">
       <span class="badge bg-teal-lt d-none d-sm-inline-flex">Cổng học vụ</span>
       <div class="dropdown">
-        <button class="btn btn-icon btn-ghost-secondary header-ghost-button position-relative" type="button"
+        <button class="btn btn-icon header-ghost-button notification-trigger position-relative" type="button"
                 data-bs-toggle="dropdown" aria-expanded="false" th:aria-label="${notificationAriaLabel ?: 'Xem thông báo'}">
           <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
             <path d="M10 5a2 2 0 0 1 4 0 6 6 0 0 1 4 6v4l2 2H4l2-2v-4a6 6 0 0 1 4-6M9 21h6"/>
           </svg>
-          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-red"
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill notification-count-badge"
                 th:if="${hasUnreadNotifications}" th:text="${headerUnreadBadge}">3</span>
         </button>
         <div class="dropdown-menu dropdown-menu-end notification-menu p-0">

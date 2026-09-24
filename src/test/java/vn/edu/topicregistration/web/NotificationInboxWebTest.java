@@ -102,6 +102,8 @@ class NotificationInboxWebTest {
         mvc.perform(get("/notifications").principal(authentication(7L)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("99+")))
+                .andExpect(content().string(containsString("notification-trigger")))
+                .andExpect(content().string(containsString("notification-count-badge")))
                 .andExpect(content().string(containsString("137 thông báo chưa đọc")))
                 .andExpect(content().string(containsString("Thông báo 1")))
                 .andExpect(content().string(containsString("Thông báo 5")));
