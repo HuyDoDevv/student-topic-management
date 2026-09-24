@@ -99,7 +99,7 @@ cutoff chưa đọc; open không nhận redirect URL và target vẫn kiểm tra
 
 - [X] T010 Viết MySQL concurrency/security tests cho duplicate event, publish race, rollback và cross-account access tại `src/test/java/vn/edu/topicregistration/concurrency/NotificationConcurrencyIT.java` và cập nhật profile fixture liên quan tại `src/test/resources/`
 - [X] T011 Viết Playwright E2E cho ADMIN publish → STUDENT bell/open/read, DEAN scope, keyboard/mobile/empty state tại `src/test/java/vn/edu/topicregistration/e2e/NotificationFlowE2ETest.java` và hoàn thiện CSS cần thiết tại `src/main/resources/static/css/app.css`
-- [ ] T012 Chạy quickstart/full suites, kiểm tra query/index và cập nhật bằng chứng/truy vết tại `specs/003-notifications/quickstart.md`, `specs/003-notifications/acceptance-matrix.md`, `database/DATA_FLOW.md`, `database/class-diagram.mmd`, `database/README.md`
+- [X] T012 Chạy quickstart/full suites, kiểm tra query/index và cập nhật bằng chứng/truy vết tại `specs/003-notifications/quickstart.md`, `specs/003-notifications/acceptance-matrix.md`, `database/DATA_FLOW.md`, `database/class-diagram.mmd`, `database/README.md`
 
 ---
 

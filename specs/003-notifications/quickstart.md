@@ -1,7 +1,8 @@
 # Quickstart Validation: Thông báo trong hệ thống
 
-> Tài liệu này mô tả cách nghiệm thu sau khi feature được duyệt và triển khai. Ở trạng thái plan
-> hiện tại chưa có code/migration tương ứng, vì vậy các scenario chưa được đánh dấu PASS.
+> Feature đã được triển khai trên `feature/003-notifications`. Bằng chứng tự động bên dưới được
+> chạy ngày 2026-09-24 trên Java 21 và MySQL 8.4 test riêng; scenario thủ công vẫn được giữ để
+> thành viên nhóm có thể kiểm tra lại giao diện.
 
 ## 1. Prerequisites
 
@@ -15,13 +16,13 @@
 ## 2. Static and unit checks
 
 ```bash
-./mvnw test
+env -u JAVA_HOME ./mvnw test
 git diff --check
 ```
 
-Expected:
+Kết quả nghiệm thu:
 
-- Unit/web tests pass.
+- **PASS**: 234 unit/web tests, không failure/error.
 - Không có whitespace error, secret, `.env`, `target/` hoặc file máy cá nhân trong diff.
 - Test bao phủ event-key, recipient scope, target resolver, validation, CSRF và IDOR.
 
@@ -30,12 +31,17 @@ Expected:
 Cấu hình profile integration tới database test theo convention hiện có rồi chạy:
 
 ```bash
+env -u JAVA_HOME \
+TEST_DATABASE_URL="$TEST_DATABASE_URL" \
+TEST_DATABASE_USERNAME="$TEST_DATABASE_USERNAME" \
+TEST_DATABASE_PASSWORD="$TEST_DATABASE_PASSWORD" \
 ./mvnw verify -Pintegration
 ```
 
-Expected:
+Kết quả nghiệm thu:
 
-- Clean migration V1 → V12 thành công.
+- **PASS**: 35 integration/concurrency tests trên MySQL 8.4; clean migration V1 → V12 và
+  upgrade V6/V7/V11 → V12 thành công.
 - Upgrade schema V11 có dữ liệu announcement mẫu → V12 giữ dữ liệu cũ.
 - Unique event key và `(event_id, recipient_id)` được MySQL thực thi.
 - Rollback service nguồn không để lại event/recipient.
@@ -49,7 +55,7 @@ Expected:
 4. Publish.
 5. Đăng nhập lần lượt DEAN, LECTURER, STUDENT đang enabled.
 
-Expected:
+Expected khi kiểm tra thủ công:
 
 - Mỗi account nhận đúng một item `ANNOUNCEMENT`, badge tăng một.
 - Dropdown chỉ hiển thị tối đa năm mục, newest first.
@@ -63,7 +69,7 @@ Expected:
 2. Kiểm tra STUDENT/LECTURER cùng khoa và account ngoài scope.
 3. Dùng LECTURER thử gọi route quản lý; dùng DEAN thử ID draft ngoài scope.
 
-Expected:
+Expected khi kiểm tra thủ công:
 
 - Chỉ account enabled thuộc khoa tại thời điểm publish nhận.
 - LECTURER/STUDENT không quản lý được announcement.
@@ -78,7 +84,7 @@ Expected:
 4. Trong lúc mark-all, tạo một item mới sau cutoff.
 5. Dùng account khác đoán recipient-notification ID.
 
-Expected:
+Expected khi kiểm tra thủ công:
 
 - Phân trang 20, order `delivered_at DESC, id DESC`, filter không lẫn account.
 - Mark-one idempotent, giữ read timestamp đầu tiên.
@@ -107,7 +113,7 @@ Cho từng action:
 3. Gây lỗi có chủ đích trước commit để kiểm tra rollback.
 4. Mở notification và kiểm tra target authorization.
 
-Expected: đúng một item/người nhận khi commit; không có item khi rollback; không ai ngoài scope
+Expected khi kiểm tra thủ công: đúng một item/người nhận khi commit; không có item khi rollback; không ai ngoài scope
 nhận hoặc mở được tài nguyên.
 
 ## 8. Query/performance check
@@ -119,15 +125,26 @@ Tạo bộ dữ liệu test 2.000 accounts và 100.000 `user_notifications`, sau
 - inbox ALL/UNREAD theo category;
 - mark-all có cutoff.
 
-Expected:
+Kết quả `EXPLAIN ANALYZE` trên fixture 2.000 accounts/100.000 deliveries:
 
-- Query dùng index recipient/read/time, không full scan toàn bảng recipient.
-- Header và trang đầu inbox hoàn tất dưới 2 giây trong môi trường test dự án.
-- Không phát sinh N+1 event/account query trong log SQL kiểm thử.
+- **Unread count**: dùng covering index `idx_user_notifications_recipient_read_time`,
+  actual time khoảng **0,016 ms**.
+- **Top 5 header**: lookup theo recipient bằng index và join event bằng PK, actual time khoảng
+  **0,067 ms**.
+- **Inbox unread + category**: không scan `user_notifications`; lookup unique
+  `(event_id, recipient_id)`, actual time khoảng **2,71 ms** trên fixture.
+- **Mark-all cutoff**: plan dùng range trên `idx_user_notifications_recipient_read_time`.
+- Không query nào full scan bảng 100.000 `user_notifications`; tất cả thấp hơn ngưỡng 2 giây.
+- Repository dùng `@EntityGraph(attributePaths = "event")` cho header/inbox để tránh N+1 ở tầng JPA.
 
 ## 9. E2E suite
 
 ```bash
+env -u JAVA_HOME \
+TEST_DATABASE_URL="$TEST_DATABASE_URL" \
+TEST_DATABASE_USERNAME="$TEST_DATABASE_USERNAME" \
+TEST_DATABASE_PASSWORD="$TEST_DATABASE_PASSWORD" \
+E2E_ACCOUNT_PASSWORD="$E2E_ACCOUNT_PASSWORD" \
 ./mvnw verify -Pe2e
 ```
 
@@ -138,6 +155,9 @@ Minimum journeys:
 - Registration decision/result publication creates per-student notification.
 - Keyboard navigation, visible focus, empty state, unread text/badge and mobile header.
 
+Kết quả: **PASS** — 7 Playwright tests, gồm `NotificationFlowE2ETest`; full-suite evidence được ghi trong
+[acceptance-matrix.md](acceptance-matrix.md).
+
 ## 10. Acceptance evidence
 
 Trước khi đánh dấu feature hoàn thành:
@@ -147,3 +167,5 @@ Trước khi đánh dấu feature hoàn thành:
 - Cập nhật traceability/acceptance matrix cho REQ-29–30 và các PN đã duyệt.
 - Kiểm tra từng task ID có đúng một commit riêng; không gộp hoặc đánh dấu chỉ vì build thành công.
 - Chạy lại `./mvnw test`, integration, E2E phù hợp và `git diff --check`.
+
+Ma trận truy vết và trạng thái cuối nằm tại [acceptance-matrix.md](acceptance-matrix.md).
