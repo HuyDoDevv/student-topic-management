@@ -39,6 +39,7 @@ import vn.edu.topicregistration.entity.RegistrationStatus;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.entity.TopicEntity;
+import vn.edu.topicregistration.service.NotificationService;
 
 class GroupRegistrationFeedbackTest {
     private static final Instant NOW = Instant.parse("2026-09-13T01:00:00Z");
@@ -60,6 +61,7 @@ class GroupRegistrationFeedbackTest {
                 accounts,
                 activeRegistrations,
                 authorization,
+                mock(NotificationService.class),
                 Clock.fixed(NOW, ZoneOffset.UTC));
 
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);

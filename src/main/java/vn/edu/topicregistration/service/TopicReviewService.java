@@ -24,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.topicregistration.service.TopicReviewRules.InvalidTopicReviewStateException;
 import vn.edu.topicregistration.service.TopicReviewRules.ReviewDecision;
 import vn.edu.topicregistration.service.TopicRules.TopicStatus;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
+import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
 @Profile("!preview & !test")
@@ -31,14 +34,17 @@ public class TopicReviewService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;
     private final AuthorizationPolicy authorization;
+    private final NotificationService notifications;
 
     public TopicReviewService(
             RegistrationPeriodRepository periods,
             TopicRepository topics,
-            AuthorizationPolicy authorization) {
+            AuthorizationPolicy authorization,
+            NotificationService notifications) {
         this.periods = periods;
         this.topics = topics;
         this.authorization = authorization;
+        this.notifications = notifications;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -101,6 +107,23 @@ public class TopicReviewService {
                 () -> TopicReviewRules.review(statusOf(locked.topic()), decision));
         locked.topic().changeStatus(nextStatus.name());
         topics.flush();
+        NotificationEventType eventType = decision == ReviewDecision.APPROVE
+                ? NotificationEventType.TOPIC_PROPOSAL_APPROVED
+                : NotificationEventType.TOPIC_PROPOSAL_REJECTED;
+        notifications.emit(new EmissionCommand(
+                eventType,
+                locked.topic().getId(),
+                locked.actor().accountId(),
+                List.of(locked.topic().getAuthor().getId()),
+                decision == ReviewDecision.APPROVE
+                        ? "Đề tài đã được duyệt"
+                        : "Đề tài chưa được duyệt",
+                decision == ReviewDecision.APPROVE
+                        ? "Đề tài của bạn đã được Trưởng khoa chấp nhận."
+                        : "Đề tài của bạn đã bị từ chối. Vui lòng xem lại thông tin đề tài.",
+                null,
+                NotificationTargetType.TOPIC,
+                locked.topic().getId()));
         return new ReviewResult(
                 locked.topic().getId(),
                 locked.period().getId(),
@@ -113,7 +136,7 @@ public class TopicReviewService {
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         RegistrationPeriodEntity period = lockedPeriod(periodId);
-        authorization.requireDeanOfFaculty(period.getFaculty().getId());
+        var dean = authorization.requireDeanOfFaculty(period.getFaculty().getId());
 
         TopicEntity topic = topics.findByIdForUpdate(topicId)
                 .orElseThrow(() -> new ApplicationException(
@@ -124,7 +147,7 @@ public class TopicReviewService {
         if (topic.getVersion() != expectedVersion) {
             throw new OptimisticLockingFailureException("Topic version is stale");
         }
-        return new LockedTopic(period, topic);
+        return new LockedTopic(period, topic, dean);
     }
 
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
@@ -182,7 +205,8 @@ public class TopicReviewService {
 
     private record LockedTopic(
             RegistrationPeriodEntity period,
-            TopicEntity topic) {
+            TopicEntity topic,
+            vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity actor) {
     }
 
     public record ReviewResult(

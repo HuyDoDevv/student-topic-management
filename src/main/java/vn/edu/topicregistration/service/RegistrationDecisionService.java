@@ -27,6 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.topicregistration.service.RegistrationRules.RegistrationRuleException;
 import vn.edu.topicregistration.service.RegistrationRules.State;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
 @Profile("!preview & !test")
@@ -34,19 +38,25 @@ public class RegistrationDecisionService {
     private final RegistrationPeriodRepository periods;
     private final RegistrationRepository registrations;
     private final UserAccountRepository accounts;
+    private final RegistrationMemberRepository registrationMembers;
     private final AuthorizationPolicy authorization;
+    private final NotificationService notifications;
     private final Clock clock;
 
     public RegistrationDecisionService(
             RegistrationPeriodRepository periods,
             RegistrationRepository registrations,
             UserAccountRepository accounts,
+            RegistrationMemberRepository registrationMembers,
             AuthorizationPolicy authorization,
+            NotificationService notifications,
             Clock clock) {
         this.periods = periods;
         this.registrations = registrations;
         this.accounts = accounts;
+        this.registrationMembers = registrationMembers;
         this.authorization = authorization;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -80,6 +90,14 @@ public class RegistrationDecisionService {
             }
         }
         registrations.flush();
+        emitDecision(selected, NotificationEventType.REGISTRATION_ACCEPTED,
+                locked.actorAccount().getId());
+        for (RegistrationEntity registration : pending) {
+            if (!Objects.equals(registration.getId(), registrationId)) {
+                emitDecision(registration, NotificationEventType.REGISTRATION_AUTO_REJECTED,
+                        locked.actorAccount().getId());
+            }
+        }
         return toResult(selected, rejectedCount);
     }
 
@@ -95,7 +113,37 @@ public class RegistrationDecisionService {
         locked.registration().rejectManually(
                 locked.actorAccount(), normalizedReason, clock.instant());
         registrations.flush();
+        emitDecision(locked.registration(), NotificationEventType.REGISTRATION_REJECTED,
+                locked.actorAccount().getId());
         return toResult(locked.registration(), 0);
+    }
+
+    private void emitDecision(
+            RegistrationEntity registration,
+            NotificationEventType eventType,
+            long actorId) {
+        List<Long> recipientIds = registrationMembers
+                .findAllByRegistrationId(registration.getId())
+                .stream()
+                .map(member -> member.getStudent().getId())
+                .distinct()
+                .toList();
+        String title = eventType == NotificationEventType.REGISTRATION_ACCEPTED
+                ? "Đăng ký đề tài đã được chấp nhận"
+                : "Đăng ký đề tài đã bị từ chối";
+        String body = eventType == NotificationEventType.REGISTRATION_ACCEPTED
+                ? "Nhóm của bạn đã được chấp nhận đăng ký đề tài."
+                : "Đăng ký của nhóm đã bị từ chối. Vui lòng xem chi tiết để biết lý do.";
+        notifications.emit(new EmissionCommand(
+                eventType,
+                registration.getId(),
+                actorId,
+                recipientIds,
+                title,
+                body,
+                null,
+                NotificationTargetType.REGISTRATION,
+                registration.getId()));
     }
 
     private LockedRegistration lockedRegistration(
