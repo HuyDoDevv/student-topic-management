@@ -74,6 +74,11 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .header-mobile-context { display: none; color: #384454; font-weight: 700; }
 .header-actions { margin-left: auto; }
 .notification-menu { width: min(20rem, calc(100vw - 2rem)); }
+.notification-menu .list-group {
+  max-height: min(26rem, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .notification-unread {
   border-left: 3px solid #74b9e8 !important;
   background: #f8fbfe;
@@ -85,7 +90,7 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   background: transparent;
   color: inherit;
 }
-.notification-dropdown-button { padding: 1rem 1.25rem; }
+.notification-dropdown-button { min-height: 4.5rem; padding: 1rem 1.25rem; }
 .notification-content-button { padding: 0; }
 .notification-dropdown-button:hover,
 .notification-dropdown-button:focus-visible,
@@ -336,6 +341,7 @@ input[readonly] { background-color: var(--tblr-bg-surface-secondary, #f1f3f5); c
   .brand-mark { width: 2.3rem; height: 2.3rem; }
   .header-mobile-context { max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .header-actions { gap: .35rem !important; }
+  .notification-menu { width: calc(100vw - 1rem); }
   .header-actions .btn { padding-inline: .5rem; }
   .page-title { font-size: 1.5rem; }
   .page-wrapper .page-header { margin-bottom: 1.25rem; }
