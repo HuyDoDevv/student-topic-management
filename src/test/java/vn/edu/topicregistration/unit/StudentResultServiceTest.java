@@ -40,6 +40,7 @@ import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.ResultService;
 
 class StudentResultServiceTest {
@@ -175,7 +176,8 @@ class StudentResultServiceTest {
             return new ResultService(
                     periods, councils, assignments, members, registrationMembers,
                     evaluations, results,
-                    accounts, authorization, Clock.fixed(NOW, ZoneOffset.UTC));
+                    accounts, authorization, mock(NotificationService.class),
+                    Clock.fixed(NOW, ZoneOffset.UTC));
         }
     }
 }

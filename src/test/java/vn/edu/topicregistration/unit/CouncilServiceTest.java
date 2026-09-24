@@ -53,6 +53,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.CouncilService;
 import vn.edu.topicregistration.service.CouncilService.AssignmentCommand;
 import vn.edu.topicregistration.service.CouncilService.CreateCouncilCommand;
+import vn.edu.topicregistration.service.NotificationService;
 
 class CouncilServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-14T08:00:00Z");
@@ -365,6 +366,7 @@ class CouncilServiceTest {
                     registrations,
                     reports,
                     authorization,
+                    mock(NotificationService.class),
                     entityManager,
                     Clock.fixed(NOW, ZoneOffset.UTC));
         }

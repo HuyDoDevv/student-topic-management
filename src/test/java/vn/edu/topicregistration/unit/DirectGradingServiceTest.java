@@ -50,6 +50,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.DirectGradingService;
 import vn.edu.topicregistration.service.DirectGradingService.AssignCommand;
+import vn.edu.topicregistration.service.NotificationService;
 
 class DirectGradingServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-30T02:00:00Z");
@@ -226,6 +227,7 @@ class DirectGradingServiceTest {
                 councilTopics,
                 reports,
                 authorization,
+                mock(NotificationService.class),
                 entityManager,
                 Clock.fixed(NOW, ZoneOffset.UTC));
         return new Dependencies(
