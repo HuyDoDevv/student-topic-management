@@ -37,6 +37,8 @@ import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.security.AccountPrincipal;
 import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.NotificationService.HeaderView;
+import vn.edu.topicregistration.service.NotificationService.InboxCategory;
+import vn.edu.topicregistration.service.NotificationService.InboxStatus;
 import vn.edu.topicregistration.service.NotificationService.NotificationItem;
 
 class NotificationInboxWebTest {
@@ -56,13 +58,14 @@ class NotificationInboxWebTest {
                 .setViewResolvers(viewResolver())
                 .build();
         when(notifications.headerForCurrentActor()).thenReturn(new HeaderView(0, List.of()));
-        when(notifications.inboxForCurrentActor(0)).thenReturn(new PageImpl<>(List.of()));
+        when(notifications.inboxForCurrentActor(InboxStatus.ALL, InboxCategory.ALL, 0))
+                .thenReturn(new PageImpl<>(List.of()));
     }
 
     @Test
     void rendersOnlyCurrentActorsInboxWithPagination() throws Exception {
         NotificationItem ownItem = item(41L, "Đề tài đã được duyệt", null);
-        when(notifications.inboxForCurrentActor(1)).thenReturn(new PageImpl<>(
+        when(notifications.inboxForCurrentActor(InboxStatus.ALL, InboxCategory.ALL, 1)).thenReturn(new PageImpl<>(
                 List.of(ownItem), PageRequest.of(1, NotificationService.INBOX_PAGE_SIZE), 21));
 
         mvc.perform(get("/notifications?page=1").principal(authentication(7L)))
@@ -74,7 +77,7 @@ class NotificationInboxWebTest {
                 .andExpect(content().string(containsString("Trang 2 / 2")))
                 .andExpect(content().string(not(containsString("recipientId"))));
 
-        verify(notifications).inboxForCurrentActor(1);
+        verify(notifications).inboxForCurrentActor(InboxStatus.ALL, InboxCategory.ALL, 1);
     }
 
     @Test
@@ -82,7 +85,8 @@ class NotificationInboxWebTest {
         mvc.perform(get("/notifications?page=-1").principal(authentication(7L)))
                 .andExpect(status().isBadRequest());
 
-        verify(notifications, never()).inboxForCurrentActor(-1);
+        verify(notifications, never()).inboxForCurrentActor(
+                InboxStatus.ALL, InboxCategory.ALL, -1);
     }
 
     @Test

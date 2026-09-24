@@ -74,6 +74,24 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .header-mobile-context { display: none; color: #384454; font-weight: 700; }
 .header-actions { margin-left: auto; }
 .notification-menu { width: min(20rem, calc(100vw - 2rem)); }
+.notification-unread {
+  border-left: 3px solid #74b9e8 !important;
+  background: #f8fbfe;
+}
+.notification-dropdown-button,
+.notification-content-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+.notification-dropdown-button { padding: 1rem 1.25rem; }
+.notification-content-button { padding: 0; }
+.notification-dropdown-button:hover,
+.notification-dropdown-button:focus-visible,
+.notification-content-button:hover .text-body,
+.notification-content-button:focus-visible .text-body { color: var(--tblr-primary) !important; }
+.notification-open-form { margin: 0; }
 .app-header .header-ghost-button:hover,
 .app-header .header-ghost-button:focus,
 .app-header .header-ghost-button[aria-expanded="true"] {

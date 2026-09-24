@@ -167,6 +167,12 @@ class NotificationServiceTest {
         when(dependencies.notifications().findByRecipientId(
                 org.mockito.ArgumentMatchers.eq(9L), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(delivery)));
+        when(dependencies.notifications().findInbox(
+                org.mockito.ArgumentMatchers.eq(9L),
+                org.mockito.ArgumentMatchers.eq(false),
+                org.mockito.ArgumentMatchers.isNull(),
+                any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(delivery)));
         when(dependencies.notifications().countByRecipientIdAndReadAtIsNull(9L)).thenReturn(1L);
 
         var header = dependencies.service().headerForCurrentActor();
@@ -236,6 +242,7 @@ class NotificationServiceTest {
                 accounts,
                 announcements,
                 authorization,
+                new NotificationTargetResolver(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
         return new Dependencies(service, events, notifications, accounts, authorization);
     }

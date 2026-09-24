@@ -24,6 +24,8 @@ import vn.edu.topicregistration.entity.NotificationEventType;
 import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.UserNotificationEntity;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.AnnouncementRepository;
 import vn.edu.topicregistration.repository.NotificationEventRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
@@ -45,6 +47,7 @@ public class NotificationService {
     private final UserAccountRepository accounts;
     private final AnnouncementRepository announcements;
     private final AuthorizationPolicy authorization;
+    private final NotificationTargetResolver targetResolver;
     private final Clock clock;
 
     public NotificationService(
@@ -53,12 +56,14 @@ public class NotificationService {
             UserAccountRepository accounts,
             AnnouncementRepository announcements,
             AuthorizationPolicy authorization,
+            NotificationTargetResolver targetResolver,
             Clock clock) {
         this.events = events;
         this.notifications = notifications;
         this.accounts = accounts;
         this.announcements = announcements;
         this.authorization = authorization;
+        this.targetResolver = targetResolver;
         this.clock = clock;
     }
 
@@ -120,12 +125,60 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public Page<NotificationItem> inboxForCurrentActor(int pageNumber) {
+        return inboxForCurrentActor(InboxStatus.ALL, InboxCategory.ALL, pageNumber);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<NotificationItem> inboxForCurrentActor(
+            InboxStatus status,
+            InboxCategory category,
+            int pageNumber) {
+        if (status == null || category == null) {
+            throw new IllegalArgumentException("Notification filters are required");
+        }
         if (pageNumber < 0) {
             throw new IllegalArgumentException("Notification page must not be negative");
         }
         Pageable pageable = PageRequest.of(pageNumber, INBOX_PAGE_SIZE, NEWEST_FIRST);
-        return notifications.findByRecipientId(currentAccountId(), pageable)
+        return notifications.findInbox(
+                        currentAccountId(),
+                        status == InboxStatus.UNREAD,
+                        category.notificationCategory(),
+                        pageable)
                 .map(NotificationService::toItem);
+    }
+
+    @Transactional
+    public void markAsReadForCurrentActor(long notificationId) {
+        long recipientId = currentAccountId();
+        requireOwned(notificationId, recipientId);
+        notifications.markRead(notificationId, recipientId, clock.instant());
+    }
+
+    @Transactional
+    public int markAllAsReadForCurrentActor() {
+        long recipientId = currentAccountId();
+        Instant cutoff = clock.instant();
+        return notifications.markAllReadThrough(recipientId, cutoff, cutoff);
+    }
+
+    @Transactional
+    public String openForCurrentActor(long notificationId) {
+        long recipientId = currentAccountId();
+        UserNotificationEntity notification = requireOwned(notificationId, recipientId);
+        String target = targetResolver.resolve(
+                notification.getEvent().getTargetType(),
+                notification.getEvent().getTargetId());
+        notifications.markRead(notificationId, recipientId, clock.instant());
+        return target;
+    }
+
+    private UserNotificationEntity requireOwned(long notificationId, long recipientId) {
+        if (notificationId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return notifications.findByIdAndRecipientId(notificationId, recipientId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
     }
 
     private long currentAccountId() {
@@ -239,6 +292,27 @@ public class NotificationService {
     public record HeaderView(long unreadCount, List<NotificationItem> items) {
         public HeaderView {
             items = List.copyOf(items);
+        }
+    }
+
+    public enum InboxStatus {
+        ALL,
+        UNREAD
+    }
+
+    public enum InboxCategory {
+        ALL(null),
+        ANNOUNCEMENT(NotificationCategory.ANNOUNCEMENT),
+        ACADEMIC_EVENT(NotificationCategory.ACADEMIC_EVENT);
+
+        private final NotificationCategory notificationCategory;
+
+        InboxCategory(NotificationCategory notificationCategory) {
+            this.notificationCategory = notificationCategory;
+        }
+
+        NotificationCategory notificationCategory() {
+            return notificationCategory;
         }
     }
 }

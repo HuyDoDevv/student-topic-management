@@ -87,7 +87,7 @@ rollback và retry; người ngoài scope không nhận.
 **Independent Test**: Hai account có read-state độc lập; thao tác lặp idempotent; notification đến sau
 cutoff chưa đọc; open không nhận redirect URL và target vẫn kiểm tra quyền.
 
-- [ ] T009 [US4] Viết web/integration test trước rồi triển khai filter, mark-one, mark-all cutoff và open/redirect tại `src/test/java/vn/edu/topicregistration/web/NotificationReadWebTest.java`, `src/test/java/vn/edu/topicregistration/integration/NotificationReadIT.java`, `src/main/java/vn/edu/topicregistration/service/NotificationService.java`, `controller/NotificationController.java`, `src/main/resources/templates/notifications/list.html`, `fragments/header.html`
+- [X] T009 [US4] Viết web/integration test trước rồi triển khai filter, mark-one, mark-all cutoff và open/redirect tại `src/test/java/vn/edu/topicregistration/web/NotificationReadWebTest.java`, `src/test/java/vn/edu/topicregistration/integration/NotificationReadIT.java`, `src/main/java/vn/edu/topicregistration/service/NotificationService.java`, `controller/NotificationController.java`, `src/main/resources/templates/notifications/list.html`, `fragments/header.html`
 
 **Checkpoint**: US4 hoàn chỉnh, CSRF/IDOR/idempotency/read timestamp được kiểm chứng.
 
