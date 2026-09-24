@@ -94,6 +94,11 @@ class AnnouncementPublicationIT {
         assertEquals(3, count("SELECT COUNT(*) FROM user_notifications notification "
                 + "JOIN notification_events event ON event.id = notification.event_id "
                 + "WHERE event.announcement_id = ?", schoolDraft.id()));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM user_notifications notification
+                JOIN notification_events event ON event.id = notification.event_id
+                WHERE event.announcement_id = ? AND notification.recipient_id = ?
+                """, schoolDraft.id(), dean.accountId()));
 
         authenticate(dean);
         var facultyDraft = announcements.create(new DraftCommand("Thông báo khoa", "Nội dung khoa"));
