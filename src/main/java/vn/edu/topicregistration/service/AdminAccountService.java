@@ -1,13 +1,7 @@
 package vn.edu.topicregistration.service;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -112,104 +106,6 @@ public class AdminAccountService {
         return accountView(
                 persist(prepared, department, roleMap),
                 prepared.accountType());
-    }
-
-    @Transactional
-    public ImportResult importCsv(byte[] content) {
-        authorization.requireRole(RoleCode.ADMIN);
-        if (content == null || content.length == 0) {
-            return failed(1, "Vui lòng chọn file CSV có dữ liệu.");
-        }
-        if (content.length > MAX_IMPORT_BYTES) {
-            return failed(1, "File CSV không được lớn hơn 1 MB.");
-        }
-
-        List<CsvRecord> records;
-        try {
-            records = parseCsv(decodeUtf8(content));
-        } catch (IllegalArgumentException exception) {
-            return failed(1, exception.getMessage());
-        }
-        if (records.isEmpty()) {
-            return failed(1, "File CSV chưa có dòng tiêu đề.");
-        }
-        if (!CSV_HEADER.equals(records.getFirst().fields())) {
-            return failed(1, "Dòng tiêu đề phải đúng: " + String.join(",", CSV_HEADER));
-        }
-
-        List<CsvRecord> dataRows = records.stream()
-                .skip(1)
-                .filter(record -> record.fields().stream().anyMatch(value -> !value.isBlank()))
-                .toList();
-        if (dataRows.isEmpty()) {
-            return failed(2, "File CSV chưa có tài khoản để import.");
-        }
-        if (dataRows.size() > MAX_IMPORT_ROWS) {
-            return failed(2, "Mỗi lần chỉ import tối đa " + MAX_IMPORT_ROWS + " tài khoản.");
-        }
-
-        List<ImportIssue> issues = new ArrayList<>();
-        List<PreparedAccount> prepared = new ArrayList<>();
-        Set<String> usernames = new LinkedHashSet<>();
-        Set<Long> departmentIds = new LinkedHashSet<>();
-        for (CsvRecord row : dataRows) {
-            if (row.fields().size() != CSV_HEADER.size()) {
-                issues.add(new ImportIssue(row.row(), "Dòng phải có đúng 5 cột."));
-                continue;
-            }
-            try {
-                AccountType type = parseAccountType(row.fields().get(0));
-                long departmentId = parseDepartmentId(row.fields().get(4));
-                PreparedAccount item = prepare(new CreateAccountCommand(
-                        type,
-                        row.fields().get(1),
-                        row.fields().get(2),
-                        row.fields().get(3),
-                        departmentId), row.row());
-                String key = item.username().toLowerCase(Locale.ROOT);
-                if (!usernames.add(key)) {
-                    issues.add(new ImportIssue(row.row(),
-                            "Tên đăng nhập bị lặp trong file: " + item.username()));
-                    continue;
-                }
-                prepared.add(item);
-                departmentIds.add(departmentId);
-            } catch (IllegalArgumentException exception) {
-                issues.add(new ImportIssue(row.row(), safeMessage(exception)));
-            }
-        }
-
-        Map<Long, DepartmentEntity> departmentMap = new HashMap<>();
-        departments.findAllById(departmentIds)
-                .forEach(department -> departmentMap.put(department.getId(), department));
-        for (PreparedAccount item : prepared) {
-            if (!departmentMap.containsKey(item.departmentId())) {
-                issues.add(new ImportIssue(item.row(),
-                        "Mã bộ môn không tồn tại: " + item.departmentId()));
-            }
-            if (accounts.existsByUsernameIgnoreCase(item.username())) {
-                issues.add(new ImportIssue(item.row(),
-                        "Tên đăng nhập đã tồn tại: " + item.username()));
-            }
-        }
-        if (!issues.isEmpty()) {
-            return new ImportResult(0, issues);
-        }
-
-        Set<RoleCode> requiredCodes = prepared.stream()
-                .flatMap(item -> item.accountType().roles().stream())
-                .collect(java.util.stream.Collectors.toSet());
-        Map<RoleCode, RoleEntity> roleMap = requiredRoles(requiredCodes);
-        for (PreparedAccount item : prepared) {
-            persist(item, departmentMap.get(item.departmentId()), roleMap);
-        }
-        return new ImportResult(prepared.size(), List.of());
-    }
-
-    public byte[] csvTemplate() {
-        authorization.requireRole(RoleCode.ADMIN);
-        return ("\ufeff" + String.join(",", CSV_HEADER) + "\r\n")
-                .getBytes(StandardCharsets.UTF_8);
     }
 
     private UserAccountEntity persist(
@@ -354,80 +250,8 @@ public class AdminAccountService {
         return List.of(AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN);
     }
 
-    private static String decodeUtf8(byte[] content) {
-        try {
-            String value = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(content))
-                    .toString();
-            return value.startsWith("\ufeff") ? value.substring(1) : value;
-        } catch (CharacterCodingException exception) {
-            throw new IllegalArgumentException("File phải dùng mã hóa UTF-8.", exception);
-        }
-    }
-
-    private static List<CsvRecord> parseCsv(String input) {
-        List<CsvRecord> records = new ArrayList<>();
-        List<String> fields = new ArrayList<>();
-        StringBuilder field = new StringBuilder();
-        boolean quoted = false;
-        int row = 1;
-        for (int index = 0; index < input.length(); index++) {
-            char current = input.charAt(index);
-            if (quoted) {
-                if (current == '"') {
-                    if (index + 1 < input.length() && input.charAt(index + 1) == '"') {
-                        field.append('"');
-                        index++;
-                    } else {
-                        quoted = false;
-                    }
-                } else {
-                    field.append(current);
-                }
-                continue;
-            }
-            if (current == '"' && field.length() == 0) {
-                quoted = true;
-            } else if (current == ',') {
-                fields.add(field.toString());
-                field.setLength(0);
-            } else if (current == '\n' || current == '\r') {
-                if (current == '\r' && index + 1 < input.length()
-                        && input.charAt(index + 1) == '\n') {
-                    index++;
-                }
-                fields.add(field.toString());
-                records.add(new CsvRecord(row++, List.copyOf(fields)));
-                fields.clear();
-                field.setLength(0);
-            } else {
-                field.append(current);
-            }
-        }
-        if (quoted) {
-            throw new IllegalArgumentException("File CSV có dấu nháy kép chưa đóng.");
-        }
-        if (field.length() > 0 || !fields.isEmpty()) {
-            fields.add(field.toString());
-            records.add(new CsvRecord(row, List.copyOf(fields)));
-        }
-        return records;
-    }
-
     private static String trim(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private static String safeMessage(IllegalArgumentException exception) {
-        return exception.getMessage() == null || exception.getMessage().isBlank()
-                ? "Dữ liệu dòng không hợp lệ."
-                : exception.getMessage();
-    }
-
-    private static ImportResult failed(int row, String message) {
-        return new ImportResult(0, List.of(new ImportIssue(row, message)));
     }
 
     public enum AccountType {
@@ -541,19 +365,6 @@ public class AdminAccountService {
                     List.of(), List.of(), List.of(), AdminAccountService.creatableTypes(),
                     AccountFilter.empty(),
                     0, 0, 0, 0);
-        }
-    }
-
-    public record ImportIssue(int row, String message) {
-    }
-
-    public record ImportResult(int importedCount, List<ImportIssue> issues) {
-        public ImportResult {
-            issues = List.copyOf(issues);
-        }
-
-        public boolean hasErrors() {
-            return !issues.isEmpty();
         }
     }
 

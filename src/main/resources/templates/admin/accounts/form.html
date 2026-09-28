@@ -7,7 +7,7 @@
     <div>
       <div class="page-pretitle">QUẢN TRỊ HỆ THỐNG</div>
       <h1 class="page-title">Tạo tài khoản</h1>
-      <p class="text-secondary mt-2 mb-0">Cấp từng tài khoản hoặc import danh sách CSV từ một khu vực riêng.</p>
+      <p class="text-secondary mt-2 mb-0">Cấp từng tài khoản Sinh viên, Giảng viên hoặc Trưởng khoa.</p>
     </div>
     <a class="btn btn-outline-secondary" th:href="@{/dashboard}">Về tổng quan</a>
   </div>
@@ -16,8 +16,8 @@
        th:text="${successMessage}">Đã lưu.</div>
 
   <div class="row row-cards">
-    <div class="col-xl-7">
-      <form class="card h-100" method="post" th:action="@{/admin/accounts}"
+    <div class="col-xl-8">
+      <form class="card" method="post" th:action="@{/admin/accounts}"
             th:object="${adminAccountForm}" data-prevent-double-submit>
         <div class="card-header"><h2 class="card-title">Tạo từng tài khoản</h2></div>
         <div class="card-body">
@@ -69,42 +69,6 @@
           <button class="btn btn-primary" type="submit">Tạo tài khoản</button>
         </div>
       </form>
-    </div>
-
-    <div class="col-xl-5">
-      <form class="card mb-4" method="post" enctype="multipart/form-data"
-            th:action="@{/admin/accounts/import}" data-prevent-double-submit>
-        <div class="card-header"><h2 class="card-title">Import tài khoản bằng CSV</h2></div>
-        <div class="card-body">
-          <p class="text-secondary">Hệ thống kiểm tra toàn bộ file trước khi tạo. Chỉ một dòng sai sẽ không ghi bất kỳ tài khoản nào.</p>
-          <div class="alert alert-danger" role="alert" th:if="${importIssues != null and !importIssues.isEmpty()}">
-            <h3 class="h4">File CSV chưa hợp lệ</h3>
-            <ul class="mb-0">
-              <li th:each="issue : ${importIssues}">Dòng <strong th:text="${issue.row}">1</strong>:
-                <span th:text="${issue.message}">Lỗi định dạng</span></li>
-            </ul>
-          </div>
-          <label class="form-label" for="file">File CSV UTF-8</label>
-          <input class="form-control" id="file" name="file" type="file" accept=".csv,text/csv" required>
-          <div class="form-hint">Tối đa 1 MB và 5.000 dòng. Không giữ mật khẩu trong file sau khi import.</div>
-          <a class="btn btn-outline-primary mt-3" th:href="@{/admin/accounts/import-template.csv}">Tải file mẫu</a>
-        </div>
-        <div class="card-footer text-end"><button class="btn btn-primary" type="submit">Kiểm tra và import</button></div>
-      </form>
-
-      <div class="card">
-        <div class="card-header"><h2 class="card-title">Mã bộ môn dùng trong CSV</h2></div>
-        <div class="table-responsive">
-          <table class="table table-vcenter card-table">
-            <thead><tr><th>Mã</th><th>Bộ môn</th><th>Khoa</th></tr></thead>
-            <tbody><tr th:each="department : ${departments}">
-              <td th:text="${department.id}">1</td>
-              <td th:text="${department.name}">CNPM</td>
-              <td th:text="${department.facultyName}">CNTT</td>
-            </tr></tbody>
-          </table>
-        </div>
-      </div>
     </div>
   </div>
 </section>

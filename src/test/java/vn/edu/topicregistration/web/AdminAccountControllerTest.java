@@ -1,6 +1,5 @@
 package vn.edu.topicregistration.web;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -8,22 +7,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import vn.edu.topicregistration.controller.AdminAccountController;
@@ -31,8 +23,6 @@ import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.AccountWorkspace;
-import vn.edu.topicregistration.service.AdminAccountService.ImportIssue;
-import vn.edu.topicregistration.service.AdminAccountService.ImportResult;
 
 class AdminAccountControllerTest {
     AdminAccountService accounts;
@@ -149,28 +139,14 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void invalidImportReturnsRowErrorsAndDoesNotRedirect() throws Exception {
-        when(accounts.importCsv(any())).thenReturn(new ImportResult(
-                0, List.of(new ImportIssue(3, "Loại tài khoản không hợp lệ."))));
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "accounts.csv", "text/csv", "bad".getBytes(StandardCharsets.UTF_8));
-
-        mvc.perform(multipart("/admin/accounts/import").file(file))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(view().name("admin/accounts/form"))
-                .andExpect(model().attributeExists("importIssues"));
+    void importEndpointIsNotMapped() throws Exception {
+        mvc.perform(post("/admin/accounts/import"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    void templateDownloadUsesStableUtf8CsvHeader() throws Exception {
-        when(accounts.csvTemplate()).thenReturn(
-                "\ufeffaccount_type,username,full_name,password,department_id\r\n"
-                        .getBytes(StandardCharsets.UTF_8));
-
+    void importTemplateEndpointIsNotMapped() throws Exception {
         mvc.perform(get("/admin/accounts/import-template.csv"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", containsString("attachment")))
-                .andExpect(content().string(containsString(
-                        "account_type,username,full_name,password,department_id")));
+                .andExpect(status().isNotFound());
     }
 }

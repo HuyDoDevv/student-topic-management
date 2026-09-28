@@ -64,7 +64,7 @@ public class DashboardService {
                         new Metric("Trưởng khoa", statistics.deans(),
                                 "Tài khoản DEAN", "/admin/accounts/deans")),
                 new Focus("CẤP TÀI KHOẢN", "Tạo tài khoản mới",
-                        "Tạo từng tài khoản hoặc import danh sách Sinh viên, Giảng viên và Trưởng khoa.",
+                        "Tạo từng tài khoản Sinh viên, Giảng viên hoặc Trưởng khoa.",
                         "/admin/accounts/new", "Mở trang tạo tài khoản", "bg-blue-lt"));
     }
 

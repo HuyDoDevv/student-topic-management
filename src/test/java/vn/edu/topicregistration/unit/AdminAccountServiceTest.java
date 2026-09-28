@@ -7,13 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -83,77 +81,6 @@ class AdminAccountServiceTest {
     }
 
     @Test
-    void rejectsWholeCsvBeforeWritingWhenAnyRowIsInvalid() {
-        Dependencies dependencies = dependencies();
-        allowAdmin(dependencies);
-        DepartmentEntity department = department(7L, "Công nghệ phần mềm", 3L, "CNTT");
-        when(dependencies.departments().findAllById(anyIterable())).thenReturn(List.of(department));
-        when(dependencies.accounts().existsByUsernameIgnoreCase(any())).thenReturn(false);
-
-        String csv = "account_type,username,full_name,password,department_id\n"
-                + "STUDENT,student01,Sinh viên Một,temporary-password,7\n"
-                + "ADMIN,admin02,Quản trị Hai,temporary-password,7\n";
-
-        var result = dependencies.service().importCsv(csv.getBytes(StandardCharsets.UTF_8));
-
-        assertTrue(result.hasErrors());
-        assertEquals(0, result.importedCount());
-        assertEquals(3, result.issues().getFirst().row());
-        verify(dependencies.accounts(), never()).saveAndFlush(any());
-        verify(dependencies.userRoles(), never()).saveAllAndFlush(any());
-    }
-
-    @Test
-    void importsAllSupportedTypesOnlyAfterEveryRowPassesValidation() {
-        Dependencies dependencies = dependencies();
-        allowAdmin(dependencies);
-        DepartmentEntity department = department(7L, "Công nghệ phần mềm", 3L, "CNTT");
-        RoleEntity studentRole = role(RoleCode.STUDENT);
-        RoleEntity lecturerRole = role(RoleCode.LECTURER);
-        RoleEntity deanRole = role(RoleCode.DEAN);
-        when(dependencies.departments().findAllById(anyIterable())).thenReturn(List.of(department));
-        when(dependencies.accounts().existsByUsernameIgnoreCase(any())).thenReturn(false);
-        when(dependencies.roles().findAllById(anyIterable())).thenReturn(List.of(
-                studentRole, lecturerRole, deanRole));
-        when(dependencies.accounts().saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
-        when(dependencies.userRoles().saveAllAndFlush(any())).thenAnswer(call -> call.getArgument(0));
-
-        String csv = "\ufeffaccount_type,username,full_name,password,department_id\r\n"
-                + "STUDENT,student01,Sinh viên Một,temporary-password,7\r\n"
-                + "LECTURER,lecturer01,Giảng viên Một,temporary-password,7\r\n"
-                + "DEAN,dean01,Trưởng khoa Một,temporary-password,7\r\n";
-
-        var result = dependencies.service().importCsv(csv.getBytes(StandardCharsets.UTF_8));
-
-        assertFalse(result.hasErrors());
-        assertEquals(3, result.importedCount());
-        verify(dependencies.accounts(), org.mockito.Mockito.times(3)).saveAndFlush(any());
-        verify(dependencies.userRoles(), org.mockito.Mockito.times(3)).saveAllAndFlush(any());
-    }
-
-    @Test
-    void reportsClearCsvErrorsForUnknownTypeAndNonNumericDepartment() {
-        Dependencies dependencies = dependencies();
-        allowAdmin(dependencies);
-
-        var unknownType = dependencies.service().importCsv((
-                "account_type,username,full_name,password,department_id\n"
-                        + "FOO,user01,Người dùng Một,temporary-password,7\n")
-                .getBytes(StandardCharsets.UTF_8));
-        var invalidDepartment = dependencies.service().importCsv((
-                "account_type,username,full_name,password,department_id\n"
-                        + "STUDENT,student01,Sinh viên Một,temporary-password,abc\n")
-                .getBytes(StandardCharsets.UTF_8));
-
-        assertEquals("Loại tài khoản chỉ nhận STUDENT, LECTURER hoặc DEAN.",
-                unknownType.issues().getFirst().message());
-        assertEquals("Mã bộ môn phải là số nguyên dương.",
-                invalidDepartment.issues().getFirst().message());
-        verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
-                dependencies.roles(), dependencies.faculties());
-    }
-
-    @Test
     void rejectsNonAdminBeforeEveryAccountManagementOperation() {
         Dependencies dependencies = dependencies();
         when(dependencies.authorization().requireRole(RoleCode.ADMIN))
@@ -162,10 +89,8 @@ class AdminAccountServiceTest {
 
         assertThrows(AccessDeniedException.class, () -> service.workspace(null));
         assertThrows(AccessDeniedException.class, () -> service.create(null));
-        assertThrows(AccessDeniedException.class, () -> service.importCsv(null));
-        assertThrows(AccessDeniedException.class, service::csvTemplate);
 
-        verify(dependencies.authorization(), times(4)).requireRole(RoleCode.ADMIN);
+        verify(dependencies.authorization(), times(2)).requireRole(RoleCode.ADMIN);
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
                 dependencies.roles(), dependencies.departments(), dependencies.faculties());
     }

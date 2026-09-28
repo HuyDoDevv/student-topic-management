@@ -1,18 +1,10 @@
 package vn.edu.topicregistration.controller;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -22,7 +14,6 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import vn.edu.topicregistration.dto.AdminAccountForm;
@@ -31,8 +22,6 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.AccountFilter;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
-import vn.edu.topicregistration.service.AdminAccountService.ImportIssue;
-import vn.edu.topicregistration.service.AdminAccountService.ImportResult;
 
 @Controller
 @Profile("!test")
@@ -126,43 +115,6 @@ public class AdminAccountController {
         redirectAttributes.addFlashAttribute(
                 "successMessage", "Đã tạo tài khoản " + form.getUsername().trim() + ".");
         return WebRedirects.seeOther(managementPath(form.getAccountType()));
-    }
-
-    @PostMapping(
-            value = "/admin/accounts/import",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Object importCsv(
-            @RequestParam("file") MultipartFile file,
-            HttpServletResponse response,
-            RedirectAttributes redirectAttributes,
-            Model model) {
-        ImportResult result;
-        try {
-            result = accounts.importCsv(file.getBytes());
-        } catch (IOException exception) {
-            result = new ImportResult(
-                    0, List.of(new ImportIssue(1, "Không thể đọc file CSV đã chọn.")));
-        }
-        if (result.hasErrors()) {
-            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            model.addAttribute("importIssues", result.issues());
-            return renderForm(model, new AdminAccountForm());
-        }
-        redirectAttributes.addFlashAttribute(
-                "successMessage", "Đã import " + result.importedCount() + " tài khoản.");
-        return WebRedirects.seeOther("/admin/accounts/new");
-    }
-
-    @GetMapping("/admin/accounts/import-template.csv")
-    public ResponseEntity<byte[]> template() {
-        ContentDisposition disposition = ContentDisposition.attachment()
-                .filename("mau-import-tai-khoan.csv", StandardCharsets.UTF_8)
-                .build();
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                .header("X-Content-Type-Options", "nosniff")
-                .body(accounts.csvTemplate());
     }
 
     private String renderList(
