@@ -35,7 +35,7 @@ import vn.edu.topicregistration.service.GroupService.InvitationView;
 import vn.edu.topicregistration.service.GroupService.StudentPeriodPhase;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class GroupController {
     private static final Locale VIETNAMESE = Locale.forLanguageTag("vi-VN");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(

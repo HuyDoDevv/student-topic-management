@@ -33,7 +33,7 @@ import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class RegistrationDecisionService {
     private final RegistrationPeriodRepository periods;
     private final RegistrationRepository registrations;

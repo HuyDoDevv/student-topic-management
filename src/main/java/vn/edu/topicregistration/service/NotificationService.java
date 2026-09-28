@@ -33,7 +33,7 @@ import vn.edu.topicregistration.repository.UserNotificationRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class NotificationService {
     public static final int HEADER_LIMIT = 5;
     public static final int INBOX_PAGE_SIZE = 20;

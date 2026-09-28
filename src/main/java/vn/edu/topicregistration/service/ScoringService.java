@@ -46,7 +46,7 @@ import vn.edu.topicregistration.service.ScoreRules.ScoreRuleException;
 import vn.edu.topicregistration.util.ScoreFormat;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class ScoringService {
     private final RegistrationPeriodRepository periods;
     private final CouncilRepository councils;

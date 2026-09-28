@@ -43,7 +43,7 @@ import vn.edu.topicregistration.service.ReportRules.UploadContext;
 import vn.edu.topicregistration.service.ReportRules.ViewContext;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class ReportService {
     private static final int SIGNATURE_LENGTH = 5;
 

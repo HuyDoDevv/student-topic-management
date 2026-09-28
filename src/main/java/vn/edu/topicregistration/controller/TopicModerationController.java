@@ -13,7 +13,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class TopicModerationController {
     private final TopicModerationService moderation;
 

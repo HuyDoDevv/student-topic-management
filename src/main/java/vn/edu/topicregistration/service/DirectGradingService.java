@@ -42,7 +42,7 @@ import vn.edu.topicregistration.service.DirectGradingRules.DirectGradingRuleExce
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class DirectGradingService {
     private static final String DIRECT_LOCATION = "Chấm độc lập";
 

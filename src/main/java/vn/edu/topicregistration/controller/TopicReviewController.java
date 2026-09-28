@@ -15,7 +15,7 @@ import vn.edu.topicregistration.service.TopicReviewService.PublicationResult;
 import vn.edu.topicregistration.service.TopicReviewService.ReviewResult;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class TopicReviewController {
     private final TopicReviewService topics;
 

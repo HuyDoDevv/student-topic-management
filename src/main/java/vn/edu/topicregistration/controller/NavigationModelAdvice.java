@@ -6,7 +6,6 @@ import vn.edu.topicregistration.entity.RoleCode;
 import java.util.Locale;
 import java.util.Set;
 
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -14,7 +13,6 @@ import org.springframework.ui.Model;
 
 
 @ControllerAdvice
-@Profile("!preview")
 public class NavigationModelAdvice {
 
     @ModelAttribute
@@ -32,7 +30,6 @@ public class NavigationModelAdvice {
             model.addAttribute("canViewStudentResults", false);
             model.addAttribute("canManageAccounts", false);
             model.addAttribute("canManageAnnouncements", false);
-            model.addAttribute("previewMode", false);
             return;
         }
 
@@ -56,7 +53,6 @@ public class NavigationModelAdvice {
         model.addAttribute("canManageAccounts", roles.contains(RoleCode.ADMIN));
         model.addAttribute("canManageAnnouncements",
                 roles.contains(RoleCode.ADMIN) || roles.contains(RoleCode.DEAN));
-        model.addAttribute("previewMode", false);
     }
 
     private static String initials(String displayName) {

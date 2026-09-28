@@ -29,7 +29,7 @@ import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class TopicReviewService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;

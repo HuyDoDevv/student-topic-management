@@ -39,7 +39,7 @@ import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class GroupService {
     private final RegistrationPeriodRepository periods;
     private final StudentGroupRepository groups;

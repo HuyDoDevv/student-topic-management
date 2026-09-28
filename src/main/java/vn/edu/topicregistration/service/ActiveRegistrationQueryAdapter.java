@@ -14,7 +14,7 @@ import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistrati
 import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistrationStatus;
 
 @Repository
-@Profile("!preview & !test")
+@Profile("!test")
 public class ActiveRegistrationQueryAdapter implements ActiveRegistrationQuery {
     private static final EnumSet<RegistrationStatus> ACTIVE_STATUSES = EnumSet.of(
             RegistrationStatus.PENDING,

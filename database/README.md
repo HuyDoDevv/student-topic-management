@@ -58,8 +58,8 @@ SPRING_DATASOURCE_USERNAME=topic_local
 SPRING_DATASOURCE_PASSWORD=THAY_BANG_MAT_KHAU_THAT
 ```
 
-Chạy `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows. Profile `preview` vẫn chạy giao diện
-không kết nối database.
+Chạy `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows. Ứng dụng sử dụng
+profile `local` và luôn kết nối database.
 
 ## 24 bảng nghiệp vụ
 

@@ -33,7 +33,7 @@ import vn.edu.topicregistration.service.RegistrationService.SubmissionWorkspace;
 import vn.edu.topicregistration.service.RegistrationService.TopicOption;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class RegistrationController {
     private static final Locale VIETNAMESE = Locale.forLanguageTag("vi-VN");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(

@@ -13,7 +13,7 @@ import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.NotificationService.HeaderView;
 
 @ControllerAdvice
-@Profile("!preview & !test")
+@Profile("!test")
 public class NotificationModelAdvice {
     private final NotificationService notifications;
 

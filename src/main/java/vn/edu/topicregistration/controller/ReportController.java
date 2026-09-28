@@ -31,7 +31,7 @@ import vn.edu.topicregistration.service.ReportService.ReportWorkspace;
 import vn.edu.topicregistration.util.ProjectTime;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class ReportController {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy HH:mm",
