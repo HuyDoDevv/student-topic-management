@@ -11,6 +11,10 @@
 **Tests**: Bắt buộc theo spec AT-01–15 và constitution VIII. Viết test trước phần thực thi;
 chạy để chứng minh thất bại do hành vi chưa có, rồi làm cho đạt. Không coi lỗi biên dịch là bằng chứng đầy đủ.
 
+**Runtime update 2026-09-28:** chỉ còn profile `local` với MySQL. Controller/config/test
+dành riêng cho preview đã bị xóa. Các tên test preview trong task đã hoàn thành là bằng
+chứng lịch sử; task mới không được khôi phục profile hoặc fixture UI không database.
+
 ## Format and paths
 
 `- [ ] Txxx [P?] [USn?] mô tả và đường dẫn`. Đường dẫn tính từ root repository.
@@ -242,7 +246,7 @@ Chờ mọi story và gate. Không “polish” thay cho kiểm thử còn thi�
 
 - [X] T061 [P] Kiểm tra toàn ma trận quyền bằng GET/POST trực tiếp, scope/quan hệ thay đổi và secret không xuất trong log tại `src/test/java/vn/edu/topicregistration/web/AuthorizationMatrixTest.java`; bổ sung mọi ca chưa được story tests bao phủ, gồm ADMIN không có quyền học vụ (FR-01–15; AT-06,08–10,14; SC-004,007).
 
-- [X] T062 Viết/chạy kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN tại `src/test/java/vn/edu/topicregistration/e2e/AssetPortabilityE2ETest.java`; kiểm tra viewport 360/768/1280, không tràn ngang toàn trang, vùng cuộn bảng, keyboard/labels/empty/error/badges và notices đóng gói trong JAR; cập nhật đóng gói `pom.xml` nếu cần (AT-15, SC-009).
+- [X] T062 Đã kiểm tra JAR từ thư mục khác và browser assets không dùng Tabler nguồn/CDN. Test `AssetPortabilityE2ETest` dựa trên preview đã được retire ngày 2026-09-28; kiểm tra portability/responsive tiếp theo phải chạy qua local profile và MySQL test cô lập (AT-15, SC-009).
 
 - [X] T063 Thực hiện quickstart trên DB local bằng DBeaver, ghi lệnh thực tế/phiên bản/env/migration/seed/backup và kết quả tại `specs/001-topic-registration/quickstart.md`, `README.md`; không chỉnh schema ứng dụng thủ công và không ghi secrets vào tài liệu.
 
@@ -259,11 +263,11 @@ các task contract/concurrency/E2E còn mở vì không đổi nghiệp vụ, ro
 
 Feedback ADMIN được loại khỏi phase này theo yêu cầu người dùng. Ba task dưới đây độc lập
 về vai trò nhưng dùng chung quyết định thời gian trong FR-03; thực hiện tuần tự để tránh
-sửa đồng thời template preview và tài liệu dùng chung.
+sửa đồng thời template UI và tài liệu dùng chung.
 
-- [X] T077 [US1] Dashboard và danh sách Trưởng khoa chỉ tính/hiển thị đợt chưa qua `student_end`; đổi nhãn giai đoạn rõ GV/SV, thêm lọc trạng thái và ba cột đề tài chờ duyệt, nhóm chờ xét, đề tài chờ công bố. Viết test lọc active và render preview trước implementation; cập nhật spec/plan/contract/ma trận.
+- [X] T077 [US1] Dashboard và danh sách Trưởng khoa chỉ tính/hiển thị đợt chưa qua `student_end`; đổi nhãn giai đoạn rõ GV/SV, thêm lọc trạng thái và ba cột đề tài chờ duyệt, nhóm chờ xét, đề tài chờ công bố. Viết test lọc active và render UI trước implementation; cập nhật spec/plan/contract/ma trận.
 
-- [X] T078 [US2] Chặn mở form và tạo đề tài mới ngoài hạn GV ở UI/backend, vẫn cho xem và sửa bản nháp cũ; chia trang chọn đợt Giảng viên thành còn hiệu lực/đã hết hạn và ẩn nút tạo khi không mở. Viết `TopicAuthorServiceTest` và preview test đỏ trước implementation, sau đó chạy đạt.
+- [X] T078 [US2] Chặn mở form và tạo đề tài mới ngoài hạn GV ở UI/backend, vẫn cho xem và sửa bản nháp cũ; chia trang chọn đợt Giảng viên thành còn hiệu lực/đã hết hạn và ẩn nút tạo khi không mở. Viết `TopicAuthorServiceTest` và web test đỏ trước implementation, sau đó chạy đạt.
 
 - [X] T079 [US4] Chia trang chọn đợt Sinh viên thành sắp đăng ký, đang đăng ký và đã kết thúc/ngoài thời gian đăng ký theo `student_start`/`student_end`, giữ các lối xem nhóm/lời mời cũ đúng quyền.
 
@@ -273,20 +277,21 @@ T080 phụ thuộc foundation identity/security và cấu trúc MVC T076, nhưng
 contract/concurrency/E2E học vụ còn mở. Phạm vi chỉ cấp tài khoản mới, không thêm sửa/xóa
 tài khoản hiện hữu hoặc quản lý danh mục khoa/bộ môn.
 
-- [X] T080 [FR-01] Tạo workspace ADMIN xem/tìm/lọc toàn bộ tài khoản; tạo từng tài khoản STUDENT/LECTURER/DEAN với password băm và role cố định; import CSV UTF-8 nguyên tử tối đa 1 MB/5.000 dòng, báo lỗi theo dòng và tải file mẫu; chặn người không có ADMIN ở backend, không cho tạo ADMIN hoặc nhận role từ client; thêm menu/dashboard/preview, unit/web tests và đồng bộ spec/plan/data-model/web contract/acceptance matrix.
+- [X] T080 [FR-01] Tạo workspace ADMIN xem/tìm/lọc toàn bộ tài khoản; tạo từng tài khoản STUDENT/LECTURER/DEAN với password băm và role cố định; import CSV UTF-8 nguyên tử tối đa 1 MB/5.000 dòng, báo lỗi theo dòng và tải file mẫu; chặn người không có ADMIN ở backend, không cho tạo ADMIN hoặc nhận role từ client; thêm menu/dashboard/UI local, unit/web tests và đồng bộ spec/plan/data-model/web contract/acceptance matrix.
 
-- [X] T081 [FR-01] Tách layout workspace ADMIN: chuyển thống kê tài khoản về Dashboard; tạo route/menu/danh sách riêng cho Sinh viên, Giảng viên và Trưởng khoa với loại tài khoản khóa ở backend; gom tạo đơn lẻ và import CSV vào trang Tạo tài khoản riêng; viết test controller/dashboard/preview trước implementation và đồng bộ spec/plan/web contract/acceptance matrix.
+- [X] T081 [FR-01] Tách layout workspace ADMIN: chuyển thống kê tài khoản về Dashboard; tạo route/menu/danh sách riêng cho Sinh viên, Giảng viên và Trưởng khoa với loại tài khoản khóa ở backend; gom tạo đơn lẻ và import CSV vào trang Tạo tài khoản riêng; viết test controller/dashboard/web trước implementation và đồng bộ spec/plan/web contract/acceptance matrix.
 
 ## Phase 12: Period history filter feedback 2026-09-17
 
 T082 cập nhật quyết định danh sách của T077 nhưng giữ nguyên cách Dashboard đếm đợt còn
 hiệu lực. Không đổi database, quyền hoặc phạm vi khoa.
 
-- [X] T082 [US1] Cho danh sách Trưởng khoa nhận cả đợt đã qua `student_end`, thêm lựa chọn “Đã quá hạn” vào bộ lọc trạng thái và giữ liên kết chi tiết; viết unit/preview test đỏ trước implementation, đồng bộ spec/plan/web contract/acceptance matrix và chạy test hồi quy.
+- [X] T082 [US1] Cho danh sách Trưởng khoa nhận cả đợt đã qua `student_end`, thêm lựa chọn “Đã quá hạn” vào bộ lọc trạng thái và giữ liên kết chi tiết; viết unit/web test đỏ trước implementation, đồng bộ spec/plan/web contract/acceptance matrix và chạy test hồi quy.
 
 Follow-up giao diện ngày 2026-09-21 cho T082: bổ sung bộ lọc loại đợt và công việc chờ
 xử lý, cho phép kết hợp cùng tìm kiếm/bộ lọc trạng thái, đồng thời nhấn màu các số chờ khác
-0 và giữ số 0 trung tính; `FoundationWebTest` kiểm tra contract render tương ứng.
+0 và giữ số 0 trung tính; `FoundationWebTest` đã kiểm tra contract render tại thời điểm đó
+và được retire cùng preview ngày 2026-09-28.
 
 ## Dependencies & execution order
 

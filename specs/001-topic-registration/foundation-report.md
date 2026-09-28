@@ -3,6 +3,8 @@
 > `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows.
 > Nội dung bên dưới là bằng chứng lịch sử của nền tảng PostgreSQL trước khi chuyển đổi;
 > không dùng các lệnh/scripts PostgreSQL cũ để chạy phiên bản hiện tại.
+> Profile preview được nhắc trong báo cáo cũng là bằng chứng lịch sử và đã bị loại bỏ
+> ngày 2026-09-28; phiên bản hiện tại chỉ chạy profile local với MySQL.
 
 # Báo cáo triển khai nền tảng
 

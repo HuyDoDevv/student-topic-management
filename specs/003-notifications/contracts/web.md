@@ -77,7 +77,8 @@ Bell button:
 - Mỗi thao tác mở là form POST có CSRF.
 - Footer dropdown có link GET `/notifications`.
 
-Preview profile tiếp tục dùng dữ liệu giả/empty, không gọi database notification thật.
+Ứng dụng chỉ chạy bằng profile local. Notification header luôn lấy dữ liệu theo tài khoản
+đang đăng nhập từ MySQL; không còn fixture notification hoặc nhánh xử lý dành cho preview.
 
 ## 3. Announcement management
 

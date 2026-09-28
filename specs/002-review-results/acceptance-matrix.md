@@ -13,7 +13,7 @@ unit/web, integration/concurrency và Playwright E2E đều đạt trên MySQL t
 | FR-21–22, FR-24 | AS-9.1–9.5 | `ResultService`, faculty result controller/views | Rules/service/controller ở T006; atomic complete/publish integration, concurrency và E2E | PASS |
 | FR-23–24 | AS-10.1–10.4 | snapshot-filtered result repository/service, student views | Privacy tests ở T007; published snapshot integration và browser outsider 404 | PASS |
 | FR-26 | AS-7.7–7.10 | `DirectGradingService`, V10 mode/trigger, direct-grading view, reused scoring/result | Rules/service/controller và regression liên quan 53/53; migration V7→V10 và empty/V6→V10 trên MySQL 8.4 đạt 4/4 | PASS |
-| FR-27 | AS-7.11, AS-8.6, AS-9.6, AS-10.5–10.7 | V11, evaluation/result theo student snapshot, scoring UI từng sinh viên, complete theo full matrix, student-scoped query; Trưởng khoa xem đúng đăng ký trước publish và lọc kết hợp đợt/giảng viên/trạng thái | Targeted unit/web 47/47; direct/result group-scoped preview và filter tests 26/26; default suite 200/200; integration/concurrency 18/18; E2E 2/2 gồm privacy giữa hai sinh viên cùng nhóm và outsider 404 | PASS |
+| FR-27 | AS-7.11, AS-8.6, AS-9.6, AS-10.5–10.7 | V11, evaluation/result theo student snapshot, scoring UI từng sinh viên, complete theo full matrix, student-scoped query; Trưởng khoa xem đúng đăng ký trước publish và lọc kết hợp đợt/giảng viên/trạng thái | Targeted unit/web 47/47; direct/result group-scoped view và filter tests 26/26; default suite 200/200; integration/concurrency 18/18; E2E 2/2 gồm privacy giữa hai sinh viên cùng nhóm và outsider 404 | PASS |
 
 ## Manual demo evidence
 

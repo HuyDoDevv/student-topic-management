@@ -41,4 +41,5 @@ kiện chuyển sang triển khai; kết quả code/test vẫn được ghi theo
 FR-12 có nguồn U từ yêu cầu hiện tại; không nhận nhầm nhánh từ chối là nội dung tường minh
 của REQ-16. REQ-11 được tách phần GVHD/GVPB; REQ-06–07 chỉ cấu hình ngày ở đợt này.
 
-Preview test hiện có không thay thế kiểm thử nghiệp vụ; AT được cập nhật khi triển khai.
+Các preview test đã được retire ngày 2026-09-28. Kiểm thử hiện hành phải dùng unit/web
+test và local profile với MySQL test cô lập; AT được cập nhật khi triển khai.
