@@ -55,7 +55,7 @@ class DirectGradingRulesTest {
         assertFailure(Failure.INVALID_GRADER,
                 VALID.withGraderLecturer(false));
         assertFailure(Failure.INVALID_GRADER,
-                VALID.withSameDepartment(false));
+                VALID.withSameFaculty(false));
         assertFailure(Failure.SUPERVISOR_CONFLICT,
                 VALID.withSupervisor(true));
     }

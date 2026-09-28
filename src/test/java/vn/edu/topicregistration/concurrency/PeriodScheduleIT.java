@@ -90,7 +90,7 @@ class PeriodScheduleIT {
         clock.set(BEFORE_OPENING);
         FixtureSupport fixtures = new FixtureSupport(dataSource, clock);
         FixtureSupport.OrganizationScope scope = fixtures.createOrganization(
-                "Khoa CNTT concurrency", "Công nghệ phần mềm concurrency");
+                "Khoa CNTT concurrency");
         facultyId = scope.facultyId();
         fixtures.createIdentity(
                 "dean-schedule", "Trưởng khoa", "unusable-concurrency-hash", true,

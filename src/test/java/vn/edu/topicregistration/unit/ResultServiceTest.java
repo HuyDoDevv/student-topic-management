@@ -129,7 +129,7 @@ class ResultServiceTest {
         Dependencies dependencies = dependencies();
         fixture(dependencies, CouncilStatus.ACTIVE, 4L);
         when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
-                new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 4L, 2L));
+                new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 2L));
 
         assertThrows(AccessDeniedException.class,
                 () -> dependencies.service().complete(41L, 4L));
@@ -183,7 +183,7 @@ class ResultServiceTest {
         when(result.getStatus()).thenReturn(FinalResultStatus.READY);
         when(dependencies.results().findAllByCouncilIdForUpdate(41L)).thenReturn(List.of(result));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 4L, 2L));
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
         UserAccountEntity dean = mock(UserAccountEntity.class);
         when(dependencies.accounts().findDetailedById(31L)).thenReturn(Optional.of(dean));
 
@@ -216,7 +216,7 @@ class ResultServiceTest {
         Dependencies dependencies = dependencies();
         Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 4L, 2L));
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
         when(dependencies.results().findAllByCouncilIdForUpdate(41L)).thenReturn(List.of());
 
         ApplicationException missing = assertThrows(ApplicationException.class,
@@ -241,7 +241,7 @@ class ResultServiceTest {
         Dependencies dependencies = dependencies();
         Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
         when(dependencies.authorization().requireRole(RoleCode.DEAN)).thenReturn(
-                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 4L, 2L));
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
         FinalResultEntity result = result(fixture, FinalResultStatus.READY);
         when(dependencies.results()
                 .findAllByCouncilPeriodFacultyIdOrderByConsolidatedAtDescIdRegistrationIdDesc(2L))
@@ -354,7 +354,7 @@ class ResultServiceTest {
                 .thenReturn(Optional.of(7L));
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
-                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 4L, 2L));
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
         when(dependencies.councils().findByIdForUpdate(41L)).thenReturn(Optional.of(council));
         when(dependencies.assignments().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(assignment));

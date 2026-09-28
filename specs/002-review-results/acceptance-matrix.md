@@ -21,7 +21,7 @@ unit/web, integration/concurrency và Playwright E2E đều đạt trên MySQL t
 |---|---|---|---|
 | Upload/replace report | `student1.demo`, registration ACCEPTED chưa gắn board | PDF hiện hành được lưu/tải; file cũ được thay trước ACTIVE | AUTOMATED PASS; manual fixture available |
 | Report lock and protected download | ACTIVE/PUBLISHED demo registrations | Actor đúng quan hệ tải được; replace bị khóa | AUTOMATED PASS; manual fixture available |
-| Board 3–5 members | `dean.demo`, `[DEMO] Hội đồng KLTN - Đang chấm` | Board có Chair, Secretary và member cùng bộ môn | AUTOMATED PASS; manual fixture available |
+| Board 3–5 members | `dean.demo`, `[DEMO] Hội đồng KLTN - Đang chấm` | Board có Chair, Secretary và member cùng khoa | AUTOMATED PASS; manual fixture available |
 | Score/resubmit | `lecturer1.demo`, `lecturer4.demo`, `lecturer5.demo` | Chỉ evaluation của actor đổi khi board ACTIVE | AUTOMATED PASS; manual fixture available |
 | Complete/publish | Chair `lecturer1.demo`, sau đó `dean.demo` | Toàn board thành COMPLETED rồi PUBLISHED nguyên tử | AUTOMATED PASS; manual fixture available |
 | Student visibility | `student1.demo` đến `student3.demo` | Chỉ snapshot group thấy result PUBLISHED của mình | AUTOMATED PASS; manual fixture available |

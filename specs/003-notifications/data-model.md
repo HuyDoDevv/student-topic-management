@@ -139,7 +139,7 @@ Không có chuyển READ → UNREAD và không có delete trong v1.
 | Nguồn | Query/nguồn đáng tin cậy |
 |---|---|
 | Announcement cấp trường | Mọi `user_accounts.enabled = TRUE` tại thời điểm publish |
-| Announcement cấp khoa | Tài khoản enabled có `department.faculty_id = actor.faculty_id` |
+| Announcement cấp khoa | Tài khoản enabled có `account.faculty_id = actor.faculty_id` |
 | Group invitation created | `invitee_id` của invitation đã persist |
 | Invitation response | Leader/inviter đáng tin cậy từ group/invitation |
 | Topic decision | `topics.author_id` |

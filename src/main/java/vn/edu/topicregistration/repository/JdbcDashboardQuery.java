@@ -51,11 +51,10 @@ public class JdbcDashboardQuery implements DashboardQuery {
         return count("""
                 SELECT COUNT(*) FROM topics t
                 JOIN registration_periods p ON p.id = t.period_id
-                JOIN departments d ON d.id = t.department_id
-                WHERE p.faculty_id = ? AND d.faculty_id = ?
+                WHERE p.faculty_id = ?
                   AND p.student_end >= ?
                   AND t.hidden_at IS NULL AND t.status = ?
-                """, facultyId, facultyId, Timestamp.from(now), status);
+                """, facultyId, Timestamp.from(now), status);
     }
 
     @Override
@@ -77,13 +76,13 @@ public class JdbcDashboardQuery implements DashboardQuery {
 
     @Override
     public long countLecturerTopics(
-            long lecturerId, long departmentId, long facultyId, String status) {
+            long lecturerId, long facultyId, String status) {
         return count("""
                 SELECT COUNT(*) FROM topics t
                 JOIN registration_periods p ON p.id = t.period_id
-                WHERE t.author_id = ? AND t.department_id = ? AND p.faculty_id = ?
+                WHERE t.author_id = ? AND p.faculty_id = ?
                   AND t.hidden_at IS NULL AND t.status = ?
-                """, lecturerId, departmentId, facultyId, status);
+                """, lecturerId, facultyId, status);
     }
 
     @Override

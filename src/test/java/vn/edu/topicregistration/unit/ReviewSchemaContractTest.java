@@ -16,6 +16,8 @@ class ReviewSchemaContractTest {
             "src/main/resources/db/migration/V10__support_direct_grading_assignments.sql");
     private static final Path INDIVIDUAL_GRADING_MIGRATION = Path.of(
             "src/main/resources/db/migration/V11__grade_each_registration_student.sql");
+    private static final Path FACULTY_SCOPE_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V13__replace_departments_with_faculty_scope.sql");
 
     @Test
     void v8AddsLifecycleAndConsistencyGuardsToPlaceholderTables() throws IOException {
@@ -58,5 +60,17 @@ class ReviewSchemaContractTest {
                 () -> assertTrue(sql.contains("fk_final_results_registration_student")),
                 () -> assertTrue(sql.contains("INSERT INTO evaluations")),
                 () -> assertTrue(sql.contains("INSERT INTO final_results")));
+    }
+
+    @Test
+    void v13MovesAcademicScopeDirectlyToFacultyAndRemovesDepartments() throws IOException {
+        String sql = Files.readString(FACULTY_SCOPE_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("ADD COLUMN faculty_id")),
+                () -> assertTrue(sql.contains("fk_accounts_faculty")),
+                () -> assertTrue(sql.contains("DROP COLUMN department_id")),
+                () -> assertTrue(sql.contains("DROP TABLE departments")),
+                () -> assertTrue(sql.contains("Khoa Công nghệ Thông tin")));
     }
 }

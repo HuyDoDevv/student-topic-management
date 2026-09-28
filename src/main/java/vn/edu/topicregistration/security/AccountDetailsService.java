@@ -1,7 +1,7 @@
 package vn.edu.topicregistration.security;
 
 import vn.edu.topicregistration.entity.RoleCode;
-import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 
@@ -30,9 +30,8 @@ public class AccountDetailsService implements UserDetailsService {
         Set<RoleCode> roles = account.getRoleCodes();
         validateRoleCombination(roles);
 
-        DepartmentEntity department = account.getDepartment();
-        Long departmentId = department == null ? null : department.getId();
-        Long facultyId = department == null ? null : department.getFaculty().getId();
+        FacultyEntity faculty = account.getFaculty();
+        Long facultyId = faculty == null ? null : faculty.getId();
 
         return new AccountPrincipal(
                 account.getId(),
@@ -41,7 +40,6 @@ public class AccountDetailsService implements UserDetailsService {
                 account.getFullName(),
                 account.isEnabled(),
                 roles,
-                departmentId,
                 facultyId);
     }
 

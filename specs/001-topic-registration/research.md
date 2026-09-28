@@ -84,7 +84,7 @@ kiểm tra network browser không có request bắt buộc ra CDN. Bước này 
 
 - **Decision:** Spring Security form login/session; hash mật khẩu bằng PasswordEncoder,
   giữ CSRF cho form mutation; kiểm tra policy tại service trên dữ liệu tin cậy.
-  Không nhận roles/department từ form để cấp quyền.
+  Không nhận roles/faculty từ form để cấp quyền; tài khoản học vụ được gán khoa CNTT mặc định ở backend.
 - **Rationale:** phù hợp ứng dụng HTML cùng origin; không cần token API tự thiết kế.
   Test thuần nghiệp vụ, MockMvc, DB MySQL riêng và browser Chromium.
 - **Alternatives considered:** JWT/SSO không cần cho tài khoản nội bộ cấp sẵn đã chốt;

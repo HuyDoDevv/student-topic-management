@@ -20,7 +20,7 @@ import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 /** FR-05/06/14; AS-2.1-2.3, AS-2.5-2.11; AT-03/12. */
 class TopicRulesTest {
     private static final long AUTHOR_ID = 11L;
-    private static final long DEPARTMENT_ID = 7L;
+    private static final long FACULTY_ID = 7L;
     private static final Instant START = Instant.parse("2026-09-12T00:00:00Z");
     private static final Instant END = Instant.parse("2026-09-12T02:00:00Z");
     private static final Instant MIDDLE = Instant.parse("2026-09-12T01:00:00Z");
@@ -56,7 +56,7 @@ class TopicRulesTest {
     }
 
     @Test
-    void coSupervisorMustBeEnabledLecturerInAuthorsDepartment() {
+    void coSupervisorMustBeEnabledLecturerInAuthorsFaculty() {
         assertFailure(Failure.VALIDATION_FAILED,
                 () -> submit(completeDraft(List.of(primary(), candidate(12, 8, true, true))),
                         ownDraft(), MIDDLE));
@@ -99,13 +99,13 @@ class TopicRulesTest {
     }
 
     @Test
-    void onlyAuthorFromTopicsDepartmentCanSaveOrSubmit() {
-        TopicAccess otherLecturer = new TopicAccess(12, AUTHOR_ID, DEPARTMENT_ID,
-                DEPARTMENT_ID, TopicStatus.DRAFT);
-        TopicAccess otherDepartment = new TopicAccess(AUTHOR_ID, AUTHOR_ID, 8,
-                DEPARTMENT_ID, TopicStatus.DRAFT);
+    void onlyAuthorFromTopicsFacultyCanSaveOrSubmit() {
+        TopicAccess otherLecturer = new TopicAccess(12, AUTHOR_ID, FACULTY_ID,
+                FACULTY_ID, TopicStatus.DRAFT);
+        TopicAccess otherFaculty = new TopicAccess(AUTHOR_ID, AUTHOR_ID, 8,
+                FACULTY_ID, TopicStatus.DRAFT);
 
-        for (TopicAccess denied : List.of(otherLecturer, otherDepartment)) {
+        for (TopicAccess denied : List.of(otherLecturer, otherFaculty)) {
             assertFailure(Failure.ACCESS_DENIED,
                     () -> TopicRules.validateForSave(completeDraft(List.of(primary())), denied));
             assertFailure(Failure.ACCESS_DENIED,
@@ -117,8 +117,8 @@ class TopicRulesTest {
     void saveAndSubmitAreLockedAfterLeavingDraft() {
         for (TopicStatus status : List.of(
                 TopicStatus.PENDING_APPROVAL, TopicStatus.APPROVED, TopicStatus.PUBLISHED)) {
-            TopicAccess access = new TopicAccess(AUTHOR_ID, AUTHOR_ID, DEPARTMENT_ID,
-                    DEPARTMENT_ID, status);
+            TopicAccess access = new TopicAccess(AUTHOR_ID, AUTHOR_ID, FACULTY_ID,
+                    FACULTY_ID, status);
             assertFailure(Failure.INVALID_STATE,
                     () -> TopicRules.validateForSave(completeDraft(List.of(primary())), access));
             assertFailure(Failure.INVALID_STATE,
@@ -145,8 +145,8 @@ class TopicRulesTest {
     }
 
     private static TopicAccess ownDraft() {
-        return new TopicAccess(AUTHOR_ID, AUTHOR_ID, DEPARTMENT_ID,
-                DEPARTMENT_ID, TopicStatus.DRAFT);
+        return new TopicAccess(AUTHOR_ID, AUTHOR_ID, FACULTY_ID,
+                FACULTY_ID, TopicStatus.DRAFT);
     }
 
     private static TopicDraft completeDraft(List<SupervisorCandidate> supervisors) {
@@ -161,15 +161,15 @@ class TopicRulesTest {
     }
 
     private static SupervisorCandidate primary() {
-        return candidate(AUTHOR_ID, DEPARTMENT_ID, true, true);
+        return candidate(AUTHOR_ID, FACULTY_ID, true, true);
     }
 
     private static SupervisorCandidate coSupervisor() {
-        return candidate(12, DEPARTMENT_ID, true, true);
+        return candidate(12, FACULTY_ID, true, true);
     }
 
     private static SupervisorCandidate candidate(
-            long accountId, long departmentId, boolean enabled, boolean lecturer) {
-        return new SupervisorCandidate(accountId, departmentId, enabled, lecturer);
+            long accountId, long facultyId, boolean enabled, boolean lecturer) {
+        return new SupervisorCandidate(accountId, facultyId, enabled, lecturer);
     }
 }

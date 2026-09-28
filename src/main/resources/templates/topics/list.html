@@ -54,7 +54,7 @@
           <td data-label="Đề tài">
             <a class="fw-semibold" th:href="@{/topics/{id}(id=${topic.id})}"
                th:text="${#strings.isEmpty(topic.title) ? 'Chưa đặt tên' : topic.title}">Tên đề tài</a>
-            <div class="small text-secondary" th:text="${topic.department}">Bộ môn</div>
+            <div class="small text-secondary" th:text="${topic.faculty}">Khoa</div>
           </td>
           <td data-label="Người đề xuất" th:text="${topic.author}">Giảng viên</td>
           <td data-label="Giảng viên hướng dẫn" th:text="${topic.supervisorNames}">Chưa chọn</td>

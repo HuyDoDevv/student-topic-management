@@ -7,14 +7,13 @@
     <div>
       <div class="page-pretitle">HỘI ĐỒNG MỚI</div>
       <h1 class="page-title">Lập hội đồng</h1>
-      <p class="text-secondary mt-2 mb-0"><span th:text="${workspace.periodName}">Đợt KLTN</span> · <span th:text="${workspace.departmentName}">Bộ môn</span></p>
+      <p class="text-secondary mt-2 mb-0"><span th:text="${workspace.periodName}">Đợt KLTN</span> · <span th:text="${workspace.facultyName}">Khoa Công nghệ Thông tin</span></p>
     </div>
     <a class="btn btn-outline-secondary" th:href="@{/faculty/boards}">Quay lại</a>
   </div>
 
   <form class="card" method="post" th:action="@{/faculty/boards}" th:object="${councilForm}" data-prevent-double-submit>
     <input type="hidden" th:field="*{periodId}">
-    <input type="hidden" th:field="*{departmentId}">
     <div class="card-header"><h2 class="card-title">Thông tin hội đồng</h2></div>
     <div class="card-body">
       <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</div>

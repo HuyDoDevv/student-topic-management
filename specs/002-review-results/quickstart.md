@@ -4,7 +4,7 @@
 
 - Java 21 và MySQL 8.4 test/local riêng theo README.
 - Feature 001 đã có registration `ACCEPTED` của period `TLCN` hoặc `KLTN` với snapshot 3 SV.
-- Ba đến năm active LECTURER cùng department và không ai là supervisor của topic.
+- Ba đến năm active LECTURER cùng faculty và không ai là supervisor của topic.
 - Thư mục report local không nằm trong repository.
 
 ```bash
@@ -25,10 +25,10 @@ database có dữ liệu thật cho integration/concurrency.
 
 ## Scenario 2 — Council
 
-1. DEAN tạo board cho period TLCN/KLTN, department đúng, 3 member với Chair/Secretary khác nhau.
-2. Gán ít nhất hai ACCEPTED registrations cùng period/department, lịch và địa điểm riêng.
+1. DEAN tạo board cho period TLCN/KLTN đúng khoa, 3 member với Chair/Secretary khác nhau.
+2. Gán ít nhất hai ACCEPTED registrations cùng period/faculty, lịch và địa điểm riêng.
 3. Chuyển DRAFT → ASSIGNED → SCHEDULED → ACTIVE.
-4. Thử thêm supervisor, lecturer ngoài department, registration COURSE/NCKH hoặc registration
+4. Thử thêm supervisor, lecturer ngoài faculty, registration COURSE/NCKH hoặc registration
    đã thuộc board khác; mong đợi từ chối không đổi dữ liệu.
 
 ## Scenario 3 — Scoring and results
@@ -44,9 +44,9 @@ database có dữ liệu thật cho integration/concurrency.
 ## Scenario 3A — Direct grading for COURSE/NCKH
 
 1. Chuẩn bị registration COURSE hoặc NCKH ở trạng thái ACCEPTED và nộp báo cáo hiện hành.
-2. DEAN mở `/faculty/direct-grading`, chọn một LECTURER cùng bộ môn không phải bất kỳ GVHD
+2. DEAN mở `/faculty/direct-grading`, chọn một LECTURER cùng khoa không phải bất kỳ GVHD
    nào; xác nhận lượt chấm chuyển ACTIVE và leader không thể thay báo cáo nữa.
-3. Thử chọn GVHD, tài khoản khóa/khác bộ môn hoặc registration TLCN/KLTN; mong đợi từ chối.
+3. Thử chọn GVHD, tài khoản khóa/khác khoa hoặc registration TLCN/KLTN; mong đợi từ chối.
 4. Grader mở **Chấm điểm**, submit điểm cho đủ từng sinh viên rồi **Hoàn tất chấm**; DEAN
    quay lại trang phân công để publish. Final score của mỗi sinh viên phải bằng đúng điểm
    riêng đã submit.

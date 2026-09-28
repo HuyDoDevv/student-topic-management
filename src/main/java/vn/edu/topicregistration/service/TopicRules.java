@@ -16,7 +16,7 @@ public final class TopicRules {
         validateSupervisors(
                 normalized.supervisors(),
                 access.authorId(),
-                access.topicDepartmentId());
+                access.topicFacultyId());
         return normalized;
     }
 
@@ -50,7 +50,7 @@ public final class TopicRules {
             throw failure(Failure.INVALID_STATE);
         }
         if (access.actorId() != access.authorId()
-                || access.actorDepartmentId() != access.topicDepartmentId()) {
+                || access.actorFacultyId() != access.topicFacultyId()) {
             throw failure(Failure.ACCESS_DENIED);
         }
     }
@@ -69,7 +69,7 @@ public final class TopicRules {
     private static void validateSupervisors(
             List<SupervisorCandidate> supervisors,
             long authorId,
-            long topicDepartmentId) {
+            long topicFacultyId) {
         if (supervisors.isEmpty()
                 || supervisors.size() > 2
                 || supervisors.getFirst().accountId() != authorId) {
@@ -81,7 +81,7 @@ public final class TopicRules {
                     || !uniqueIds.add(supervisor.accountId())
                     || !supervisor.enabled()
                     || !supervisor.lecturer()
-                    || supervisor.departmentId() != topicDepartmentId) {
+                    || supervisor.facultyId() != topicFacultyId) {
                 throw failure(Failure.VALIDATION_FAILED);
             }
         }
@@ -116,8 +116,8 @@ public final class TopicRules {
     public record TopicAccess(
             long actorId,
             long authorId,
-            long actorDepartmentId,
-            long topicDepartmentId,
+            long actorFacultyId,
+            long topicFacultyId,
             TopicStatus status) {
         public TopicAccess {
             Objects.requireNonNull(status, "status");
@@ -126,7 +126,7 @@ public final class TopicRules {
 
     public record SupervisorCandidate(
             long accountId,
-            long departmentId,
+            long facultyId,
             boolean enabled,
             boolean lecturer) {
     }

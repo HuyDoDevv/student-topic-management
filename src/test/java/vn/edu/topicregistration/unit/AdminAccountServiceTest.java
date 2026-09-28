@@ -21,13 +21,11 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.RoleEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.UserRoleEntity;
-import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.repository.FacultyRepository;
 import vn.edu.topicregistration.repository.RoleRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
@@ -44,10 +42,11 @@ class AdminAccountServiceTest {
     void createsDeanWithLecturerRoleAndEncodedPassword() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
-        DepartmentEntity department = department(7L, "Công nghệ phần mềm", 3L, "CNTT");
+        FacultyEntity faculty = faculty(3L, AdminAccountService.DEFAULT_FACULTY_NAME);
         RoleEntity deanRole = role(RoleCode.DEAN);
         RoleEntity lecturerRole = role(RoleCode.LECTURER);
-        when(dependencies.departments().findById(7L)).thenReturn(Optional.of(department));
+        when(dependencies.faculties().findByNameIgnoreCase(
+                AdminAccountService.DEFAULT_FACULTY_NAME)).thenReturn(Optional.of(faculty));
         when(dependencies.accounts().existsByUsernameIgnoreCase("dean01")).thenReturn(false);
         when(dependencies.roles().findAllById(anyIterable())).thenReturn(List.of(
                 deanRole, lecturerRole));
@@ -55,7 +54,7 @@ class AdminAccountServiceTest {
         when(dependencies.userRoles().saveAllAndFlush(any())).thenAnswer(call -> call.getArgument(0));
 
         var created = dependencies.service().create(new CreateAccountCommand(
-                AccountType.DEAN, " dean01 ", " Trưởng khoa Một ", "temporary-password", 7L));
+                AccountType.DEAN, " dean01 ", " Trưởng khoa Một ", "temporary-password"));
 
         assertEquals(AccountType.DEAN, created.accountType());
         assertEquals("Trưởng khoa", created.accountTypeLabel());
@@ -92,24 +91,19 @@ class AdminAccountServiceTest {
 
         verify(dependencies.authorization(), times(2)).requireRole(RoleCode.ADMIN);
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
-                dependencies.roles(), dependencies.departments(), dependencies.faculties());
+                dependencies.roles(), dependencies.faculties());
     }
 
     private static void allowAdmin(Dependencies dependencies) {
         when(dependencies.authorization().requireRole(RoleCode.ADMIN)).thenReturn(
-                new ActorIdentity(1L, Set.of(RoleCode.ADMIN), null, null));
+                new ActorIdentity(1L, Set.of(RoleCode.ADMIN), null));
     }
 
-    private static DepartmentEntity department(
-            long id, String name, long facultyId, String facultyName) {
-        DepartmentEntity department = mock(DepartmentEntity.class);
+    private static FacultyEntity faculty(long id, String name) {
         FacultyEntity faculty = mock(FacultyEntity.class);
-        when(department.getId()).thenReturn(id);
-        when(department.getName()).thenReturn(name);
-        when(department.getFaculty()).thenReturn(faculty);
-        when(faculty.getId()).thenReturn(facultyId);
-        when(faculty.getName()).thenReturn(facultyName);
-        return department;
+        when(faculty.getId()).thenReturn(id);
+        when(faculty.getName()).thenReturn(name);
+        return faculty;
     }
 
     private static RoleEntity role(RoleCode code) {
@@ -123,7 +117,6 @@ class AdminAccountServiceTest {
                 mock(UserAccountRepository.class),
                 mock(UserRoleRepository.class),
                 mock(RoleRepository.class),
-                mock(DepartmentRepository.class),
                 mock(FacultyRepository.class),
                 mock(AuthorizationPolicy.class),
                 new BCryptPasswordEncoder());
@@ -133,13 +126,12 @@ class AdminAccountServiceTest {
             UserAccountRepository accounts,
             UserRoleRepository userRoles,
             RoleRepository roles,
-            DepartmentRepository departments,
             FacultyRepository faculties,
             AuthorizationPolicy authorization,
             BCryptPasswordEncoder passwords) {
         AdminAccountService service() {
             return new AdminAccountService(
-                    accounts, userRoles, roles, departments, faculties,
+                    accounts, userRoles, roles, faculties,
                     authorization, passwords);
         }
     }

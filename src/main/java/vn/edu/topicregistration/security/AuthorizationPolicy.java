@@ -1,7 +1,7 @@
 package vn.edu.topicregistration.security;
 
 import vn.edu.topicregistration.entity.RoleCode;
-import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 
@@ -46,12 +46,9 @@ public class AuthorizationPolicy {
             throw denied();
         }
 
-        DepartmentEntity department = account.getDepartment();
-        Long departmentId = department == null ? null : department.getId();
-        Long facultyId = department == null || department.getFaculty() == null
-                ? null
-                : department.getFaculty().getId();
-        return new ActorIdentity(account.getId(), roles, departmentId, facultyId);
+        FacultyEntity faculty = account.getFaculty();
+        Long facultyId = faculty == null ? null : faculty.getId();
+        return new ActorIdentity(account.getId(), roles, facultyId);
     }
 
     public ActorIdentity requireRole(RoleCode role) {
@@ -70,9 +67,9 @@ public class AuthorizationPolicy {
         return actor;
     }
 
-    public ActorIdentity requireLecturerOfDepartment(long resourceDepartmentId) {
+    public ActorIdentity requireLecturerOfFaculty(long resourceFacultyId) {
         ActorIdentity actor = requireRole(RoleCode.LECTURER);
-        if (!Objects.equals(actor.departmentId(), resourceDepartmentId)) {
+        if (!Objects.equals(actor.facultyId(), resourceFacultyId)) {
             throw denied();
         }
         return actor;
@@ -94,9 +91,9 @@ public class AuthorizationPolicy {
         return actor;
     }
 
-    public ActorIdentity requireTopicAuthor(long persistedAuthorId, long resourceDepartmentId) {
+    public ActorIdentity requireTopicAuthor(long persistedAuthorId, long resourceFacultyId) {
         ActorIdentity actor = requireTopicAuthoringLecturer();
-        if (!Objects.equals(actor.departmentId(), resourceDepartmentId)
+        if (!Objects.equals(actor.facultyId(), resourceFacultyId)
                 || !Objects.equals(actor.accountId(), persistedAuthorId)) {
             throw denied();
         }
@@ -132,7 +129,6 @@ public class AuthorizationPolicy {
     public record ActorIdentity(
             Long accountId,
             Set<RoleCode> roles,
-            Long departmentId,
             Long facultyId) {
         public ActorIdentity {
             roles = Set.copyOf(roles);

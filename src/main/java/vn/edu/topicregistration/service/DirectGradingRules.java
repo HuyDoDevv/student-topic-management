@@ -31,7 +31,7 @@ public final class DirectGradingRules {
         }
         if (!context.graderEnabled()
                 || !context.graderLecturer()
-                || !context.sameDepartment()) {
+                || !context.sameFaculty()) {
             throw failure(Failure.INVALID_GRADER);
         }
         if (context.supervisor()) {
@@ -50,45 +50,45 @@ public final class DirectGradingRules {
             boolean alreadyAssigned,
             boolean graderEnabled,
             boolean graderLecturer,
-            boolean sameDepartment,
+            boolean sameFaculty,
             boolean supervisor) {
         public AssignmentContext withTopicType(String value) {
             return new AssignmentContext(
                     value, registrationStatus, reportPresent, alreadyAssigned,
-                    graderEnabled, graderLecturer, sameDepartment, supervisor);
+                    graderEnabled, graderLecturer, sameFaculty, supervisor);
         }
 
         public AssignmentContext withRegistrationStatus(RegistrationStatus value) {
             return new AssignmentContext(
                     topicType, value, reportPresent, alreadyAssigned,
-                    graderEnabled, graderLecturer, sameDepartment, supervisor);
+                    graderEnabled, graderLecturer, sameFaculty, supervisor);
         }
 
         public AssignmentContext withReportPresent(boolean value) {
             return new AssignmentContext(
                     topicType, registrationStatus, value, alreadyAssigned,
-                    graderEnabled, graderLecturer, sameDepartment, supervisor);
+                    graderEnabled, graderLecturer, sameFaculty, supervisor);
         }
 
         public AssignmentContext withAlreadyAssigned(boolean value) {
             return new AssignmentContext(
                     topicType, registrationStatus, reportPresent, value,
-                    graderEnabled, graderLecturer, sameDepartment, supervisor);
+                    graderEnabled, graderLecturer, sameFaculty, supervisor);
         }
 
         public AssignmentContext withGraderEnabled(boolean value) {
             return new AssignmentContext(
                     topicType, registrationStatus, reportPresent, alreadyAssigned,
-                    value, graderLecturer, sameDepartment, supervisor);
+                    value, graderLecturer, sameFaculty, supervisor);
         }
 
         public AssignmentContext withGraderLecturer(boolean value) {
             return new AssignmentContext(
                     topicType, registrationStatus, reportPresent, alreadyAssigned,
-                    graderEnabled, value, sameDepartment, supervisor);
+                    graderEnabled, value, sameFaculty, supervisor);
         }
 
-        public AssignmentContext withSameDepartment(boolean value) {
+        public AssignmentContext withSameFaculty(boolean value) {
             return new AssignmentContext(
                     topicType, registrationStatus, reportPresent, alreadyAssigned,
                     graderEnabled, graderLecturer, value, supervisor);
@@ -97,7 +97,7 @@ public final class DirectGradingRules {
         public AssignmentContext withSupervisor(boolean value) {
             return new AssignmentContext(
                     topicType, registrationStatus, reportPresent, alreadyAssigned,
-                    graderEnabled, graderLecturer, sameDepartment, value);
+                    graderEnabled, graderLecturer, sameFaculty, value);
         }
     }
 

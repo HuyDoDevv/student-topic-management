@@ -27,10 +27,6 @@ public class CouncilEntity {
     @JoinColumn(name = "period_id", nullable = false)
     private RegistrationPeriodEntity period;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "department_id", nullable = false)
-    private DepartmentEntity department;
-
     @Column(nullable = false, length = 255)
     private String name;
 
@@ -62,24 +58,21 @@ public class CouncilEntity {
 
     public CouncilEntity(
             RegistrationPeriodEntity period,
-            DepartmentEntity department,
             String name,
             UserAccountEntity chair,
             UserAccountEntity secretary,
             Instant createdAt) {
-        this(period, department, name, chair, secretary, CouncilMode.COUNCIL, createdAt);
+        this(period, name, chair, secretary, CouncilMode.COUNCIL, createdAt);
     }
 
     private CouncilEntity(
             RegistrationPeriodEntity period,
-            DepartmentEntity department,
             String name,
             UserAccountEntity chair,
             UserAccountEntity secretary,
             CouncilMode mode,
             Instant createdAt) {
         this.period = Objects.requireNonNull(period, "period");
-        this.department = Objects.requireNonNull(department, "department");
         this.name = Objects.requireNonNull(name, "name");
         this.chair = Objects.requireNonNull(chair, "chair");
         this.secretary = Objects.requireNonNull(secretary, "secretary");
@@ -90,13 +83,11 @@ public class CouncilEntity {
 
     public static CouncilEntity directGrading(
             RegistrationPeriodEntity period,
-            DepartmentEntity department,
             String name,
             UserAccountEntity grader,
             Instant createdAt) {
         return new CouncilEntity(
                 period,
-                department,
                 name,
                 grader,
                 grader,
@@ -125,10 +116,6 @@ public class CouncilEntity {
 
     public RegistrationPeriodEntity getPeriod() {
         return period;
-    }
-
-    public DepartmentEntity getDepartment() {
-        return department;
     }
 
     public String getName() {

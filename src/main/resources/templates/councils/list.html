@@ -18,8 +18,8 @@
       <div class="card-header"><h2 class="card-title">Chọn phạm vi hội đồng mới</h2></div>
       <div class="card-body">
         <div class="alert alert-warning mb-3" role="status"
-             th:if="${creationOptions.periods.isEmpty() or creationOptions.departments.isEmpty()}">
-          Cần có ít nhất một đợt TLCN/KLTN và một bộ môn trong khoa trước khi lập hội đồng.
+             th:if="${creationOptions.periods.isEmpty()}">
+          Cần có ít nhất một đợt TLCN/KLTN trong khoa trước khi lập hội đồng.
         </div>
         <div class="row g-3">
           <div class="col-md-6">
@@ -31,20 +31,11 @@
                       th:text="${period.name + ' · ' + period.topicType}">Đợt KLTN</option>
             </select>
           </div>
-          <div class="col-md-6">
-            <label class="form-label" for="departmentId">Bộ môn</label>
-            <select class="form-select" id="departmentId" name="departmentId" required
-                    th:disabled="${creationOptions.departments.isEmpty()}">
-              <option value="">Chọn bộ môn</option>
-              <option th:each="department : ${creationOptions.departments}"
-                      th:value="${department.id}" th:text="${department.name}">Công nghệ phần mềm</option>
-            </select>
-          </div>
         </div>
       </div>
       <div class="card-footer text-end">
         <button class="btn btn-primary" type="submit"
-                th:disabled="${creationOptions.periods.isEmpty() or creationOptions.departments.isEmpty()}">Tiếp tục</button>
+                th:disabled="${creationOptions.periods.isEmpty()}">Tiếp tục</button>
       </div>
     </form>
   </div>
@@ -57,13 +48,13 @@
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
         <thead>
-        <tr><th>Hội đồng</th><th>Đợt</th><th>Bộ môn</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        <tr><th>Hội đồng</th><th>Đợt</th><th>Khoa</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
         </thead>
         <tbody>
         <tr th:each="board : ${boards}">
           <td data-label="Hội đồng" class="fw-semibold" th:text="${board.name}">Hội đồng KLTN</td>
           <td data-label="Đợt" th:text="${board.periodName}">Đợt KLTN</td>
-          <td data-label="Bộ môn" th:text="${board.departmentName}">Công nghệ phần mềm</td>
+          <td data-label="Khoa" th:text="${board.facultyName}">Khoa Công nghệ Thông tin</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${board.statusClass}" th:text="${board.statusLabel}">Nháp</span></td>
           <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/faculty/boards/{id}(id=${board.id})}">Xem chi tiết</a></td>
         </tr>

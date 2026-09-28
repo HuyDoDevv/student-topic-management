@@ -78,7 +78,7 @@ class PeriodContractTest {
         jdbc = new JdbcTemplate(dataSource);
         fixtures = new FixtureSupport(
                 dataSource, Clock.fixed(FIXED_NOW, TimeConfig.BUSINESS_ZONE));
-        deanScope = fixtures.createOrganization("Khoa CNTT", "Công nghệ phần mềm");
+        deanScope = fixtures.createOrganization("Khoa CNTT");
         fixtures.createIdentity(
                 "dean", "Trưởng khoa", UNUSED_HASH, true,
                 deanScope, Set.of(RoleCode.LECTURER, RoleCode.DEAN));
@@ -119,8 +119,7 @@ class PeriodContractTest {
                 Timestamp.from(Instant.parse("2026-09-09T00:00:00Z")),
                 Timestamp.from(Instant.parse("2026-09-09T00:00:01Z")),
                 Timestamp.from(STUDENT_END), ownPeriod);
-        FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization(
-                "Khoa Điện", "Điện công nghiệp");
+        FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization("Khoa Điện");
         long otherPeriod = insertPeriod(otherScope.facultyId(), "Đợt Điện", 0L);
         var lecturer = fixtures.createIdentity("lecturer-dashboard", "Giảng viên A", UNUSED_HASH,
                 true, deanScope, Set.of(RoleCode.LECTURER));
@@ -134,9 +133,9 @@ class PeriodContractTest {
                 true, deanScope, Set.of(RoleCode.STUDENT));
         fixtures.createIdentity("admin-dashboard", "Quản trị", UNUSED_HASH,
                 true, null, Set.of(RoleCode.ADMIN));
-        insertTopic(ownPeriod, deanScope.departmentId(), lecturer.accountId(), "PENDING_APPROVAL");
-        insertTopic(ownPeriod, deanScope.departmentId(), colleague.accountId(), "PENDING_APPROVAL");
-        insertTopic(otherPeriod, otherScope.departmentId(), otherLecturer.accountId(), "PENDING_APPROVAL");
+        insertTopic(ownPeriod, lecturer.accountId(), "PENDING_APPROVAL");
+        insertTopic(ownPeriod, colleague.accountId(), "PENDING_APPROVAL");
+        insertTopic(otherPeriod, otherLecturer.accountId(), "PENDING_APPROVAL");
         jdbc.update("INSERT INTO student_groups(period_id, leader_student_id) VALUES (?, ?)",
                 ownPeriod, student.accountId());
         long groupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
@@ -165,12 +164,12 @@ class PeriodContractTest {
         return (DashboardView) result.getModelAndView().getModel().get("dashboard");
     }
 
-    private void insertTopic(long periodId, long departmentId, long authorId, String status) {
+    private void insertTopic(long periodId, long authorId, String status) {
         jdbc.update("""
-                INSERT INTO topics(period_id, department_id, author_id, title, description,
+                INSERT INTO topics(period_id, author_id, title, description,
                                    objectives, student_requirements, expected_results, status)
-                VALUES (?, ?, ?, 'Đề tài mẫu', 'Nội dung', 'Mục tiêu', 'Yêu cầu', 'Kết quả', ?)
-                """, periodId, departmentId, authorId, status);
+                VALUES (?, ?, 'Đề tài mẫu', 'Nội dung', 'Mục tiêu', 'Yêu cầu', 'Kết quả', ?)
+                """, periodId, authorId, status);
     }
 
     @Test
@@ -241,8 +240,7 @@ class PeriodContractTest {
     @Test
     void listAndUpdateStayInsideThePersistedFacultyScope() throws Exception {
         long ownPeriod = insertPeriod(deanScope.facultyId(), "Đợt khoa CNTT", 0L);
-        FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization(
-                "Khoa Điện", "Điện công nghiệp");
+        FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization("Khoa Điện");
         long otherPeriod = insertPeriod(otherScope.facultyId(), "Đợt khoa Điện", 0L);
 
         mvc.perform(get("/periods")

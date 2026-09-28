@@ -152,7 +152,7 @@ class NotificationServiceTest {
     void queriesOnlyCurrentActorsInboxAndMapsUnreadItems() {
         Dependencies dependencies = dependencies();
         when(dependencies.authorization().currentActor()).thenReturn(
-                new ActorIdentity(9L, Set.of(RoleCode.STUDENT), 3L, 2L));
+                new ActorIdentity(9L, Set.of(RoleCode.STUDENT), 2L));
         NotificationEventEntity event = mock(NotificationEventEntity.class);
         when(event.getTitle()).thenReturn("Kết quả đã công bố");
         when(event.getBody()).thenReturn("Xem kết quả của bạn.");

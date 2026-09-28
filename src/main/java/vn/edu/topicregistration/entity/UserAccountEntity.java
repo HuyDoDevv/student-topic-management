@@ -37,8 +37,8 @@ public class UserAccountEntity {
     private String passwordHash;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private DepartmentEntity department;
+    @JoinColumn(name = "faculty_id")
+    private FacultyEntity faculty;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<UserRoleEntity> roles = new LinkedHashSet<>();
@@ -50,12 +50,12 @@ public class UserAccountEntity {
             String fullName,
             String username,
             String passwordHash,
-            DepartmentEntity department) {
+            FacultyEntity faculty) {
         this.fullName = fullName;
         this.enabled = true;
         this.username = username;
         this.passwordHash = passwordHash;
-        this.department = department;
+        this.faculty = faculty;
     }
 
     public Long getId() {
@@ -78,8 +78,8 @@ public class UserAccountEntity {
         return passwordHash;
     }
 
-    public DepartmentEntity getDepartment() {
-        return department;
+    public FacultyEntity getFaculty() {
+        return faculty;
     }
 
     public Set<RoleCode> getRoleCodes() {

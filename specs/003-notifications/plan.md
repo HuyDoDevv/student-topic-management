@@ -147,7 +147,7 @@ chạm tới tại điểm phát sinh sự kiện đã duyệt.
   sang route nội bộ. Client không gửi URL chuyển tiếp.
 - Truy cập ID bản nhận của tài khoản khác trả 404 để không lộ tồn tại.
 - Nội dung do người đăng nhập được Thymeleaf escape; phiên bản đầu không hỗ trợ HTML/rich text.
-- ADMIN có scope trường; DEAN lấy faculty từ identity/department đáng tin cậy, không tin
+- ADMIN có scope trường; DEAN lấy faculty trực tiếp từ identity đáng tin cậy, không tin
   `facultyId` từ form.
 - Thông báo không cấp quyền: controller đích vẫn gọi policy hiện tại.
 

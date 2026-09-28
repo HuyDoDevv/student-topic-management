@@ -219,6 +219,6 @@ class AnnouncementServiceTest {
     }
 
     private static ActorIdentity actor(long id, Long facultyId, RoleCode... roles) {
-        return new ActorIdentity(id, Set.of(roles), null, facultyId);
+        return new ActorIdentity(id, Set.of(roles), facultyId);
     }
 }

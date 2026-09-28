@@ -23,37 +23,37 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
 
     @Query("select account from UserAccountEntity account "
             + "where account.enabled = true "
-            + "and account.department.faculty.id = :facultyId "
+            + "and account.faculty.id = :facultyId "
             + "order by account.id")
     List<UserAccountEntity> findAllEnabledByFacultyId(@Param("facultyId") long facultyId);
 
-    @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
+    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account order by account.username")
     List<UserAccountEntity> findAllDetailed();
 
-    @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
+    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     Optional<UserAccountEntity> findByUsername(String username);
 
-    @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
+    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account where account.id = :id")
     Optional<UserAccountEntity> findDetailedById(@Param("id") long id);
 
-    @EntityGraph(attributePaths = {"department", "roles", "roles.role"})
+    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account "
             + "join account.roles assignment "
             + "where account.enabled = true "
-            + "and account.department.id = :departmentId "
+            + "and account.faculty.id = :facultyId "
             + "and assignment.role.code = :role "
             + "order by account.fullName, account.username")
-    List<UserAccountEntity> findEnabledByDepartmentAndRole(
-            @Param("departmentId") long departmentId,
+    List<UserAccountEntity> findEnabledByFacultyAndRole(
+            @Param("facultyId") long facultyId,
             @Param("role") RoleCode role);
 
-    @EntityGraph(attributePaths = {"department", "department.faculty", "roles", "roles.role"})
+    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account "
             + "join account.roles assignment "
             + "where account.enabled = true "
-            + "and account.department.faculty.id = :facultyId "
+            + "and account.faculty.id = :facultyId "
             + "and assignment.role.code = :role "
             + "and not exists ("
             + "select membership.id from GroupMembershipEntity membership "
@@ -73,7 +73,7 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             vn.edu.topicregistration.entity.GroupInvitationStatus invitationStatus);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"department", "roles", "roles.role"})
+    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account "
             + "left join account.roles assignment "
             + "where account.id = :id")

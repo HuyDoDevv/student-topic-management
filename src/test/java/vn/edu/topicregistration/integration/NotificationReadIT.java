@@ -93,8 +93,7 @@ class NotificationReadIT {
         DATABASE.resetAndMigrate();
         FixtureSupport fixtures = new FixtureSupport(
                 DATABASE.dataSource(), Clock.fixed(NOW, ZoneOffset.UTC));
-        OrganizationScope scope = fixtures.createOrganization(
-                "Khoa Công nghệ thông tin", "Bộ môn Công nghệ phần mềm");
+        OrganizationScope scope = fixtures.createOrganization("Khoa Công nghệ thông tin");
         recipient = fixtures.createIdentity(
                 "notification.reader", "Người nhận", "NOT_A_LOGIN_HASH", true, scope,
                 Set.of(RoleCode.STUDENT));

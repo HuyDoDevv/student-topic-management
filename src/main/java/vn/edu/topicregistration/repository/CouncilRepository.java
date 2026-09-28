@@ -18,18 +18,18 @@ public interface CouncilRepository extends JpaRepository<CouncilEntity, Long> {
     Optional<Long> findPeriodIdByCouncilId(@Param("id") long id);
 
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "chair", "secretary"
+            "period", "period.faculty", "chair", "chair.faculty", "secretary", "secretary.faculty"
     })
     Optional<CouncilEntity> findDetailedById(long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "chair", "secretary"
+            "period", "period.faculty", "chair", "chair.faculty", "secretary", "secretary.faculty"
     })
     @Query("select council from CouncilEntity council where council.id = :id")
     Optional<CouncilEntity> findByIdForUpdate(@Param("id") long id);
 
-    @EntityGraph(attributePaths = {"period", "department", "chair", "secretary"})
+    @EntityGraph(attributePaths = {"period", "period.faculty", "chair", "secretary"})
     List<CouncilEntity> findAllByPeriodFacultyIdAndModeOrderByCreatedAtDescIdDesc(
             long facultyId,
             CouncilMode mode);

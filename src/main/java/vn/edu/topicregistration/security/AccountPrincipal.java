@@ -22,18 +22,16 @@ public final class AccountPrincipal implements UserDetails {
     private final String fullName;
     private final boolean enabled;
     private final Set<RoleCode> roles;
-    private final Long departmentId;
     private final Long facultyId;
 
     public AccountPrincipal(Long accountId, String username, String passwordHash, String fullName,
-            boolean enabled, Set<RoleCode> roles, Long departmentId, Long facultyId) {
+            boolean enabled, Set<RoleCode> roles, Long facultyId) {
         this.accountId = accountId;
         this.username = username;
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.enabled = enabled;
         this.roles = Set.copyOf(roles);
-        this.departmentId = departmentId;
         this.facultyId = facultyId;
     }
 
@@ -47,10 +45,6 @@ public final class AccountPrincipal implements UserDetails {
 
     public Set<RoleCode> roles() {
         return roles;
-    }
-
-    public Long departmentId() {
-        return departmentId;
     }
 
     public Long facultyId() {

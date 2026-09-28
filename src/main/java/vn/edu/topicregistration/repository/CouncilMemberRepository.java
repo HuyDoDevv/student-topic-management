@@ -20,7 +20,7 @@ public interface CouncilMemberRepository
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
-            "council", "lecturer", "lecturer.department", "lecturer.roles", "lecturer.roles.role"
+            "council", "lecturer", "lecturer.faculty", "lecturer.roles", "lecturer.roles.role"
     })
     @Query("select member from CouncilMemberEntity member "
             + "where member.council.id = :councilId order by member.slot")

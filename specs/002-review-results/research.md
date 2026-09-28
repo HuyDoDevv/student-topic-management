@@ -3,7 +3,7 @@
 ## R-01 — Mở rộng schema placeholder bằng V8
 
 **Decision**: Giữ nguyên các bảng V1 và thêm `V8__implement_review_and_results.sql` để bổ
-sung trạng thái, version, department scope, uniqueness và CHECK còn thiếu.
+sung trạng thái, version, faculty scope, uniqueness và CHECK còn thiếu.
 
 **Rationale**: V1–V7 có thể đã chạy trên database chia sẻ; Flyway yêu cầu migration bất biến.
 Các bảng placeholder đã chứa quan hệ nền phù hợp nên không cần tạo hệ bảng song song.
@@ -39,14 +39,14 @@ trước insert (mất file nếu DB lỗi); XA transaction (quá mức cho ứn
 
 ## R-04 — Council scope và khóa giao dịch
 
-**Decision**: Council thuộc đúng period và department, chỉ period TLCN/KLTN. Một council có
-nhiều registration cùng period/department; mỗi registration chỉ thuộc một council. Mutation
+**Decision**: Council thuộc đúng period và kế thừa faculty từ period, chỉ period TLCN/KLTN. Một council có
+nhiều registration cùng period/faculty; mỗi registration chỉ thuộc một council. Mutation
 khóa `registration_periods` trước, sau đó council và child theo ID tăng dần.
 
 **Rationale**: Khớp Q2:C, workflow và protocol khóa đã dùng ở feature 001; cho phép kiểm tra
-faculty/department/supervisor nhất quán khi phân công hoặc activate.
+faculty/supervisor nhất quán khi phân công hoặc activate.
 
-**Alternatives considered**: council toàn faculty (không khớp workflow same-department);
+**Alternatives considered**: department scope cũ đã bị quyết định Faculty-only ngày 2026-09-28 thay thế;
 một council/registration (trái lựa chọn nhiều nhóm); chỉ optimistic lock (không đủ cho
 complete tranh chấp submit).
 

@@ -18,7 +18,7 @@ public interface CouncilTopicRepository
         extends JpaRepository<CouncilTopicEntity, CouncilTopicId> {
     @EntityGraph(attributePaths = {
             "council", "registration", "registration.group", "registration.topic",
-            "registration.topic.department", "registration.topic.supervisors",
+            "registration.topic.period", "registration.topic.period.faculty", "registration.topic.supervisors",
             "registration.topic.supervisors.lecturer"
     })
     List<CouncilTopicEntity> findAllByCouncilIdOrderByRegistrationId(long councilId);
@@ -51,7 +51,7 @@ public interface CouncilTopicRepository
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
             "registration", "registration.group", "registration.topic",
-            "registration.topic.department", "registration.topic.supervisors",
+            "registration.topic.period", "registration.topic.period.faculty", "registration.topic.supervisors",
             "registration.topic.supervisors.lecturer"
     })
     @Query("select assignment from CouncilTopicEntity assignment "

@@ -426,7 +426,7 @@ public class PeriodController {
 
     public record ReviewTopicPageView(
             long id,
-            String department,
+            String faculty,
             String author,
             String title,
             String description,
@@ -443,7 +443,7 @@ public class PeriodController {
         static ReviewTopicPageView from(ReviewTopicView topic) {
             return new ReviewTopicPageView(
                     topic.id(),
-                    topic.department(),
+                    topic.faculty(),
                     topic.author(),
                     topic.title(),
                     topic.description(),

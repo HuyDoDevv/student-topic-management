@@ -36,15 +36,6 @@
               <div class="form-hint">Trưởng khoa được cấp đồng thời vai trò Giảng viên.</div>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="departmentId">Bộ môn</label>
-              <select class="form-select" id="departmentId" th:field="*{departmentId}" required>
-                <option value="">Chọn khoa và bộ môn</option>
-                <option th:each="department : ${departments}" th:value="${department.id}"
-                        th:text="${department.facultyName + ' · ' + department.name}">Bộ môn</option>
-              </select>
-              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('departmentId')}" th:errors="*{departmentId}"></div>
-            </div>
-            <div class="col-md-6">
               <label class="form-label" for="username">Tên đăng nhập</label>
               <input class="form-control" id="username" type="text" th:field="*{username}"
                      maxlength="191" autocomplete="off" required>

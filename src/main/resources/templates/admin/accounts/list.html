@@ -8,7 +8,7 @@
       <div class="page-pretitle">QUẢN TRỊ HỆ THỐNG</div>
       <h1 class="page-title" th:text="${managementTitle}">Quản lý sinh viên</h1>
       <p class="text-secondary mt-2 mb-0" th:text="${managementDescription}">
-        Tra cứu tài khoản theo khoa, bộ môn và trạng thái.
+        Tra cứu tài khoản theo khoa và trạng thái.
       </p>
     </div>
     <a class="btn btn-primary" th:href="@{/admin/accounts/new}">+ Tạo tài khoản</a>
@@ -43,15 +43,6 @@
                     th:text="${faculty.name}">Khoa CNTT</option>
           </select>
         </div>
-        <div class="col-md-6">
-          <label class="form-label" for="departmentId">Bộ môn</label>
-          <select class="form-select" id="departmentId" name="departmentId">
-            <option value="">Tất cả bộ môn</option>
-            <option th:each="department : ${workspace.departments}" th:value="${department.id}"
-                    th:selected="${workspace.filter.departmentId == department.id}"
-                    th:text="${department.facultyName + ' · ' + department.name}">Bộ môn</option>
-          </select>
-        </div>
       </div>
     </div>
     <div class="card-footer text-end">
@@ -68,13 +59,12 @@
     </div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Tài khoản</th><th>Loại</th><th>Khoa</th><th>Bộ môn</th><th>Trạng thái</th></tr></thead>
+        <thead><tr><th>Tài khoản</th><th>Loại</th><th>Khoa</th><th>Trạng thái</th></tr></thead>
         <tbody>
         <tr th:each="account : ${workspace.accounts}">
           <td data-label="Tài khoản"><strong th:text="${account.fullName}">Nguyễn Văn A</strong><br><span class="text-secondary" th:text="${account.username}">username</span></td>
           <td data-label="Loại"><span class="badge" th:classappend="${accountBadgeClass}" th:text="${account.accountTypeLabel}">Sinh viên</span></td>
           <td data-label="Khoa" th:text="${account.facultyName}">CNTT</td>
-          <td data-label="Bộ môn" th:text="${account.departmentName}">CNPM</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${account.enabled ? 'bg-green-lt' : 'bg-secondary-lt'}" th:text="${account.enabled ? 'Đang hoạt động' : 'Đã khóa'}">Đang hoạt động</span></td>
         </tr>
         </tbody>

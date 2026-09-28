@@ -84,7 +84,6 @@ class AdminAccountControllerTest {
                         .param("username", "student01")
                         .param("fullName", "Sinh viên Một")
                         .param("password", "temporary-password")
-                        .param("departmentId", "7")
                         .param("roles", "ADMIN"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/accounts/students"));
@@ -98,12 +97,11 @@ class AdminAccountControllerTest {
                         .param("accountType", "STUDENT")
                         .param("username", "")
                         .param("fullName", "")
-                        .param("password", "short")
-                        .param("departmentId", "0"))
+                        .param("password", "short"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(view().name("admin/accounts/form"))
                 .andExpect(model().attributeHasFieldErrors(
-                        "adminAccountForm", "username", "fullName", "password", "departmentId"));
+                        "adminAccountForm", "username", "fullName", "password"));
 
         verify(accounts, never()).create(any());
     }
@@ -114,8 +112,7 @@ class AdminAccountControllerTest {
                         .param("accountType", "ADMIN")
                         .param("username", "admin02")
                         .param("fullName", "Quản trị Hai")
-                        .param("password", "temporary-password")
-                        .param("departmentId", "7"))
+                        .param("password", "temporary-password"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(view().name("admin/accounts/form"))
                 .andExpect(model().attributeHasErrors("adminAccountForm"));
@@ -129,8 +126,7 @@ class AdminAccountControllerTest {
                         .param("accountType", "STUDENT")
                         .param("username", "student02")
                         .param("fullName", "Sinh viên Hai")
-                        .param("password", "😀".repeat(30))
-                        .param("departmentId", "7"))
+                        .param("password", "😀".repeat(30)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(view().name("admin/accounts/form"))
                 .andExpect(model().attributeHasErrors("adminAccountForm"));

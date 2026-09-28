@@ -147,7 +147,6 @@ class NotificationReadWebTest {
                 "Sinh viên 7",
                 true,
                 Set.of(RoleCode.STUDENT),
-                1L,
                 1L);
         return UsernamePasswordAuthenticationToken.authenticated(
                 principal, principal.getPassword(), principal.getAuthorities());

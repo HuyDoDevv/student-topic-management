@@ -33,26 +33,26 @@ class SchemaSeedMigrationIT {
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV12WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV13WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
         assertDoesNotThrow(() -> flyway(database).validate());
-        assertEquals(24, count(jdbc, """
+        assertEquals(23, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(67, constraintCount(jdbc, "CHECK"));
-        assertEquals(57, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(26, constraintCount(jdbc, "UNIQUE"));
-        assertEquals(25, constraintCount(jdbc, "PRIMARY KEY"));
+        assertEquals(66, constraintCount(jdbc, "CHECK"));
+        assertEquals(54, constraintCount(jdbc, "FOREIGN KEY"));
+        assertEquals(25, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(24, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
                 "trg_councils_validate_officers",
@@ -82,7 +82,7 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "chk_registration_members_slot", "CHECK");
         assertConstraint(jdbc, "uq_project_reports_current_registration", "UNIQUE");
         assertConstraint(jdbc, "chk_project_reports_content_type", "CHECK");
-        assertConstraint(jdbc, "fk_councils_department", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_accounts_faculty", "FOREIGN KEY");
         assertConstraint(jdbc, "chk_councils_grading_mode_officers", "CHECK");
         assertConstraint(jdbc, "uq_council_topics_registration", "UNIQUE");
         assertConstraint(jdbc, "chk_evaluations_lifecycle", "CHECK");
@@ -118,7 +118,10 @@ class SchemaSeedMigrationIT {
         fixture.seeder().run(new DefaultApplicationArguments(new String[0]));
 
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM faculties"));
-        assertEquals(2, count(jdbc, "SELECT COUNT(*) FROM departments"));
+        assertEquals(0, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_schema = DATABASE() AND table_name = 'departments'
+                """));
         assertEquals(12, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(6, count(jdbc, "SELECT COUNT(*) FROM topics"));
@@ -152,7 +155,7 @@ class SchemaSeedMigrationIT {
                 """));
         assertEquals(0, count(jdbc, """
                 SELECT COUNT(*) FROM user_accounts
-                WHERE username = 'admin.demo' AND department_id IS NOT NULL
+                WHERE username = 'admin.demo' AND faculty_id IS NOT NULL
                 """));
 
         Long pendingId = jdbc.queryForObject(

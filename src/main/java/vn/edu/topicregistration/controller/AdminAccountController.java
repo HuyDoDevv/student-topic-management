@@ -34,8 +34,7 @@ public class AdminAccountController {
 
     @InitBinder("adminAccountForm")
     void whitelistAccountFields(WebDataBinder binder) {
-        binder.setAllowedFields(
-                "accountType", "username", "fullName", "password", "departmentId");
+        binder.setAllowedFields("accountType", "username", "fullName", "password");
     }
 
     @GetMapping("/admin/accounts")
@@ -47,11 +46,10 @@ public class AdminAccountController {
     public String students(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long facultyId,
-            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.STUDENT, facultyId, departmentId, enabled),
+                query, AccountType.STUDENT, facultyId, enabled),
                 AccountSection.STUDENTS);
     }
 
@@ -59,11 +57,10 @@ public class AdminAccountController {
     public String lecturers(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long facultyId,
-            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.LECTURER, facultyId, departmentId, enabled),
+                query, AccountType.LECTURER, facultyId, enabled),
                 AccountSection.LECTURERS);
     }
 
@@ -71,11 +68,10 @@ public class AdminAccountController {
     public String deans(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long facultyId,
-            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.DEAN, facultyId, departmentId, enabled),
+                query, AccountType.DEAN, facultyId, enabled),
                 AccountSection.DEANS);
     }
 
@@ -107,7 +103,7 @@ public class AdminAccountController {
                         "Tên đăng nhập đã tồn tại.");
             } else {
                 bindingResult.reject("account.invalid",
-                        "Thông tin tài khoản hoặc bộ môn chưa hợp lệ.");
+                        "Thông tin tài khoản hoặc Khoa mặc định chưa hợp lệ.");
             }
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form);
@@ -137,7 +133,6 @@ public class AdminAccountController {
         }
         var workspace = accounts.workspace(AccountFilter.empty());
         model.addAttribute("accountTypes", workspace.creatableTypes());
-        model.addAttribute("departments", workspace.departments());
         return "admin/accounts/form";
     }
 
@@ -158,17 +153,17 @@ public class AdminAccountController {
     private enum AccountSection {
         STUDENTS(
                 "Quản lý sinh viên",
-                "Tra cứu tài khoản sinh viên theo khoa, bộ môn và trạng thái.",
+                "Tra cứu tài khoản sinh viên theo khoa và trạng thái.",
                 "Tìm sinh viên", "sinh viên", "/admin/accounts/students",
                 "admin-students", "bg-azure-lt"),
         LECTURERS(
                 "Quản lý giảng viên",
-                "Tra cứu tài khoản giảng viên theo khoa, bộ môn và trạng thái.",
+                "Tra cứu tài khoản giảng viên theo khoa và trạng thái.",
                 "Tìm giảng viên", "giảng viên", "/admin/accounts/lecturers",
                 "admin-lecturers", "bg-blue-lt"),
         DEANS(
                 "Quản lý trưởng khoa",
-                "Tra cứu tài khoản trưởng khoa theo khoa, bộ môn và trạng thái.",
+                "Tra cứu tài khoản trưởng khoa theo khoa và trạng thái.",
                 "Tìm trưởng khoa", "trưởng khoa", "/admin/accounts/deans",
                 "admin-deans", "bg-purple-lt");
 

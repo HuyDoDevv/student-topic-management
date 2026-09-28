@@ -15,7 +15,7 @@ class NotificationPersistenceIT {
     private static final String MIGRATIONS = "classpath:db/migration";
 
     @Test
-    void v12PreservesAnnouncementsAndEnforcesNotificationInvariants() {
+    void v12AndV13PreserveAnnouncementsAndEnforceNotificationInvariants() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV11 = Flyway.configure()
                 .dataSource(database.dataSource())
@@ -60,7 +60,7 @@ class NotificationPersistenceIT {
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
                 .load();
-        assertEquals(1, allVersions.migrate().migrationsExecuted);
+        assertEquals(2, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);
 
         assertEquals(publisherId, requiredLong(jdbc,

@@ -27,7 +27,6 @@ import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
@@ -167,11 +166,6 @@ class DirectGradingServiceTest {
             List<TopicSupervisorEntity> supervisors) {
         FacultyEntity faculty = mock(FacultyEntity.class);
         when(faculty.getId()).thenReturn(2L);
-        DepartmentEntity department = mock(DepartmentEntity.class);
-        when(department.getId()).thenReturn(4L);
-        when(department.getName()).thenReturn("Công nghệ phần mềm");
-        when(department.getFaculty()).thenReturn(faculty);
-
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
         when(period.getId()).thenReturn(7L);
         when(period.getName()).thenReturn("Đợt " + topicType);
@@ -180,7 +174,7 @@ class DirectGradingServiceTest {
 
         TopicEntity topic = mock(TopicEntity.class);
         when(topic.getTitle()).thenReturn("Đề tài thử nghiệm");
-        when(topic.getDepartment()).thenReturn(department);
+        when(topic.getPeriod()).thenReturn(period);
         when(topic.getSupervisors()).thenReturn(supervisors);
         StudentGroupEntity group = mock(StudentGroupEntity.class);
         when(group.getId()).thenReturn(21L);
@@ -196,14 +190,14 @@ class DirectGradingServiceTest {
         when(grader.getFullName()).thenReturn("Giảng viên B");
         when(grader.getUsername()).thenReturn("lecturer-b");
         when(grader.isEnabled()).thenReturn(true);
-        when(grader.getDepartment()).thenReturn(department);
+        when(grader.getFaculty()).thenReturn(faculty);
         when(grader.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
 
         when(dependencies.registrations().findPeriodIdByRegistrationId(51L))
                 .thenReturn(Optional.of(7L));
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 4L, 2L));
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
         when(dependencies.registrations().findByIdForUpdate(51L))
                 .thenReturn(Optional.of(registration));
         when(dependencies.accounts().findByIdForUpdate(11L)).thenReturn(Optional.of(grader));

@@ -89,10 +89,8 @@ public class RegistrationService {
         StudentGroupEntity group = lockedGroup(groupId, period, expectedGroupVersion);
         TopicEntity topic = lockedTopic(topicId, period);
 
-        boolean topicInFaculty = topic.getDepartment().getFaculty() != null
-                && Objects.equals(
-                        topic.getDepartment().getFaculty().getId(),
-                        period.getFaculty().getId());
+        boolean topicInFaculty = Objects.equals(
+                topic.getPeriod().getFaculty().getId(), period.getFaculty().getId());
         if (!topicInFaculty) {
             throw new AccessDeniedException("Topic faculty scope does not match the period");
         }
@@ -337,7 +335,7 @@ public class RegistrationService {
                 topic.getId(),
                 topic.getTitle(),
                 displayName(topic.getAuthor()),
-                topic.getDepartment().getName(),
+                topic.getPeriod().getFaculty().getName(),
                 topic.getSupervisors().stream()
                         .map(TopicSupervisorEntity::getLecturer)
                         .map(RegistrationService::displayName)
@@ -387,7 +385,7 @@ public class RegistrationService {
         return new TopicOption(
                 topic.getId(),
                 topic.getTitle(),
-                topic.getDepartment().getName(),
+                topic.getPeriod().getFaculty().getName(),
                 topic.getSupervisors().stream()
                         .map(TopicSupervisorEntity::getLecturer)
                         .map(RegistrationService::displayName)
@@ -465,7 +463,7 @@ public class RegistrationService {
     public record TopicOption(
             long id,
             String title,
-            String department,
+            String faculty,
             List<String> supervisors) {
         public TopicOption {
             supervisors = List.copyOf(supervisors);
@@ -480,7 +478,7 @@ public class RegistrationService {
             long topicId,
             String topicTitle,
             String topicAuthor,
-            String topicDepartment,
+            String topicFaculty,
             List<String> supervisors,
             List<RegistrationMemberView> members,
             RegistrationStatus status,

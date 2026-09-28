@@ -112,7 +112,7 @@ class ReportServiceTest {
         Dependencies dependencies = dependencies();
         DetailedFixture fixture = detailedRegistration(dependencies);
         when(dependencies.authorization().currentActor()).thenReturn(new ActorIdentity(
-                99L, Set.of(RoleCode.STUDENT), 3L, 2L));
+                99L, Set.of(RoleCode.STUDENT), 2L));
         when(dependencies.members().existsByRegistrationIdAndStudentId(11L, 99L))
                 .thenReturn(false);
         when(dependencies.councilTopics().findByRegistrationId(11L))
@@ -167,7 +167,7 @@ class ReportServiceTest {
         when(dependencies.registrations().findByIdForUpdate(11L))
                 .thenReturn(Optional.of(registration));
         when(dependencies.authorization().currentActor()).thenReturn(new ActorIdentity(
-                31L, Set.of(RoleCode.STUDENT), 3L, 2L));
+                31L, Set.of(RoleCode.STUDENT), 2L));
         when(dependencies.members()
                 .existsByRegistrationIdAndStudentIdAndLeaderAtSubmissionTrue(11L, 31L))
                 .thenReturn(leader);

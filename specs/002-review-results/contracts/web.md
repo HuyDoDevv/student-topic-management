@@ -20,7 +20,7 @@ scope không làm lộ đường dẫn/storage key.
 | Method | Route | Purpose |
 |---|---|---|
 | GET | `/faculty/boards` | List council trong faculty |
-| GET | `/faculty/boards/new?periodId={id}&departmentId={id}` | Form create |
+| GET | `/faculty/boards/new?periodId={id}` | Form create; faculty lấy từ period |
 | POST | `/faculty/boards` | Create DRAFT với 3–5 member/chức danh |
 | GET | `/faculty/boards/{id}` | Detail, members, assignments, progress |
 | POST | `/faculty/boards/{id}/assignments` | Gán ACCEPTED registration + lịch/địa điểm |
@@ -28,9 +28,9 @@ scope không làm lộ đường dẫn/storage key.
 | POST | `/faculty/boards/{id}/schedule` | ASSIGNED → SCHEDULED |
 | POST | `/faculty/boards/{id}/activate` | SCHEDULED → ACTIVE |
 
-Create form: `periodId`, `departmentId`, `name`, `chairId`, `secretaryId`,
+Create form: `periodId`, `name`, `chairId`, `secretaryId`,
 `memberIds` (1–3 người bổ sung). Assignment: `registrationId`, `scheduledAt`, `location`,
-`version`. Service revalidates TLCN/KLTN, faculty/department, active LECTURER, 3–5 unique,
+`version`. Service revalidates TLCN/KLTN, faculty, active LECTURER, 3–5 unique,
 chair != secretary, accepted registration và supervisor exclusion.
 
 ## Direct grading — DEAN / assigned LECTURER
@@ -44,7 +44,7 @@ chair != secretary, accepted registration và supervisor exclusion.
 
 Form phân công chỉ nhận `registrationId`, `graderId`. Service khóa period rồi registration,
 revalidate COURSE/NCKH, ACCEPTED, current report, chưa có assignment, grader active LECTURER
-cùng department và không thuộc bất kỳ TopicSupervisor nào. Thành công tạo một membership,
+cùng faculty và không thuộc bất kỳ TopicSupervisor nào. Thành công tạo một membership,
 một assignment với nhãn `Chấm độc lập`, chuyển ngay ACTIVE và vì vậy khóa report. Không
 dùng `student_end` làm hạn báo cáo; Trưởng khoa chỉ thao tác sau khi xác nhận kỳ nộp đã hết.
 

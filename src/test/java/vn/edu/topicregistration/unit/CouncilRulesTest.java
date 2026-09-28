@@ -18,41 +18,41 @@ import vn.edu.topicregistration.service.CouncilRules.MemberCandidate;
 import vn.edu.topicregistration.service.CouncilRules.TransitionContext;
 
 class CouncilRulesTest {
-    private static final long DEPARTMENT_ID = 4L;
+    private static final long FACULTY_ID = 4L;
 
     @Test
     void acceptsThreeToFiveDistinctLecturersWithSeparateOfficersForThesisPeriods() {
         assertDoesNotThrow(() -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, validMembers(3)));
+                "TLCN", FACULTY_ID, 11L, 12L, validMembers(3)));
         assertDoesNotThrow(() -> CouncilRules.validateCreation(
-                "KLTN", DEPARTMENT_ID, 11L, 12L, validMembers(5)));
+                "KLTN", FACULTY_ID, 11L, 12L, validMembers(5)));
     }
 
     @Test
-    void rejectsInvalidCardinalityDuplicateOfficerRoleDepartmentAndPeriodType() {
+    void rejectsInvalidCardinalityDuplicateOfficerRoleFacultyAndPeriodType() {
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, validMembers(2)));
+                "TLCN", FACULTY_ID, 11L, 12L, validMembers(2)));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, validMembers(6)));
+                "TLCN", FACULTY_ID, 11L, 12L, validMembers(6)));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 11L, validMembers(3)));
+                "TLCN", FACULTY_ID, 11L, 11L, validMembers(3)));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, List.of(
+                "TLCN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L), candidate(12L))));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, List.of(
+                "TLCN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L),
-                        new MemberCandidate(13L, DEPARTMENT_ID, false, true))));
+                        new MemberCandidate(13L, FACULTY_ID, false, true))));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, List.of(
+                "TLCN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L),
-                        new MemberCandidate(13L, DEPARTMENT_ID, true, false))));
+                        new MemberCandidate(13L, FACULTY_ID, true, false))));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", DEPARTMENT_ID, 11L, 12L, List.of(
+                "TLCN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L),
                         new MemberCandidate(13L, 99L, true, true))));
         assertFailure(Failure.INVALID_STATE, () -> CouncilRules.validateCreation(
-                "COURSE", DEPARTMENT_ID, 11L, 12L, validMembers(3)));
+                "COURSE", FACULTY_ID, 11L, 12L, validMembers(3)));
     }
 
     @Test
@@ -69,7 +69,7 @@ class CouncilRulesTest {
 
         assertAssignmentFailure(valid.withRegistrationStatus(RegistrationStatus.PENDING));
         assertAssignmentFailure(valid.withSamePeriod(false));
-        assertAssignmentFailure(valid.withSameDepartment(false));
+        assertAssignmentFailure(valid.withSameFaculty(false));
         assertAssignmentFailure(valid.withAssignedElsewhere(true));
         assertAssignmentFailure(valid.withSupervisorConflict(true));
         assertAssignmentFailure(valid.withTopicType("NCKH"));
@@ -119,7 +119,7 @@ class CouncilRulesTest {
     }
 
     private static MemberCandidate candidate(long id) {
-        return new MemberCandidate(id, DEPARTMENT_ID, true, true);
+        return new MemberCandidate(id, FACULTY_ID, true, true);
     }
 
     private static void assertAssignmentFailure(AssignmentContext context) {

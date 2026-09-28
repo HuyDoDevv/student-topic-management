@@ -29,13 +29,11 @@ public final class FixtureSupport {
         return dataSource;
     }
 
-    public OrganizationScope createOrganization(String facultyName, String departmentName) {
+    public OrganizationScope createOrganization(String facultyName) {
         try (Connection connection = dataSource.getConnection()) {
             long facultyId = insertReturningId(connection,
                     "INSERT INTO faculties(name) VALUES (?)", facultyName);
-            long departmentId = insertReturningId(connection,
-                    "INSERT INTO departments(name, faculty_id) VALUES (?, ?)", departmentName, facultyId);
-            return new OrganizationScope(facultyId, departmentId);
+            return new OrganizationScope(facultyId);
         } catch (SQLException exception) {
             throw new IllegalStateException("Could not create organization fixture", exception);
         }
@@ -50,10 +48,10 @@ public final class FixtureSupport {
             connection.setAutoCommit(false);
             try {
                 long accountId = insertReturningId(connection, """
-                        INSERT INTO user_accounts(full_name, enabled, username, password_hash, department_id)
+                        INSERT INTO user_accounts(full_name, enabled, username, password_hash, faculty_id)
                         VALUES (?, ?, ?, ?, ?)
                         """, fullName, enabled, username, passwordHash,
-                        scope == null ? null : scope.departmentId());
+                        scope == null ? null : scope.facultyId());
                 try (PreparedStatement statement = connection.prepareStatement(
                         "INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)")) {
                     for (RoleCode role : roles) {
@@ -90,7 +88,7 @@ public final class FixtureSupport {
         }
     }
 
-    public record OrganizationScope(long facultyId, long departmentId) {
+    public record OrganizationScope(long facultyId) {
     }
 
     public record IdentityFixture(

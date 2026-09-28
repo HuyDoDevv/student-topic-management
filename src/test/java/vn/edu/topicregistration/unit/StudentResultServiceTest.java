@@ -116,7 +116,7 @@ class StudentResultServiceTest {
     }
 
     private static ActorIdentity student() {
-        return new ActorIdentity(31L, Set.of(RoleCode.STUDENT), 4L, 2L);
+        return new ActorIdentity(31L, Set.of(RoleCode.STUDENT), 2L);
     }
 
     private static FinalResultEntity publishedResult() {

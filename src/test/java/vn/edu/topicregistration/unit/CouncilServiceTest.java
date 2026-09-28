@@ -28,7 +28,6 @@ import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
@@ -43,7 +42,6 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.CouncilMemberRepository;
 import vn.edu.topicregistration.repository.CouncilRepository;
 import vn.edu.topicregistration.repository.CouncilTopicRepository;
-import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
@@ -71,7 +69,7 @@ class CouncilServiceTest {
 
         CouncilService.CouncilSummaryView created = dependencies.service().create(
                 new CreateCouncilCommand(
-                        7L, 4L, "  Hội đồng KLTN  ", 11L, 12L, List.of(13L)));
+                        7L, "  Hội đồng KLTN  ", 11L, 12L, List.of(13L)));
 
         InOrder order = inOrder(
                 dependencies.periods(),
@@ -106,7 +104,7 @@ class CouncilServiceTest {
 
         assertThrows(AccessDeniedException.class, () -> dependencies.service().create(
                 new CreateCouncilCommand(
-                        7L, 4L, "Hội đồng", 11L, 12L, List.of(13L))));
+                        7L, "Hội đồng", 11L, 12L, List.of(13L))));
 
         verify(dependencies.councils(), never()).saveAndFlush(any());
     }
@@ -222,17 +220,11 @@ class CouncilServiceTest {
     private static CreationFixture validCreation(Dependencies dependencies) {
         RegistrationPeriodEntity period = mockPeriod("KLTN");
         FacultyEntity faculty = period.getFaculty();
-        DepartmentEntity department = mock(DepartmentEntity.class);
-        when(department.getId()).thenReturn(4L);
-        when(department.getName()).thenReturn("Công nghệ phần mềm");
-        when(department.getFaculty()).thenReturn(faculty);
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
-        when(dependencies.departments().findByIdAndFacultyId(4L, 2L))
-                .thenReturn(Optional.of(department));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(3L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 4L, 2L));
+                new ActorIdentity(3L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 2L));
         for (long id = 11; id <= 13; id++) {
-            UserAccountEntity lecturer = mockLecturer(id, department);
+            UserAccountEntity lecturer = mockLecturer(id, faculty);
             when(dependencies.accounts().findDetailedById(id)).thenReturn(Optional.of(lecturer));
         }
         return new CreationFixture(faculty);
@@ -244,18 +236,14 @@ class CouncilServiceTest {
             long version) {
         RegistrationPeriodEntity period = mockPeriod("TLCN");
         FacultyEntity faculty = period.getFaculty();
-        DepartmentEntity department = mock(DepartmentEntity.class);
-        when(department.getId()).thenReturn(4L);
-        when(department.getFaculty()).thenReturn(faculty);
         CouncilEntity council = mock(CouncilEntity.class);
         when(council.getId()).thenReturn(41L);
         when(council.getPeriod()).thenReturn(period);
-        when(council.getDepartment()).thenReturn(department);
         when(council.getStatus()).thenReturn(status);
         when(council.getVersion()).thenReturn(version);
 
         TopicEntity topic = mock(TopicEntity.class);
-        when(topic.getDepartment()).thenReturn(department);
+        when(topic.getPeriod()).thenReturn(period);
         when(topic.getSupervisors()).thenReturn(List.of());
         RegistrationEntity registration = mock(RegistrationEntity.class);
         when(registration.getId()).thenReturn(51L);
@@ -263,9 +251,9 @@ class CouncilServiceTest {
         when(registration.getTopic()).thenReturn(topic);
         when(registration.getStatus()).thenReturn(RegistrationStatus.ACCEPTED);
 
-        UserAccountEntity first = mockLecturer(11L, department);
-        UserAccountEntity second = mockLecturer(12L, department);
-        UserAccountEntity third = mockLecturer(13L, department);
+        UserAccountEntity first = mockLecturer(11L, faculty);
+        UserAccountEntity second = mockLecturer(12L, faculty);
+        UserAccountEntity third = mockLecturer(13L, faculty);
         when(council.getChair()).thenReturn(first);
         when(council.getSecretary()).thenReturn(second);
         List<CouncilMemberEntity> members = List.of(
@@ -277,7 +265,7 @@ class CouncilServiceTest {
                 .thenReturn(Optional.of(7L));
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(3L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 4L, 2L));
+                new ActorIdentity(3L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 2L));
         when(dependencies.councils().findByIdForUpdate(41L)).thenReturn(Optional.of(council));
         when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of());
@@ -302,13 +290,13 @@ class CouncilServiceTest {
         return period;
     }
 
-    private static UserAccountEntity mockLecturer(long id, DepartmentEntity department) {
+    private static UserAccountEntity mockLecturer(long id, FacultyEntity faculty) {
         UserAccountEntity lecturer = mock(UserAccountEntity.class);
         when(lecturer.getId()).thenReturn(id);
         when(lecturer.getFullName()).thenReturn("Giảng viên " + id);
         when(lecturer.getUsername()).thenReturn("lecturer" + id);
         when(lecturer.isEnabled()).thenReturn(true);
-        when(lecturer.getDepartment()).thenReturn(department);
+        when(lecturer.getFaculty()).thenReturn(faculty);
         when(lecturer.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
         return lecturer;
     }
@@ -333,7 +321,6 @@ class CouncilServiceTest {
     private static Dependencies dependencies() {
         return new Dependencies(
                 mock(RegistrationPeriodRepository.class),
-                mock(DepartmentRepository.class),
                 mock(UserAccountRepository.class),
                 mock(CouncilRepository.class),
                 mock(CouncilMemberRepository.class),
@@ -346,7 +333,6 @@ class CouncilServiceTest {
 
     private record Dependencies(
             RegistrationPeriodRepository periods,
-            DepartmentRepository departments,
             UserAccountRepository accounts,
             CouncilRepository councils,
             CouncilMemberRepository members,
@@ -358,7 +344,6 @@ class CouncilServiceTest {
         CouncilService service() {
             return new CouncilService(
                     periods,
-                    departments,
                     accounts,
                     councils,
                     members,
