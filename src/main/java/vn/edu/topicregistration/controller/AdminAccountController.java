@@ -35,7 +35,7 @@ import vn.edu.topicregistration.service.AdminAccountService.ImportIssue;
 import vn.edu.topicregistration.service.AdminAccountService.ImportResult;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class AdminAccountController {
     private final AdminAccountService accounts;
 

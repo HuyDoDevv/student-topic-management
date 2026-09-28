@@ -29,7 +29,7 @@ import vn.edu.topicregistration.service.TopicAuthorService.TopicWorkspace;
 import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class TopicAuthorController {
     private final TopicAuthorService topics;
 

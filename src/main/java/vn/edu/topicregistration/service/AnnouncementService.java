@@ -33,7 +33,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class AnnouncementService {
     public static final int PAGE_SIZE = 20;
     private static final String SCHOOL_SOURCE = "Nhà trường";

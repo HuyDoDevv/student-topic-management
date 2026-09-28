@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class FoundationController {
     private final ProjectTime projectTime;
     private final DashboardService dashboard;

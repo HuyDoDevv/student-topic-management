@@ -7,7 +7,6 @@ import vn.edu.topicregistration.repository.UserAccountRepository;
 
 import java.util.Set;
 
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 @Service
-@Profile("!preview")
 public class AccountDetailsService implements UserDetailsService {
     private final UserAccountRepository accounts;
 

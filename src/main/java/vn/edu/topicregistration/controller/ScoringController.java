@@ -28,7 +28,7 @@ import vn.edu.topicregistration.service.ScoringService.StudentScoreWorkspace;
 import vn.edu.topicregistration.util.ProjectTime;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class ScoringController {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));

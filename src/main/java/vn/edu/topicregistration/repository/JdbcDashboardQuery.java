@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@Profile("!preview & !test")
+@Profile("!test")
 public class JdbcDashboardQuery implements DashboardQuery {
     private final JdbcTemplate jdbc;
 

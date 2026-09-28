@@ -25,7 +25,7 @@ import vn.edu.topicregistration.service.DirectGradingService.DirectGradingWorksp
 import vn.edu.topicregistration.service.ResultService;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class DirectGradingController {
     private final DirectGradingService directGrading;
     private final ResultService results;

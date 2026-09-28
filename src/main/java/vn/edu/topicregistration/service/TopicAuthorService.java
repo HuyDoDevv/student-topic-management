@@ -35,7 +35,7 @@ import vn.edu.topicregistration.service.TopicRules.TopicRuleException;
 import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class TopicAuthorService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;

@@ -16,7 +16,7 @@ merge về `develop` sau khi task, test và bằng chứng nghiệm thu đã ho�
 
 1. Có JDK 21 và MySQL 8.4 local đang chạy.
 2. Sao chép `.env.example` thành `.env` và điền cấu hình riêng của máy.
-3. Muốn xem giao diện: đặt `SPRING_PROFILES_ACTIVE=preview` trong `.env`.
+3. Giữ `SPRING_PROFILES_ACTIVE=local` và cấu hình kết nối MySQL trong `.env`.
 4. Chạy lệnh tương ứng bên dưới, mở http://127.0.0.1:8088. Dừng bằng Ctrl+C.
 
 Kiểm tra `./mvnw --version` phải hiển thị Java 21. Nếu terminal đang có `JAVA_HOME`
@@ -77,8 +77,8 @@ Không commit file dump; sao lưu database trước khi áp dụng migration m�
 
 Foundation T001–T016 đã hoàn thành: schema 20 bảng, identity repository, đăng nhập
 Spring Security bằng tài khoản được cấp, policy role/scope, clock nghiệp vụ, ánh xạ lỗi
-và hạ tầng unit/integration/E2E. Profile `local` dùng MySQL và Hibernate validate;
-profile `preview` chỉ hiển thị catalogue UI mà không truy cập database.
+và hạ tầng unit/integration/E2E. Ứng dụng chạy bằng profile `local`, dùng MySQL và
+Hibernate validate.
 
 Các luồng đợt đăng ký, đề xuất/duyệt đề tài, nhóm sinh viên, đăng ký đề tài, báo cáo,
 hội đồng, phân công chấm COURSE/NCKH, chấm điểm và kết quả đã kết nối MySQL trên profile

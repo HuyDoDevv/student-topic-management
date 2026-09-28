@@ -18,7 +18,7 @@ import vn.edu.topicregistration.dto.DashboardView.Metric;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class DashboardService {
     private final AuthorizationPolicy authorization;
     private final DashboardQuery query;

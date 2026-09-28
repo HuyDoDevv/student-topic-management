@@ -33,7 +33,7 @@ import vn.edu.topicregistration.service.CouncilService.CreationWorkspace;
 import vn.edu.topicregistration.util.ProjectTime;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class CouncilController {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));

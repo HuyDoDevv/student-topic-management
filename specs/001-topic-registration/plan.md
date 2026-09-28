@@ -12,8 +12,13 @@
 
 **Implementation update 2026-09-09:** đã có khung ứng dụng, UI và migration MySQL V1
 cho 20 bảng; chưa có entity/service/repository hoặc tài khoản nghiệp vụ thật. Profile
-preview dùng để xem UI mà không cần DB; local yêu cầu MySQL và không tự fallback.
+preview từng được dùng để xem UI không cần DB; local yêu cầu MySQL và không tự fallback.
 Xem [foundation-report.md](foundation-report.md).
+
+**Runtime update 2026-09-28:** profile preview và toàn bộ controller, security config,
+fixture UI, test catalogue tương ứng đã được loại bỏ. Ứng dụng hiện chỉ chạy bằng profile
+`local`, kết nối MySQL thật; không còn đường chạy UI không database. Các nhắc tới preview
+trong bằng chứng hoàn thành cũ chỉ mô tả lịch sử kiểm thử, không phải hướng dẫn hiện hành.
 
 ## Summary
 
@@ -179,7 +184,7 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 | 3 | Nháp, gửi duyệt, GVHD, duyệt/công bố | FR-05–07,14; REQ-02–03,08–11,15,31 | AT-03,06,12 |
 | 4 | Nhóm, lời mời có xác nhận, thành viên, tự rời/giải tán và chuyển trưởng nhóm | FR-08–09; REQ-12–13,31 | AT-04,06–08; G-Group đã chốt lại ngày 2026-09-11 |
 | 5 | Gửi/rút/đăng ký lại, snapshot thành viên lúc gửi, quyết định và auto-reject | FR-10–13; REQ-03,14–16,31 | AT-04–08,11; G-Registration đã giải phóng ngày 2026-09-11, quy tắc đủ 3/snapshot cập nhật ngày 2026-09-12 |
-| 6 | Quản lý cấp tài khoản ADMIN: Dashboard thống kê, danh sách tách theo loại, trang tạo/import nguyên tử và file mẫu | FR-01; REQ-28,31–32 | AS-1.17–1.18; AT-10; unit/web/preview tests T080–T081 |
+| 6 | Quản lý cấp tài khoản ADMIN: Dashboard thống kê, danh sách tách theo loại, trang tạo/import nguyên tử và file mẫu | FR-01; REQ-28,31–32 | AS-1.17–1.18; AT-10; unit/web tests T080–T081 |
 | 7 | E2E, DB migration/seed, kiểm tra DBeaver, đối chiếu acceptance | FR-01–15, NFR-01–02; REQ-31–32 | AS toàn bộ, AT-15, SC-001–009 đã xác nhận |
 
 Đây là trình tự kế hoạch, không phải tasks.md và không cho phép bỏ qua gate ở mỗi phần.

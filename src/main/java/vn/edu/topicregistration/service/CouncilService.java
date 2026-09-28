@@ -50,7 +50,7 @@ import vn.edu.topicregistration.service.CouncilRules.TransitionContext;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class CouncilService {
     private final RegistrationPeriodRepository periods;
     private final DepartmentRepository departments;

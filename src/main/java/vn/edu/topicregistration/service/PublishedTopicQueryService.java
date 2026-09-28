@@ -21,7 +21,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class PublishedTopicQueryService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;

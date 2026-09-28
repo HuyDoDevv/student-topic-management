@@ -35,7 +35,7 @@ import vn.edu.topicregistration.repository.UserRoleRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class AdminAccountService {
     private static final List<String> CSV_HEADER = List.of(
             "account_type", "username", "full_name", "password", "department_id");

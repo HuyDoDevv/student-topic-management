@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class PeriodTransactionService {
     private final RegistrationPeriodRepository periods;
     private final AuthorizationPolicy authorization;

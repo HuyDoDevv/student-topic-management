@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class TopicModerationService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;

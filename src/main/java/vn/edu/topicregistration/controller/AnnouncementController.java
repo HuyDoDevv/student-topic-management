@@ -28,7 +28,7 @@ import vn.edu.topicregistration.service.AnnouncementService.AnnouncementView;
 import vn.edu.topicregistration.service.AnnouncementService.PublicationResult;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 @RequestMapping("/announcements")
 public class AnnouncementController {
     private final AnnouncementService announcements;

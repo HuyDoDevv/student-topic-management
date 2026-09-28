@@ -40,7 +40,7 @@ import vn.edu.topicregistration.service.TopicReviewService.ReviewWorkspace;
 import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 @RequestMapping("/periods")
 public class PeriodController {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(

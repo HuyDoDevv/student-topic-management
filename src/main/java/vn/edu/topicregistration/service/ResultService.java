@@ -54,7 +54,7 @@ import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 import vn.edu.topicregistration.util.ScoreFormat;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class ResultService {
     private final RegistrationPeriodRepository periods;
     private final CouncilRepository councils;

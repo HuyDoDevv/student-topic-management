@@ -42,7 +42,7 @@ import vn.edu.topicregistration.service.RegistrationRules.WithdrawalContext;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class RegistrationService {
     private static final List<RegistrationStatus> ACTIVE_STATUSES = List.of(
             RegistrationStatus.PENDING,

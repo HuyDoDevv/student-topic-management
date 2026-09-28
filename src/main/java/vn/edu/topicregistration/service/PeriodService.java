@@ -24,7 +24,7 @@ import vn.edu.topicregistration.service.PeriodRules.TopicType;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
-@Profile("!preview & !test")
+@Profile("!test")
 public class PeriodService {
     private final PeriodTransactionService transactions;
     private final RegistrationPeriodRepository periods;

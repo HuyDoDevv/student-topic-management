@@ -19,7 +19,7 @@ import vn.edu.topicregistration.service.NotificationService.InboxStatus;
 import vn.edu.topicregistration.service.NotificationService.NotificationItem;
 
 @Controller
-@Profile("!preview & !test")
+@Profile("!test")
 public class NotificationController {
     private final NotificationService notifications;
 

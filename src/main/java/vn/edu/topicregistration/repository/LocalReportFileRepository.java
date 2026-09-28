@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
 import vn.edu.topicregistration.config.ReportStorageProperties;
 
 @Repository
-@Profile("!preview & !test")
+@Profile("!test")
 public class LocalReportFileRepository implements ReportFileRepository {
     private static final long MAX_SIZE_BYTES = 20L * 1024 * 1024;
     private static final Pattern STORAGE_KEY = Pattern.compile(
