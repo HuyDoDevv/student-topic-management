@@ -132,9 +132,46 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Trang tự cập nhật email cho LECTURER/DEAN chưa được triển khai đúng theo quyết định tách thành task sau.
 - Student account cũ trước V14 được giữ nguyên và không backfill profile giả; danh sách sẽ hiển thị “Chưa cập nhật” cho lớp/khóa của các account đó.
 
+## TASK-004 — Tinh chỉnh UX/UI form tạo tài khoản
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; visual QA trên session đã đăng nhập chờ kiểm tra
+- Commit: Chưa commit theo yêu cầu
+- Yêu cầu: Chuẩn hóa UX/UI cho ba form tạo STUDENT, LECTURER và DEAN mà không thay đổi nghiệp vụ TASK-003.
+- Ngoài phạm vi: controller/service/DTO, validation backend, route, database, migration, phân quyền, commit và push.
+
+### File đã thay đổi
+
+- `src/main/resources/templates/admin/accounts/student-form.html`
+- `src/main/resources/templates/admin/accounts/lecturer-form.html`
+- `src/main/resources/templates/admin/accounts/dean-form.html`
+- `src/main/resources/static/css/app.css`
+- `docs/implementation-progress.md`
+
+### Thay đổi
+
+- Chuẩn hóa ba trang theo cùng một cấu trúc: header, card, ghi chú trường bắt buộc, panel phạm vi tài khoản, nhóm định danh, nhóm bảo mật và footer hành động.
+- Thay trường Khoa readonly của sinh viên bằng panel chỉ đọc để không tạo cảm giác đây là dữ liệu có thể chỉnh sửa; giảng viên/trưởng khoa cũng hiển thị rõ role và Khoa CNTT được backend tự gán.
+- Form sinh viên tách riêng thông tin định danh, thông tin học tập và bảo mật; hiển thị rõ MSSV được dùng làm username và tạo email trường.
+- Thêm placeholder, hint định dạng, autocomplete phù hợp, `aria-describedby`, error summary có focus và `th:errorclass="is-invalid"` cho lỗi theo trường.
+- Tái sử dụng `data-password-toggle` hiện có để cung cấp nút Hiện/Ẩn mật khẩu trên cả ba form, không thêm JavaScript mới.
+- Footer có nút Hủy và nút tạo chính; CSS riêng bảo đảm form có độ rộng ổn định, nhóm thông tin rõ ràng và chuyển thành một cột/nút toàn hàng trên mobile.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw -q -Dtest=AdminAccountControllerTest test`: PASS, 8/8 test.
+- `git diff --check`: PASS.
+- Kiểm tra tĩnh xác nhận cả ba template có error summary, `th:errorclass`, password toggle, action Hủy/Tạo và các class responsive dùng chung.
+- Không có thay đổi Java/backend/schema trong TASK-004.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa chụp được visual QA sau đăng nhập: trình duyệt kiểm thử tách biệt bị chuyển tới `/login`, còn session Chrome đang đăng nhập không khả dụng cho công cụ kiểm tra. Cần reload ba trang trong session hiện tại để xác nhận trực quan desktop và mobile.
+- Các thay đổi CSS được giới hạn bằng prefix `account-`; rủi ro ảnh hưởng form khác thấp nhưng vẫn cần kiểm tra trình duyệt thực tế tại breakpoint 768px và 576px.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 và TASK-002 nằm trong hai commit đã có; TASK-003 hiện là uncommitted changes.
-- Working tree có thay đổi của TASK-003, không có commit mới.
+- TASK-001 và TASK-002 nằm trong hai commit đã có; TASK-003 và TASK-004 hiện là uncommitted changes.
+- Working tree có thay đổi của TASK-003/TASK-004, không có commit mới.
 - Chưa push lên remote.
