@@ -33,13 +33,13 @@ class SchemaSeedMigrationIT {
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV14WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV15WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -49,7 +49,7 @@ class SchemaSeedMigrationIT {
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(70, constraintCount(jdbc, "CHECK"));
+        assertEquals(71, constraintCount(jdbc, "CHECK"));
         assertEquals(55, constraintCount(jdbc, "FOREIGN KEY"));
         assertEquals(27, constraintCount(jdbc, "UNIQUE"));
         assertEquals(25, constraintCount(jdbc, "PRIMARY KEY"));
@@ -86,6 +86,7 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_user_accounts_email", "UNIQUE");
         assertConstraint(jdbc, "uq_student_profiles_student_code", "UNIQUE");
         assertConstraint(jdbc, "fk_student_profiles_user", "FOREIGN KEY");
+        assertConstraint(jdbc, "chk_user_accounts_security_version", "CHECK");
         assertConstraint(jdbc, "chk_councils_grading_mode_officers", "CHECK");
         assertConstraint(jdbc, "uq_council_topics_registration", "UNIQUE");
         assertConstraint(jdbc, "chk_evaluations_lifecycle", "CHECK");

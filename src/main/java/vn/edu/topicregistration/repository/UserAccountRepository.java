@@ -36,6 +36,8 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
     @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     Optional<UserAccountEntity> findByUsername(String username);
 
+    Optional<UserAccountEntity> findByIdAndUsername(Long id, String username);
+
     @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account where account.id = :id")
     Optional<UserAccountEntity> findDetailedById(@Param("id") long id);

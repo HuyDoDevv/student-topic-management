@@ -213,9 +213,51 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Bản ghi MSSV sai đã được tạo trước TASK-005 vẫn còn trong database; task này chỉ ngăn dữ liệu sai mới và không tự động sửa/xóa dữ liệu hiện hữu.
 - Chưa thêm database CHECK cho định dạng MSSV/lớp vì dữ liệu sai hiện hữu có thể làm migration thất bại; mọi luồng tạo tài khoản của ứng dụng đã được chặn ở DTO và service.
 
+## TASK-006 — Tự đổi mật khẩu và nền tảng thu hồi session
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; verification MySQL và visual QA chờ môi trường
+- Commit: `HEAD` (`feat(security): add self-service password change`)
+- Yêu cầu: Cho phép mọi người dùng đã đăng nhập tự đổi mật khẩu; tài khoản mới dùng mật khẩu tạm thời phải đổi ở lần đăng nhập đầu tiên; session cũ mất hiệu lực khi trạng thái bảo mật thay đổi.
+- Ngoài phạm vi: ADMIN đặt lại mật khẩu cho người khác (TASK-007), khóa/mở khóa tài khoản (TASK-008), quên mật khẩu qua email, OTP, MFA, lịch sử mật khẩu và audit log.
+
+### File đã thay đổi
+
+- Migration/domain/repository: `V15__add_account_security_state.sql`, `UserAccountEntity.java`, `UserAccountRepository.java` và `full-schema-check.sql`.
+- Security: `PasswordPolicy.java`, `AccountPrincipal.java`, `AccountDetailsService.java`, `AccountStateFilter.java`, `SecurityConfig.java` và `ApplicationErrorCode.java`.
+- Luồng đổi mật khẩu: `ChangePasswordForm.java`, `AccountSecurityService.java`, `AccountSecurityController.java` và `account/change-password.html`.
+- Tạo tài khoản/UI: `AdminAccountService.java`, `fragments/header.html` và `auth/login.html`.
+- Test: `AccountSecurityServiceTest.java`, `AccountStateFilterTest.java`, `AccountDetailsServiceTest.java`, `AccountSecurityControllerTest.java`, `AccountSecurityMigrationIT.java`, `AdminAccountServiceTest.java`, `AccountProvisioningIT.java`, `AccountProfileMigrationIT.java`, `FacultyScopeMigrationIT.java`, `NotificationPersistenceIT.java`, `SchemaSeedMigrationIT.java` và `ReviewSchemaContractTest.java`.
+- Tài liệu: `docs/implementation-progress.md`.
+
+### Thay đổi
+
+- V15 thêm `must_change_password` mặc định `FALSE` và `security_version` mặc định `0`; account cũ không bị ép đổi mật khẩu sau migration và version âm bị database từ chối.
+- Account mới do ADMIN tạo được đánh dấu dùng mật khẩu tạm thời. Sau lần đăng nhập đầu, mọi route nghiệp vụ đều chuyển về `/account/password` cho tới khi người dùng đổi mật khẩu.
+- Form đổi mật khẩu yêu cầu mật khẩu hiện tại, mật khẩu mới và xác nhận; áp dụng giới hạn 8–72 ký tự, tối đa 72 byte UTF-8, không cho dùng lại mật khẩu hiện tại và không trim mật khẩu.
+- Đổi thành công cập nhật BCrypt hash, xóa cờ bắt buộc đổi, tăng `security_version`, hủy session hiện tại và chuyển về `/login?passwordChanged`.
+- `AccountStateFilter` chỉ nằm trong Spring Security chain sau authentication; ở mỗi request nó đối chiếu account id/username, `enabled` và `security_version` với database. Account không tồn tại, bị khóa hoặc session cũ bị thu hồi sẽ bị đăng xuất về `/login?sessionExpired`.
+- Filter vẫn cho phép login, logout, error và static resources; khi bắt buộc đổi mật khẩu chỉ trang đổi mật khẩu được truy cập.
+- Header có mục “Đổi mật khẩu”; trang login hiển thị thông báo đổi mật khẩu thành công hoặc session không còn hiệu lực.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw -q -DskipTests compile`: PASS.
+- `env -u JAVA_HOME ./mvnw -q -DskipTests test-compile`: PASS.
+- Bộ test tập trung cuối gồm authentication, authorization, principal, filter, service, controller, account provisioning unit và schema contract: PASS, 47/47 test.
+- `env -u JAVA_HOME ./mvnw test`: 243 test, 231 đạt, 12 lỗi môi trường do thiếu `TEST_DATABASE_URL` trong `AuthorizationMatrixTest` và `PeriodContractTest`; 0 failure.
+- `git diff --check` và kiểm tra trailing whitespace cho các file mới: PASS.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa chạy `AccountSecurityMigrationIT` và `AccountProvisioningIT` trên MySQL 8.4 vì chưa có `TEST_DATABASE_URL`; cần xác nhận V15, CHECK constraint và cờ mật khẩu tạm thời trên database test riêng.
+- Chưa visual QA trang đổi mật khẩu trong browser session thực tế, đặc biệt trạng thái bắt buộc đổi mật khẩu và responsive mobile.
+- Filter thêm một truy vấn account nhẹ cho mỗi request đã đăng nhập để thu hồi session ngay ở request tiếp theo; phù hợp phạm vi hiện tại nhưng cần theo dõi nếu tải hệ thống tăng lớn.
+- `security_version` mới chỉ tăng khi người dùng tự đổi mật khẩu trong TASK-006; ADMIN reset và khóa/mở khóa sẽ sử dụng cùng cơ chế trong TASK-007/008.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 đến TASK-005 đã được tách thành năm commit liên tiếp.
-- Working tree không còn thay đổi thuộc TASK-005 sau khi commit; `mvnw.cmd` vẫn được giữ ngoài commit vì chỉ có chênh lệch line-ending ngoài phạm vi task.
+- TASK-001 đến TASK-006 đã được tách thành sáu commit liên tiếp.
+- Working tree chỉ còn `mvnw.cmd` nằm ngoài các task vì đây là chênh lệch line-ending đã tồn tại trước đó.
 - Chưa push lên remote.

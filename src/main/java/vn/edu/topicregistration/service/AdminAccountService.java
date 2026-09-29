@@ -1,6 +1,5 @@
 package vn.edu.topicregistration.service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,6 +27,7 @@ import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserRoleRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.PasswordPolicy;
 
 @Service
 @Profile("!test")
@@ -155,6 +155,7 @@ public class AdminAccountService {
                 passwordEncoder.encode(prepared.password()),
                 prepared.email(),
                 faculty);
+        account.markPasswordAsTemporary();
         UserAccountEntity saved = accounts.saveAndFlush(account);
         List<UserRoleEntity> assignments = prepared.accountType().roles().stream()
                 .map(code -> new UserRoleEntity(saved, roleMap.get(code)))
@@ -209,9 +210,7 @@ public class AdminAccountService {
         if (fullName.isEmpty() || fullName.length() > 255) {
             throw new IllegalArgumentException("Họ tên là bắt buộc và tối đa 255 ký tự.");
         }
-        int passwordBytes = password.getBytes(StandardCharsets.UTF_8).length;
-        if (password.isBlank() || password.length() < 8
-                || password.length() > 72 || passwordBytes > 72) {
+        if (!PasswordPolicy.isValid(password)) {
             throw new IllegalArgumentException(
                     "Mật khẩu tạm thời phải có ít nhất 8 ký tự và không quá 72 byte UTF-8.");
         }

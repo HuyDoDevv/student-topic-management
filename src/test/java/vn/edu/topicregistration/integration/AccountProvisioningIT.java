@@ -25,6 +25,7 @@ import vn.edu.topicregistration.entity.StudentProfileEntity;
 import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.CreateStudentCommand;
+import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
 
 /** Verifies that student provisioning does not leave a partial account on profile failure. */
 @SpringBootTest
@@ -86,6 +87,19 @@ class AccountProvisioningIT {
                 SELECT COUNT(*) FROM user_roles role_assignment
                 JOIN user_accounts account ON account.id = role_assignment.user_id
                 WHERE account.username = '23119999'
+                """));
+    }
+
+    @Test
+    void newlyProvisionedAccountsRequirePasswordChange() {
+        accounts.createLecturer(new CreateLecturerCommand(
+                "security.lecturer", "Giảng viên bảo mật", "temporary-password"));
+
+        assertEquals(1L, count("""
+                SELECT COUNT(*) FROM user_accounts
+                WHERE username = 'security.lecturer'
+                  AND must_change_password = TRUE
+                  AND security_version = 0
                 """));
     }
 

@@ -40,6 +40,7 @@ WHERE id = -3;
 INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
 VALUES (-3, '23110001', '23110CL1', 'K2023');
 CALL expect_failure('UPDATE user_accounts SET email=''23110001@student.hcmute.edu.vn'' WHERE id=-4');
+CALL expect_failure('UPDATE user_accounts SET security_version=-1 WHERE id=-4');
 CALL expect_failure('INSERT INTO student_profiles(user_id,student_code,class_name,cohort_code) VALUES (-4,''23110001'',''23110CL2'',''K2023'')');
 CALL expect_failure('INSERT INTO student_profiles(user_id,student_code,class_name,cohort_code) VALUES (-5,''23110002'',''23110CL2'',''2023'')');
 

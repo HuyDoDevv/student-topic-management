@@ -39,6 +39,8 @@ public class AccountDetailsService implements UserDetailsService {
                 account.getPasswordHash(),
                 account.getFullName(),
                 account.isEnabled(),
+                account.isMustChangePassword(),
+                account.getSecurityVersion(),
                 roles,
                 facultyId);
     }

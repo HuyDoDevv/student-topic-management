@@ -7,11 +7,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import vn.edu.topicregistration.repository.UserAccountRepository;
 
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain applicationSecurity(HttpSecurity http) throws Exception {
+    SecurityFilterChain applicationSecurity(
+            HttpSecurity http, UserAccountRepository accounts) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                     .requestMatchers(HttpMethod.GET,
                             "/login", "/error", "/css/**", "/js/**", "/vendor/**", "/img/**")
@@ -29,7 +33,10 @@ public class SecurityConfig {
                     .invalidateHttpSession(true)
                     .deleteCookies("JSESSIONID"))
                 .sessionManagement(session -> session
-                    .sessionFixation(fixation -> fixation.migrateSession()));
+                    .sessionFixation(fixation -> fixation.migrateSession()))
+                .addFilterAfter(
+                        new AccountStateFilter(accounts),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

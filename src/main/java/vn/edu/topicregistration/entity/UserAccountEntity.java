@@ -40,6 +40,12 @@ public class UserAccountEntity {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword;
+
+    @Column(name = "security_version", nullable = false)
+    private long securityVersion;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "faculty_id")
     private FacultyEntity faculty;
@@ -71,6 +77,8 @@ public class UserAccountEntity {
         this.enabled = true;
         this.username = username;
         this.passwordHash = passwordHash;
+        this.mustChangePassword = false;
+        this.securityVersion = 0;
         this.email = email;
         this.faculty = faculty;
     }
@@ -99,6 +107,14 @@ public class UserAccountEntity {
         return passwordHash;
     }
 
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public long getSecurityVersion() {
+        return securityVersion;
+    }
+
     public FacultyEntity getFaculty() {
         return faculty;
     }
@@ -119,5 +135,18 @@ public class UserAccountEntity {
 
     public void disable() {
         this.enabled = false;
+    }
+
+    public void markPasswordAsTemporary() {
+        this.mustChangePassword = true;
+    }
+
+    public void changePassword(String encodedPassword) {
+        if (encodedPassword == null || encodedPassword.isBlank()) {
+            throw new IllegalArgumentException("Encoded password is required");
+        }
+        this.passwordHash = encodedPassword;
+        this.mustChangePassword = false;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
     }
 }

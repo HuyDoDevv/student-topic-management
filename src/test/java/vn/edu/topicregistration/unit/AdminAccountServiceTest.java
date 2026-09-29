@@ -62,6 +62,7 @@ class AdminAccountServiceTest {
         assertEquals(null, created.email());
         assertAssignedRoles(dependencies, Set.of(RoleCode.DEAN, RoleCode.LECTURER));
         assertStoredPassword(dependencies, "temporary-password");
+        assertTemporaryPassword(dependencies);
     }
 
     @Test
@@ -80,6 +81,7 @@ class AdminAccountServiceTest {
         assertEquals("lecturer01", created.username());
         assertEquals(null, created.email());
         assertAssignedRoles(dependencies, Set.of(RoleCode.LECTURER));
+        assertTemporaryPassword(dependencies);
     }
 
     @Test
@@ -106,6 +108,7 @@ class AdminAccountServiceTest {
         assertEquals("K2023", created.cohortCode());
         assertEquals("23110001@student.hcmute.edu.vn", created.email());
         assertAssignedRoles(dependencies, Set.of(RoleCode.STUDENT));
+        assertTemporaryPassword(dependencies);
 
         ArgumentCaptor<StudentProfileEntity> profile =
                 ArgumentCaptor.forClass(StudentProfileEntity.class);
@@ -233,6 +236,13 @@ class AdminAccountServiceTest {
         assertTrue(dependencies.passwords().matches(
                 rawPassword, account.getValue().getPasswordHash()));
         assertFalse(account.getValue().getPasswordHash().contains(rawPassword));
+    }
+
+    private static void assertTemporaryPassword(Dependencies dependencies) {
+        ArgumentCaptor<UserAccountEntity> account = ArgumentCaptor.forClass(UserAccountEntity.class);
+        verify(dependencies.accounts()).saveAndFlush(account.capture());
+        assertTrue(account.getValue().isMustChangePassword());
+        assertEquals(0L, account.getValue().getSecurityVersion());
     }
 
     private static void assertAssignedRoles(

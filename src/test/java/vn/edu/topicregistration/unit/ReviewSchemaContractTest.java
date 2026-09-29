@@ -20,6 +20,8 @@ class ReviewSchemaContractTest {
             "src/main/resources/db/migration/V13__replace_departments_with_faculty_scope.sql");
     private static final Path ACCOUNT_PROFILE_MIGRATION = Path.of(
             "src/main/resources/db/migration/V14__add_account_email_and_student_profiles.sql");
+    private static final Path ACCOUNT_SECURITY_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V15__add_account_security_state.sql");
 
     @Test
     void v8AddsLifecycleAndConsistencyGuardsToPlaceholderTables() throws IOException {
@@ -88,5 +90,17 @@ class ReviewSchemaContractTest {
                 () -> assertTrue(sql.contains("fk_student_profiles_user")),
                 () -> assertTrue(sql.contains("ON DELETE CASCADE")),
                 () -> assertTrue(sql.contains("^K[0-9]{4}$")));
+    }
+
+    @Test
+    void v15AddsTemporaryPasswordAndSessionRevocationState() throws IOException {
+        String sql = Files.readString(ACCOUNT_SECURITY_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("must_change_password")),
+                () -> assertTrue(sql.contains("security_version")),
+                () -> assertTrue(sql.contains("DEFAULT FALSE")),
+                () -> assertTrue(sql.contains("DEFAULT 0")),
+                () -> assertTrue(sql.contains("chk_user_accounts_security_version")));
     }
 }

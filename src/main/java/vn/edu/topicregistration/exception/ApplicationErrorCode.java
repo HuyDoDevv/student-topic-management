@@ -10,6 +10,8 @@ public enum ApplicationErrorCode {
     ACCOUNT_USERNAME_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Tên đăng nhập đã tồn tại", "Vui lòng chọn tên đăng nhập khác."),
     ACCOUNT_EMAIL_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Email đã tồn tại", "Email này đã được sử dụng."),
     ACCOUNT_STUDENT_CODE_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "MSSV đã tồn tại", "Vui lòng kiểm tra lại MSSV."),
+    ACCOUNT_CURRENT_PASSWORD_INVALID(HttpStatus.UNPROCESSABLE_CONTENT, "Mật khẩu hiện tại không đúng", "Vui lòng nhập lại mật khẩu hiện tại."),
+    ACCOUNT_PASSWORD_REUSED(HttpStatus.UNPROCESSABLE_CONTENT, "Mật khẩu mới chưa hợp lệ", "Mật khẩu mới phải khác mật khẩu hiện tại."),
     WINDOW_CLOSED(HttpStatus.UNPROCESSABLE_CONTENT, "Đã hết thời gian thao tác", "Khoảng thời gian cho thao tác này đã đóng."),
     GROUP_FULL(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã đủ thành viên", "Một nhóm chỉ có tối đa ba sinh viên."),
     GROUP_INCOMPLETE(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm chưa đủ thành viên", "Nhóm phải có đúng ba sinh viên trước khi đăng ký đề tài."),
