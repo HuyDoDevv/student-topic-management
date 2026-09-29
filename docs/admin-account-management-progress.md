@@ -1,4 +1,4 @@
-# Implementation Progress
+# Admin Account Management Progress
 
 File này ghi lại các task đã triển khai theo yêu cầu hiện tại của chủ dự án. Mỗi task chỉ
 được cập nhật sau khi đã inspect, có plan được duyệt, implement và chạy verification phù hợp.
@@ -23,7 +23,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - `specs/001-topic-registration/contracts/web.md`
 - `specs/001-topic-registration/data-model.md`
 - `specs/001-topic-registration/acceptance-matrix.md`
-- `docs/implementation-progress.md`
+- `docs/admin-account-management-progress.md`
 
 ### Thay đổi
 
@@ -50,7 +50,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-28
 - Trạng thái: Completed; verification MySQL chờ môi trường test
-- Commit: `HEAD` (`refactor(scope): replace departments with faculty`)
+- Commit: `2d8fd9a` (`refactor(scope): replace departments with faculty`)
 - Yêu cầu: Loại bỏ hoàn toàn Department/Bộ môn; giữ Faculty, seed một Khoa Công nghệ Thông tin, chưa có CRUD khoa; bảo toàn luồng đề tài, đăng ký, báo cáo và chấm điểm.
 - Ngoài phạm vi: thêm/sửa/xóa khoa, thay role, đổi công thức chấm điểm và push.
 
@@ -65,7 +65,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Dữ liệu mẫu: `src/main/java/vn/edu/topicregistration/seed/LocalDemoSeeder.java`.
 - Giao diện: form/danh sách account, topic, registration, council và direct grading trong `src/main/resources/templates/`.
 - Test/schema: `FacultyScopeMigrationIT.java`, fixture integration, unit/web tests liên quan và `src/test/resources/database/full-schema-check.sql`.
-- Tài liệu: các artifact trong `specs/001-topic-registration/`, `specs/002-review-results/`, `specs/003-notifications/` và `docs/implementation-progress.md`.
+- Tài liệu: các artifact trong `specs/001-topic-registration/`, `specs/002-review-results/`, `specs/003-notifications/` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -105,7 +105,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Migration/seed: `V14__add_account_email_and_student_profiles.sql`, `LocalDemoSeeder.java`.
 - Giao diện: xóa `admin/accounts/form.html`; thêm `student-form.html`, `lecturer-form.html`, `dean-form.html`; cập nhật `admin/accounts/list.html` và `fragments/sidebar.html`.
 - Test/schema: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`, `DashboardServiceTest.java`, `AuthorizationMatrixTest.java`, `ReviewSchemaContractTest.java`, `AccountProfileMigrationIT.java`, `AccountProvisioningIT.java`, các migration integration test liên quan, `FixtureSupport.java` và `full-schema-check.sql`.
-- Tài liệu: `spec.md`, `contracts/web.md`, `data-model.md`, `acceptance-matrix.md`, `implementation-progress.md`.
+- Tài liệu: `spec.md`, `contracts/web.md`, `data-model.md`, `acceptance-matrix.md`, `admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -146,7 +146,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - `src/main/resources/templates/admin/accounts/lecturer-form.html`
 - `src/main/resources/templates/admin/accounts/dean-form.html`
 - `src/main/resources/static/css/app.css`
-- `docs/implementation-progress.md`
+- `docs/admin-account-management-progress.md`
 
 ### Thay đổi
 
@@ -173,7 +173,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-29
 - Trạng thái: Completed; verification MySQL chờ môi trường test
-- Commit: `HEAD` (`fix(admin): strengthen account creation validation`)
+- Commit: `83ed249` (`fix(admin): strengthen account creation validation`)
 - Yêu cầu: Rà soát validation của ba form tạo STUDENT, LECTURER và DEAN; không cho MSSV chứa chữ hoặc dữ liệu sai định dạng vẫn được tạo; sửa bố cục form bị vỡ và bỏ các helper note dư thừa.
 - Ngoài phạm vi: sửa/xóa dữ liệu sai đã tồn tại, migration database, thay đổi role/khoa, commit và push.
 
@@ -183,7 +183,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Service: `AdminAccountService.java`.
 - Giao diện: `student-form.html`, `lecturer-form.html`, `dean-form.html`, `static/js/app.js`.
 - Test: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`.
-- Tài liệu: `docs/implementation-progress.md`.
+- Tài liệu: `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -217,7 +217,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-29
 - Trạng thái: Completed; verification MySQL và visual QA chờ môi trường
-- Commit: `HEAD` (`feat(security): add self-service password change`)
+- Commit: `f2d2882` (`feat(security): add self-service password change`)
 - Yêu cầu: Cho phép mọi người dùng đã đăng nhập tự đổi mật khẩu; tài khoản mới dùng mật khẩu tạm thời phải đổi ở lần đăng nhập đầu tiên; session cũ mất hiệu lực khi trạng thái bảo mật thay đổi.
 - Ngoài phạm vi: ADMIN đặt lại mật khẩu cho người khác (TASK-007), khóa/mở khóa tài khoản (TASK-008), quên mật khẩu qua email, OTP, MFA, lịch sử mật khẩu và audit log.
 
@@ -228,7 +228,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Luồng đổi mật khẩu: `ChangePasswordForm.java`, `AccountSecurityService.java`, `AccountSecurityController.java` và `account/change-password.html`.
 - Tạo tài khoản/UI: `AdminAccountService.java`, `fragments/header.html` và `auth/login.html`.
 - Test: `AccountSecurityServiceTest.java`, `AccountStateFilterTest.java`, `AccountDetailsServiceTest.java`, `AccountSecurityControllerTest.java`, `AccountSecurityMigrationIT.java`, `AdminAccountServiceTest.java`, `AccountProvisioningIT.java`, `AccountProfileMigrationIT.java`, `FacultyScopeMigrationIT.java`, `NotificationPersistenceIT.java`, `SchemaSeedMigrationIT.java` và `ReviewSchemaContractTest.java`.
-- Tài liệu: `docs/implementation-progress.md`.
+- Tài liệu: `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -259,7 +259,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-29
 - Trạng thái: Completed; visual QA và test MySQL chờ môi trường
-- Commit: `HEAD` (`feat(admin): add account password reset`)
+- Commit: `f2bc71e` (`feat(admin): add account password reset`)
 - Yêu cầu: Cho phép ADMIN cấp mật khẩu tạm thời mới cho tài khoản Sinh viên, Giảng viên hoặc Trưởng khoa; thu hồi session cũ và bắt buộc người dùng đổi mật khẩu sau khi đăng nhập lại.
 - Ngoài phạm vi: Khóa/mở khóa tài khoản (TASK-008), reset tài khoản ADMIN, gửi mật khẩu qua email, sinh mật khẩu ngẫu nhiên, quên mật khẩu, OTP/MFA và audit log.
 
@@ -268,7 +268,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Domain/service/controller: `UserAccountEntity.java`, `AdminAccountService.java` và `AdminAccountController.java`.
 - Form/UI: `AdminResetPasswordForm.java`, `admin/accounts/list.html` và `admin/accounts/reset-password.html`.
 - Test: `AdminAccountServiceTest.java` và `AdminAccountControllerTest.java`.
-- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/implementation-progress.md`.
+- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -297,7 +297,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-29
 - Trạng thái: Completed; visual QA và test MySQL chờ môi trường
-- Commit: Chưa commit theo yêu cầu
+- Commit: `0806e62` (`feat(admin): add account lock management`)
 - Yêu cầu: Cho phép ADMIN khóa/mở khóa tài khoản Sinh viên, Giảng viên và Trưởng khoa; thu hồi session cũ chắc chắn và không làm mất dữ liệu học vụ.
 - Ngoài phạm vi: Xóa tài khoản, khóa tài khoản ADMIN, khóa theo thời hạn/lý do, email thông báo và audit log riêng cho quản lý tài khoản.
 
@@ -306,7 +306,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Domain/service/controller: `UserAccountEntity.java`, `AdminAccountService.java` và `AdminAccountController.java`.
 - UI: `admin/accounts/list.html`.
 - Test: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`, `AccountStateFilterTest.java` và `UserAccountLockPersistenceIT.java`.
-- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/implementation-progress.md`.
+- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -336,9 +336,50 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Chưa chạy 12 test MySQL và `UserAccountLockPersistenceIT` vì môi trường chưa cung cấp `TEST_DATABASE_URL`; regression test đã được thêm để chạy trên database test biệt lập khi biến môi trường sẵn sàng.
 - Session đang mở bị thu hồi ở request HTTP tiếp theo, không phải bằng cơ chế quét/xóa tập trung ngay tại thời điểm ADMIN bấm khóa.
 
+## TASK-009 — Thông báo tài khoản bị khóa và giới hạn đăng nhập
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; visual QA và test MySQL chờ môi trường
+- Commit: `4554c21` (`feat(security): protect login attempts`)
+- Yêu cầu: Thông báo chính xác khi tài khoản bị ADMIN khóa nhưng không làm lộ trạng thái account cho người không biết mật khẩu; giới hạn số lần đăng nhập sai theo username và địa chỉ IP.
+- Ngoài phạm vi: CAPTCHA, Redis/distributed rate limiting, tin cậy `X-Forwarded-For`, tự mở khóa account trong database, migration/schema, dependency, biến môi trường và audit log.
+
+### File đã thay đổi
+
+- Security: `SecurityConfig.java`, `LoginRateLimiter.java` và `AccountStateFilter.java`.
+- Giao diện: `auth/login.html`.
+- Test: `AuthenticationTest.java` và `AccountStateFilterTest.java`.
+- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
+
+### Thay đổi
+
+- Cấu hình một `DaoAuthenticationProvider` duy nhất và chuyển kiểm tra `enabled` sang sau bước xác thực mật khẩu. Vì vậy account bị khóa chỉ chuyển tới `/login?disabled` khi mật khẩu đúng; mật khẩu sai và username không tồn tại đều tiếp tục dùng `/login?error` chung để tránh dò trạng thái account.
+- Thêm `LoginRateLimiter` trong Spring Security chain cho `POST /login`: 5 lần sai theo username đã trim/lowercase trong cửa sổ 15 phút hoặc 50 lần sai theo remote IP trong cửa sổ 15 phút sẽ chặn 15 phút.
+- Request bị chặn chuyển tới `/login?rateLimited` trước khi gọi authentication provider; giới hạn tạm thời chỉ nằm trong bộ nhớ và không thay đổi `user_accounts.enabled`.
+- Đăng nhập thành công xóa bộ đếm theo username nhưng không xóa bộ đếm IP. IP lấy trực tiếp từ `request.getRemoteAddr()` và không tin header `X-Forwarded-For`.
+- Hai map theo dõi được giới hạn 10.000 key mỗi loại và dọn entry hết hạn định kỳ; state sẽ mất khi ứng dụng restart và không chia sẻ giữa nhiều instance.
+- `AccountStateFilter` kiểm tra account bị khóa trước `security_version`; session đang hoạt động của account vừa bị ADMIN khóa được hủy và chuyển tới `/login?disabled` ở request tiếp theo.
+- Trang login hiển thị riêng thông báo account bị quản trị viên khóa và thông báo thử đăng nhập quá nhiều lần.
+- Cập nhật web contract với quy tắc thông báo khóa và hai ngưỡng rate limit; không thay đổi schema, migration, dependency hoặc environment configuration.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw -q -DskipTests test-compile`: PASS.
+- `env -u JAVA_HOME ./mvnw -q -Dtest=AuthenticationTest,AccountStateFilterTest test`: PASS, 14/14 test.
+- Regression test xác nhận: khóa + đúng mật khẩu trả `disabled`; khóa + sai mật khẩu trả lỗi chung; lần sai thứ 5 theo username và lần sai thứ 50 theo IP kích hoạt chặn; request tiếp theo không gọi authentication; đăng nhập thành công xóa counter username; session account bị khóa chuyển tới `disabled`.
+- `env -u JAVA_HOME ./mvnw test`: 262 test, 250 đạt, 12 lỗi môi trường do thiếu `TEST_DATABASE_URL` trong `AuthorizationMatrixTest` và `PeriodContractTest`; 0 failure.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa visual QA hai trạng thái thông báo mới trên browser thật.
+- Chưa chạy 12 test MySQL vì môi trường chưa cung cấp `TEST_DATABASE_URL`.
+- Rate limit nằm trong memory của từng application instance: restart sẽ xóa counter và triển khai nhiều instance không dùng chung giới hạn. Nếu mở rộng hạ tầng, cần chuyển state sang kho dùng chung như Redis.
+- `request.getRemoteAddr()` chỉ phản ánh đúng IP người dùng khi ứng dụng chạy trực tiếp. Nếu đặt sau reverse proxy, cần cấu hình proxy tin cậy và chiến lược lấy IP riêng trước khi dùng header forwarded.
+- Tracking có giới hạn dung lượng và loại bỏ một key khi đầy; đây là cơ chế bảo vệ cơ bản cho phạm vi hiện tại, không thay thế WAF/rate limiter tại edge khi hệ thống public quy mô lớn.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 đến TASK-007 đã được tách thành bảy commit liên tiếp; TASK-008 hiện là uncommitted changes.
-- `mvnw.cmd` vẫn nằm ngoài TASK-008 vì chỉ có chênh lệch line-ending đã tồn tại trước đó.
+- TASK-001 đến TASK-009 đã được tách thành chín commit liên tiếp; file nhật ký được đổi tên trong một commit tài liệu riêng.
+- `mvnw.cmd` vẫn nằm ngoài toàn bộ các task vì chỉ có chênh lệch line-ending đã tồn tại trước đó.
 - Chưa push lên remote.
