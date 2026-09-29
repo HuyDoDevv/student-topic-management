@@ -94,7 +94,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-29
 - Trạng thái: Completed; verification MySQL chờ môi trường test
-- Commit: Chưa commit theo yêu cầu
+- Commit: `42c5d28` (`feat(admin): separate account creation by role`)
 - Yêu cầu: Tách việc tạo STUDENT, LECTURER và DEAN thành ba trang/route riêng; STUDENT dùng MSSV làm username và sinh email theo domain trường; LECTURER/DEAN chưa nhập email khi ADMIN tạo.
 - Ngoài phạm vi: trang để giảng viên/trưởng khoa tự cập nhật email, CRUD khoa, thay đổi role, import tài khoản, commit và push.
 
@@ -136,7 +136,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 
 - Ngày: 2026-09-29
 - Trạng thái: Completed; visual QA trên session đã đăng nhập chờ kiểm tra
-- Commit: Chưa commit theo yêu cầu
+- Commit: `75af8be` (`style(admin): refine account creation forms`)
 - Yêu cầu: Chuẩn hóa UX/UI cho ba form tạo STUDENT, LECTURER và DEAN mà không thay đổi nghiệp vụ TASK-003.
 - Ngoài phạm vi: controller/service/DTO, validation backend, route, database, migration, phân quyền, commit và push.
 
@@ -169,9 +169,53 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Chưa chụp được visual QA sau đăng nhập: trình duyệt kiểm thử tách biệt bị chuyển tới `/login`, còn session Chrome đang đăng nhập không khả dụng cho công cụ kiểm tra. Cần reload ba trang trong session hiện tại để xác nhận trực quan desktop và mobile.
 - Các thay đổi CSS được giới hạn bằng prefix `account-`; rủi ro ảnh hưởng form khác thấp nhưng vẫn cần kiểm tra trình duyệt thực tế tại breakpoint 768px và 576px.
 
+## TASK-005 — Chuẩn hóa validation tạo tài khoản
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; verification MySQL chờ môi trường test
+- Commit: `HEAD` (`fix(admin): strengthen account creation validation`)
+- Yêu cầu: Rà soát validation của ba form tạo STUDENT, LECTURER và DEAN; không cho MSSV chứa chữ hoặc dữ liệu sai định dạng vẫn được tạo; sửa bố cục form bị vỡ và bỏ các helper note dư thừa.
+- Ngoài phạm vi: sửa/xóa dữ liệu sai đã tồn tại, migration database, thay đổi role/khoa, commit và push.
+
+### File đã thay đổi
+
+- DTO: `StudentAccountForm.java`, `LecturerAccountForm.java`, `DeanAccountForm.java`.
+- Service: `AdminAccountService.java`.
+- Giao diện: `student-form.html`, `lecturer-form.html`, `dean-form.html`, `static/js/app.js`.
+- Test: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`.
+- Tài liệu: `docs/implementation-progress.md`.
+
+### Thay đổi
+
+- MSSV phải gồm đúng 8 chữ số ở cả Bean Validation và tầng service; input dùng bàn phím số trên thiết bị hỗ trợ và lọc ký tự không phải số khi gõ/dán.
+- Mã lớp là bắt buộc, chỉ gồm chữ không dấu và số, tối đa 64 ký tự; service chuẩn hóa thành chữ hoa trước khi lưu.
+- Khóa chấp nhận `K2026` hoặc `k2026` ở form và luôn chuẩn hóa thành `K2026` trước khi lưu.
+- Username của LECTURER/DEAN vẫn cho phép chữ không dấu, số, `.`, `_`, `-`, nhưng phải bắt đầu và kết thúc bằng chữ hoặc số.
+- Họ tên giữ hỗ trợ Unicode, bắt buộc sau khi trim và tối đa 255 ký tự; mật khẩu tạm thời phải có 8–72 ký tự đồng thời không vượt 72 byte UTF-8.
+- Giữ pattern phía trình duyệt cho MSSV, lớp, khóa, username và mật khẩu; bỏ helper note tĩnh dưới field để lỗi chỉ xuất hiện khi validation thất bại.
+- Sửa thẻ đóng sai trong form LECTURER/DEAN để phần bảo mật và footer nằm đúng trong card; áp dụng bố cục gọn đồng nhất cho cả ba form.
+- Bỏ ghi chú phụ trong card header, panel phạm vi, section và footer; footer chỉ còn nhóm nút Hủy/Tạo được căn phải.
+- Thêm regression test cho MSSV chứa chữ như `sdfsdf`, MSSV sai độ dài, lớp sai ký tự/độ dài, khóa sai, username sai, họ tên rỗng/quá dài và mật khẩu sai giới hạn.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw -q -Dtest=AdminAccountServiceTest,AdminAccountControllerTest test`: PASS, 18/18 test.
+- `env -u JAVA_HOME ./mvnw -q -Dtest=AdminAccountControllerTest test` sau khi sửa layout: PASS, 11/11 test.
+- `env -u JAVA_HOME ./mvnw test`: 229 test, 217 đạt, 12 lỗi môi trường do thiếu `TEST_DATABASE_URL` trong `AuthorizationMatrixTest` và `PeriodContractTest`; 0 failure.
+- `git diff --check`: PASS.
+- Kiểm tra tĩnh xác nhận MSSV dùng `inputmode="numeric"`, pattern đúng 8 chữ số và hook `data-digits-only`; ba form không còn helper note nhưng vẫn giữ error markup theo field.
+- HTML Tidy không còn báo `unexpected </div>` hoặc thiếu thẻ đóng `div` ở cả ba template.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa chạy 12 test MySQL vì môi trường chưa cung cấp `TEST_DATABASE_URL`.
+- Chưa thực hiện lại visual QA trong browser session đã đăng nhập sau khi sửa nesting; cần reload ba form để xác nhận bố cục thực tế.
+- Bản ghi MSSV sai đã được tạo trước TASK-005 vẫn còn trong database; task này chỉ ngăn dữ liệu sai mới và không tự động sửa/xóa dữ liệu hiện hữu.
+- Chưa thêm database CHECK cho định dạng MSSV/lớp vì dữ liệu sai hiện hữu có thể làm migration thất bại; mọi luồng tạo tài khoản của ứng dụng đã được chặn ở DTO và service.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 và TASK-002 nằm trong hai commit đã có; TASK-003 và TASK-004 hiện là uncommitted changes.
-- Working tree có thay đổi của TASK-003/TASK-004, không có commit mới.
+- TASK-001 đến TASK-005 đã được tách thành năm commit liên tiếp.
+- Working tree không còn thay đổi thuộc TASK-005 sau khi commit; `mvnw.cmd` vẫn được giữ ngoài commit vì chỉ có chênh lệch line-ending ngoài phạm vi task.
 - Chưa push lên remote.

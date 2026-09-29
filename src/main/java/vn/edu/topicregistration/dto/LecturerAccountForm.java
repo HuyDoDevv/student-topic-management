@@ -11,8 +11,8 @@ import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerComman
 public class LecturerAccountForm {
     @NotBlank(message = "Vui lòng nhập tên đăng nhập.")
     @Size(max = 191, message = "Tên đăng nhập không được dài quá 191 ký tự.")
-    @Pattern(regexp = "^[A-Za-z0-9._-]+$",
-            message = "Tên đăng nhập chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang.")
+    @Pattern(regexp = "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$",
+            message = "Tên đăng nhập phải bắt đầu và kết thúc bằng chữ hoặc số; ở giữa có thể dùng dấu chấm, gạch dưới hoặc gạch ngang.")
     private String username;
 
     @NotBlank(message = "Vui lòng nhập họ tên.")

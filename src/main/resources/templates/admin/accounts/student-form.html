@@ -17,8 +17,7 @@
       th:object="${studentAccountForm}" data-prevent-double-submit>
       <div class="card-header account-form-header">
         <div>
-          <h2 class="card-title mb-1">Thông tin sinh viên</h2>
-          <p class="text-secondary small mb-0">Các trường có dấu <span class="text-danger">*</span> là bắt buộc.</p>
+          <h2 class="card-title">Thông tin sinh viên</h2>
         </div>
         <span class="badge bg-azure-lt">Sinh viên</span>
       </div>
@@ -36,14 +35,12 @@
           <div>
             <span class="account-scope-eyebrow">Phạm vi tài khoản</span>
             <strong>Sinh viên · <span th:text="${facultyName}">Khoa Công nghệ Thông tin</span></strong>
-            <p>Khoa và vai trò được hệ thống tự gán, không cần nhập thủ công.</p>
           </div>
         </div>
 
         <div class="account-form-section">
           <div class="account-form-section-heading">
             <h3>Thông tin định danh</h3>
-            <p>MSSV sẽ được dùng làm tên đăng nhập và địa chỉ email sinh viên.</p>
           </div>
           <div class="row g-3">
             <div class="col-md-6">
@@ -55,10 +52,9 @@
             <div class="col-md-6">
               <label class="form-label" for="studentCode">MSSV <span class="text-danger">*</span></label>
               <input class="form-control" id="studentCode" type="text" th:field="*{studentCode}"
-                th:errorclass="is-invalid" maxlength="32" autocomplete="off" autocapitalize="characters"
-                spellcheck="false" placeholder="Ví dụ: 23110001" aria-describedby="student-code-help" required>
+                th:errorclass="is-invalid" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="off"
+                spellcheck="false" placeholder="Ví dụ: 23110001" data-digits-only required>
               <div class="invalid-feedback" th:errors="*{studentCode}">MSSV chưa hợp lệ.</div>
-              <div class="form-hint" id="student-code-help">Chỉ nhập chữ không dấu và số.</div>
             </div>
           </div>
 
@@ -77,20 +73,20 @@
         <div class="account-form-section">
           <div class="account-form-section-heading">
             <h3>Thông tin học tập</h3>
-            <p>Thông tin dùng để nhận diện sinh viên trong các luồng học vụ.</p>
           </div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="className">Lớp <span class="text-danger">*</span></label>
               <input class="form-control" id="className" type="text" th:field="*{className}" th:errorclass="is-invalid"
-                maxlength="64" autocomplete="off" placeholder="Ví dụ: 23110CL1" required>
+                maxlength="64" pattern="[A-Za-z0-9]+" autocomplete="off" autocapitalize="characters"
+                spellcheck="false" placeholder="Ví dụ: 23110CL1" required>
               <div class="invalid-feedback" th:errors="*{className}">Lớp chưa hợp lệ.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label" for="cohortCode">Khóa <span class="text-danger">*</span></label>
               <input class="form-control" id="cohortCode" type="text" th:field="*{cohortCode}"
-                th:errorclass="is-invalid" maxlength="5" placeholder="Ví dụ: K2026" pattern="K[0-9]{4}"
-                autocapitalize="characters" spellcheck="false" aria-describedby="cohort-help" required>
+                th:errorclass="is-invalid" maxlength="5" placeholder="Ví dụ: K2026" pattern="[Kk][0-9]{4}"
+                autocapitalize="characters" spellcheck="false" required>
               <div class="invalid-feedback" th:errors="*{cohortCode}">Khóa chưa hợp lệ.</div>
             </div>
           </div>
@@ -99,7 +95,6 @@
         <div class="account-form-section">
           <div class="account-form-section-heading">
             <h3>Bảo mật ban đầu</h3>
-            <p>Sinh viên sử dụng mật khẩu này trong lần đăng nhập đầu tiên.</p>
           </div>
           <div class="row g-3">
             <div class="col-md-6">
@@ -107,7 +102,7 @@
               <div class="input-group input-group-flat">
                 <input class="form-control" id="password" type="password" th:field="*{password}"
                   th:errorclass="is-invalid" minlength="8" maxlength="72" autocomplete="new-password"
-                  aria-describedby="password-help password-error" required>
+                  aria-describedby="password-error" required>
                 <button class="input-group-text account-password-toggle" type="button" data-password-toggle
                   aria-controls="password" aria-label="Hiện mật khẩu">Hiện</button>
               </div>
@@ -119,8 +114,7 @@
           </div>
         </div>
       </div>
-      <div class="card-footer account-form-actions d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <span class="text-secondary small">Kiểm tra lại MSSV trước khi tạo vì đây cũng là tên đăng nhập.</span>
+      <div class="card-footer account-form-actions d-flex flex-wrap align-items-center justify-content-end gap-3">
         <div class="btn-list account-action-buttons">
           <a class="btn btn-ghost-secondary" th:href="@{/admin/accounts/students}">Hủy</a>
           <button class="btn btn-primary" type="submit">Tạo sinh viên</button>

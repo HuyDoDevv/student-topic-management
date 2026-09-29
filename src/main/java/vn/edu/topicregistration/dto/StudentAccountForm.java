@@ -14,16 +14,16 @@ public class StudentAccountForm {
     private String fullName;
 
     @NotBlank(message = "Vui lòng nhập MSSV.")
-    @Size(max = 32, message = "MSSV không được dài quá 32 ký tự.")
-    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "MSSV chỉ gồm chữ không dấu và số.")
+    @Pattern(regexp = "^[0-9]{8}$", message = "MSSV phải gồm đúng 8 chữ số.")
     private String studentCode;
 
     @NotBlank(message = "Vui lòng nhập lớp.")
     @Size(max = 64, message = "Lớp không được dài quá 64 ký tự.")
+    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "Lớp chỉ gồm chữ không dấu và số.")
     private String className;
 
     @NotBlank(message = "Vui lòng nhập khóa.")
-    @Pattern(regexp = "^K[0-9]{4}$", message = "Khóa phải có định dạng K2026.")
+    @Pattern(regexp = "(?i)^K[0-9]{4}$", message = "Khóa phải có định dạng K2026.")
     private String cohortCode;
 
     @NotBlank(message = "Vui lòng nhập mật khẩu tạm thời.")

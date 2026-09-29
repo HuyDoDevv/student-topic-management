@@ -33,7 +33,10 @@ import vn.edu.topicregistration.security.AuthorizationPolicy;
 @Profile("!test")
 public class AdminAccountService {
     public static final String DEFAULT_FACULTY_NAME = "Khoa Công nghệ Thông tin";
-    private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9._-]+$");
+    private static final Pattern USERNAME = Pattern.compile(
+            "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$");
+    private static final Pattern STUDENT_CODE = Pattern.compile("^[0-9]{8}$");
+    private static final Pattern CLASS_CODE = Pattern.compile("^[A-Z0-9]+$");
 
     private final UserAccountRepository accounts;
     private final UserRoleRepository userRoles;
@@ -171,16 +174,14 @@ public class AdminAccountService {
 
     private static PreparedStudent prepareStudent(CreateStudentCommand command) {
         Objects.requireNonNull(command, "command");
-        String studentCode = trim(command.studentCode()).toUpperCase(Locale.ROOT);
-        if (studentCode.isEmpty() || studentCode.length() > 32
-                || !USERNAME.matcher(studentCode).matches()
-                || studentCode.contains(".") || studentCode.contains("_")
-                || studentCode.contains("-")) {
-            throw new IllegalArgumentException("MSSV chỉ gồm chữ không dấu và số, tối đa 32 ký tự.");
+        String studentCode = trim(command.studentCode());
+        if (!STUDENT_CODE.matcher(studentCode).matches()) {
+            throw new IllegalArgumentException("MSSV phải gồm đúng 8 chữ số.");
         }
-        String className = trim(command.className());
-        if (className.isEmpty() || className.length() > 64) {
-            throw new IllegalArgumentException("Lớp là bắt buộc và tối đa 64 ký tự.");
+        String className = trim(command.className()).toUpperCase(Locale.ROOT);
+        if (className.length() > 64 || !CLASS_CODE.matcher(className).matches()) {
+            throw new IllegalArgumentException(
+                    "Lớp là bắt buộc, chỉ gồm chữ không dấu và số, tối đa 64 ký tự.");
         }
         String cohortCode = trim(command.cohortCode()).toUpperCase(Locale.ROOT);
         if (!cohortCode.matches("^K[0-9]{4}$")) {
@@ -209,7 +210,8 @@ public class AdminAccountService {
             throw new IllegalArgumentException("Họ tên là bắt buộc và tối đa 255 ký tự.");
         }
         int passwordBytes = password.getBytes(StandardCharsets.UTF_8).length;
-        if (password.isBlank() || password.length() < 8 || passwordBytes > 72) {
+        if (password.isBlank() || password.length() < 8
+                || password.length() > 72 || passwordBytes > 72) {
             throw new IllegalArgumentException(
                     "Mật khẩu tạm thời phải có ít nhất 8 ký tự và không quá 72 byte UTF-8.");
         }

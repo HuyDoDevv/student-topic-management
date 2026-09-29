@@ -131,7 +131,7 @@ class AdminAccountControllerTest {
     @Test
     void invalidStudentFieldsRenderInlineErrorsWithoutWriting() throws Exception {
         mvc.perform(post("/admin/accounts/students")
-                        .param("studentCode", "invalid-code")
+                        .param("studentCode", "sdfsdf")
                         .param("fullName", "")
                         .param("className", "")
                         .param("cohortCode", "2023")
@@ -143,6 +143,63 @@ class AdminAccountControllerTest {
                         "cohortCode", "password"));
 
         verify(accounts, never()).createStudent(any());
+    }
+
+    @Test
+    void studentCodeAndClassRejectNonNumericOrUnsupportedCharacters() throws Exception {
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "2311ABCD")
+                        .param("fullName", "Sinh viên Một")
+                        .param("className", "23110 CL1")
+                        .param("cohortCode", "K2023")
+                        .param("password", "temporary-password"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("admin/accounts/student-form"))
+                .andExpect(model().attributeHasFieldErrors(
+                        "studentAccountForm", "studentCode", "className"));
+
+        verify(accounts, never()).createStudent(any());
+    }
+
+    @Test
+    void lowercaseStudentClassAndCohortPassWebValidation() throws Exception {
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "23110001")
+                        .param("fullName", "Sinh viên Một")
+                        .param("className", "23110cl1")
+                        .param("cohortCode", "k2023")
+                        .param("password", "temporary-password"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/students"));
+
+        verify(accounts).createStudent(argThat(command ->
+                command.studentCode().equals("23110001")
+                        && command.className().equals("23110cl1")
+                        && command.cohortCode().equals("k2023")));
+    }
+
+    @Test
+    void lecturerAndDeanRejectInvalidIdentityAndPasswordFields() throws Exception {
+        mvc.perform(post("/admin/accounts/lecturers")
+                        .param("username", ".lecturer")
+                        .param("fullName", "")
+                        .param("password", "short"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("admin/accounts/lecturer-form"))
+                .andExpect(model().attributeHasFieldErrors(
+                        "lecturerAccountForm", "username", "fullName", "password"));
+
+        mvc.perform(post("/admin/accounts/deans")
+                        .param("username", "dean-")
+                        .param("fullName", "")
+                        .param("password", "short"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("admin/accounts/dean-form"))
+                .andExpect(model().attributeHasFieldErrors(
+                        "deanAccountForm", "username", "fullName", "password"));
+
+        verify(accounts, never()).createLecturer(any());
+        verify(accounts, never()).createDean(any());
     }
 
     @Test

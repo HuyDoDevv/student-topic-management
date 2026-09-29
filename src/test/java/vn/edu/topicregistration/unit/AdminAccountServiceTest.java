@@ -97,7 +97,7 @@ class AdminAccountServiceTest {
                 .thenAnswer(call -> call.getArgument(0));
 
         var created = dependencies.service().createStudent(new CreateStudentCommand(
-                " 23110001 ", " Sinh viên Một ", " 23110CL1 ", " k2023 ",
+                " 23110001 ", " Sinh viên Một ", " 23110cl1 ", " k2023 ",
                 "temporary-password"));
 
         assertEquals("23110001", created.username());
@@ -113,6 +113,84 @@ class AdminAccountServiceTest {
         assertEquals("23110001", profile.getValue().getStudentCode());
         assertEquals("23110CL1", profile.getValue().getClassName());
         assertEquals("K2023", profile.getValue().getCohortCode());
+    }
+
+    @Test
+    void rejectsInvalidStudentFieldsBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        AdminAccountService service = dependencies.service();
+
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "sdfsdf", "Sinh viên Một", "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "2311000", "Sinh viên Một", "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110 CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "A".repeat(65), "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", " ", "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "A".repeat(256), "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "K2023", "short")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "K2023",
+                        "a".repeat(73))));
+
+        verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
+                dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
+    }
+
+    @Test
+    void rejectsInvalidLecturerAndDeanFieldsBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        AdminAccountService service = dependencies.service();
+
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        ".lecturer", "Giảng viên Một", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        "a".repeat(192), "Giảng viên Một", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        "lecturer01", " ", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        "lecturer01", "A".repeat(256), "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand("dean-", "Trưởng khoa Một", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand("dean01", "Trưởng khoa Một", "short")));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand("dean01", "Trưởng khoa Một", "a".repeat(73))));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand(
+                        "dean01", "Trưởng khoa Một", "😀".repeat(30))));
+
+        verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
+                dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
     }
 
     @Test

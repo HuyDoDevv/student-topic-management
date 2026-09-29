@@ -17,8 +17,7 @@
       th:object="${deanAccountForm}" data-prevent-double-submit>
       <div class="card-header account-form-header">
         <div>
-          <h2 class="card-title mb-1">Thông tin trưởng khoa</h2>
-          <p class="text-secondary small mb-0">Các trường có dấu <span class="text-danger">*</span> là bắt buộc.</p>
+          <h2 class="card-title">Thông tin trưởng khoa</h2>
         </div>
         <span class="badge bg-purple-lt">Trưởng khoa</span>
       </div>
@@ -36,14 +35,12 @@
           <div>
             <span class="account-scope-eyebrow">Phạm vi tài khoản</span>
             <strong>Trưởng khoa · Khoa Công nghệ Thông tin</strong>
-            <p>Tài khoản được cấp quyền trưởng khoa và quyền giảng viên; email sẽ do người dùng cập nhật sau.</p>
           </div>
         </div>
 
         <div class="account-form-section">
           <div class="account-form-section-heading">
             <h3>Thông tin định danh</h3>
-            <p>Tên đăng nhập phải duy nhất; quyền quản lý được hệ thống gán theo đúng loại tài khoản.</p>
           </div>
           <div class="row g-3">
             <div class="col-md-6">
@@ -55,39 +52,35 @@
             <div class="col-md-6">
               <label class="form-label" for="username">Tên đăng nhập <span class="text-danger">*</span></label>
               <input class="form-control" id="username" type="text" th:field="*{username}" th:errorclass="is-invalid"
-                maxlength="191" autocomplete="off" spellcheck="false" placeholder="Ví dụ: truongkhoa.nguyenvana"
-                aria-describedby="username-help" required>
+                maxlength="191" pattern="[A-Za-z0-9](?:[A-Za-z0-9._\-]*[A-Za-z0-9])?" autocomplete="off"
+                spellcheck="false" placeholder="Ví dụ: truongkhoa.nguyenvana" required>
               <div class="invalid-feedback" th:errors="*{username}">Tên đăng nhập chưa hợp lệ.</div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="account-form-section">
-        <div class="account-form-section-heading">
-          <h3>Bảo mật ban đầu</h3>
-          <p>Trưởng khoa sử dụng mật khẩu này trong lần đăng nhập đầu tiên.</p>
-        </div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label" for="password">Mật khẩu tạm thời <span class="text-danger">*</span></label>
-            <div class="input-group input-group-flat">
-              <input class="form-control" id="password" type="password" th:field="*{password}"
-                th:errorclass="is-invalid" minlength="8" maxlength="72" autocomplete="new-password"
-                aria-describedby="password-help password-error" required>
-              <button class="input-group-text account-password-toggle" type="button" data-password-toggle
-                aria-controls="password" aria-label="Hiện mật khẩu">Hiện</button>
+        <div class="account-form-section">
+          <div class="account-form-section-heading">
+            <h3>Bảo mật ban đầu</h3>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="password">Mật khẩu tạm thời <span class="text-danger">*</span></label>
+              <div class="input-group input-group-flat">
+                <input class="form-control" id="password" type="password" th:field="*{password}"
+                  th:errorclass="is-invalid" minlength="8" maxlength="72" autocomplete="new-password"
+                  aria-describedby="password-error" required>
+                <button class="input-group-text account-password-toggle" type="button" data-password-toggle
+                  aria-controls="password" aria-label="Hiện mật khẩu">Hiện</button>
+              </div>
+              <div class="invalid-feedback d-block" id="password-error" th:if="${#fields.hasErrors('password')}"
+                th:errors="*{password}">Mật khẩu chưa hợp lệ.</div>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('passwordWithinBcryptLimit')}"
+                th:errors="*{passwordWithinBcryptLimit}">Mật khẩu vượt quá giới hạn.</div>
             </div>
-            <div class="invalid-feedback d-block" id="password-error" th:if="${#fields.hasErrors('password')}"
-              th:errors="*{password}">Mật khẩu chưa hợp lệ.</div>
-            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('passwordWithinBcryptLimit')}"
-              th:errors="*{passwordWithinBcryptLimit}">Mật khẩu vượt quá giới hạn.</div>
           </div>
         </div>
       </div>
-      </div>
-      <div class="card-footer account-form-actions d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <span class="text-secondary small">Hệ thống tự gán đồng thời quyền trưởng khoa và giảng viên.</span>
+      <div class="card-footer account-form-actions d-flex flex-wrap align-items-center justify-content-end gap-3">
         <div class="btn-list account-action-buttons">
           <a class="btn btn-ghost-secondary" th:href="@{/admin/accounts/deans}">Hủy</a>
           <button class="btn btn-primary" type="submit">Tạo trưởng khoa</button>
