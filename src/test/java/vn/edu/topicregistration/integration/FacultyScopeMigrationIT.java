@@ -8,7 +8,7 @@ import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Verifies V13 consolidation from legacy department scope to direct faculty scope. */
+/** Verifies V13 consolidation and the following V14 account-profile migration. */
 class FacultyScopeMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
 
@@ -82,7 +82,7 @@ class FacultyScopeMigrationIT {
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
                 .load();
-        assertEquals(1, allVersions.migrate().migrationsExecuted);
+        assertEquals(2, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);
 
         long canonicalFaculty = requiredLong(jdbc, """

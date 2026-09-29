@@ -18,6 +18,8 @@ class ReviewSchemaContractTest {
             "src/main/resources/db/migration/V11__grade_each_registration_student.sql");
     private static final Path FACULTY_SCOPE_MIGRATION = Path.of(
             "src/main/resources/db/migration/V13__replace_departments_with_faculty_scope.sql");
+    private static final Path ACCOUNT_PROFILE_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V14__add_account_email_and_student_profiles.sql");
 
     @Test
     void v8AddsLifecycleAndConsistencyGuardsToPlaceholderTables() throws IOException {
@@ -72,5 +74,19 @@ class ReviewSchemaContractTest {
                 () -> assertTrue(sql.contains("DROP COLUMN department_id")),
                 () -> assertTrue(sql.contains("DROP TABLE departments")),
                 () -> assertTrue(sql.contains("Khoa Công nghệ Thông tin")));
+    }
+
+    @Test
+    void v14AddsUniqueEmailAndStudentProfileIdentity() throws IOException {
+        String sql = Files.readString(ACCOUNT_PROFILE_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("ADD COLUMN email")),
+                () -> assertTrue(sql.contains("uq_user_accounts_email")),
+                () -> assertTrue(sql.contains("CREATE TABLE student_profiles")),
+                () -> assertTrue(sql.contains("uq_student_profiles_student_code")),
+                () -> assertTrue(sql.contains("fk_student_profiles_user")),
+                () -> assertTrue(sql.contains("ON DELETE CASCADE")),
+                () -> assertTrue(sql.contains("^K[0-9]{4}$")));
     }
 }

@@ -125,7 +125,7 @@ class ReviewSchemaMigrationIT {
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
                 .load();
-        assertEquals(6, allVersions.migrate().migrationsExecuted);
+        assertEquals(8, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);
 
         assertEquals("DRAFT", jdbc.queryForObject(

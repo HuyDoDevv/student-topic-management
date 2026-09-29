@@ -63,9 +63,9 @@ public class DashboardService {
                                 "Tài khoản LECTURER", "/admin/accounts/lecturers"),
                         new Metric("Trưởng khoa", statistics.deans(),
                                 "Tài khoản DEAN", "/admin/accounts/deans")),
-                new Focus("CẤP TÀI KHOẢN", "Tạo tài khoản mới",
-                        "Tạo từng tài khoản Sinh viên, Giảng viên hoặc Trưởng khoa.",
-                        "/admin/accounts/new", "Mở trang tạo tài khoản", "bg-blue-lt"));
+                new Focus("CẤP TÀI KHOẢN", "Quản lý tài khoản",
+                        "Mở từng danh sách để tạo đúng loại tài khoản cần cấp.",
+                        "/admin/accounts/students", "Mở quản lý sinh viên", "bg-blue-lt"));
     }
 
     private DashboardView dean(ActorIdentity actor) {

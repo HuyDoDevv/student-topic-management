@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Thêm sinh viên', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">QUẢN LÝ SINH VIÊN</div>
+      <h1 class="page-title">Thêm sinh viên</h1>
+      <p class="text-secondary mt-2 mb-0">MSSV đồng thời là tên đăng nhập và được dùng để tạo email sinh viên.</p>
+    </div>
+    <a class="btn btn-outline-secondary" th:href="@{/admin/accounts/students}">Về danh sách</a>
+  </div>
+
+  <div class="row row-cards">
+    <div class="col-xl-8">
+      <form class="card" method="post" th:action="@{/admin/accounts/students}"
+            th:object="${studentAccountForm}" data-prevent-double-submit>
+        <div class="card-header"><h2 class="card-title">Thông tin sinh viên</h2></div>
+        <div class="card-body">
+          <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}"
+               th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="fullName">Họ tên <span class="text-danger">*</span></label>
+              <input class="form-control" id="fullName" type="text" th:field="*{fullName}" maxlength="255" required>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="studentCode">MSSV <span class="text-danger">*</span></label>
+              <input class="form-control" id="studentCode" type="text" th:field="*{studentCode}"
+                     maxlength="32" autocomplete="off" required>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('studentCode')}" th:errors="*{studentCode}"></div>
+              <div class="form-hint">Tên đăng nhập là MSSV; email có dạng mssv@student.hcmute.edu.vn.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="className">Lớp <span class="text-danger">*</span></label>
+              <input class="form-control" id="className" type="text" th:field="*{className}" maxlength="64" required>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('className')}" th:errors="*{className}"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cohortCode">Khóa <span class="text-danger">*</span></label>
+              <input class="form-control" id="cohortCode" type="text" th:field="*{cohortCode}"
+                     maxlength="5" placeholder="K2026" pattern="K[0-9]{4}" required>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('cohortCode')}" th:errors="*{cohortCode}"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="facultyName">Khoa</label>
+              <input class="form-control" id="facultyName" type="text" th:value="${facultyName}" readonly>
+              <div class="form-hint">Khoa được hệ thống gán từ dữ liệu đã seed.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="password">Mật khẩu tạm thời <span class="text-danger">*</span></label>
+              <input class="form-control" id="password" type="password" th:field="*{password}"
+                     minlength="8" maxlength="72" autocomplete="new-password" required>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('passwordWithinBcryptLimit')}" th:errors="*{passwordWithinBcryptLimit}"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-end">
+          <button class="btn btn-primary" type="submit">Tạo sinh viên</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+</body>
+</html>

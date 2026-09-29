@@ -34,6 +34,14 @@ INSERT INTO user_accounts(id, username, password_hash, faculty_id) VALUES
     (-8, 'schema-check-8', 'NOT_A_LOGIN_HASH', -1);
 INSERT INTO user_roles(user_id, role_code) VALUES
     (-1, 'LECTURER'), (-1, 'ADMIN'), (-2, 'LECTURER'), (-3, 'STUDENT');
+UPDATE user_accounts
+SET email = '23110001@student.hcmute.edu.vn'
+WHERE id = -3;
+INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
+VALUES (-3, '23110001', '23110CL1', 'K2023');
+CALL expect_failure('UPDATE user_accounts SET email=''23110001@student.hcmute.edu.vn'' WHERE id=-4');
+CALL expect_failure('INSERT INTO student_profiles(user_id,student_code,class_name,cohort_code) VALUES (-4,''23110001'',''23110CL2'',''K2023'')');
+CALL expect_failure('INSERT INTO student_profiles(user_id,student_code,class_name,cohort_code) VALUES (-5,''23110002'',''23110CL2'',''2023'')');
 
 INSERT INTO registration_periods(
     id, faculty_id, name, topic_type,

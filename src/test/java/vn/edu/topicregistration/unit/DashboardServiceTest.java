@@ -123,7 +123,7 @@ class DashboardServiceTest {
         assertEquals("Trưởng khoa", view.metrics().get(3).label());
         assertEquals(33, view.metrics().get(0).value());
         assertEquals(10, view.metrics().get(2).value());
-        assertEquals("/admin/accounts/new", view.focus().href());
+        assertEquals("/admin/accounts/students", view.focus().href());
         verifyNoInteractions(time);
     }
 

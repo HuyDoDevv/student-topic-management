@@ -209,15 +209,16 @@ class AuthorizationMatrixTest {
         mvc.perform(get("/groups/{id}", groupId).with(actor(leader, "STUDENT")))
                 .andExpect(status().isOk());
 
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "forged-admin-create")
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "23119991")
                         .param("fullName", "Không được tạo")
+                        .param("className", "23110CL9")
+                        .param("cohortCode", "K2023")
                         .param("password", "temporary-password")
                         .with(actor(dean, "ADMIN")).with(csrf()))
                 .andExpect(status().isForbidden());
         assertTrue(count("""
-                SELECT COUNT(*) FROM user_accounts WHERE username = 'forged-admin-create'
+                SELECT COUNT(*) FROM user_accounts WHERE username = '23119991'
                 """) == 0L);
     }
 
@@ -263,17 +264,18 @@ class AuthorizationMatrixTest {
     @Test
     void passwordsDoNotAppearInResponsesOrCapturedLogs(CapturedOutput output) throws Exception {
         String secret = "T061-secret-must-never-be-logged";
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "auth-created-student")
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "23119992")
                         .param("fullName", "Sinh viên được tạo")
+                        .param("className", "23110CL9")
+                        .param("cohortCode", "K2023")
                         .param("password", secret)
                         .with(actor(admin, "ADMIN")).with(csrf()))
                 .andExpect(status().isSeeOther())
                 .andExpect(content().string(not(containsString(secret))));
 
         String storedHash = jdbc.queryForObject("""
-                SELECT password_hash FROM user_accounts WHERE username = 'auth-created-student'
+                SELECT password_hash FROM user_accounts WHERE username = '23119992'
                 """, String.class);
         assertNotNull(storedHash);
         assertFalse(storedHash.contains(secret));

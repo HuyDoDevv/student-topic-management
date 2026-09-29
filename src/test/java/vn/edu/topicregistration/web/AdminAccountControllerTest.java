@@ -38,39 +38,30 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void legacyWorkspaceRedirectsToStudentManagement() throws Exception {
+    void accountRootAndLegacyCreateRouteRedirectSafely() throws Exception {
         mvc.perform(get("/admin/accounts"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/accounts/students"));
+        mvc.perform(get("/admin/accounts/new"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/students/new"));
     }
 
     @Test
-    void rendersStudentManagementAndFilters() throws Exception {
-        mvc.perform(get("/admin/accounts/students")
-                        .param("query", "student")
-                        .param("enabled", "true"))
+    void rendersManagementPagesWithRoleSpecificCreateLinks() throws Exception {
+        mvc.perform(get("/admin/accounts/students"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/accounts/list"))
-                .andExpect(model().attributeExists("workspace"))
-                .andExpect(model().attribute("managementTitle", "Quản lý sinh viên"))
-                .andExpect(model().attribute("activeNav", "admin-students"));
+                .andExpect(model().attribute("createPath", "/admin/accounts/students/new"));
+        mvc.perform(get("/admin/accounts/lecturers"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("createPath", "/admin/accounts/lecturers/new"));
+        mvc.perform(get("/admin/accounts/deans"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("createPath", "/admin/accounts/deans/new"));
 
         verify(accounts).workspace(argThat(
                 filter -> filter.accountType() == AccountType.STUDENT));
-    }
-
-    @Test
-    void rendersLecturerAndDeanManagementSeparately() throws Exception {
-        mvc.perform(get("/admin/accounts/lecturers"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("managementTitle", "Quản lý giảng viên"))
-                .andExpect(model().attribute("activeNav", "admin-lecturers"));
-
-        mvc.perform(get("/admin/accounts/deans"))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("managementTitle", "Quản lý trưởng khoa"))
-                .andExpect(model().attribute("activeNav", "admin-deans"));
-
         verify(accounts).workspace(argThat(
                 filter -> filter.accountType() == AccountType.LECTURER));
         verify(accounts).workspace(argThat(
@@ -78,71 +69,104 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void validSingleCreateUsesWhitelistedFieldsAndRedirects() throws Exception {
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "student01")
+    void rendersThreeIndependentCreatePages() throws Exception {
+        mvc.perform(get("/admin/accounts/students/new"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/accounts/student-form"))
+                .andExpect(model().attributeExists("studentAccountForm", "facultyName"));
+        mvc.perform(get("/admin/accounts/lecturers/new"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/accounts/lecturer-form"))
+                .andExpect(model().attributeExists("lecturerAccountForm"));
+        mvc.perform(get("/admin/accounts/deans/new"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/accounts/dean-form"))
+                .andExpect(model().attributeExists("deanAccountForm"));
+    }
+
+    @Test
+    void studentRouteDerivesIdentityAndIgnoresForgedFields() throws Exception {
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "23110001")
                         .param("fullName", "Sinh viên Một")
+                        .param("className", "23110CL1")
+                        .param("cohortCode", "K2023")
                         .param("password", "temporary-password")
-                        .param("roles", "ADMIN"))
+                        .param("username", "forged")
+                        .param("email", "forged@example.com")
+                        .param("accountType", "ADMIN")
+                        .param("facultyId", "999"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/accounts/students"));
 
-        verify(accounts).create(any());
+        verify(accounts).createStudent(argThat(command ->
+                command.studentCode().equals("23110001")
+                        && command.fullName().equals("Sinh viên Một")
+                        && command.className().equals("23110CL1")
+                        && command.cohortCode().equals("K2023")));
     }
 
     @Test
-    void invalidSingleCreateRendersFieldErrorsWithoutCallingService() throws Exception {
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "")
+    void lecturerAndDeanRoutesLockTheirAccountTypes() throws Exception {
+        mvc.perform(post("/admin/accounts/lecturers")
+                        .param("username", "lecturer01")
+                        .param("fullName", "Giảng viên Một")
+                        .param("password", "temporary-password")
+                        .param("accountType", "ADMIN"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/lecturers"));
+        mvc.perform(post("/admin/accounts/deans")
+                        .param("username", "dean01")
+                        .param("fullName", "Trưởng khoa Một")
+                        .param("password", "temporary-password")
+                        .param("accountType", "ADMIN"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/deans"));
+
+        verify(accounts).createLecturer(argThat(command ->
+                command.username().equals("lecturer01")));
+        verify(accounts).createDean(argThat(command -> command.username().equals("dean01")));
+    }
+
+    @Test
+    void invalidStudentFieldsRenderInlineErrorsWithoutWriting() throws Exception {
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "invalid-code")
                         .param("fullName", "")
+                        .param("className", "")
+                        .param("cohortCode", "2023")
                         .param("password", "short"))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(view().name("admin/accounts/form"))
+                .andExpect(view().name("admin/accounts/student-form"))
                 .andExpect(model().attributeHasFieldErrors(
-                        "adminAccountForm", "username", "fullName", "password"));
+                        "studentAccountForm", "studentCode", "fullName", "className",
+                        "cohortCode", "password"));
 
-        verify(accounts, never()).create(any());
+        verify(accounts, never()).createStudent(any());
     }
 
     @Test
-    void directRequestCannotCreateAnotherAdminAccount() throws Exception {
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "ADMIN")
-                        .param("username", "admin02")
-                        .param("fullName", "Quản trị Hai")
-                        .param("password", "temporary-password"))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(view().name("admin/accounts/form"))
-                .andExpect(model().attributeHasErrors("adminAccountForm"));
-
-        verify(accounts, never()).create(any());
-    }
-
-    @Test
-    void bcryptByteLimitIsValidatedBeforeCallingService() throws Exception {
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "student02")
-                        .param("fullName", "Sinh viên Hai")
+    void bcryptByteLimitIsValidatedForEachForm() throws Exception {
+        mvc.perform(post("/admin/accounts/deans")
+                        .param("username", "dean02")
+                        .param("fullName", "Trưởng khoa Hai")
                         .param("password", "😀".repeat(30)))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(view().name("admin/accounts/form"))
-                .andExpect(model().attributeHasErrors("adminAccountForm"));
+                .andExpect(view().name("admin/accounts/dean-form"))
+                .andExpect(model().attributeHasErrors("deanAccountForm"));
 
-        verify(accounts, never()).create(any());
+        verify(accounts, never()).createDean(any());
     }
 
     @Test
-    void importEndpointIsNotMapped() throws Exception {
-        mvc.perform(post("/admin/accounts/import"))
+    void sharedPostAndRemovedImportRoutesAreNotMapped() throws Exception {
+        MockMvc routeOnlyMvc = standaloneSetup(new AdminAccountController(accounts)).build();
+
+        routeOnlyMvc.perform(post("/admin/accounts"))
+                .andExpect(status().isMethodNotAllowed());
+        routeOnlyMvc.perform(post("/admin/accounts/import"))
                 .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void importTemplateEndpointIsNotMapped() throws Exception {
-        mvc.perform(get("/admin/accounts/import-template.csv"))
+        routeOnlyMvc.perform(get("/admin/accounts/import-template.csv"))
                 .andExpect(status().isNotFound());
     }
 }

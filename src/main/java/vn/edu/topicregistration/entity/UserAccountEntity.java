@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -26,6 +27,9 @@ public class UserAccountEntity {
 
     @Column(name = "full_name", length = 255)
     private String fullName;
+
+    @Column(length = 254, unique = true)
+    private String email;
 
     @Column(nullable = false)
     private boolean enabled;
@@ -43,6 +47,9 @@ public class UserAccountEntity {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<UserRoleEntity> roles = new LinkedHashSet<>();
 
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private StudentProfileEntity studentProfile;
+
     protected UserAccountEntity() {
     }
 
@@ -51,10 +58,20 @@ public class UserAccountEntity {
             String username,
             String passwordHash,
             FacultyEntity faculty) {
+        this(fullName, username, passwordHash, null, faculty);
+    }
+
+    public UserAccountEntity(
+            String fullName,
+            String username,
+            String passwordHash,
+            String email,
+            FacultyEntity faculty) {
         this.fullName = fullName;
         this.enabled = true;
         this.username = username;
         this.passwordHash = passwordHash;
+        this.email = email;
         this.faculty = faculty;
     }
 
@@ -70,6 +87,10 @@ public class UserAccountEntity {
         return enabled;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
     public String getUsername() {
         return username;
     }
@@ -80,6 +101,10 @@ public class UserAccountEntity {
 
     public FacultyEntity getFaculty() {
         return faculty;
+    }
+
+    public StudentProfileEntity getStudentProfile() {
+        return studentProfile;
     }
 
     public Set<RoleCode> getRoleCodes() {

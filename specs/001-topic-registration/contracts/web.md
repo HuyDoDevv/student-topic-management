@@ -85,8 +85,10 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | GET /admin/accounts/students | query,facultyId,enabled | ADMIN nhận 200 danh sách chỉ STUDENT đã lọc; loại tài khoản do backend khóa theo route | 01 |
 | GET /admin/accounts/lecturers | query,facultyId,enabled | ADMIN nhận 200 danh sách chỉ LECTURER không gồm DEAN; loại do backend khóa theo route | 01 |
 | GET /admin/accounts/deans | query,facultyId,enabled | ADMIN nhận 200 danh sách chỉ DEAN; loại do backend khóa theo route | 01 |
-| GET /admin/accounts/new | — | ADMIN nhận trang cấp tài khoản riêng gồm form tạo từng tài khoản STUDENT/LECTURER/DEAN | 01 |
-| POST /admin/accounts | accountType,username,fullName,password | 303 sau khi tạo một tài khoản trong khoa CNTT mặc định; password được băm; DEAN nhận DEAN+LECTURER; username trùng hoặc input sai trả 422 và không ghi | 01 |
+| GET /admin/accounts/new | — | Redirect 303 sang `/admin/accounts/students/new` để tương thích liên kết cũ | 01 |
+| GET /admin/accounts/students/new; POST /admin/accounts/students | fullName,studentCode,className,cohortCode,password | ADMIN nhận form riêng; backend khóa role STUDENT, dùng MSSV làm username, sinh email `{mssv}@student.hcmute.edu.vn`, gán khoa CNTT mặc định và lưu hồ sơ sinh viên; `cohortCode` có dạng `K2026` | 01 |
+| GET /admin/accounts/lecturers/new; POST /admin/accounts/lecturers | fullName,username,password | ADMIN nhận form riêng; backend khóa role LECTURER, gán khoa CNTT mặc định và để email null chờ người dùng tự cập nhật ở feature sau | 01 |
+| GET /admin/accounts/deans/new; POST /admin/accounts/deans | fullName,username,password | ADMIN nhận form riêng; backend khóa DEAN+LECTURER, gán khoa CNTT mặc định và để email null chờ người dùng tự cập nhật ở feature sau | 01 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự chuyển sang nhóm khác; SV rời nhóm cũ rồi chỉ tham
@@ -127,7 +129,7 @@ hàng mới. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 | Đề tài | Table, detail card, form, status badge | AS-2.*, AS-3.*, AT-03,12 |
 | Nhóm | Member table, select, action modal | AS-4.*, AT-04,06 |
 | Đăng ký | Topic list, form confirmation, result badge | AS-5.*, AT-05,11 |
-| Quản lý tài khoản | Metric cards, bộ lọc, danh sách responsive và form tạo từng tài khoản | AS-1.17, AT-10 |
+| Quản lý tài khoản | Metric cards, bộ lọc, danh sách responsive và ba form tạo theo vai trò | AS-1.17, AT-10 |
 
 Menu theo role chỉ hỗ trợ UX. Nút disabled/hidden không thay thế backend.
 Danh sách rỗng hiển thị thông báo; POST đang gửi có chỉ báo và hạn chế double-click;

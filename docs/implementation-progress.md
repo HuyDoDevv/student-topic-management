@@ -90,9 +90,51 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Chưa chạy được migration/integration/concurrency/E2E trên MySQL vì `TEST_DATABASE_URL` chưa được cấu hình; đặc biệt V13 và số lượng constraint trong schema cần được xác nhận trên MySQL 8.4 test riêng.
 - V13 cố ý hợp nhất mọi dữ liệu khoa cũ về Khoa Công nghệ Thông tin và xóa các khoa khác theo phạm vi một khoa hiện tại; cần backup trước khi áp dụng lên database có dữ liệu cần giữ tách khoa.
 
+## TASK-003 — Tách luồng tạo tài khoản theo vai trò
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; verification MySQL chờ môi trường test
+- Commit: Chưa commit theo yêu cầu
+- Yêu cầu: Tách việc tạo STUDENT, LECTURER và DEAN thành ba trang/route riêng; STUDENT dùng MSSV làm username và sinh email theo domain trường; LECTURER/DEAN chưa nhập email khi ADMIN tạo.
+- Ngoài phạm vi: trang để giảng viên/trưởng khoa tự cập nhật email, CRUD khoa, thay đổi role, import tài khoản, commit và push.
+
+### File đã thay đổi
+
+- Controller/DTO: `AdminAccountController.java`; xóa `AdminAccountForm.java`; thêm `StudentAccountForm.java`, `LecturerAccountForm.java`, `DeanAccountForm.java`.
+- Service/domain/repository: `AdminAccountService.java`, `DashboardService.java`, `UserAccountEntity.java`, `StudentProfileEntity.java`, `ApplicationErrorCode.java`, `UserAccountRepository.java`, `StudentProfileRepository.java`.
+- Migration/seed: `V14__add_account_email_and_student_profiles.sql`, `LocalDemoSeeder.java`.
+- Giao diện: xóa `admin/accounts/form.html`; thêm `student-form.html`, `lecturer-form.html`, `dean-form.html`; cập nhật `admin/accounts/list.html` và `fragments/sidebar.html`.
+- Test/schema: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`, `DashboardServiceTest.java`, `AuthorizationMatrixTest.java`, `ReviewSchemaContractTest.java`, `AccountProfileMigrationIT.java`, `AccountProvisioningIT.java`, các migration integration test liên quan, `FixtureSupport.java` và `full-schema-check.sql`.
+- Tài liệu: `spec.md`, `contracts/web.md`, `data-model.md`, `acceptance-matrix.md`, `implementation-progress.md`.
+
+### Thay đổi
+
+- Thêm ba cặp route riêng: `/admin/accounts/students/new|students`, `/lecturers/new|lecturers`, `/deans/new|deans`; route GET cũ `/admin/accounts/new` chuyển hướng về form sinh viên và không còn POST tạo tài khoản gộp.
+- Khóa role theo route và whitelist field riêng, nên request không thể tự khai `accountType`, email, username sinh viên hoặc khoa.
+- Sinh viên nhập họ tên, MSSV, lớp, khóa dạng `K2026` và mật khẩu tạm thời. Backend chuẩn hóa MSSV thành username, sinh email `{mssv}@student.hcmute.edu.vn`, tự gán Khoa Công nghệ Thông tin và lưu profile cùng account/role trong một transaction.
+- Giảng viên và trưởng khoa chỉ nhập họ tên, tên đăng nhập, mật khẩu tạm thời; email lưu null. DEAN tiếp tục nhận đồng thời role DEAN và LECTURER.
+- Thêm migration V14 với `user_accounts.email` nullable unique và bảng `student_profiles`; account cũ được giữ nguyên và có thể chưa có profile.
+- Danh sách tài khoản hiển thị email; danh sách sinh viên hiển thị thêm lớp/khóa. Mỗi danh sách có nút tạo đúng loại; sidebar bỏ mục tạo tài khoản gộp.
+- Seeder bổ sung email/profile cho sinh viên mẫu nhưng giữ username demo cũ để không phá các fixture và luồng đăng nhập hiện hữu.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw clean -DskipTests compile`: PASS.
+- `env -u JAVA_HOME ./mvnw -DskipTests test-compile`: PASS.
+- `AdminAccountServiceTest, AdminAccountControllerTest, DashboardServiceTest, ReviewSchemaContractTest`: PASS, 24/24 test.
+- `env -u JAVA_HOME ./mvnw test`: 224 test, 212 đạt, 12 lỗi môi trường do thiếu `TEST_DATABASE_URL` trong `AuthorizationMatrixTest` và `PeriodContractTest`; 0 failure.
+- Không còn DTO/service tạo account gộp hoặc POST `/admin/accounts`; các endpoint import vẫn không có mapping.
+- `git diff --check`: PASS.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa chạy được `AccountProfileMigrationIT`, `AccountProvisioningIT` và các integration test MySQL vì môi trường chưa cung cấp `TEST_DATABASE_URL`; số lượng constraint V14 và rollback transaction cần được xác nhận trên MySQL 8.4 test riêng.
+- Trang tự cập nhật email cho LECTURER/DEAN chưa được triển khai đúng theo quyết định tách thành task sau.
+- Student account cũ trước V14 được giữ nguyên và không backfill profile giả; danh sách sẽ hiển thị “Chưa cập nhật” cho lớp/khóa của các account đó.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 và TASK-002 được tách thành đúng hai commit liên tiếp.
-- Working tree sạch sau khi kiểm tra cuối.
+- TASK-001 và TASK-002 nằm trong hai commit đã có; TASK-003 hiện là uncommitted changes.
+- Working tree có thay đổi của TASK-003, không có commit mới.
 - Chưa push lên remote.

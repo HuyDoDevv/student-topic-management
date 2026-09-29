@@ -17,12 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.RoleEntity;
+import vn.edu.topicregistration.entity.StudentProfileEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.UserRoleEntity;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.FacultyRepository;
 import vn.edu.topicregistration.repository.RoleRepository;
+import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserRoleRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
@@ -36,6 +38,7 @@ public class AdminAccountService {
     private final UserAccountRepository accounts;
     private final UserRoleRepository userRoles;
     private final RoleRepository roles;
+    private final StudentProfileRepository studentProfiles;
     private final FacultyRepository faculties;
     private final AuthorizationPolicy authorization;
     private final PasswordEncoder passwordEncoder;
@@ -44,12 +47,14 @@ public class AdminAccountService {
             UserAccountRepository accounts,
             UserRoleRepository userRoles,
             RoleRepository roles,
+            StudentProfileRepository studentProfiles,
             FacultyRepository faculties,
             AuthorizationPolicy authorization,
             PasswordEncoder passwordEncoder) {
         this.accounts = accounts;
         this.userRoles = userRoles;
         this.roles = roles;
+        this.studentProfiles = studentProfiles;
         this.faculties = faculties;
         this.authorization = authorization;
         this.passwordEncoder = passwordEncoder;
@@ -71,7 +76,6 @@ public class AdminAccountService {
         return new AccountWorkspace(
                 visible,
                 facultyOptions,
-                creatableTypes(),
                 safeFilter,
                 all.size(),
                 all.stream().filter(AccountView::enabled).count(),
@@ -81,19 +85,61 @@ public class AdminAccountService {
     }
 
     @Transactional
-    public AccountView create(CreateAccountCommand command) {
+    public AccountView createStudent(CreateStudentCommand command) {
         authorization.requireRole(RoleCode.ADMIN);
-        PreparedAccount prepared = prepare(command);
+        PreparedStudent prepared = prepareStudent(command);
+        ensureAvailable(prepared.account());
+        if (studentProfiles.existsByStudentCodeIgnoreCase(prepared.studentCode())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_STUDENT_CODE_EXISTS);
+        }
+        FacultyEntity faculty = defaultFaculty();
+        Map<RoleCode, RoleEntity> roleMap = requiredRoles(AccountType.STUDENT.roles());
+        UserAccountEntity account = persist(prepared.account(), faculty, roleMap);
+        StudentProfileEntity profile = studentProfiles.saveAndFlush(new StudentProfileEntity(
+                account, prepared.studentCode(), prepared.className(), prepared.cohortCode()));
+        return accountView(account, AccountType.STUDENT, profile);
+    }
+
+    @Transactional
+    public AccountView createLecturer(CreateLecturerCommand command) {
+        authorization.requireRole(RoleCode.ADMIN);
+        return createStaff(AccountType.LECTURER,
+                command == null ? null : command.username(),
+                command == null ? null : command.fullName(),
+                command == null ? null : command.password());
+    }
+
+    @Transactional
+    public AccountView createDean(CreateDeanCommand command) {
+        authorization.requireRole(RoleCode.ADMIN);
+        return createStaff(AccountType.DEAN,
+                command == null ? null : command.username(),
+                command == null ? null : command.fullName(),
+                command == null ? null : command.password());
+    }
+
+    private AccountView createStaff(
+            AccountType type, String username, String fullName, String password) {
+        PreparedAccount prepared = prepareAccount(type, username, fullName, password, null);
+        ensureAvailable(prepared);
+        FacultyEntity faculty = defaultFaculty();
+        Map<RoleCode, RoleEntity> roleMap = requiredRoles(type.roles());
+        return accountView(persist(prepared, faculty, roleMap), type);
+    }
+
+    private FacultyEntity defaultFaculty() {
+        return faculties.findByNameIgnoreCase(DEFAULT_FACULTY_NAME)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.VALIDATION_FAILED));
+    }
+
+    private void ensureAvailable(PreparedAccount prepared) {
         if (accounts.existsByUsernameIgnoreCase(prepared.username())) {
             throw new ApplicationException(ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS);
         }
-        FacultyEntity faculty = faculties.findByNameIgnoreCase(DEFAULT_FACULTY_NAME)
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.VALIDATION_FAILED));
-        Map<RoleCode, RoleEntity> roleMap = requiredRoles(prepared.accountType().roles());
-        return accountView(
-                persist(prepared, faculty, roleMap),
-                prepared.accountType());
+        if (prepared.email() != null && accounts.existsByEmailIgnoreCase(prepared.email())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_EMAIL_EXISTS);
+        }
     }
 
     private UserAccountEntity persist(
@@ -104,6 +150,7 @@ public class AdminAccountService {
                 prepared.fullName(),
                 prepared.username(),
                 passwordEncoder.encode(prepared.password()),
+                prepared.email(),
                 faculty);
         UserAccountEntity saved = accounts.saveAndFlush(account);
         List<UserRoleEntity> assignments = prepared.accountType().roles().stream()
@@ -122,15 +169,38 @@ public class AdminAccountService {
         return result;
     }
 
-    private static PreparedAccount prepare(CreateAccountCommand command) {
+    private static PreparedStudent prepareStudent(CreateStudentCommand command) {
         Objects.requireNonNull(command, "command");
-        if (command.accountType() == null || !command.accountType().creatable()) {
-            throw new IllegalArgumentException(
-                    "Loại tài khoản chỉ nhận STUDENT, LECTURER hoặc DEAN.");
+        String studentCode = trim(command.studentCode()).toUpperCase(Locale.ROOT);
+        if (studentCode.isEmpty() || studentCode.length() > 32
+                || !USERNAME.matcher(studentCode).matches()
+                || studentCode.contains(".") || studentCode.contains("_")
+                || studentCode.contains("-")) {
+            throw new IllegalArgumentException("MSSV chỉ gồm chữ không dấu và số, tối đa 32 ký tự.");
         }
-        String username = trim(command.username());
-        String fullName = trim(command.fullName());
-        String password = command.password() == null ? "" : command.password();
+        String className = trim(command.className());
+        if (className.isEmpty() || className.length() > 64) {
+            throw new IllegalArgumentException("Lớp là bắt buộc và tối đa 64 ký tự.");
+        }
+        String cohortCode = trim(command.cohortCode()).toUpperCase(Locale.ROOT);
+        if (!cohortCode.matches("^K[0-9]{4}$")) {
+            throw new IllegalArgumentException("Khóa phải có định dạng K2026.");
+        }
+        String email = studentCode.toLowerCase(Locale.ROOT) + "@student.hcmute.edu.vn";
+        PreparedAccount account = prepareAccount(
+                AccountType.STUDENT, studentCode, command.fullName(), command.password(), email);
+        return new PreparedStudent(account, studentCode, className, cohortCode);
+    }
+
+    private static PreparedAccount prepareAccount(
+            AccountType type, String rawUsername, String rawFullName,
+            String rawPassword, String email) {
+        if (type == null || !type.creatable()) {
+            throw new IllegalArgumentException("Loại tài khoản không thể được tạo.");
+        }
+        String username = trim(rawUsername);
+        String fullName = trim(rawFullName);
+        String password = rawPassword == null ? "" : rawPassword;
         if (username.isEmpty() || username.length() > 191 || !USERNAME.matcher(username).matches()) {
             throw new IllegalArgumentException(
                     "Tên đăng nhập chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang và tối đa 191 ký tự.");
@@ -143,7 +213,7 @@ public class AdminAccountService {
             throw new IllegalArgumentException(
                     "Mật khẩu tạm thời phải có ít nhất 8 ký tự và không quá 72 byte UTF-8.");
         }
-        return new PreparedAccount(command.accountType(), username, fullName, password);
+        return new PreparedAccount(type, username, fullName, password, email);
     }
 
     private static boolean matches(AccountView account, AccountFilter filter) {
@@ -170,6 +240,11 @@ public class AdminAccountService {
     }
 
     private static AccountView accountView(UserAccountEntity account, AccountType type) {
+        return accountView(account, type, account.getStudentProfile());
+    }
+
+    private static AccountView accountView(
+            UserAccountEntity account, AccountType type, StudentProfileEntity profile) {
         FacultyEntity faculty = account.getFaculty();
         return new AccountView(
                 account.getId(),
@@ -181,11 +256,11 @@ public class AdminAccountService {
                 type == null ? "Chưa xác định" : type.label(),
                 faculty == null ? null : faculty.getId(),
                 faculty == null ? "Không áp dụng" : faculty.getName(),
+                account.getEmail(),
+                profile == null ? null : profile.getStudentCode(),
+                profile == null ? null : profile.getClassName(),
+                profile == null ? null : profile.getCohortCode(),
                 account.isEnabled());
-    }
-
-    private static List<AccountType> creatableTypes() {
-        return List.of(AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN);
     }
 
     private static String trim(String value) {
@@ -234,11 +309,18 @@ public class AdminAccountService {
         }
     }
 
-    public record CreateAccountCommand(
-            AccountType accountType,
-            String username,
+    public record CreateStudentCommand(
+            String studentCode,
             String fullName,
+            String className,
+            String cohortCode,
             String password) {
+    }
+
+    public record CreateLecturerCommand(String username, String fullName, String password) {
+    }
+
+    public record CreateDeanCommand(String username, String fullName, String password) {
     }
 
     public record AccountFilter(
@@ -267,6 +349,10 @@ public class AdminAccountService {
             String accountTypeLabel,
             Long facultyId,
             String facultyName,
+            String email,
+            String studentCode,
+            String className,
+            String cohortCode,
             boolean enabled) {
     }
 
@@ -276,7 +362,6 @@ public class AdminAccountService {
     public record AccountWorkspace(
             List<AccountView> accounts,
             List<FacultyOption> faculties,
-            List<AccountType> creatableTypes,
             AccountFilter filter,
             long totalAccounts,
             long enabledAccounts,
@@ -285,13 +370,11 @@ public class AdminAccountService {
         public AccountWorkspace {
             accounts = List.copyOf(accounts);
             faculties = List.copyOf(faculties);
-            creatableTypes = List.copyOf(creatableTypes);
         }
 
         public static AccountWorkspace empty() {
             return new AccountWorkspace(
-                    List.of(), List.of(), AdminAccountService.creatableTypes(),
-                    AccountFilter.empty(),
+                    List.of(), List.of(), AccountFilter.empty(),
                     0, 0, 0, 0);
         }
     }
@@ -300,6 +383,14 @@ public class AdminAccountService {
             AccountType accountType,
             String username,
             String fullName,
-            String password) {
+            String password,
+            String email) {
+    }
+
+    private record PreparedStudent(
+            PreparedAccount account,
+            String studentCode,
+            String className,
+            String cohortCode) {
     }
 }

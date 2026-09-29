@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import vn.edu.topicregistration.dto.AdminAccountForm;
+import vn.edu.topicregistration.dto.DeanAccountForm;
+import vn.edu.topicregistration.dto.LecturerAccountForm;
+import vn.edu.topicregistration.dto.StudentAccountForm;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
@@ -32,9 +34,19 @@ public class AdminAccountController {
         this.accounts = accounts;
     }
 
-    @InitBinder("adminAccountForm")
-    void whitelistAccountFields(WebDataBinder binder) {
-        binder.setAllowedFields("accountType", "username", "fullName", "password");
+    @InitBinder("studentAccountForm")
+    void whitelistStudentFields(WebDataBinder binder) {
+        binder.setAllowedFields("fullName", "studentCode", "className", "cohortCode", "password");
+    }
+
+    @InitBinder("lecturerAccountForm")
+    void whitelistLecturerFields(WebDataBinder binder) {
+        binder.setAllowedFields("fullName", "username", "password");
+    }
+
+    @InitBinder("deanAccountForm")
+    void whitelistDeanFields(WebDataBinder binder) {
+        binder.setAllowedFields("fullName", "username", "password");
     }
 
     @GetMapping("/admin/accounts")
@@ -76,41 +88,92 @@ public class AdminAccountController {
     }
 
     @GetMapping("/admin/accounts/new")
-    public String createForm(Model model) {
-        return renderForm(model, new AdminAccountForm());
+    public Object legacyCreateForm() {
+        return WebRedirects.seeOther(AccountSection.STUDENTS.createPath);
     }
 
-    @PostMapping("/admin/accounts")
-    public Object create(
-            @Valid @ModelAttribute("adminAccountForm") AdminAccountForm form,
+    @GetMapping("/admin/accounts/students/new")
+    public String studentForm(Model model) {
+        return renderStudentForm(model, new StudentAccountForm());
+    }
+
+    @PostMapping("/admin/accounts/students")
+    public Object createStudent(
+            @Valid @ModelAttribute("studentAccountForm") StudentAccountForm form,
             BindingResult bindingResult,
             HttpServletResponse response,
             RedirectAttributes redirectAttributes,
             Model model) {
         if (bindingResult.hasErrors()) {
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return renderForm(model, form);
+            return renderStudentForm(model, form);
         }
         try {
-            accounts.create(form.toCommand());
+            accounts.createStudent(form.toCommand());
         } catch (ApplicationException exception) {
-            if (exception.code() != ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS
-                    && exception.code() != ApplicationErrorCode.VALIDATION_FAILED) {
-                throw exception;
-            }
-            if (exception.code() == ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS) {
-                bindingResult.rejectValue("username", "account.username.exists",
-                        "Tên đăng nhập đã tồn tại.");
-            } else {
-                bindingResult.reject("account.invalid",
-                        "Thông tin tài khoản hoặc Khoa mặc định chưa hợp lệ.");
-            }
+            rejectStudent(exception, bindingResult);
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return renderForm(model, form);
+            return renderStudentForm(model, form);
         }
         redirectAttributes.addFlashAttribute(
-                "successMessage", "Đã tạo tài khoản " + form.getUsername().trim() + ".");
-        return WebRedirects.seeOther(managementPath(form.getAccountType()));
+                "successMessage", "Đã tạo sinh viên " + form.getStudentCode().trim() + ".");
+        return WebRedirects.seeOther(AccountSection.STUDENTS.path);
+    }
+
+    @GetMapping("/admin/accounts/lecturers/new")
+    public String lecturerForm(Model model) {
+        return renderLecturerForm(model, new LecturerAccountForm());
+    }
+
+    @PostMapping("/admin/accounts/lecturers")
+    public Object createLecturer(
+            @Valid @ModelAttribute("lecturerAccountForm") LecturerAccountForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderLecturerForm(model, form);
+        }
+        try {
+            accounts.createLecturer(form.toCommand());
+        } catch (ApplicationException exception) {
+            rejectStaff(exception, bindingResult);
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderLecturerForm(model, form);
+        }
+        redirectAttributes.addFlashAttribute(
+                "successMessage", "Đã tạo giảng viên " + form.getUsername().trim() + ".");
+        return WebRedirects.seeOther(AccountSection.LECTURERS.path);
+    }
+
+    @GetMapping("/admin/accounts/deans/new")
+    public String deanForm(Model model) {
+        return renderDeanForm(model, new DeanAccountForm());
+    }
+
+    @PostMapping("/admin/accounts/deans")
+    public Object createDean(
+            @Valid @ModelAttribute("deanAccountForm") DeanAccountForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderDeanForm(model, form);
+        }
+        try {
+            accounts.createDean(form.toCommand());
+        } catch (ApplicationException exception) {
+            rejectStaff(exception, bindingResult);
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderDeanForm(model, form);
+        }
+        redirectAttributes.addFlashAttribute(
+                "successMessage", "Đã tạo trưởng khoa " + form.getUsername().trim() + ".");
+        return WebRedirects.seeOther(AccountSection.DEANS.path);
     }
 
     private String renderList(
@@ -122,27 +185,63 @@ public class AdminAccountController {
         model.addAttribute("searchTitle", section.searchTitle);
         model.addAttribute("accountLabel", section.accountLabel);
         model.addAttribute("managementPath", section.path);
+        model.addAttribute("createPath", section.createPath);
+        model.addAttribute("createLabel", section.createLabel);
         model.addAttribute("accountBadgeClass", section.badgeClass);
         return "admin/accounts/list";
     }
 
-    private String renderForm(Model model, AdminAccountForm form) {
-        common(model, "admin-account-create");
-        if (!model.containsAttribute("adminAccountForm")) {
-            model.addAttribute("adminAccountForm", form);
+    private String renderStudentForm(Model model, StudentAccountForm form) {
+        common(model, AccountSection.STUDENTS.activeNav);
+        if (!model.containsAttribute("studentAccountForm")) {
+            model.addAttribute("studentAccountForm", form);
         }
-        var workspace = accounts.workspace(AccountFilter.empty());
-        model.addAttribute("accountTypes", workspace.creatableTypes());
-        return "admin/accounts/form";
+        model.addAttribute("facultyName", AdminAccountService.DEFAULT_FACULTY_NAME);
+        return "admin/accounts/student-form";
     }
 
-    private static String managementPath(AccountType type) {
-        return switch (type) {
-            case STUDENT -> AccountSection.STUDENTS.path;
-            case LECTURER -> AccountSection.LECTURERS.path;
-            case DEAN -> AccountSection.DEANS.path;
-            case ADMIN -> "/admin/accounts/new";
-        };
+    private String renderLecturerForm(Model model, LecturerAccountForm form) {
+        common(model, AccountSection.LECTURERS.activeNav);
+        if (!model.containsAttribute("lecturerAccountForm")) {
+            model.addAttribute("lecturerAccountForm", form);
+        }
+        return "admin/accounts/lecturer-form";
+    }
+
+    private String renderDeanForm(Model model, DeanAccountForm form) {
+        common(model, AccountSection.DEANS.activeNav);
+        if (!model.containsAttribute("deanAccountForm")) {
+            model.addAttribute("deanAccountForm", form);
+        }
+        return "admin/accounts/dean-form";
+    }
+
+    private static void rejectStudent(
+            ApplicationException exception, BindingResult bindingResult) {
+        switch (exception.code()) {
+            case ACCOUNT_USERNAME_EXISTS, ACCOUNT_STUDENT_CODE_EXISTS ->
+                    bindingResult.rejectValue("studentCode", "account.studentCode.exists",
+                            "MSSV đã tồn tại.");
+            case ACCOUNT_EMAIL_EXISTS ->
+                    bindingResult.rejectValue("studentCode", "account.email.exists",
+                            "Email sinh từ MSSV này đã tồn tại.");
+            case VALIDATION_FAILED -> bindingResult.reject("account.invalid",
+                    "Thông tin tài khoản hoặc Khoa mặc định chưa hợp lệ.");
+            default -> throw exception;
+        }
+    }
+
+    private static void rejectStaff(
+            ApplicationException exception, BindingResult bindingResult) {
+        if (exception.code() == ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS) {
+            bindingResult.rejectValue("username", "account.username.exists",
+                    "Tên đăng nhập đã tồn tại.");
+        } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
+            bindingResult.reject("account.invalid",
+                    "Thông tin tài khoản hoặc Khoa mặc định chưa hợp lệ.");
+        } else {
+            throw exception;
+        }
     }
 
     private static void common(Model model, String activeNav) {
@@ -155,16 +254,19 @@ public class AdminAccountController {
                 "Quản lý sinh viên",
                 "Tra cứu tài khoản sinh viên theo khoa và trạng thái.",
                 "Tìm sinh viên", "sinh viên", "/admin/accounts/students",
+                "/admin/accounts/students/new", "Thêm sinh viên",
                 "admin-students", "bg-azure-lt"),
         LECTURERS(
                 "Quản lý giảng viên",
                 "Tra cứu tài khoản giảng viên theo khoa và trạng thái.",
                 "Tìm giảng viên", "giảng viên", "/admin/accounts/lecturers",
+                "/admin/accounts/lecturers/new", "Thêm giảng viên",
                 "admin-lecturers", "bg-blue-lt"),
         DEANS(
                 "Quản lý trưởng khoa",
                 "Tra cứu tài khoản trưởng khoa theo khoa và trạng thái.",
                 "Tìm trưởng khoa", "trưởng khoa", "/admin/accounts/deans",
+                "/admin/accounts/deans/new", "Thêm trưởng khoa",
                 "admin-deans", "bg-purple-lt");
 
         private final String title;
@@ -172,6 +274,8 @@ public class AdminAccountController {
         private final String searchTitle;
         private final String accountLabel;
         private final String path;
+        private final String createPath;
+        private final String createLabel;
         private final String activeNav;
         private final String badgeClass;
 
@@ -181,6 +285,8 @@ public class AdminAccountController {
                 String searchTitle,
                 String accountLabel,
                 String path,
+                String createPath,
+                String createLabel,
                 String activeNav,
                 String badgeClass) {
             this.title = title;
@@ -188,6 +294,8 @@ public class AdminAccountController {
             this.searchTitle = searchTitle;
             this.accountLabel = accountLabel;
             this.path = path;
+            this.createPath = createPath;
+            this.createLabel = createLabel;
             this.activeNav = activeNav;
             this.badgeClass = badgeClass;
         }

@@ -131,6 +131,17 @@ database local của người dùng.
 | Migration MySQL | BLOCKED do môi trường | Đã thêm `FacultyScopeMigrationIT` và cập nhật schema/seed integration tests nhưng chưa chạy vì thiếu `TEST_DATABASE_URL`. |
 | Full unit/web suite | BLOCKED do môi trường | 221 test: 209 đạt, 12 lỗi môi trường thuộc `AuthorizationMatrixTest`/`PeriodContractTest`, 0 failure. |
 
+## Bằng chứng TASK-003 — tách luồng tạo tài khoản theo vai trò — 2026-09-29
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Route và khóa role | PASS | `AdminAccountControllerTest` kiểm tra ba cặp GET/POST riêng cho STUDENT, LECTURER, DEAN; field giả mạo `accountType`, username/email/khoa của sinh viên không được bind; POST gộp không còn handler tạo account. |
+| Dữ liệu sinh viên | PASS | `AdminAccountServiceTest` kiểm tra MSSV được chuẩn hóa thành username, email `{mssv}@student.hcmute.edu.vn`, lớp/khóa được lưu vào profile và role chỉ là STUDENT. |
+| Giảng viên/trưởng khoa | PASS | Service test kiểm tra email null; LECTURER nhận đúng một role và DEAN nhận đồng thời DEAN+LECTURER; mật khẩu chỉ lưu dưới dạng BCrypt. |
+| Migration/transaction contract | PASS tĩnh | V14 thêm email nullable unique và `student_profiles`; `ReviewSchemaContractTest` đạt. `AccountProfileMigrationIT` kiểm tra nâng cấp V13→V14, giữ account cũ, nhiều email null, unique email/MSSV, định dạng khóa và cascade profile. `AccountProvisioningIT` kiểm tra rollback account/role khi ghi profile lỗi. |
+| Kiểm thử mục tiêu | PASS | `AdminAccountServiceTest,AdminAccountControllerTest,DashboardServiceTest,ReviewSchemaContractTest`: 24 test, 0 failure/error. |
+| Full suite | BLOCKED một phần do môi trường | `env -u JAVA_HOME ./mvnw test` chạy 224 test: 212 đạt, 12 lỗi môi trường thuộc `AuthorizationMatrixTest`/`PeriodContractTest` vì thiếu `TEST_DATABASE_URL`; 0 failure. `AccountProfileMigrationIT` và `AccountProvisioningIT` cũng cần cùng biến môi trường nên chưa chạy trên MySQL. |
+
 ## Bằng chứng feedback ADMIN T080 — 2026-09-16 *(lịch sử; import bị loại bỏ bởi TASK-001)*
 
 | Phạm vi | Kết quả | Bằng chứng |

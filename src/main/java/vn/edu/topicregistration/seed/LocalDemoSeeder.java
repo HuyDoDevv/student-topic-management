@@ -122,6 +122,11 @@ public class LocalDemoSeeder implements ApplicationRunner {
                     facultyId,
                     passwordHash,
                     "STUDENT");
+            studentProfile(
+                    students[index],
+                    "23110%03d".formatted(number),
+                    "23110CL%d".formatted(number <= 4 ? 1 : 2),
+                    "K2023");
         }
 
         LocalDate today = projectTime.today();
@@ -420,6 +425,25 @@ public class LocalDemoSeeder implements ApplicationRunner {
                     accountId, role);
         }
         return accountId;
+    }
+
+    private void studentProfile(
+            long accountId,
+            String studentCode,
+            String className,
+            String cohortCode) {
+        String email = studentCode.toLowerCase(java.util.Locale.ROOT)
+                + "@student.hcmute.edu.vn";
+        jdbc.update(
+                "UPDATE user_accounts SET email = COALESCE(email, ?) WHERE id = ?",
+                email, accountId);
+        if (optionalId(
+                "SELECT user_id FROM student_profiles WHERE user_id = ?", accountId) == null) {
+            jdbc.update("""
+                    INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
+                    VALUES (?, ?, ?, ?)
+                    """, accountId, studentCode, className, cohortCode);
+        }
     }
 
     private PeriodWindow period(

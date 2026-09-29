@@ -11,7 +11,7 @@
         Tra cứu tài khoản theo khoa và trạng thái.
       </p>
     </div>
-    <a class="btn btn-primary" th:href="@{/admin/accounts/new}">+ Tạo tài khoản</a>
+    <a class="btn btn-primary" th:href="${createPath}" th:text="${'+ ' + createLabel}">+ Thêm sinh viên</a>
   </div>
 
   <div class="alert alert-success" role="status" th:if="${successMessage != null}"
@@ -59,10 +59,15 @@
     </div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Tài khoản</th><th>Loại</th><th>Khoa</th><th>Trạng thái</th></tr></thead>
+        <thead><tr><th>Tài khoản</th><th th:if="${workspace.filter.accountType.name() == 'STUDENT'}">Lớp / Khóa</th><th>Email</th><th>Loại</th><th>Khoa</th><th>Trạng thái</th></tr></thead>
         <tbody>
         <tr th:each="account : ${workspace.accounts}">
-          <td data-label="Tài khoản"><strong th:text="${account.fullName}">Nguyễn Văn A</strong><br><span class="text-secondary" th:text="${account.username}">username</span></td>
+          <td data-label="Tài khoản"><strong th:text="${account.fullName}">Nguyễn Văn A</strong><br><span class="text-secondary" th:text="${account.studentCode != null ? account.studentCode : account.username}">username</span></td>
+          <td data-label="Lớp / Khóa" th:if="${workspace.filter.accountType.name() == 'STUDENT'}">
+            <span th:text="${account.className != null ? account.className : 'Chưa cập nhật'}">Lớp</span><br>
+            <span class="text-secondary" th:text="${account.cohortCode != null ? account.cohortCode : 'Chưa cập nhật'}">Khóa</span>
+          </td>
+          <td data-label="Email" th:text="${account.email != null ? account.email : 'Chưa cập nhật'}">Email</td>
           <td data-label="Loại"><span class="badge" th:classappend="${accountBadgeClass}" th:text="${account.accountTypeLabel}">Sinh viên</span></td>
           <td data-label="Khoa" th:text="${account.facultyName}">CNTT</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${account.enabled ? 'bg-green-lt' : 'bg-secondary-lt'}" th:text="${account.enabled ? 'Đang hoạt động' : 'Đã khóa'}">Đang hoạt động</span></td>

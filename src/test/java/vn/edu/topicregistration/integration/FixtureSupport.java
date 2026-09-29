@@ -72,6 +72,40 @@ public final class FixtureSupport {
         }
     }
 
+    public IdentityFixture createStudentIdentity(
+            String studentCode,
+            String fullName,
+            String className,
+            String cohortCode,
+            String passwordHash,
+            boolean enabled,
+            OrganizationScope scope) {
+        IdentityFixture identity = createIdentity(
+                studentCode, fullName, passwordHash, enabled, scope, Set.of(RoleCode.STUDENT));
+        try (Connection connection = dataSource.getConnection()) {
+            try (PreparedStatement account = connection.prepareStatement(
+                    "UPDATE user_accounts SET email = ? WHERE id = ?")) {
+                account.setString(1, studentCode.toLowerCase(java.util.Locale.ROOT)
+                        + "@student.hcmute.edu.vn");
+                account.setLong(2, identity.accountId());
+                account.executeUpdate();
+            }
+            try (PreparedStatement profile = connection.prepareStatement("""
+                    INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
+                    VALUES (?, ?, ?, ?)
+                    """)) {
+                profile.setLong(1, identity.accountId());
+                profile.setString(2, studentCode);
+                profile.setString(3, className);
+                profile.setString(4, cohortCode);
+                profile.executeUpdate();
+            }
+            return identity;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Could not create student profile fixture", exception);
+        }
+    }
+
     private static long insertReturningId(Connection connection, String sql, Object... parameters)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {

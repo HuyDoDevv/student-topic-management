@@ -16,9 +16,10 @@ không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã đ
 | Entity / bảng dự kiến | Trường chính | Quan hệ và ghi chú |
 |---|---|---|
 | Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope duy nhất của tài khoản học vụ và đợt đăng ký. Phiên bản hiện tại seed đúng một `Khoa Công nghệ Thông tin`; chưa có CRUD khoa |
-| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, faculty_id FK nullable, enabled boolean | STUDENT/LECTURER/DEAN liên kết trực tiếp tới khoa; ADMIN có thể không có khoa. ADMIN chỉ tạo từng tài khoản bằng biểu mẫu; mật khẩu luôn băm, không lưu plaintext |
+| UserAccount / user_accounts | id bigint PK, username text unique, email varchar(254) unique nullable, password_hash text, faculty_id FK nullable, enabled boolean | STUDENT/LECTURER/DEAN liên kết trực tiếp tới khoa; ADMIN có thể không có khoa. Sinh viên mới dùng MSSV làm username và email `{mssv}@student.hcmute.edu.vn`; LECTURER/DEAN mới để email null chờ tự cập nhật ở feature sau; mật khẩu luôn băm |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
 | UserRole / user_roles | user_id FK, role_code FK | PK hai trường; provisioning chỉ nhận STUDENT→STUDENT, LECTURER→LECTURER hoặc DEAN→DEAN+LECTURER và không tạo ADMIN. Tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN không có quyền học vụ/đăng ký/cơ cấu tổ chức |
+| StudentProfile / student_profiles | user_id PK/FK, student_code varchar(32) unique, class_name varchar(64), cohort_code varchar(16) | Hồ sơ riêng cho sinh viên được tạo mới; `cohort_code` bắt buộc dạng `K2026`. Tài khoản sinh viên đã tồn tại trước V14 được giữ nguyên và có thể chưa có profile |
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
 | Topic / topics | id, period_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt và kế thừa khoa từ đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt |
 | TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng khoa; chỉ thay đổi khi topic DRAFT |
@@ -32,9 +33,10 @@ Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đ�
 Trưởng khoa thao tác dữ liệu trong khoa mình; sinh viên xem đề tài công bố trong khoa và
 chỉ thay đổi nhóm/đăng ký mà quan hệ dữ liệu cho phép. Không bỏ trống scope rồi hiểu là toàn quyền.
 
-Tạo từng tài khoản dùng transaction service. Service kiểm tra loại tài khoản, username,
-mật khẩu, khoa mặc định và trùng username trong database trước khi ghi. Không có luồng import CSV
-hoặc file mẫu tài khoản.
+Tạo từng tài khoản dùng ba route/form riêng và transaction service. Service khóa loại tài khoản
+theo route, kiểm tra mật khẩu, khoa mặc định và dữ liệu trùng trước khi ghi. Với sinh viên,
+MSSV được chuẩn hóa làm username, email được sinh tự động và account/profile được ghi nguyên tử.
+Không có luồng import CSV hoặc file mẫu tài khoản.
 
 Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nội dung cần cờ/trạng thái
 ẩn và metadata `hidden_by`, `hidden_at`, `hidden_reason`; mọi thay đổi schema tương ứng phải
