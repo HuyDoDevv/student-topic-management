@@ -49,7 +49,7 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | Method / path dự kiến | Payload chính | Thành công / điều kiện | FR |
 |---|---|---|---|
 | GET /login | — | 200 form Tabler | 01 |
-| POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
+| POST /login | username,password,CSRF | Thành công redirect `/`; sai trả thông báo chung. Account bị ADMIN khóa chỉ hiện thông báo khóa sau khi mật khẩu đúng. Giới hạn 5 lần sai/username và 50 lần sai/IP trong cửa sổ 15 phút, sau đó chặn 15 phút mà không đổi trạng thái account trong database | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
 | GET /; GET /dashboard | — | 200 dashboard theo vai trò đã xác thực, số liệu truy vấn trong scope khoa từ database; DEAN+LECTURER dùng DEAN, ADMIN không xem số liệu học vụ. | 01,03,10–11 |
 | GET /periods; GET /periods/{id} | — | 200 theo scope; danh sách DEAN có cả đợt còn hiệu lực và đã qua `student_end`, lọc được “Đã quá hạn” cùng các nhãn giai đoạn và hiển thị số chờ duyệt/chờ xét/chờ công bố; chi tiết truy cập đúng quyền và có thao tác review/publish | 01–04,07,11 |

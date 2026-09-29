@@ -13,6 +13,8 @@
         <h1 class="h2 text-center mb-2">Đăng nhập</h1>
         <p class="text-secondary text-center mb-4">Sử dụng tài khoản do nhà trường cấp.</p>
         <div class="alert alert-danger" role="alert" th:if="${param.error}">Tên đăng nhập hoặc mật khẩu không chính xác.</div>
+        <div class="alert alert-danger" role="alert" th:if="${param.disabled}">Tài khoản đã bị quản trị viên khóa. Vui lòng liên hệ quản trị viên để được mở khóa.</div>
+        <div class="alert alert-warning" role="alert" th:if="${param.rateLimited}">Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 15 phút.</div>
         <div class="alert alert-success" role="status" th:if="${param.logout}">Bạn đã đăng xuất thành công.</div>
         <div class="alert alert-success" role="status" th:if="${param.passwordChanged}">Đổi mật khẩu thành công. Vui lòng đăng nhập lại.</div>
         <div class="alert alert-warning" role="status" th:if="${param.sessionExpired}">Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.</div>

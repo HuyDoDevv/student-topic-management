@@ -51,8 +51,17 @@ public class AccountStateFilter extends OncePerRequestFilter {
         UserAccountEntity account = accounts.findByIdAndUsername(
                         principal.accountId(), principal.getUsername())
                 .orElse(null);
-        if (account == null || !account.isEnabled()
-                || account.getSecurityVersion() != principal.securityVersion()) {
+        if (account == null) {
+            expireSession(request);
+            response.sendRedirect(request.getContextPath() + "/login?sessionExpired");
+            return;
+        }
+        if (!account.isEnabled()) {
+            expireSession(request);
+            response.sendRedirect(request.getContextPath() + "/login?disabled");
+            return;
+        }
+        if (account.getSecurityVersion() != principal.securityVersion()) {
             expireSession(request);
             response.sendRedirect(request.getContextPath() + "/login?sessionExpired");
             return;

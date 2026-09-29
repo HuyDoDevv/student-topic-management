@@ -55,7 +55,7 @@ class AccountStateFilterTest {
 
         dependencies.filter().doFilter(request, response, dependencies.chain());
 
-        assertEquals("/login?sessionExpired", response.getRedirectedUrl());
+        assertEquals("/login?disabled", response.getRedirectedUrl());
         assertThrows(IllegalStateException.class, session::getCreationTime);
         verify(dependencies.chain(), never()).doFilter(request, response);
     }
