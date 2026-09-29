@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -27,6 +28,9 @@ public class UserAccountEntity {
     @Column(name = "full_name", length = 255)
     private String fullName;
 
+    @Column(length = 254, unique = true)
+    private String email;
+
     @Column(nullable = false)
     private boolean enabled;
 
@@ -36,12 +40,21 @@ public class UserAccountEntity {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword;
+
+    @Column(name = "security_version", nullable = false)
+    private long securityVersion;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private DepartmentEntity department;
+    @JoinColumn(name = "faculty_id")
+    private FacultyEntity faculty;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private Set<UserRoleEntity> roles = new LinkedHashSet<>();
+
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private StudentProfileEntity studentProfile;
 
     protected UserAccountEntity() {
     }
@@ -50,12 +63,24 @@ public class UserAccountEntity {
             String fullName,
             String username,
             String passwordHash,
-            DepartmentEntity department) {
+            FacultyEntity faculty) {
+        this(fullName, username, passwordHash, null, faculty);
+    }
+
+    public UserAccountEntity(
+            String fullName,
+            String username,
+            String passwordHash,
+            String email,
+            FacultyEntity faculty) {
         this.fullName = fullName;
         this.enabled = true;
         this.username = username;
         this.passwordHash = passwordHash;
-        this.department = department;
+        this.mustChangePassword = false;
+        this.securityVersion = 0;
+        this.email = email;
+        this.faculty = faculty;
     }
 
     public Long getId() {
@@ -70,6 +95,10 @@ public class UserAccountEntity {
         return enabled;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
     public String getUsername() {
         return username;
     }
@@ -78,8 +107,20 @@ public class UserAccountEntity {
         return passwordHash;
     }
 
-    public DepartmentEntity getDepartment() {
-        return department;
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public long getSecurityVersion() {
+        return securityVersion;
+    }
+
+    public FacultyEntity getFaculty() {
+        return faculty;
+    }
+
+    public StudentProfileEntity getStudentProfile() {
+        return studentProfile;
     }
 
     public Set<RoleCode> getRoleCodes() {
@@ -92,7 +133,43 @@ public class UserAccountEntity {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    public void disable() {
+    public boolean disable() {
+        if (!this.enabled) {
+            return false;
+        }
         this.enabled = false;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
+        return true;
+    }
+
+    public boolean enable() {
+        if (this.enabled) {
+            return false;
+        }
+        this.enabled = true;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
+        return true;
+    }
+
+    public void markPasswordAsTemporary() {
+        this.mustChangePassword = true;
+    }
+
+    public void changePassword(String encodedPassword) {
+        if (encodedPassword == null || encodedPassword.isBlank()) {
+            throw new IllegalArgumentException("Encoded password is required");
+        }
+        this.passwordHash = encodedPassword;
+        this.mustChangePassword = false;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
+    }
+
+    public void resetPassword(String encodedPassword) {
+        if (encodedPassword == null || encodedPassword.isBlank()) {
+            throw new IllegalArgumentException("Encoded password is required");
+        }
+        this.passwordHash = encodedPassword;
+        this.mustChangePassword = true;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
     }
 }

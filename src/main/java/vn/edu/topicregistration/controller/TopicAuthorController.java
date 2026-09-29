@@ -97,7 +97,7 @@ public class TopicAuthorController {
                 throw exception;
             }
             bindingResult.reject("topic.invalid",
-                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng bộ môn.");
+                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng khoa.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, null, false);
         }
@@ -144,7 +144,7 @@ public class TopicAuthorController {
                 throw exception;
             }
             bindingResult.reject("topic.invalid",
-                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng bộ môn.");
+                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng khoa.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, TopicPageView.from(current), true);
         }
@@ -173,7 +173,7 @@ public class TopicAuthorController {
         }
         model.addAttribute("editing", editing);
         model.addAttribute("period", context.period());
-        model.addAttribute("departmentName", context.departmentName());
+        model.addAttribute("facultyName", context.facultyName());
         model.addAttribute("primarySupervisor", context.primarySupervisor());
         model.addAttribute("coSupervisors", context.coSupervisors());
         model.addAttribute("topic", topic);
@@ -192,7 +192,7 @@ public class TopicAuthorController {
     public record TopicPageView(
             Long id,
             Long periodId,
-            String department,
+            String faculty,
             String author,
             String title,
             String description,
@@ -208,7 +208,7 @@ public class TopicAuthorController {
             return new TopicPageView(
                     topic.id(),
                     topic.periodId(),
-                    topic.departmentName(),
+                    topic.facultyName(),
                     topic.authorName(),
                     topic.title(),
                     topic.description(),

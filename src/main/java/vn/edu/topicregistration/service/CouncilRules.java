@@ -16,7 +16,7 @@ public final class CouncilRules {
 
     public static void validateCreation(
             String topicType,
-            long departmentId,
+            long facultyId,
             long chairId,
             long secretaryId,
             List<MemberCandidate> members) {
@@ -36,7 +36,7 @@ public final class CouncilRules {
                     || !uniqueIds.add(member.accountId())
                     || !member.enabled()
                     || !member.lecturer()
-                    || !Objects.equals(member.departmentId(), departmentId)) {
+                    || !Objects.equals(member.facultyId(), facultyId)) {
                 throw failure(Failure.INVALID_MEMBERS);
             }
             chairPresent |= member.accountId() == chairId;
@@ -56,7 +56,7 @@ public final class CouncilRules {
         if (!SUPPORTED_TYPES.contains(context.topicType())
                 || context.registrationStatus() != RegistrationStatus.ACCEPTED
                 || !context.samePeriod()
-                || !context.sameDepartment()
+                || !context.sameFaculty()
                 || context.assignedElsewhere()
                 || context.supervisorConflict()) {
             throw failure(Failure.INVALID_ASSIGNMENT);
@@ -101,7 +101,7 @@ public final class CouncilRules {
 
     public record MemberCandidate(
             Long accountId,
-            Long departmentId,
+            Long facultyId,
             boolean enabled,
             boolean lecturer) {
     }
@@ -111,34 +111,34 @@ public final class CouncilRules {
             String topicType,
             RegistrationStatus registrationStatus,
             boolean samePeriod,
-            boolean sameDepartment,
+            boolean sameFaculty,
             boolean assignedElsewhere,
             boolean supervisorConflict) {
         public AssignmentContext withCouncilStatus(CouncilStatus value) {
             return new AssignmentContext(
-                    value, topicType, registrationStatus, samePeriod, sameDepartment,
+                    value, topicType, registrationStatus, samePeriod, sameFaculty,
                     assignedElsewhere, supervisorConflict);
         }
 
         public AssignmentContext withTopicType(String value) {
             return new AssignmentContext(
-                    councilStatus, value, registrationStatus, samePeriod, sameDepartment,
+                    councilStatus, value, registrationStatus, samePeriod, sameFaculty,
                     assignedElsewhere, supervisorConflict);
         }
 
         public AssignmentContext withRegistrationStatus(RegistrationStatus value) {
             return new AssignmentContext(
-                    councilStatus, topicType, value, samePeriod, sameDepartment,
+                    councilStatus, topicType, value, samePeriod, sameFaculty,
                     assignedElsewhere, supervisorConflict);
         }
 
         public AssignmentContext withSamePeriod(boolean value) {
             return new AssignmentContext(
-                    councilStatus, topicType, registrationStatus, value, sameDepartment,
+                    councilStatus, topicType, registrationStatus, value, sameFaculty,
                     assignedElsewhere, supervisorConflict);
         }
 
-        public AssignmentContext withSameDepartment(boolean value) {
+        public AssignmentContext withSameFaculty(boolean value) {
             return new AssignmentContext(
                     councilStatus, topicType, registrationStatus, samePeriod, value,
                     assignedElsewhere, supervisorConflict);
@@ -146,13 +146,13 @@ public final class CouncilRules {
 
         public AssignmentContext withAssignedElsewhere(boolean value) {
             return new AssignmentContext(
-                    councilStatus, topicType, registrationStatus, samePeriod, sameDepartment,
+                    councilStatus, topicType, registrationStatus, samePeriod, sameFaculty,
                     value, supervisorConflict);
         }
 
         public AssignmentContext withSupervisorConflict(boolean value) {
             return new AssignmentContext(
-                    councilStatus, topicType, registrationStatus, samePeriod, sameDepartment,
+                    councilStatus, topicType, registrationStatus, samePeriod, sameFaculty,
                     assignedElsewhere, value);
         }
     }

@@ -27,7 +27,6 @@ import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.service.CouncilService;
 import vn.edu.topicregistration.service.CouncilService.CouncilCreationOptions;
-import vn.edu.topicregistration.service.CouncilService.CouncilDepartmentOption;
 import vn.edu.topicregistration.service.CouncilService.CouncilDetailView;
 import vn.edu.topicregistration.service.CouncilService.CouncilPeriodOption;
 import vn.edu.topicregistration.service.CouncilService.CouncilSummaryView;
@@ -56,8 +55,7 @@ class CouncilControllerTest {
     void listsOnlyServiceScopedBoards() throws Exception {
         when(councils.listForCurrentDean()).thenReturn(List.of(summary()));
         CouncilCreationOptions options = new CouncilCreationOptions(
-                List.of(new CouncilPeriodOption(7L, "Đợt KLTN", "KLTN")),
-                List.of(new CouncilDepartmentOption(4L, "Công nghệ phần mềm")));
+                List.of(new CouncilPeriodOption(7L, "Đợt KLTN", "KLTN")));
         when(councils.creationOptionsForCurrentDean()).thenReturn(options);
 
         mvc.perform(get("/faculty/boards"))
@@ -69,11 +67,10 @@ class CouncilControllerTest {
 
     @Test
     void createFormLoadsScopedLecturerOptions() throws Exception {
-        when(councils.creationWorkspace(7L, 4L)).thenReturn(workspace());
+        when(councils.creationWorkspace(7L)).thenReturn(workspace());
 
         mvc.perform(get("/faculty/boards/new")
-                        .param("periodId", "7")
-                        .param("departmentId", "4"))
+                        .param("periodId", "7"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("councils/form"))
                 .andExpect(model().attribute("lecturers", workspace().lecturers()));
@@ -85,7 +82,6 @@ class CouncilControllerTest {
 
         mvc.perform(post("/faculty/boards")
                         .param("periodId", "7")
-                        .param("departmentId", "4")
                         .param("name", "Hội đồng KLTN")
                         .param("chairId", "11")
                         .param("secretaryId", "12")
@@ -97,7 +93,6 @@ class CouncilControllerTest {
 
         verify(councils).create(argThat(command ->
                 command.periodId() == 7L
-                        && command.departmentId() == 4L
                         && command.chairId() == 11L
                         && command.secretaryId() == 12L
                         && command.memberIds().equals(List.of(13L))));

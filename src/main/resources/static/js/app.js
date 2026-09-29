@@ -13,6 +13,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelectorAll("[data-digits-only]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const digits = input.value.replace(/\D/g, "");
+      if (input.value !== digits) input.value = digits;
+    });
+  });
+
   document.querySelectorAll("form[data-prevent-double-submit]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       const confirmation = event.submitter?.dataset.confirm ?? form.dataset.confirm;

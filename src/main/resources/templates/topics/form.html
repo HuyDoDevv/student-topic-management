@@ -64,8 +64,8 @@
       <fieldset>
         <legend class="h3 mb-1">Giảng viên hướng dẫn</legend>
         <p class="text-secondary mb-1">
-          Người tạo đề tài được tự động phân công làm GVHD chính thuộc bộ môn
-          <strong th:text="${departmentName}">Công nghệ phần mềm</strong>.
+          Người tạo đề tài được tự động phân công làm GVHD chính thuộc khoa
+          <strong th:text="${facultyName}">Khoa Công nghệ Thông tin</strong>.
         </p>
         <div class="topic-option supervisor-option supervisor-primary mt-3">
           <span class="supervisor-primary-mark" aria-hidden="true">1</span>
@@ -81,11 +81,11 @@
 
         <div class="mt-4">
           <div class="fw-bold">GVHD phối hợp <span class="text-secondary fw-normal">(không bắt buộc)</span></div>
-          <p class="form-hint mb-3">Có thể chọn thêm tối đa một giảng viên đang hoạt động cùng bộ môn.</p>
+          <p class="form-hint mb-3">Có thể chọn thêm tối đa một giảng viên đang hoạt động cùng khoa.</p>
         </div>
 
         <div class="alert alert-info mb-0" th:if="${coSupervisors.isEmpty()}">
-          Bộ môn hiện không có giảng viên khác phù hợp để làm GVHD phối hợp.
+          Khoa hiện không có giảng viên khác phù hợp để làm GVHD phối hợp.
         </div>
 
         <div class="supervisor-grid" th:if="${!coSupervisors.isEmpty()}"

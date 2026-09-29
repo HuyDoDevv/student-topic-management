@@ -154,8 +154,6 @@ class ReviewResultNotificationIT {
                 SELECT id FROM registration_periods
                 WHERE name = '[DEMO] Khóa luận tốt nghiệp - Đang chấm'
                 """);
-        long departmentId = requiredLong(
-                "SELECT department_id FROM user_accounts WHERE username = 'lecturer1.demo'");
         long chairId = requiredLong(
                 "SELECT id FROM user_accounts WHERE username = 'lecturer1.demo'");
         long secretaryId = requiredLong(
@@ -166,7 +164,6 @@ class ReviewResultNotificationIT {
         authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
         var council = councils.create(new CreateCouncilCommand(
                 periodId,
-                departmentId,
                 "[TEST] Hội đồng nhận thông báo",
                 chairId,
                 secretaryId,

@@ -178,7 +178,7 @@ class ScoringServiceTest {
         Dependencies outsiderDependencies = dependencies();
         validFixture(outsiderDependencies, CouncilStatus.ACTIVE);
         when(outsiderDependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
-                new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 4L, 2L));
+                new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 2L));
 
         assertThrows(AccessDeniedException.class,
                 () -> outsiderDependencies.service().submit(
@@ -266,7 +266,7 @@ class ScoringServiceTest {
                 .thenReturn(Optional.of(7L));
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
-                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 4L, 2L));
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
         when(dependencies.councils().findByIdForUpdate(41L)).thenReturn(Optional.of(council));
         when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(assignment));

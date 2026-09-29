@@ -56,7 +56,7 @@ class PeriodServiceTest {
         clock = mock(Clock.class);
         faculty = mock(FacultyEntity.class);
         dean = new ActorIdentity(
-                9L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 11L, 21L);
+                9L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 21L);
         when(faculty.getId()).thenReturn(21L);
         when(authorization.requireRole(RoleCode.DEAN)).thenReturn(dean);
         when(clock.instant()).thenReturn(NOW);

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -23,22 +22,26 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.RoleEntity;
+import vn.edu.topicregistration.entity.StudentProfileEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.UserRoleEntity;
-import vn.edu.topicregistration.repository.DepartmentRepository;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.FacultyRepository;
 import vn.edu.topicregistration.repository.RoleRepository;
+import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserRoleRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.AdminAccountService;
-import vn.edu.topicregistration.service.AdminAccountService.AccountType;
-import vn.edu.topicregistration.service.AdminAccountService.CreateAccountCommand;
+import vn.edu.topicregistration.service.AdminAccountService.CreateDeanCommand;
+import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
+import vn.edu.topicregistration.service.AdminAccountService.CreateStudentCommand;
+import vn.edu.topicregistration.service.AdminAccountService.ResetPasswordCommand;
 
 class AdminAccountServiceTest {
 
@@ -46,111 +49,351 @@ class AdminAccountServiceTest {
     void createsDeanWithLecturerRoleAndEncodedPassword() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
-        DepartmentEntity department = department(7L, "Công nghệ phần mềm", 3L, "CNTT");
+        allowDefaultFaculty(dependencies);
         RoleEntity deanRole = role(RoleCode.DEAN);
         RoleEntity lecturerRole = role(RoleCode.LECTURER);
-        when(dependencies.departments().findById(7L)).thenReturn(Optional.of(department));
-        when(dependencies.accounts().existsByUsernameIgnoreCase("dean01")).thenReturn(false);
         when(dependencies.roles().findAllById(anyIterable())).thenReturn(List.of(
                 deanRole, lecturerRole));
-        when(dependencies.accounts().saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
-        when(dependencies.userRoles().saveAllAndFlush(any())).thenAnswer(call -> call.getArgument(0));
+        saveArguments(dependencies);
 
-        var created = dependencies.service().create(new CreateAccountCommand(
-                AccountType.DEAN, " dean01 ", " Trưởng khoa Một ", "temporary-password", 7L));
+        var created = dependencies.service().createDean(new CreateDeanCommand(
+                " dean01 ", " Trưởng khoa Một ", "temporary-password"));
 
-        assertEquals(AccountType.DEAN, created.accountType());
+        assertEquals("dean01", created.username());
         assertEquals("Trưởng khoa", created.accountTypeLabel());
-
-        ArgumentCaptor<UserAccountEntity> account = ArgumentCaptor.forClass(UserAccountEntity.class);
-        verify(dependencies.accounts()).saveAndFlush(account.capture());
-        assertEquals("dean01", account.getValue().getUsername());
-        assertEquals("Trưởng khoa Một", account.getValue().getFullName());
-        assertTrue(dependencies.passwords().matches(
-                "temporary-password", account.getValue().getPasswordHash()));
-        assertFalse(account.getValue().getPasswordHash().contains("temporary-password"));
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<Iterable<UserRoleEntity>> assignments =
-                ArgumentCaptor.forClass(Iterable.class);
-        verify(dependencies.userRoles()).saveAllAndFlush(assignments.capture());
-        Set<RoleCode> assigned = java.util.stream.StreamSupport
-                .stream(assignments.getValue().spliterator(), false)
-                .map(UserRoleEntity::getRole)
-                .map(RoleEntity::getCode)
-                .collect(java.util.stream.Collectors.toSet());
-        assertEquals(Set.of(RoleCode.DEAN, RoleCode.LECTURER), assigned);
+        assertEquals(null, created.email());
+        assertAssignedRoles(dependencies, Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        assertStoredPassword(dependencies, "temporary-password");
+        assertTemporaryPassword(dependencies);
     }
 
     @Test
-    void rejectsWholeCsvBeforeWritingWhenAnyRowIsInvalid() {
+    void createsLecturerWithoutEmail() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
-        DepartmentEntity department = department(7L, "Công nghệ phần mềm", 3L, "CNTT");
-        when(dependencies.departments().findAllById(anyIterable())).thenReturn(List.of(department));
-        when(dependencies.accounts().existsByUsernameIgnoreCase(any())).thenReturn(false);
-
-        String csv = "account_type,username,full_name,password,department_id\n"
-                + "STUDENT,student01,Sinh viên Một,temporary-password,7\n"
-                + "ADMIN,admin02,Quản trị Hai,temporary-password,7\n";
-
-        var result = dependencies.service().importCsv(csv.getBytes(StandardCharsets.UTF_8));
-
-        assertTrue(result.hasErrors());
-        assertEquals(0, result.importedCount());
-        assertEquals(3, result.issues().getFirst().row());
-        verify(dependencies.accounts(), never()).saveAndFlush(any());
-        verify(dependencies.userRoles(), never()).saveAllAndFlush(any());
-    }
-
-    @Test
-    void importsAllSupportedTypesOnlyAfterEveryRowPassesValidation() {
-        Dependencies dependencies = dependencies();
-        allowAdmin(dependencies);
-        DepartmentEntity department = department(7L, "Công nghệ phần mềm", 3L, "CNTT");
-        RoleEntity studentRole = role(RoleCode.STUDENT);
+        allowDefaultFaculty(dependencies);
         RoleEntity lecturerRole = role(RoleCode.LECTURER);
-        RoleEntity deanRole = role(RoleCode.DEAN);
-        when(dependencies.departments().findAllById(anyIterable())).thenReturn(List.of(department));
-        when(dependencies.accounts().existsByUsernameIgnoreCase(any())).thenReturn(false);
-        when(dependencies.roles().findAllById(anyIterable())).thenReturn(List.of(
-                studentRole, lecturerRole, deanRole));
-        when(dependencies.accounts().saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
-        when(dependencies.userRoles().saveAllAndFlush(any())).thenAnswer(call -> call.getArgument(0));
+        when(dependencies.roles().findAllById(anyIterable()))
+                .thenReturn(List.of(lecturerRole));
+        saveArguments(dependencies);
 
-        String csv = "\ufeffaccount_type,username,full_name,password,department_id\r\n"
-                + "STUDENT,student01,Sinh viên Một,temporary-password,7\r\n"
-                + "LECTURER,lecturer01,Giảng viên Một,temporary-password,7\r\n"
-                + "DEAN,dean01,Trưởng khoa Một,temporary-password,7\r\n";
+        var created = dependencies.service().createLecturer(new CreateLecturerCommand(
+                "lecturer01", "Giảng viên Một", "temporary-password"));
 
-        var result = dependencies.service().importCsv(csv.getBytes(StandardCharsets.UTF_8));
-
-        assertFalse(result.hasErrors());
-        assertEquals(3, result.importedCount());
-        verify(dependencies.accounts(), org.mockito.Mockito.times(3)).saveAndFlush(any());
-        verify(dependencies.userRoles(), org.mockito.Mockito.times(3)).saveAllAndFlush(any());
+        assertEquals("lecturer01", created.username());
+        assertEquals(null, created.email());
+        assertAssignedRoles(dependencies, Set.of(RoleCode.LECTURER));
+        assertTemporaryPassword(dependencies);
     }
 
     @Test
-    void reportsClearCsvErrorsForUnknownTypeAndNonNumericDepartment() {
+    void createsStudentWithMssvUsernameGeneratedEmailAndProfile() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
+        allowDefaultFaculty(dependencies);
+        RoleEntity studentRole = role(RoleCode.STUDENT);
+        when(dependencies.roles().findAllById(anyIterable()))
+                .thenReturn(List.of(studentRole));
+        when(dependencies.studentProfiles().existsByStudentCodeIgnoreCase("23110001"))
+                .thenReturn(false);
+        saveArguments(dependencies);
+        when(dependencies.studentProfiles().saveAndFlush(any()))
+                .thenAnswer(call -> call.getArgument(0));
 
-        var unknownType = dependencies.service().importCsv((
-                "account_type,username,full_name,password,department_id\n"
-                        + "FOO,user01,Người dùng Một,temporary-password,7\n")
-                .getBytes(StandardCharsets.UTF_8));
-        var invalidDepartment = dependencies.service().importCsv((
-                "account_type,username,full_name,password,department_id\n"
-                        + "STUDENT,student01,Sinh viên Một,temporary-password,abc\n")
-                .getBytes(StandardCharsets.UTF_8));
+        var created = dependencies.service().createStudent(new CreateStudentCommand(
+                " 23110001 ", " Sinh viên Một ", " 23110cl1 ", " k2023 ",
+                "temporary-password"));
 
-        assertEquals("Loại tài khoản chỉ nhận STUDENT, LECTURER hoặc DEAN.",
-                unknownType.issues().getFirst().message());
-        assertEquals("Mã bộ môn phải là số nguyên dương.",
-                invalidDepartment.issues().getFirst().message());
+        assertEquals("23110001", created.username());
+        assertEquals("23110001", created.studentCode());
+        assertEquals("23110CL1", created.className());
+        assertEquals("K2023", created.cohortCode());
+        assertEquals("23110001@student.hcmute.edu.vn", created.email());
+        assertAssignedRoles(dependencies, Set.of(RoleCode.STUDENT));
+        assertTemporaryPassword(dependencies);
+
+        ArgumentCaptor<StudentProfileEntity> profile =
+                ArgumentCaptor.forClass(StudentProfileEntity.class);
+        verify(dependencies.studentProfiles()).saveAndFlush(profile.capture());
+        assertEquals("23110001", profile.getValue().getStudentCode());
+        assertEquals("23110CL1", profile.getValue().getClassName());
+        assertEquals("K2023", profile.getValue().getCohortCode());
+    }
+
+    @Test
+    void rejectsInvalidStudentFieldsBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        AdminAccountService service = dependencies.service();
+
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "sdfsdf", "Sinh viên Một", "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "2311000", "Sinh viên Một", "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110 CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "A".repeat(65), "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", " ", "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "A".repeat(256), "23110CL1", "K2023",
+                        "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "K2023", "short")));
+        assertThrows(IllegalArgumentException.class, () -> service.createStudent(
+                new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "K2023",
+                        "a".repeat(73))));
+
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
-                dependencies.roles(), dependencies.faculties());
+                dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
+    }
+
+    @Test
+    void rejectsInvalidLecturerAndDeanFieldsBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        AdminAccountService service = dependencies.service();
+
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        ".lecturer", "Giảng viên Một", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        "a".repeat(192), "Giảng viên Một", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        "lecturer01", " ", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createLecturer(
+                new CreateLecturerCommand(
+                        "lecturer01", "A".repeat(256), "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand("dean-", "Trưởng khoa Một", "temporary-password")));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand("dean01", "Trưởng khoa Một", "short")));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand("dean01", "Trưởng khoa Một", "a".repeat(73))));
+        assertThrows(IllegalArgumentException.class, () -> service.createDean(
+                new CreateDeanCommand(
+                        "dean01", "Trưởng khoa Một", "😀".repeat(30))));
+
+        verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
+                dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
+    }
+
+    @Test
+    void rejectsDuplicateStudentCodeBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        when(dependencies.studentProfiles().existsByStudentCodeIgnoreCase("23110001"))
+                .thenReturn(true);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().createStudent(new CreateStudentCommand(
+                        "23110001", "Sinh viên Một", "23110CL1", "K2023",
+                        "temporary-password")));
+
+        assertEquals(ApplicationErrorCode.ACCOUNT_STUDENT_CODE_EXISTS, exception.code());
+        verifyNoInteractions(dependencies.faculties(), dependencies.roles(),
+                dependencies.userRoles());
+    }
+
+    @Test
+    void resetsManagedAccountWithEncodedTemporaryPassword() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        UserAccountEntity account = mock(UserAccountEntity.class);
+        when(account.getId()).thenReturn(7L);
+        when(account.getUsername()).thenReturn("lecturer01");
+        when(account.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(account.getPasswordHash())
+                .thenReturn(dependencies.passwords().encode("current-password"));
+        when(dependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(account));
+
+        var result = dependencies.service().resetPassword(new ResetPasswordCommand(
+                7L, "new-temporary-password", "new-temporary-password"));
+
+        assertEquals(7L, result.id());
+        assertEquals("lecturer01", result.username());
+        assertEquals(AdminAccountService.AccountType.LECTURER, result.accountType());
+        ArgumentCaptor<String> encodedPassword = ArgumentCaptor.forClass(String.class);
+        verify(account).resetPassword(encodedPassword.capture());
+        assertTrue(dependencies.passwords().matches(
+                "new-temporary-password", encodedPassword.getValue()));
+        verify(dependencies.accounts()).flush();
+    }
+
+    @Test
+    void entityResetMarksPasswordTemporaryAndRevokesExistingSessions() {
+        UserAccountEntity account = new UserAccountEntity(
+                "Sinh viên Một", "23110001", "old-hash", null);
+
+        account.resetPassword("new-hash");
+
+        assertEquals("new-hash", account.getPasswordHash());
+        assertTrue(account.isMustChangePassword());
+        assertEquals(1L, account.getSecurityVersion());
+    }
+
+    @Test
+    void rejectsInvalidReusedAndAdminTargetPasswords() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        AdminAccountService service = dependencies.service();
+
+        ApplicationException invalid = assertThrows(ApplicationException.class,
+                () -> service.resetPassword(new ResetPasswordCommand(
+                        7L, "short", "different")));
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, invalid.code());
+        verify(dependencies.accounts(), never()).findByIdForUpdate(7L);
+
+        UserAccountEntity managed = mock(UserAccountEntity.class);
+        when(managed.getRoleCodes()).thenReturn(Set.of(RoleCode.STUDENT));
+        when(managed.getPasswordHash())
+                .thenReturn(dependencies.passwords().encode("current-password"));
+        when(dependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(managed));
+        ApplicationException reused = assertThrows(ApplicationException.class,
+                () -> service.resetPassword(new ResetPasswordCommand(
+                        7L, "current-password", "current-password")));
+        assertEquals(ApplicationErrorCode.ACCOUNT_PASSWORD_REUSED, reused.code());
+        verify(managed, never()).resetPassword(any());
+
+        UserAccountEntity admin = mock(UserAccountEntity.class);
+        when(admin.getRoleCodes()).thenReturn(Set.of(RoleCode.ADMIN));
+        when(dependencies.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(admin));
+        when(dependencies.accounts().findDetailedById(8L))
+                .thenReturn(Optional.of(admin));
+        ApplicationException resetAdmin = assertThrows(ApplicationException.class,
+                () -> service.resetPassword(new ResetPasswordCommand(
+                        8L, "new-temporary-password", "new-temporary-password")));
+        ApplicationException viewAdmin = assertThrows(ApplicationException.class,
+                () -> service.passwordResetTarget(8L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, resetAdmin.code());
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, viewAdmin.code());
+        verify(admin, never()).resetPassword(any());
+    }
+
+    @Test
+    void locksAndUnlocksManagedAccountsWithRowLock() {
+        Dependencies lockDependencies = dependencies();
+        allowAdmin(lockDependencies);
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(7L);
+        when(student.getUsername()).thenReturn("23110001");
+        when(student.getRoleCodes()).thenReturn(Set.of(RoleCode.STUDENT));
+        when(student.disable()).thenReturn(true);
+        when(lockDependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(student));
+
+        var locked = lockDependencies.service().lockAccount(7L);
+
+        assertFalse(locked.enabled());
+        assertTrue(locked.changed());
+        assertEquals(AdminAccountService.AccountType.STUDENT, locked.accountType());
+        verify(student).disable();
+        verify(lockDependencies.accounts()).flush();
+
+        Dependencies unlockDependencies = dependencies();
+        allowAdmin(unlockDependencies);
+        UserAccountEntity lecturer = mock(UserAccountEntity.class);
+        when(lecturer.getId()).thenReturn(8L);
+        when(lecturer.getUsername()).thenReturn("lecturer01");
+        when(lecturer.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(lecturer.enable()).thenReturn(true);
+        when(unlockDependencies.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(lecturer));
+
+        var unlocked = unlockDependencies.service().unlockAccount(8L);
+
+        assertTrue(unlocked.enabled());
+        assertTrue(unlocked.changed());
+        assertEquals(AdminAccountService.AccountType.LECTURER, unlocked.accountType());
+        verify(lecturer).enable();
+        verify(unlockDependencies.accounts()).flush();
+    }
+
+    @Test
+    void accountStatusTransitionsAreIdempotentAndPreservePasswordState() {
+        UserAccountEntity account = new UserAccountEntity(
+                "Sinh viên Một", "23110001", "encoded-password", null);
+        account.markPasswordAsTemporary();
+
+        assertTrue(account.disable());
+        assertFalse(account.disable());
+        assertFalse(account.isEnabled());
+        assertEquals(1L, account.getSecurityVersion());
+        assertEquals("encoded-password", account.getPasswordHash());
+        assertTrue(account.isMustChangePassword());
+
+        assertTrue(account.enable());
+        assertFalse(account.enable());
+        assertTrue(account.isEnabled());
+        assertEquals(2L, account.getSecurityVersion());
+        assertEquals("encoded-password", account.getPasswordHash());
+        assertTrue(account.isMustChangePassword());
+    }
+
+    @Test
+    void repeatedStatusAndAdminTargetDoNotMutateAccount() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(7L);
+        when(student.getUsername()).thenReturn("23110001");
+        when(student.getRoleCodes()).thenReturn(Set.of(RoleCode.STUDENT));
+        when(student.disable()).thenReturn(false);
+        when(dependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(student));
+
+        var unchanged = dependencies.service().lockAccount(7L);
+
+        assertFalse(unchanged.changed());
+        verify(dependencies.accounts(), never()).flush();
+
+        UserAccountEntity admin = mock(UserAccountEntity.class);
+        when(admin.getRoleCodes()).thenReturn(Set.of(RoleCode.ADMIN));
+        when(dependencies.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(admin));
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().unlockAccount(8L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, rejected.code());
+        verify(admin, never()).enable();
+    }
+
+    @Test
+    void missingAccountCannotBeLockedOrUnlocked() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        when(dependencies.accounts().findByIdForUpdate(404L))
+                .thenReturn(Optional.empty());
+
+        ApplicationException lockFailure = assertThrows(ApplicationException.class,
+                () -> dependencies.service().lockAccount(404L));
+        ApplicationException unlockFailure = assertThrows(ApplicationException.class,
+                () -> dependencies.service().unlockAccount(404L));
+
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, lockFailure.code());
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, unlockFailure.code());
     }
 
     @Test
@@ -161,30 +404,74 @@ class AdminAccountServiceTest {
         AdminAccountService service = dependencies.service();
 
         assertThrows(AccessDeniedException.class, () -> service.workspace(null));
-        assertThrows(AccessDeniedException.class, () -> service.create(null));
-        assertThrows(AccessDeniedException.class, () -> service.importCsv(null));
-        assertThrows(AccessDeniedException.class, service::csvTemplate);
+        assertThrows(AccessDeniedException.class, () -> service.createStudent(null));
+        assertThrows(AccessDeniedException.class, () -> service.createLecturer(null));
+        assertThrows(AccessDeniedException.class, () -> service.createDean(null));
+        assertThrows(AccessDeniedException.class, () -> service.passwordResetTarget(7L));
+        assertThrows(AccessDeniedException.class, () -> service.resetPassword(null));
+        assertThrows(AccessDeniedException.class, () -> service.lockAccount(7L));
+        assertThrows(AccessDeniedException.class, () -> service.unlockAccount(7L));
 
-        verify(dependencies.authorization(), times(4)).requireRole(RoleCode.ADMIN);
+        verify(dependencies.authorization(), times(8)).requireRole(RoleCode.ADMIN);
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
-                dependencies.roles(), dependencies.departments(), dependencies.faculties());
+                dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
+    }
+
+    private static void assertStoredPassword(Dependencies dependencies, String rawPassword) {
+        ArgumentCaptor<UserAccountEntity> account = ArgumentCaptor.forClass(UserAccountEntity.class);
+        verify(dependencies.accounts()).saveAndFlush(account.capture());
+        assertTrue(dependencies.passwords().matches(
+                rawPassword, account.getValue().getPasswordHash()));
+        assertFalse(account.getValue().getPasswordHash().contains(rawPassword));
+    }
+
+    private static void assertTemporaryPassword(Dependencies dependencies) {
+        ArgumentCaptor<UserAccountEntity> account = ArgumentCaptor.forClass(UserAccountEntity.class);
+        verify(dependencies.accounts()).saveAndFlush(account.capture());
+        assertTrue(account.getValue().isMustChangePassword());
+        assertEquals(0L, account.getValue().getSecurityVersion());
+    }
+
+    private static void assertAssignedRoles(
+            Dependencies dependencies, Set<RoleCode> expected) {
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<UserRoleEntity>> assignments =
+                ArgumentCaptor.forClass(Iterable.class);
+        verify(dependencies.userRoles()).saveAllAndFlush(assignments.capture());
+        Set<RoleCode> assigned = java.util.stream.StreamSupport
+                .stream(assignments.getValue().spliterator(), false)
+                .map(UserRoleEntity::getRole)
+                .map(RoleEntity::getCode)
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(expected, assigned);
+    }
+
+    private static void saveArguments(Dependencies dependencies) {
+        when(dependencies.accounts().existsByUsernameIgnoreCase(any())).thenReturn(false);
+        when(dependencies.accounts().existsByEmailIgnoreCase(any())).thenReturn(false);
+        when(dependencies.accounts().saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
+        when(dependencies.userRoles().saveAllAndFlush(any()))
+                .thenAnswer(call -> call.getArgument(0));
     }
 
     private static void allowAdmin(Dependencies dependencies) {
         when(dependencies.authorization().requireRole(RoleCode.ADMIN)).thenReturn(
-                new ActorIdentity(1L, Set.of(RoleCode.ADMIN), null, null));
+                new ActorIdentity(1L, Set.of(RoleCode.ADMIN), null));
     }
 
-    private static DepartmentEntity department(
-            long id, String name, long facultyId, String facultyName) {
-        DepartmentEntity department = mock(DepartmentEntity.class);
+    private static void allowDefaultFaculty(Dependencies dependencies) {
+        FacultyEntity defaultFaculty = faculty(
+                3L, AdminAccountService.DEFAULT_FACULTY_NAME);
+        when(dependencies.faculties().findByNameIgnoreCase(
+                AdminAccountService.DEFAULT_FACULTY_NAME))
+                .thenReturn(Optional.of(defaultFaculty));
+    }
+
+    private static FacultyEntity faculty(long id, String name) {
         FacultyEntity faculty = mock(FacultyEntity.class);
-        when(department.getId()).thenReturn(id);
-        when(department.getName()).thenReturn(name);
-        when(department.getFaculty()).thenReturn(faculty);
-        when(faculty.getId()).thenReturn(facultyId);
-        when(faculty.getName()).thenReturn(facultyName);
-        return department;
+        when(faculty.getId()).thenReturn(id);
+        when(faculty.getName()).thenReturn(name);
+        return faculty;
     }
 
     private static RoleEntity role(RoleCode code) {
@@ -198,7 +485,7 @@ class AdminAccountServiceTest {
                 mock(UserAccountRepository.class),
                 mock(UserRoleRepository.class),
                 mock(RoleRepository.class),
-                mock(DepartmentRepository.class),
+                mock(StudentProfileRepository.class),
                 mock(FacultyRepository.class),
                 mock(AuthorizationPolicy.class),
                 new BCryptPasswordEncoder());
@@ -208,13 +495,13 @@ class AdminAccountServiceTest {
             UserAccountRepository accounts,
             UserRoleRepository userRoles,
             RoleRepository roles,
-            DepartmentRepository departments,
+            StudentProfileRepository studentProfiles,
             FacultyRepository faculties,
             AuthorizationPolicy authorization,
             BCryptPasswordEncoder passwords) {
         AdminAccountService service() {
             return new AdminAccountService(
-                    accounts, userRoles, roles, departments, faculties,
+                    accounts, userRoles, roles, studentProfiles, faculties,
                     authorization, passwords);
         }
     }

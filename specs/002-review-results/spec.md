@@ -15,7 +15,7 @@ Nguồn nghiệp vụ chính là REQ-17–27 trong
 [`docs/customer/requirements-analysis.md`](../../docs/customer/requirements-analysis.md).
 Tài liệu Human Workflow do người dùng cung cấp được dùng làm bằng chứng bổ sung cho luồng
 thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi cho AI. Các quyết định của feature
-001 về tài khoản, role, phạm vi khoa/bộ môn, nhóm, đăng ký và bảo mật tiếp tục có hiệu lực.
+001 về tài khoản, role, phạm vi khoa, nhóm, đăng ký và bảo mật tiếp tục có hiệu lực.
 
 ## Clarifications
 
@@ -31,7 +31,7 @@ thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi c
   báo cáo hiện tại cho tới trước khi hội đồng phụ trách đăng ký chuyển ACTIVE. Thành viên
   trong snapshot đăng ký, GVHD, Trưởng khoa đúng phạm vi và thành viên hội đồng được xem/tải.
 - Q-12/Q-15: Người dùng chọn phương án C — một hội đồng có thể chấm nhiều nhóm trong cùng
-  đợt và bộ môn, nhưng chỉ áp dụng cho đợt TLCN hoặc KLTN.
+  đợt và khoa, nhưng chỉ áp dụng cho đợt TLCN hoặc KLTN.
 - Q-13: Người dùng chọn phương án A — mỗi thành viên hội đồng nhập một điểm tổng từ 0 đến
   10 với tối đa hai chữ số thập phân. Thành viên được sửa điểm của chính mình khi hội đồng
   còn ACTIVE, kể cả sau submit; sau COMPLETED thì khóa. Điểm cuối là trung bình cộng điểm
@@ -41,7 +41,7 @@ thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi c
 ### Session 2026-09-17
 
 - Người dùng chốt Môn học và NCKH không lập hội đồng: sau khi nhóm đã nộp báo cáo cuối,
-  Trưởng khoa phân công đúng một giảng viên cùng bộ môn, khác mọi GVHD, để chấm. TLCN tiếp
+  Trưởng khoa phân công đúng một giảng viên cùng khoa, khác mọi GVHD, để chấm. TLCN tiếp
   tục do GVPB khác GVHD chấm qua hội đồng; KLTN tiếp tục do GVPB/thành viên hội đồng khác
   GVHD chấm theo luồng hội đồng hiện có.
 - Phiên bản hiện tại chưa có trường hạn nộp báo cáo riêng. Để không mở rộng schema/lịch đợt,
@@ -115,7 +115,7 @@ lệ rồi thử 2/6 người, trùng người, thiếu chức danh, người ng
 
 1. **Given** Trưởng khoa đúng phạm vi, đợt TLCN/KLTN và đăng ký ACCEPTED, **When** lập
    hội đồng, **Then** hội đồng có 3–5 thành viên duy nhất, đúng một Chair, đúng một
-   Secretary khác Chair, mọi thành viên cùng bộ môn với hội đồng và gắn đúng lịch/địa điểm
+   Secretary khác Chair, mọi thành viên cùng khoa với hội đồng và gắn đúng lịch/địa điểm
    review (AS-7.1).
 2. **Given** có dưới 3 hoặc trên 5 thành viên, trùng thành viên, thiếu Chair/Secretary,
    Chair trùng Secretary, thành viên ngoài khoa hoặc không có năng lực LECTURER,
@@ -127,9 +127,9 @@ lệ rồi thử 2/6 người, trùng người, thiếu chức danh, người ng
    tiền điều kiện hoặc sửa thành viên sau ACTIVE (AS-7.4).
 5. **Given** người gọi không phải Trưởng khoa đúng phạm vi, **When** tạo, sửa, phân công
    hoặc chuyển trạng thái hội đồng, **Then** bị từ chối và dữ liệu không đổi (AS-7.5).
-6. **Given** một hội đồng thuộc đúng đợt và bộ môn, **When** Trưởng khoa gán nhiều đăng ký
-   ACCEPTED của đợt đó, **Then** các nhóm cùng bộ môn được xếp lịch riêng trong hội đồng;
-   đăng ký từ đợt/bộ môn khác hoặc loại môn học/NCKH bị từ chối (AS-7.6).
+6. **Given** một hội đồng thuộc đúng đợt và khoa, **When** Trưởng khoa gán nhiều đăng ký
+   ACCEPTED của đợt đó, **Then** các nhóm cùng khoa được xếp lịch riêng trong hội đồng;
+   đăng ký từ đợt/khoa khác hoặc loại môn học/NCKH bị từ chối (AS-7.6).
 
 ---
 
@@ -139,16 +139,16 @@ Là Trưởng khoa, tôi muốn phân công một giảng viên khác GVHD chấ
 sau khi nhóm đã nộp bản cuối để hai loại đề tài này có kết quả mà không phải lập hội đồng.
 
 **Independent Test**: Chuẩn bị đăng ký ACCEPTED loại COURSE/NCKH có báo cáo; phân công một
-LECTURER cùng bộ môn không phải GVHD, thử GVHD/người ngoài bộ môn/tài khoản khóa/TLCN/KLTN,
+LECTURER cùng khoa không phải GVHD, thử GVHD/người ngoài khoa/tài khoản khóa/TLCN/KLTN,
 sau đó chấm, complete một điểm và publish bằng luồng kết quả hiện có.
 
 **Acceptance Scenarios**:
 
 1. **Given** đăng ký COURSE/NCKH đã ACCEPTED, có báo cáo hiện hành và chưa được phân công,
-   **When** Trưởng khoa đúng phạm vi chọn một LECTURER đang hoạt động cùng bộ môn và khác
+   **When** Trưởng khoa đúng phạm vi chọn một LECTURER đang hoạt động cùng khoa và khác
    mọi GVHD, **Then** tạo đúng một lượt chấm ACTIVE và khóa thay thế báo cáo (AS-7.7).
 2. **Given** người được chọn là tác giả/GVHD chính/GVHD phối hợp, không có role LECTURER,
-   đã khóa hoặc khác bộ môn, **When** phân công, **Then** backend từ chối nguyên tử
+   đã khóa hoặc khác khoa, **When** phân công, **Then** backend từ chối nguyên tử
    (AS-7.8).
 3. **Given** đăng ký TLCN/KLTN, chưa ACCEPTED, chưa có báo cáo hoặc đã thuộc một lượt chấm/
    hội đồng, **When** dùng route chấm độc lập, **Then** backend từ chối; luồng hội đồng
@@ -289,9 +289,9 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   chỉ thành viên snapshot, GVHD, Trưởng khoa đúng khoa và thành viên hội đồng phụ trách
   được xem/tải. (REQ-17, REQ-31–32; U Q-11)
 - **FR-18**: Trưởng khoa đúng phạm vi được lập hội đồng cho đăng ký ACCEPTED; hội đồng có
-  3–5 LECTURER duy nhất cùng bộ môn, đúng một Chair và một Secretary khác nhau, không gồm
+  3–5 LECTURER duy nhất cùng khoa, đúng một Chair và một Secretary khác nhau, không gồm
   GVHD của bất kỳ đề tài được phân công. Một hội đồng có thể chấm nhiều đăng ký cùng
-  đợt/bộ môn và chỉ áp dụng TLCN/KLTN.
+  đợt/khoa và chỉ áp dụng TLCN/KLTN.
   (REQ-18–21,25; U Q-12/Q-15)
 - **FR-19**: Vòng đời hội đồng là `DRAFT → ASSIGNED/SCHEDULED → ACTIVE → COMPLETED →
   PUBLISHED`; backend kiểm tra tiền điều kiện, khóa cấu hình từ ACTIVE và lưu version để
@@ -317,7 +317,7 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
   filename tải xuống phải an toàn, storage key không do client quyết định, và phản hồi lỗi
   không lộ đường dẫn máy, SQL hoặc secret. (REQ-31–32; constitution IV, VII, IX)
 - **FR-26**: Với đăng ký ACCEPTED loại COURSE/NCKH đã có báo cáo, Trưởng khoa đúng phạm vi
-  được phân công đúng một LECTURER đang hoạt động cùng bộ môn và khác mọi GVHD để chấm độc
+  được phân công đúng một LECTURER đang hoạt động cùng khoa và khác mọi GVHD để chấm độc
   lập. Phân công chuyển ngay sang ACTIVE và khóa báo cáo; người chấm submit một điểm, tự
   complete; Trưởng khoa publish qua lifecycle kết quả hiện có. TLCN/KLTN không được đi qua
   luồng này và tiếp tục dùng hội đồng 3–5 người. (U 2026-09-17; AS-7.7–7.10)
@@ -334,12 +334,12 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
 
 - **Project Report**: PDF hiện tại tối đa 20 MB gắn với một đăng ký ACCEPTED, người nộp và
   thời điểm; có thể được trưởng nhóm thay trước khi hội đồng ACTIVE.
-- **Council**: hội đồng thuộc một period và bộ môn, có tên, trạng thái, version, Chair,
+- **Council**: hội đồng thuộc một period và kế thừa khoa từ period, có tên, trạng thái, version, Chair,
   Secretary và 3–5 thành viên; cấu hình lịch/địa điểm và assignment tới đăng ký được chấp nhận.
 - **Direct Grading Assignment**: biến thể `DIRECT` dùng chung hạ tầng council/evaluation/result,
   có đúng một đăng ký và một người chấm; người chấm được lưu ở cả officer fields để giữ
   lifecycle complete/publish nhưng không được hiển thị như hội đồng.
-- **Council Assignment**: liên kết hội đồng với một hoặc nhiều đăng ký ACCEPTED cùng đợt/bộ môn
+- **Council Assignment**: liên kết hội đồng với một hoặc nhiều đăng ký ACCEPTED cùng đợt/khoa
   TLCN/KLTN và lịch review riêng cho từng nhóm.
 - **Evaluation**: điểm/nhận xét của một evaluator cho một đăng ký và thành phần điểm;
   gắn thêm đúng một sinh viên snapshot; trạng thái DRAFT/SUBMITTED, không được sửa sau khi
@@ -367,14 +367,14 @@ nhóm đúng xem được, sinh viên nhóm khác và người không đăng nh�
 - **SC-016**: 100% FR-16–27 có ánh xạ REQ/U, acceptance scenario, automated test và bằng
   chứng pass trước khi feature được đánh dấu hoàn thành.
 - **SC-017**: 100% ca COURSE/NCKH hợp lệ tạo đúng một lượt chấm ACTIVE và khóa báo cáo;
-  số ca TLCN/KLTN, GVHD, người ngoài bộ môn hoặc thiếu báo cáo được phân công trực tiếp bằng 0.
+  số ca TLCN/KLTN, GVHD, người ngoài khoa hoặc thiếu báo cáo được phân công trực tiếp bằng 0.
 - **SC-018**: 100% kết quả được tính riêng theo sinh viên; complete bị từ chối nếu thiếu bất
   kỳ ô nào trong ma trận sinh viên–người chấm và không sinh viên nào xem được điểm của thành
   viên khác cùng nhóm.
 
 ## Assumptions
 
-- Tái sử dụng đăng nhập, role, khoa/bộ môn, period, topic, supervisor, group, registration
+- Tái sử dụng đăng nhập, role, khoa, period, topic, supervisor, group, registration
   ACCEPTED và registration-member snapshot của feature 001.
 - Không bổ sung quản trị tài khoản, announcements, email/push, export PDF/Excel thống kê
   hoặc thay đổi quy tắc đăng ký trong feature này.

@@ -72,7 +72,7 @@ class GroupRegistrationFeedbackTest {
         GroupMembershipEntity memberMembership = membership(member, 2);
 
         when(authorization.requireRole(RoleCode.STUDENT)).thenReturn(new ActorIdentity(
-                31L, Set.of(RoleCode.STUDENT), 3L, 7L));
+                31L, Set.of(RoleCode.STUDENT), 7L));
         when(groups.findByIdVisibleToStudent(21L, 31L)).thenReturn(Optional.of(group));
         when(group.getId()).thenReturn(21L);
         when(group.getPeriod()).thenReturn(period);

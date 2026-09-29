@@ -79,7 +79,7 @@ không dùng H2 thay MySQL cho kiểm thử ràng buộc và đồng thời.
 |---|---|---|
 | I. Nguồn nghiệp vụ | PASS | Các Q trong phạm vi hiện tại đã được khách hàng xác nhận và truy vết trong spec |
 | II. Truy vết | PASS về phương pháp | Bảng FR/REQ/AT và contracts giữ ID |
-| III. Backend quyền | PASS về thiết kế | Ma trận quyền và scope khoa/bộ môn/quan hệ tài nguyên đã được xác nhận |
+| III. Backend quyền | PASS về thiết kế | Ma trận quyền và scope khoa/quan hệ tài nguyên đã được xác nhận |
 | IV. Boundary validation | PASS về thiết kế | DTO whitelist, kiểm tra service, lỗi không ghi dở dang |
 | V. Tách nghiệp vụ | PASS về thiết kế | controller → service → repository; DTO/entity tách khỏi controller và Thymeleaf chỉ trình bày |
 | VI. Đồng thời | PASS về thiết kế, chưa kiểm thử | Khóa đợt + unique/FK/check; ma trận tranh chấp |
@@ -98,8 +98,8 @@ Không còn quyết định nghiệp vụ đang chặn trong phạm vi hiện t�
 rút/chấp nhận đồng thời; mỗi lần đăng ký lại tạo hàng mới và giữ lịch sử không thời hạn.
 
 G-Topic/Q-05–06 đã được giải quyết ngày 2026-09-10: mỗi topic thuộc đúng một đợt,
-không có reuse/copy; bộ môn và tài khoản GV được seed/import, form chỉ chọn LECTURER
-đang hoạt động cùng bộ môn. Chỉ tác giả thay đổi nội dung/GVHD khi DRAFT; dữ liệu bị khóa
+không có reuse/copy; khoa CNTT được seed và tài khoản GV được seed/tạo riêng lẻ, form chỉ chọn LECTURER
+đang hoạt động cùng khoa. Chỉ tác giả thay đổi nội dung/GVHD khi DRAFT; dữ liệu bị khóa
 từ PENDING_APPROVAL và không có chức năng thay GVHD trong quá trình thực hiện.
 
 G-Group/Q-07 được thay đổi và chốt lại ngày 2026-09-11: chỉ tạo/sửa nhóm trong hạn SV và
@@ -194,9 +194,9 @@ trong service để không tải dữ liệu ngoài kiểm tra quyền.
 - Unit: đồng hồ có thể thay thế, đầy đủ biên ngày bắt đầu/kết thúc; nội dung
   gửi duyệt, GVHD, quyền trưởng nhóm, chuyển trạng thái hợp lệ/bị cấm.
 - HTTP: MockMvc với session/CSRF; cho phép và từ chối cho từng dòng ma trận;
-  giả mạo role/department/author, truy cập ID của nhóm khác, input sai và stale version.
+  giả mạo role/faculty/author, truy cập ID của nhóm khác, input sai và stale version.
 - Cấp tài khoản: service luôn yêu cầu ADMIN, chỉ ánh xạ ba loại tài khoản cố định;
-  kiểm tra trùng username/bộ môn/header/dòng CSV trước khi ghi và rollback toàn bộ import lỗi.
+  kiểm tra trùng username và khoa CNTT mặc định trước khi ghi; không có import tài khoản.
 - DB: migration từ DB rỗng và nâng từ phiên bản trước với dữ liệu mẫu; kiểm tra
   unique có điều kiện, FK cùng đợt, leader là thành viên và rollback toàn bộ.
 - Đồng thời: nhiều connection/transaction thật, barrier/latch thay sleep tùy ý;

@@ -66,7 +66,6 @@ class NavigationModelAdviceTest {
                 "Người dùng kiểm thử",
                 true,
                 roleSet,
-                2L,
                 3L);
         ExtendedModelMap model = new ExtendedModelMap();
         advice.addCurrentAccount(

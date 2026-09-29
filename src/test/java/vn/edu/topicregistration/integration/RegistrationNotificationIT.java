@@ -88,15 +88,11 @@ class RegistrationNotificationIT {
     @Test
     void groupInvitationLifecycleNotifiesInviteeAndLeaderOnce() {
         long facultyId = requiredLong("""
-                SELECT faculty.id
-                FROM faculties faculty
-                JOIN departments department ON department.faculty_id = faculty.id
-                JOIN user_accounts account ON account.department_id = department.id
+                SELECT account.faculty_id
+                FROM user_accounts account
                 WHERE account.username = 'student6.demo'
                 """);
-        long departmentId = requiredLong(
-                "SELECT department_id FROM user_accounts WHERE username = 'student6.demo'");
-        OrganizationScope scope = new OrganizationScope(facultyId, departmentId);
+        OrganizationScope scope = new OrganizationScope(facultyId);
         IdentityFixture rejectingStudent = fixtures.createIdentity(
                 "notification.rejecting.student",
                 "Sinh viên từ chối lời mời",
@@ -172,9 +168,9 @@ class RegistrationNotificationIT {
 
         jdbc.update("""
                 INSERT INTO topics(
-                    period_id, department_id, author_id, title, description,
+                    period_id, author_id, title, description,
                     objectives, student_requirements, expected_results, status, version)
-                SELECT period_id, department_id, author_id,
+                SELECT period_id, author_id,
                        '[TEST] Đề tài bị từ chối', description, objectives,
                        student_requirements, expected_results, 'PENDING_APPROVAL', 0
                 FROM topics WHERE id = ?

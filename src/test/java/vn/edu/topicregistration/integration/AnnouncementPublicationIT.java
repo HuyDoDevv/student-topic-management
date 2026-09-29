@@ -61,8 +61,8 @@ class AnnouncementPublicationIT {
         DATABASE.resetAndMigrate();
         FixtureSupport fixtures = new FixtureSupport(
                 DATABASE.dataSource(), Clock.fixed(NOW, ZoneOffset.UTC));
-        OrganizationScope it = fixtures.createOrganization("Khoa Công nghệ thông tin", "Bộ môn CNPM");
-        OrganizationScope civil = fixtures.createOrganization("Khoa Xây dựng", "Bộ môn Công trình");
+        OrganizationScope it = fixtures.createOrganization("Khoa Công nghệ thông tin");
+        OrganizationScope civil = fixtures.createOrganization("Khoa Xây dựng");
         admin = fixtures.createIdentity(
                 "notification.admin", "Quản trị", "NOT_A_LOGIN_HASH", true, null, Set.of(RoleCode.ADMIN));
         dean = fixtures.createIdentity(

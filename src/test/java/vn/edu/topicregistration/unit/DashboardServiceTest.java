@@ -43,7 +43,7 @@ class DashboardServiceTest {
     void deanLecturerUsesDeanOnlyAndFacultyScope() {
         Instant now = Instant.parse("2026-09-14T03:00:00Z");
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.DEAN, RoleCode.LECTURER), 11L, 21L));
+                7L, Set.of(RoleCode.DEAN, RoleCode.LECTURER), 21L));
         when(time.now()).thenReturn(now);
         when(query.countFacultyTopics(21L, "PENDING_APPROVAL", now)).thenReturn(2L);
         when(query.countFacultyPendingRegistrations(21L, now)).thenReturn(1L);
@@ -58,24 +58,24 @@ class DashboardServiceTest {
     }
 
     @Test
-    void lecturerCountsOnlyOwnedTopicsInDepartmentAndFacultyIncludingZero() {
+    void lecturerCountsOnlyOwnedTopicsInFacultyIncludingZero() {
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.LECTURER), 11L, 21L));
-        when(query.countLecturerTopics(7L, 11L, 21L, "DRAFT")).thenReturn(1L);
+                7L, Set.of(RoleCode.LECTURER), 21L));
+        when(query.countLecturerTopics(7L, 21L, "DRAFT")).thenReturn(1L);
 
         DashboardView view = service.current();
 
         assertEquals("Giảng viên", view.audience());
         assertEquals(0, view.metrics().get(1).value());
         assertEquals("Có 1 đề tài nháp", view.focus().title());
-        verify(query).countLecturerTopics(7L, 11L, 21L, "PUBLISHED");
+        verify(query).countLecturerTopics(7L, 21L, "PUBLISHED");
     }
 
     @Test
     void studentSeesOwnAcceptedRegistrationFromSnapshot() {
         Instant now = Instant.parse("2026-09-14T03:00:00Z");
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.STUDENT), 11L, 21L));
+                7L, Set.of(RoleCode.STUDENT), 21L));
         when(time.now()).thenReturn(now);
         when(query.countStudentRegistrations(7L, 21L, "ACCEPTED")).thenReturn(1L);
         when(query.latestStudentRegistration(7L, 21L)).thenReturn(Optional.of(
@@ -95,7 +95,7 @@ class DashboardServiceTest {
     void studentWithoutRegistrationSeesInvitationAction() {
         Instant now = Instant.parse("2026-09-14T03:00:00Z");
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.STUDENT), 11L, 21L));
+                7L, Set.of(RoleCode.STUDENT), 21L));
         when(time.now()).thenReturn(now);
         when(query.countStudentInvitations(7L, 21L, now)).thenReturn(1L);
         when(query.latestStudentRegistration(7L, 21L)).thenReturn(Optional.empty());
@@ -109,7 +109,7 @@ class DashboardServiceTest {
     @Test
     void adminSeesAccountStatisticsWithoutAcademicCounters() {
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.ADMIN), null, null));
+                7L, Set.of(RoleCode.ADMIN), null));
         when(query.countAdminAccounts()).thenReturn(
                 new AdminAccountStatistics(33, 30, 20, 10, 2));
 
@@ -123,14 +123,14 @@ class DashboardServiceTest {
         assertEquals("Trưởng khoa", view.metrics().get(3).label());
         assertEquals(33, view.metrics().get(0).value());
         assertEquals(10, view.metrics().get(2).value());
-        assertEquals("/admin/accounts/new", view.focus().href());
+        assertEquals("/admin/accounts/students", view.focus().href());
         verifyNoInteractions(time);
     }
 
     @Test
     void missingScopeFailsClosedBeforeQuery() {
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.LECTURER), null, 21L));
+                7L, Set.of(RoleCode.LECTURER), null));
 
         assertThrows(AccessDeniedException.class, service::current);
         verifyNoInteractions(query, time);

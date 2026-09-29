@@ -21,19 +21,27 @@ public final class AccountPrincipal implements UserDetails {
     private final String passwordHash;
     private final String fullName;
     private final boolean enabled;
+    private final boolean mustChangePassword;
+    private final long securityVersion;
     private final Set<RoleCode> roles;
-    private final Long departmentId;
     private final Long facultyId;
 
     public AccountPrincipal(Long accountId, String username, String passwordHash, String fullName,
-            boolean enabled, Set<RoleCode> roles, Long departmentId, Long facultyId) {
+            boolean enabled, Set<RoleCode> roles, Long facultyId) {
+        this(accountId, username, passwordHash, fullName, enabled, false, 0, roles, facultyId);
+    }
+
+    public AccountPrincipal(Long accountId, String username, String passwordHash, String fullName,
+            boolean enabled, boolean mustChangePassword, long securityVersion,
+            Set<RoleCode> roles, Long facultyId) {
         this.accountId = accountId;
         this.username = username;
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.enabled = enabled;
+        this.mustChangePassword = mustChangePassword;
+        this.securityVersion = securityVersion;
         this.roles = Set.copyOf(roles);
-        this.departmentId = departmentId;
         this.facultyId = facultyId;
     }
 
@@ -49,12 +57,16 @@ public final class AccountPrincipal implements UserDetails {
         return roles;
     }
 
-    public Long departmentId() {
-        return departmentId;
-    }
-
     public Long facultyId() {
         return facultyId;
+    }
+
+    public boolean mustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public long securityVersion() {
+        return securityVersion;
     }
 
     @Override

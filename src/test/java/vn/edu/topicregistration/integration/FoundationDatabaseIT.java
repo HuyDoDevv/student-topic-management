@@ -62,15 +62,14 @@ class FoundationDatabaseIT {
         Instant fixedNow = Instant.parse("2026-09-10T01:00:00Z");
         FixtureSupport fixtures = new FixtureSupport(
                 dataSource, Clock.fixed(fixedNow, TimeConfig.BUSINESS_ZONE));
-        FixtureSupport.OrganizationScope scope = fixtures.createOrganization(
-                "Khoa fixture", "Bộ môn fixture");
+        FixtureSupport.OrganizationScope scope = fixtures.createOrganization("Khoa fixture");
         FixtureSupport.IdentityFixture identity = fixtures.createIdentity(
                 "fixture-lecturer", "Giảng viên fixture", "unusable-fixture-hash",
                 true, scope, Set.of(RoleCode.LECTURER));
 
         assertEquals(fixedNow, fixtures.now());
-        assertEquals(scope.departmentId(), count("""
-                SELECT department_id FROM user_accounts WHERE id = %d
+        assertEquals(scope.facultyId(), count("""
+                SELECT faculty_id FROM user_accounts WHERE id = %d
                 """.formatted(identity.accountId())));
         assertEquals(1, count("""
                 SELECT COUNT(*) FROM user_roles

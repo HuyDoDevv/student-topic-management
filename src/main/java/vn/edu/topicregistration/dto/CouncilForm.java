@@ -14,10 +14,6 @@ public class CouncilForm {
     @Positive(message = "Đợt đăng ký không hợp lệ.")
     private Long periodId;
 
-    @NotNull(message = "Vui lòng chọn bộ môn.")
-    @Positive(message = "Bộ môn không hợp lệ.")
-    private Long departmentId;
-
     @NotBlank(message = "Vui lòng nhập tên hội đồng.")
     @Size(max = 255, message = "Tên hội đồng không được dài quá 255 ký tự.")
     private String name;
@@ -38,7 +34,6 @@ public class CouncilForm {
     public CreateCouncilCommand toCommand() {
         return new CreateCouncilCommand(
                 periodId,
-                departmentId,
                 name,
                 chairId,
                 secretaryId,
@@ -51,14 +46,6 @@ public class CouncilForm {
 
     public void setPeriodId(Long periodId) {
         this.periodId = periodId;
-    }
-
-    public Long getDepartmentId() {
-        return departmentId;
-    }
-
-    public void setDepartmentId(Long departmentId) {
-        this.departmentId = departmentId;
     }
 
     public String getName() {

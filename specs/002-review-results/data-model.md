@@ -6,7 +6,7 @@
   COURSE/NCKH.
 - `registrations`: chỉ row `ACCEPTED` được có report/council/result.
 - `registration_members`: snapshot sinh viên dùng cho upload ownership và result visibility.
-- `topics` + `topic_supervisors`: department scope và danh sách cấm chấm.
+- `topics` + `topic_supervisors`: faculty scope kế thừa từ period và danh sách cấm chấm.
 - `user_accounts` + `user_roles`: account active, LECTURER/DEAN và organization scope.
 
 ## ProjectReport
@@ -33,9 +33,9 @@ lại null; unique guard đảm bảo tối đa một báo cáo hiện hành/reg
 |---|---|
 | id | Primary key |
 | period | TLCN hoặc KLTN |
-| department | Thuộc faculty của period |
+| faculty | Kế thừa trực tiếp từ period; Council không lưu `department_id` |
 | name | Bắt buộc, trim, tối đa 255 |
-| chair | Active LECTURER trong department, là member slot 1 |
+| chair | Active LECTURER trong faculty, là member slot 1 |
 | secretary | Active LECTURER khác chair, là member slot 2 |
 | gradingMode | `COUNCIL` hoặc `DIRECT` |
 | status | DRAFT, ASSIGNED, SCHEDULED, ACTIVE, COMPLETED, PUBLISHED |
@@ -64,7 +64,7 @@ chấm khác mọi TopicSupervisor.
 
 Composite key `(council_id, lecturer_id)`, unique `(council_id, slot)`, slot 1..5. Một
 council phải có 3..5 member trước ASSIGNED; chair/secretary khác nhau và đều thuộc member.
-Mọi member active LECTURER cùng department; không member nào là supervisor của một topic
+Mọi member active LECTURER cùng faculty; không member nào là supervisor của một topic
 đã gán vào council.
 
 Ngoại lệ có chủ đích cho `DIRECT`: đúng một member slot 1 là người chấm. Đây không phải hội
@@ -74,7 +74,7 @@ Ngoại lệ có chủ đích cho `DIRECT`: đúng một member slot 1 là ngư�
 
 Composite key `(council_id, registration_id)`, period copy phục vụ FK cùng period,
 `scheduled_at`, `location`. Unique `registration_id` đảm bảo một registration chỉ thuộc một
-council. Registration phải ACCEPTED và topic department phải trùng council department.
+council. Registration phải ACCEPTED và topic period faculty phải trùng council period faculty.
 
 ## ScoreComponent
 
@@ -126,7 +126,7 @@ migration fail rõ ràng thay vì tự xóa.
 
 ## Migration V9/V10
 
-V9 giữ nguyên migration tên khoa/bộ môn duy nhất đã từng được áp dụng trên database local.
+V9 giữ nguyên migration lịch sử; V13 hợp nhất dữ liệu về Khoa Công nghệ Thông tin và loại bỏ Department.
 V10 thêm `councils.grading_mode`, backfill mặc định `COUNCIL`, thay check officer cũ bằng
 check kết hợp mode/officer và tạo lại trigger officer. `COUNCIL` vẫn bắt buộc Chair khác
 Secretary; `DIRECT` bắt buộc hai FK officer cùng trỏ một người và trigger chỉ tạo một row

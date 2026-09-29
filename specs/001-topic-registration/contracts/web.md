@@ -13,8 +13,8 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 |---|---|---|---|
 | Tạo đợt | DEAN | Tên/loại/lịch ngày hợp lệ, không có ngày đã qua; TLCN/KLTN có hạn điểm GVPB, KLTN có ngày hội đồng; chỉ trong khoa của DEAN | 02–04 |
 | Sửa cấu hình đợt | DEAN | Chỉ đợt trong khoa của DEAN; trước lecturer_start hiện hành được sửa tên/loại/bốn mốc; sau đó khóa tên/loại/mốc bắt đầu và chỉ tăng mốc kết thúc chưa hết hạn; ngày phụ chỉ dời muộn hơn trước ngày đang lưu | 04,15 |
-| Tạo/sửa nháp | LECTURER tác giả, không có DEAN | Chỉ mở form/tạo mới trong hạn GV và kiểm tra lại dưới khóa đợt; đề tài hiện hữu của mình trong đúng một đợt, bộ môn mình, DRAFT vẫn sửa được ngoài hạn; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng bộ môn; tài khoản có DEAN bị từ chối dù đồng thời có LECTURER | 01,03,05–06,14 |
-| Gửi duyệt | LECTURER tác giả, không có DEAN | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi; tài khoản có DEAN bị từ chối | 01,05–06,14 |
+| Tạo/sửa nháp | LECTURER tác giả, không có DEAN | Chỉ mở form/tạo mới trong hạn GV và kiểm tra lại dưới khóa đợt; đề tài hiện hữu của mình trong đúng một đợt/khoa, DRAFT vẫn sửa được ngoài hạn; backend tự gán tác giả làm GVHD chính, chỉ nhận tối đa một GVHD phối hợp hợp lệ cùng khoa | 01,03,05–06,14 |
+| Gửi duyệt | LECTURER tác giả, không có DEAN | Hạn GV, 5 trường, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng khoa; khóa nội dung/GVHD từ PENDING_APPROVAL trở đi | 01,05–06,14 |
 | Duyệt/từ chối topic | DEAN | PENDING_APPROVAL; đúng khoa của DEAN | 07,14 |
 | Công bố | DEAN | Toàn bộ APPROVED trong đúng đợt/khoa, nguyên tử; không đổi DRAFT/PENDING_APPROVAL | 07,14 |
 | Tạo nhóm | STUDENT người tạo | Trong hạn SV; trở thành leader, chưa nhóm khác cùng đợt | 08–09 |
@@ -25,8 +25,8 @@ quan hệ trong nhóm, không phải role tài khoản. Không suy rộng quyề
 | Gửi/đăng ký lại | Leader hiện tại của đúng nhóm | Hạn SV; nhóm có đúng 3 thành viên chính thức; PUBLISHED cùng đợt và cùng khoa, chưa accepted, không active, không còn invitation PENDING; lưu snapshot thành viên/vị trí/leader lúc gửi | 10,13 |
 | Rút | Leader hiện tại của đúng nhóm | PENDING, hạn SV | 13 |
 | Chấp nhận/từ chối registration | DEAN | PENDING thuộc đợt trong khoa của DEAN; từ chối thủ công cần reason không rỗng sau khi trim; auto-reject khi accept | 11–12 |
-| Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN theo khoa, LECTURER theo bộ môn, STUDENT xem đề tài công bố trong khoa và dữ liệu nhóm/đăng ký mình có quyền | 01,07,10 |
-| Xem và cấp tài khoản | ADMIN | Xem toàn bộ; tạo/import chỉ nhận STUDENT, LECTURER, DEAN; bộ môn tồn tại; mật khẩu được băm; import nguyên tử theo file mẫu | 01 |
+| Xem danh sách/chi tiết được bảo vệ | Vai trò/quan hệ cần cho hành trình | DEAN/LECTURER/STUDENT theo khoa và quan hệ dữ liệu; mọi kiểm tra dùng scope persisted | 01,07,10 |
+| Xem và cấp tài khoản | ADMIN | Xem toàn bộ; chỉ tạo từng STUDENT, LECTURER, DEAN trong khoa CNTT mặc định; mật khẩu được băm | 01 |
 | Xử lý nội dung vi phạm | ADMIN | Có lý do; ẩn mềm nội dung, lưu actor/thời gian/lý do và khóa tài khoản đăng nội dung | 01 |
 
 Với từng dòng, người không có role/quan hệ phải bị từ chối: GVHD không tự có quyền
@@ -39,7 +39,7 @@ ADMIN được xem và cấp tài khoản theo ba loại cố định, đồng t
 dung do kẻ gian đăng: ẩn nội dung khỏi website nhưng giữ dữ liệu, lưu actor/thời gian/lý do
 và khóa tài khoản đăng nội dung. ADMIN không được tạo thêm ADMIN, thay role tùy ý, sửa/xóa
 tài khoản hiện hữu, sửa nội dung, xóa cứng, làm nghiệp vụ học vụ/đăng ký, quản lý danh mục
-khoa/bộ môn hoặc chuyển giảng viên. Mọi kiểm tra quyền này phải nằm ở backend.
+khoa hoặc chuyển giảng viên. Mọi kiểm tra quyền này phải nằm ở backend.
 ## Routes and payloads
 
 Path ID chỉ định tài nguyên; backend đọc quan hệ thật. ID, author, role, status và scope
@@ -49,15 +49,15 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | Method / path dự kiến | Payload chính | Thành công / điều kiện | FR |
 |---|---|---|---|
 | GET /login | — | 200 form Tabler | 01 |
-| POST /login | username,password,CSRF | Redirect tới trang được phép; sai trả thông báo chung | 01 |
+| POST /login | username,password,CSRF | Thành công redirect `/`; sai trả thông báo chung. Account bị ADMIN khóa chỉ hiện thông báo khóa sau khi mật khẩu đúng. Giới hạn 5 lần sai/username và 50 lần sai/IP trong cửa sổ 15 phút, sau đó chặn 15 phút mà không đổi trạng thái account trong database | 01 |
 | POST /logout | CSRF | Hủy session, redirect login | 01; kỹ thuật session |
-| GET /; GET /dashboard | — | 200 dashboard theo vai trò đã xác thực, số liệu truy vấn trong scope từ database: DEAN theo khoa và chỉ đếm đợt chưa qua `student_end`, LECTURER theo tác giả/bộ môn/khoa, STUDENT theo tài khoản/khoa và snapshot registration; DEAN+LECTURER dùng DEAN, ADMIN không xem số liệu học vụ. Các lối tắt không cấp thêm quyền. | 01,03,10–11 |
+| GET /; GET /dashboard | — | 200 dashboard theo vai trò đã xác thực, số liệu truy vấn trong scope khoa từ database; DEAN+LECTURER dùng DEAN, ADMIN không xem số liệu học vụ. | 01,03,10–11 |
 | GET /periods; GET /periods/{id} | — | 200 theo scope; danh sách DEAN có cả đợt còn hiệu lực và đã qua `student_end`, lọc được “Đã quá hạn” cùng các nhãn giai đoạn và hiển thị số chờ duyệt/chờ xét/chờ công bố; chi tiết truy cập đúng quyền và có thao tác review/publish | 01–04,07,11 |
 | POST /periods | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate | 303 tới period mới; từ chối giá trị có giờ hoặc ngày đã qua; ngày bắt buộc/null đúng theo loại | 02–04 |
 | POST /periods/{id} | name,type,4 dates (`yyyy-MM-dd`),reviewerScoreDeadline,councilReportDate,version | 303 sau sửa hợp lệ; áp dụng khóa và quy tắc chỉ dời muộn hơn của FR-04/FR-15 | 04,15 |
 | GET /topics | — | 200 danh sách đợt của tác giả, tách còn hiệu lực/đã hết hạn theo `student_end`; cả hai nhóm đều mở được danh sách đề tài cũ | 03,05 |
 | GET /periods/{id}/topics | — | 200; scope/lọc theo trạng thái quyền đã chốt; nút tạo mới chỉ có khi hạn GV đang mở | 05,07 |
-| GET /periods/{id}/topics/new; POST /periods/{id}/topics | 5 nội dung,coSupervisorIds | Chỉ trong hạn GV; GET ngoài hạn và POST trực tiếp đều trả WINDOW_CLOSED. Khi hợp lệ, tạo DRAFT thuộc riêng đợt trong path; author/department từ identity, tác giả tự động là GVHD chính, tối đa một GVHD phối hợp lấy từ danh mục đã lọc | 03,05–06,14 |
+| GET /periods/{id}/topics/new; POST /periods/{id}/topics | 5 nội dung,coSupervisorIds | Chỉ trong hạn GV; tạo DRAFT thuộc đợt/khoa trong path; author/faculty từ identity và period, tác giả tự động là GVHD chính, tối đa một GVHD phối hợp cùng khoa | 03,05–06,14 |
 | GET /topics/{id}; GET /topics/{id}/edit | — | Chỉ dữ liệu/view được policy cho phép | 01,05 |
 | POST /topics/{id}/draft | 5 nội dung,coSupervisorIds,version | 303; chỉ tác giả và DRAFT; tác giả luôn là GVHD chính; nếu bị từ chối về DRAFT thì được sửa người phối hợp/gửi lại trong hạn GV | 05–06,14 |
 | POST /topics/{id}/submit | version | DRAFT → PENDING_APPROVAL | 05–06,14 |
@@ -82,13 +82,16 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | POST /registrations/{id}/accept | version | ACCEPTED và auto-reject nguyên tử | 11 |
 | POST /registrations/{id}/reject | reason,version | PENDING → REJECTED khi reason không rỗng sau khi trim; thiếu reason trả lỗi validation và không đổi trạng thái | 12 |
 | GET /admin/accounts | — | Redirect 303 sang `/admin/accounts/students`; không còn workspace gộp chung | 01 |
-| GET /admin/accounts/students | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ STUDENT đã lọc; loại tài khoản do backend khóa theo route | 01 |
-| GET /admin/accounts/lecturers | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ LECTURER không gồm DEAN; loại do backend khóa theo route | 01 |
-| GET /admin/accounts/deans | query,facultyId,departmentId,enabled | ADMIN nhận 200 danh sách chỉ DEAN; loại do backend khóa theo route | 01 |
-| GET /admin/accounts/new | — | ADMIN nhận trang cấp tài khoản riêng gồm form STUDENT/LECTURER/DEAN, import CSV và bảng mã bộ môn | 01 |
-| POST /admin/accounts | accountType,username,fullName,password,departmentId | 303 sau khi tạo một tài khoản; password được băm; DEAN nhận DEAN+LECTURER; username trùng hoặc input sai trả 422 và không ghi | 01 |
-| POST /admin/accounts/import | multipart `file` | CSV UTF-8 tối đa 1 MB/5.000 dòng, header cố định; kiểm tra toàn file trước khi ghi; có lỗi trả 422 kèm số dòng và rollback toàn bộ, hợp lệ trả 303 | 01 |
-| GET /admin/accounts/import-template.csv | — | Tải CSV UTF-8 có BOM với header `account_type,username,full_name,password,department_id`; chỉ ADMIN | 01 |
+| GET /admin/accounts/students | query,facultyId,enabled | ADMIN nhận 200 danh sách chỉ STUDENT đã lọc; loại tài khoản do backend khóa theo route | 01 |
+| GET /admin/accounts/lecturers | query,facultyId,enabled | ADMIN nhận 200 danh sách chỉ LECTURER không gồm DEAN; loại do backend khóa theo route | 01 |
+| GET /admin/accounts/deans | query,facultyId,enabled | ADMIN nhận 200 danh sách chỉ DEAN; loại do backend khóa theo route | 01 |
+| GET /admin/accounts/new | — | Redirect 303 sang `/admin/accounts/students/new` để tương thích liên kết cũ | 01 |
+| GET /admin/accounts/students/new; POST /admin/accounts/students | fullName,studentCode,className,cohortCode,password | ADMIN nhận form riêng; backend khóa role STUDENT, dùng MSSV làm username, sinh email `{mssv}@student.hcmute.edu.vn`, gán khoa CNTT mặc định và lưu hồ sơ sinh viên; `cohortCode` có dạng `K2026` | 01 |
+| GET /admin/accounts/lecturers/new; POST /admin/accounts/lecturers | fullName,username,password | ADMIN nhận form riêng; backend khóa role LECTURER, gán khoa CNTT mặc định và để email null chờ người dùng tự cập nhật ở feature sau | 01 |
+| GET /admin/accounts/deans/new; POST /admin/accounts/deans | fullName,username,password | ADMIN nhận form riêng; backend khóa DEAN+LECTURER, gán khoa CNTT mặc định và để email null chờ người dùng tự cập nhật ở feature sau | 01 |
+| GET /admin/accounts/{accountId}/password/reset; POST /admin/accounts/{accountId}/password/reset | newPassword,confirmPassword | Chỉ ADMIN; target chỉ là STUDENT/LECTURER/DEAN. POST băm mật khẩu tạm thời mới, buộc đổi ở lần đăng nhập tiếp theo, tăng security version để thu hồi session cũ và không thay đổi trạng thái khóa | 01 |
+| POST /admin/accounts/{accountId}/lock | — | Chỉ ADMIN; target chỉ là STUDENT/LECTURER/DEAN. Khóa idempotent, tăng security version khi trạng thái thực sự đổi và thu hồi session cũ; không xóa dữ liệu học vụ | 01 |
+| POST /admin/accounts/{accountId}/unlock | — | Chỉ ADMIN; target chỉ là STUDENT/LECTURER/DEAN. Mở khóa idempotent, tăng security version khi trạng thái thực sự đổi và không làm sống lại session cũ | 01 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự chuyển sang nhóm khác; SV rời nhóm cũ rồi chỉ tham
@@ -129,7 +132,7 @@ hàng mới. Gia hạn chỉ đi qua route sửa đợt và phải thỏa đúng
 | Đề tài | Table, detail card, form, status badge | AS-2.*, AS-3.*, AT-03,12 |
 | Nhóm | Member table, select, action modal | AS-4.*, AT-04,06 |
 | Đăng ký | Topic list, form confirmation, result badge | AS-5.*, AT-05,11 |
-| Quản lý tài khoản | Metric cards, bộ lọc, danh sách responsive, form tạo, import CSV và lỗi theo dòng | AS-1.17, AT-10 |
+| Quản lý tài khoản | Metric cards, bộ lọc, danh sách responsive và ba form tạo theo vai trò | AS-1.17, AT-10 |
 
 Menu theo role chỉ hỗ trợ UX. Nút disabled/hidden không thay thế backend.
 Danh sách rỗng hiển thị thông báo; POST đang gửi có chỉ báo và hạn chế double-click;

@@ -29,13 +29,11 @@ public final class FixtureSupport {
         return dataSource;
     }
 
-    public OrganizationScope createOrganization(String facultyName, String departmentName) {
+    public OrganizationScope createOrganization(String facultyName) {
         try (Connection connection = dataSource.getConnection()) {
             long facultyId = insertReturningId(connection,
                     "INSERT INTO faculties(name) VALUES (?)", facultyName);
-            long departmentId = insertReturningId(connection,
-                    "INSERT INTO departments(name, faculty_id) VALUES (?, ?)", departmentName, facultyId);
-            return new OrganizationScope(facultyId, departmentId);
+            return new OrganizationScope(facultyId);
         } catch (SQLException exception) {
             throw new IllegalStateException("Could not create organization fixture", exception);
         }
@@ -50,10 +48,10 @@ public final class FixtureSupport {
             connection.setAutoCommit(false);
             try {
                 long accountId = insertReturningId(connection, """
-                        INSERT INTO user_accounts(full_name, enabled, username, password_hash, department_id)
+                        INSERT INTO user_accounts(full_name, enabled, username, password_hash, faculty_id)
                         VALUES (?, ?, ?, ?, ?)
                         """, fullName, enabled, username, passwordHash,
-                        scope == null ? null : scope.departmentId());
+                        scope == null ? null : scope.facultyId());
                 try (PreparedStatement statement = connection.prepareStatement(
                         "INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)")) {
                     for (RoleCode role : roles) {
@@ -74,6 +72,40 @@ public final class FixtureSupport {
         }
     }
 
+    public IdentityFixture createStudentIdentity(
+            String studentCode,
+            String fullName,
+            String className,
+            String cohortCode,
+            String passwordHash,
+            boolean enabled,
+            OrganizationScope scope) {
+        IdentityFixture identity = createIdentity(
+                studentCode, fullName, passwordHash, enabled, scope, Set.of(RoleCode.STUDENT));
+        try (Connection connection = dataSource.getConnection()) {
+            try (PreparedStatement account = connection.prepareStatement(
+                    "UPDATE user_accounts SET email = ? WHERE id = ?")) {
+                account.setString(1, studentCode.toLowerCase(java.util.Locale.ROOT)
+                        + "@student.hcmute.edu.vn");
+                account.setLong(2, identity.accountId());
+                account.executeUpdate();
+            }
+            try (PreparedStatement profile = connection.prepareStatement("""
+                    INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
+                    VALUES (?, ?, ?, ?)
+                    """)) {
+                profile.setLong(1, identity.accountId());
+                profile.setString(2, studentCode);
+                profile.setString(3, className);
+                profile.setString(4, cohortCode);
+                profile.executeUpdate();
+            }
+            return identity;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Could not create student profile fixture", exception);
+        }
+    }
+
     private static long insertReturningId(Connection connection, String sql, Object... parameters)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -90,7 +122,7 @@ public final class FixtureSupport {
         }
     }
 
-    public record OrganizationScope(long facultyId, long departmentId) {
+    public record OrganizationScope(long facultyId) {
     }
 
     public record IdentityFixture(

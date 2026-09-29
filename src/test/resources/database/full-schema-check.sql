@@ -23,8 +23,7 @@ DELIMITER ;
 START TRANSACTION;
 
 INSERT INTO faculties(id, name) VALUES (-1, 'Test faculty');
-INSERT INTO departments(id, name, faculty_id) VALUES (-1, 'Test department', -1);
-INSERT INTO user_accounts(id, username, password_hash, department_id) VALUES
+INSERT INTO user_accounts(id, username, password_hash, faculty_id) VALUES
     (-1, 'schema-check-1', 'NOT_A_LOGIN_HASH', -1),
     (-2, 'schema-check-2', 'NOT_A_LOGIN_HASH', -1),
     (-3, 'schema-check-3', 'NOT_A_LOGIN_HASH', -1),
@@ -35,6 +34,15 @@ INSERT INTO user_accounts(id, username, password_hash, department_id) VALUES
     (-8, 'schema-check-8', 'NOT_A_LOGIN_HASH', -1);
 INSERT INTO user_roles(user_id, role_code) VALUES
     (-1, 'LECTURER'), (-1, 'ADMIN'), (-2, 'LECTURER'), (-3, 'STUDENT');
+UPDATE user_accounts
+SET email = '23110001@student.hcmute.edu.vn'
+WHERE id = -3;
+INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
+VALUES (-3, '23110001', '23110CL1', 'K2023');
+CALL expect_failure('UPDATE user_accounts SET email=''23110001@student.hcmute.edu.vn'' WHERE id=-4');
+CALL expect_failure('UPDATE user_accounts SET security_version=-1 WHERE id=-4');
+CALL expect_failure('INSERT INTO student_profiles(user_id,student_code,class_name,cohort_code) VALUES (-4,''23110001'',''23110CL2'',''K2023'')');
+CALL expect_failure('INSERT INTO student_profiles(user_id,student_code,class_name,cohort_code) VALUES (-5,''23110002'',''23110CL2'',''2023'')');
 
 INSERT INTO registration_periods(
     id, faculty_id, name, topic_type,
@@ -45,8 +53,8 @@ INSERT INTO registration_periods(
     (-2, -1, 'Other period', 'COURSE', '2026-01-01 00:00:00', '2026-02-01 00:00:00',
      '2026-02-02 00:00:00', '2026-03-01 00:00:00');
 
-INSERT INTO topics(id, period_id, department_id, author_id) VALUES
-    (-1, -1, -1, -1), (-2, -1, -1, -1), (-3, -2, -1, -1);
+INSERT INTO topics(id, period_id, author_id) VALUES
+    (-1, -1, -1), (-2, -1, -1), (-3, -2, -1);
 INSERT INTO topic_supervisors(topic_id, lecturer_id, slot) VALUES
     (-1, -1, 1), (-1, -2, 2);
 
@@ -89,8 +97,8 @@ INSERT INTO project_reports(
 VALUES (-1, -3, 'report.pdf', 'test/report.pdf', 'application/pdf', 128);
 
 -- Inserting councils automatically creates chair slot 1 and secretary slot 2.
-INSERT INTO councils(id, period_id, department_id, name, chair_id, secretary_id)
-VALUES (-1, -1, -1, 'Test council', -1, -2);
+INSERT INTO councils(id, period_id, name, chair_id, secretary_id)
+VALUES (-1, -1, 'Test council', -1, -2);
 INSERT INTO council_members(council_id, lecturer_id, slot) VALUES (-1, -8, 3);
 CALL expect_failure('INSERT INTO council_members(council_id,lecturer_id,slot) VALUES (-1,-7,6)');
 CALL expect_failure('UPDATE councils SET chair_id=-7 WHERE id=-1');

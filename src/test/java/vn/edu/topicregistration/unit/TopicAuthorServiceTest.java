@@ -18,7 +18,6 @@ import java.util.Set;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RoleCode;
@@ -53,14 +52,11 @@ class TopicAuthorServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC));
 
         FacultyEntity faculty = mock(FacultyEntity.class);
-        DepartmentEntity department = mock(DepartmentEntity.class);
         UserAccountEntity author = mock(UserAccountEntity.class);
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
         when(faculty.getId()).thenReturn(21L);
-        when(department.getId()).thenReturn(11L);
-        when(department.getName()).thenReturn("Công nghệ phần mềm");
         when(author.getId()).thenReturn(7L);
-        when(author.getDepartment()).thenReturn(department);
+        when(author.getFaculty()).thenReturn(faculty);
         when(author.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
         when(author.isEnabled()).thenReturn(true);
         when(author.getUsername()).thenReturn("lecturer");
@@ -70,8 +66,7 @@ class TopicAuthorServiceTest {
         when(period.getLecturerEnd()).thenReturn(NOW.minusSeconds(1));
         when(periods.findByIdForUpdate(1L)).thenReturn(Optional.of(period));
         when(authorization.requireTopicAuthoringLecturer()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.LECTURER), 11L, 21L));
-        when(entityManager.find(DepartmentEntity.class, 11L)).thenReturn(department);
+                7L, Set.of(RoleCode.LECTURER), 21L));
         when(entityManager.find(UserAccountEntity.class, 7L)).thenReturn(author);
         when(topics.saveAndFlush(any(TopicEntity.class))).thenAnswer(call -> call.getArgument(0));
 
@@ -99,14 +94,12 @@ class TopicAuthorServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC));
 
         FacultyEntity faculty = mock(FacultyEntity.class);
-        DepartmentEntity department = mock(DepartmentEntity.class);
         UserAccountEntity author = mock(UserAccountEntity.class);
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
         when(faculty.getId()).thenReturn(21L);
-        when(department.getId()).thenReturn(11L);
-        when(department.getName()).thenReturn("Công nghệ phần mềm");
         when(author.getId()).thenReturn(7L);
         when(author.getUsername()).thenReturn("lecturer");
+        when(author.getFaculty()).thenReturn(faculty);
         when(period.getId()).thenReturn(1L);
         when(period.getName()).thenReturn("Đợt cũ");
         when(period.getFaculty()).thenReturn(faculty);
@@ -115,10 +108,9 @@ class TopicAuthorServiceTest {
         when(period.getStudentEnd()).thenReturn(NOW.plusSeconds(600));
         when(periods.findByIdAndFacultyId(1L, 21L)).thenReturn(Optional.of(period));
         when(authorization.requireTopicAuthoringLecturer()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.LECTURER), 11L, 21L));
-        when(entityManager.find(DepartmentEntity.class, 11L)).thenReturn(department);
+                7L, Set.of(RoleCode.LECTURER), 21L));
         when(entityManager.find(UserAccountEntity.class, 7L)).thenReturn(author);
-        when(accounts.findEnabledByDepartmentAndRole(11L, RoleCode.LECTURER))
+        when(accounts.findEnabledByFacultyAndRole(21L, RoleCode.LECTURER))
                 .thenReturn(List.of(author));
 
         ApplicationException failure = assertThrows(

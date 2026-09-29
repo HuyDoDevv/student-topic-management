@@ -51,9 +51,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(LocalDemoSeeder.class);
     private static final byte[] DEMO_REPORT_PDF = createDemoReportPdf();
 
-    private static final String FACULTY_NAME = "[DEMO] Khoa Công nghệ Thông tin";
-    private static final String SOFTWARE_DEPARTMENT = "[DEMO] Công nghệ phần mềm";
-    private static final String INFORMATION_SYSTEMS_DEPARTMENT = "[DEMO] Hệ thống thông tin";
+    private static final String FACULTY_NAME = "Khoa Công nghệ Thông tin";
 
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
@@ -98,38 +96,37 @@ public class LocalDemoSeeder implements ApplicationRunner {
 
         String passwordHash = passwordEncoder.encode(password);
         long facultyId = faculty(FACULTY_NAME);
-        long softwareDepartmentId = department(SOFTWARE_DEPARTMENT, facultyId);
-        long informationSystemsDepartmentId = department(
-                INFORMATION_SYSTEMS_DEPARTMENT, facultyId);
 
         account(
                 "admin.demo", "Quản trị viên Demo", null, passwordHash,
                 "ADMIN");
         long deanId = account(
-                "dean.demo", "Trưởng khoa Demo", softwareDepartmentId, passwordHash,
+                "dean.demo", "Trưởng khoa Demo", facultyId, passwordHash,
                 "DEAN", "LECTURER");
         long lecturer1Id = account(
-                "lecturer1.demo", "Giảng viên Demo 1", softwareDepartmentId, passwordHash,
+                "lecturer1.demo", "Giảng viên Demo 1", facultyId, passwordHash,
                 "LECTURER");
         long lecturer2Id = account(
-                "lecturer2.demo", "Giảng viên Demo 2", softwareDepartmentId, passwordHash,
+                "lecturer2.demo", "Giảng viên Demo 2", facultyId, passwordHash,
                 "LECTURER");
         long lecturer3Id = account(
-                "lecturer3.demo", "Giảng viên Demo 3", informationSystemsDepartmentId,
+                "lecturer3.demo", "Giảng viên Demo 3", facultyId,
                 passwordHash, "LECTURER");
 
         long[] students = new long[7];
         for (int index = 0; index < students.length; index++) {
             int number = index + 1;
-            long departmentId = number <= 4
-                    ? softwareDepartmentId
-                    : informationSystemsDepartmentId;
             students[index] = account(
                     "student" + number + ".demo",
                     "Sinh viên Demo " + number,
-                    departmentId,
+                    facultyId,
                     passwordHash,
                     "STUDENT");
+            studentProfile(
+                    students[index],
+                    "23110%03d".formatted(number),
+                    "23110CL%d".formatted(number <= 4 ? 1 : 2),
+                    "K2023");
         }
 
         LocalDate today = projectTime.today();
@@ -175,33 +172,33 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 today.minusDays(5));
 
         long sharedTopicId = topic(
-                studentOpen.id(), softwareDepartmentId, lecturer1Id,
+                studentOpen.id(), lecturer1Id,
                 "[DEMO] Hệ thống quản lý đăng ký đề tài", "PUBLISHED");
         supervisor(sharedTopicId, lecturer1Id, 1);
         supervisor(sharedTopicId, lecturer2Id, 2);
 
         long availableTopicId = topic(
-                studentOpen.id(), softwareDepartmentId, lecturer2Id,
+                studentOpen.id(), lecturer2Id,
                 "[DEMO] Cổng theo dõi tiến độ học tập", "PUBLISHED");
         supervisor(availableTopicId, lecturer2Id, 1);
 
         long draftTopicId = topic(
-                lecturerOpen.id(), informationSystemsDepartmentId, lecturer3Id,
+                lecturerOpen.id(), lecturer3Id,
                 "[DEMO] Phân tích dữ liệu học tập", "DRAFT");
         supervisor(draftTopicId, lecturer3Id, 1);
 
         long pendingTopicId = topic(
-                lecturerOpen.id(), informationSystemsDepartmentId, lecturer3Id,
+                lecturerOpen.id(), lecturer3Id,
                 "[DEMO] Trợ lý tra cứu quy chế", "PENDING_APPROVAL");
         supervisor(pendingTopicId, lecturer3Id, 1);
 
         long approvedTopicId = topic(
-                betweenWindows.id(), softwareDepartmentId, lecturer1Id,
+                betweenWindows.id(), lecturer1Id,
                 "[DEMO] Ứng dụng quản lý phòng học", "APPROVED");
         supervisor(approvedTopicId, lecturer1Id, 1);
 
         long closedTopicId = topic(
-                registrationClosed.id(), softwareDepartmentId, lecturer2Id,
+                registrationClosed.id(), lecturer2Id,
                 "[DEMO] Nền tảng quản lý khóa luận", "PUBLISHED");
         supervisor(closedTopicId, lecturer2Id, 1);
 
@@ -246,7 +243,6 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 seedReviewFixtures(
                         passwordHash,
                         facultyId,
-                        softwareDepartmentId,
                         deanId,
                         lecturer1Id,
                         lecturer2Id,
@@ -263,17 +259,16 @@ public class LocalDemoSeeder implements ApplicationRunner {
     private void seedReviewFixtures(
             String passwordHash,
             long facultyId,
-            long departmentId,
             long deanId,
             long chairId,
             long supervisorId,
             long[] students,
             LocalDate today) {
         long secretaryId = account(
-                "lecturer4.demo", "Giảng viên Demo 4", departmentId, passwordHash,
+                "lecturer4.demo", "Giảng viên Demo 4", facultyId, passwordHash,
                 "LECTURER");
         long memberId = account(
-                "lecturer5.demo", "Giảng viên Demo 5", departmentId, passwordHash,
+                "lecturer5.demo", "Giảng viên Demo 5", facultyId, passwordHash,
                 "LECTURER");
 
         PeriodWindow activePeriod = period(
@@ -287,11 +282,11 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 today.plusDays(7),
                 today.plusDays(10));
         long activeTopicOne = topic(
-                activePeriod.id(), departmentId, supervisorId,
+                activePeriod.id(), supervisorId,
                 "[DEMO] Cổng quản lý chấm khóa luận", "PUBLISHED");
         supervisor(activeTopicOne, supervisorId, 1);
         long activeTopicTwo = topic(
-                activePeriod.id(), departmentId, supervisorId,
+                activePeriod.id(), supervisorId,
                 "[DEMO] Theo dõi tiến độ khóa luận", "PUBLISHED");
         supervisor(activeTopicTwo, supervisorId, 1);
 
@@ -313,7 +308,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 activePeriod.studentStart().plus(1, ChronoUnit.DAYS), null, null, null);
 
         CreatedRow activeCouncil = council(
-                activePeriod.id(), departmentId,
+                activePeriod.id(),
                 "[DEMO] Hội đồng KLTN - Đang chấm",
                 chairId, secretaryId, "ACTIVE", today.minusDays(14));
         if (activeCouncil.created()) {
@@ -355,7 +350,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 today.minusDays(100),
                 today.minusDays(90));
         long publishedTopic = topic(
-                publishedPeriod.id(), departmentId, supervisorId,
+                publishedPeriod.id(), supervisorId,
                 "[DEMO] Hệ thống hỗ trợ quản lý đề tài", "PUBLISHED");
         supervisor(publishedTopic, supervisorId, 1);
         CreatedRow publishedGroup = group(publishedPeriod.id(), students[0]);
@@ -367,7 +362,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 publishedPeriod, publishedGroup.id(), publishedTopic, "ACCEPTED", deanId,
                 publishedPeriod.studentStart().plus(1, ChronoUnit.DAYS), null, null, null);
         CreatedRow publishedCouncil = council(
-                publishedPeriod.id(), departmentId,
+                publishedPeriod.id(),
                 "[DEMO] Hội đồng KLTN - Đã công bố",
                 chairId, secretaryId, "PUBLISHED", today.minusDays(110));
         if (publishedCouncil.created()) {
@@ -409,21 +404,10 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 : insert("INSERT INTO faculties(name) VALUES (?)", name);
     }
 
-    private long department(String name, long facultyId) {
-        Long existing = optionalId(
-                "SELECT id FROM departments WHERE faculty_id = ? AND name = ? ORDER BY id LIMIT 1",
-                facultyId, name);
-        return existing != null
-                ? existing
-                : insert(
-                        "INSERT INTO departments(name, faculty_id) VALUES (?, ?)",
-                        name, facultyId);
-    }
-
     private long account(
             String username,
             String fullName,
-            Long departmentId,
+            Long facultyId,
             String passwordHash,
             String... roles) {
         Long existing = optionalId(
@@ -433,14 +417,33 @@ public class LocalDemoSeeder implements ApplicationRunner {
         }
         long accountId = insert(
                 "INSERT INTO user_accounts(full_name, enabled, username, password_hash, "
-                        + "department_id) VALUES (?, TRUE, ?, ?, ?)",
-                fullName, username, passwordHash, departmentId);
+                        + "faculty_id) VALUES (?, TRUE, ?, ?, ?)",
+                fullName, username, passwordHash, facultyId);
         for (String role : roles) {
             jdbc.update(
                     "INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)",
                     accountId, role);
         }
         return accountId;
+    }
+
+    private void studentProfile(
+            long accountId,
+            String studentCode,
+            String className,
+            String cohortCode) {
+        String email = studentCode.toLowerCase(java.util.Locale.ROOT)
+                + "@student.hcmute.edu.vn";
+        jdbc.update(
+                "UPDATE user_accounts SET email = COALESCE(email, ?) WHERE id = ?",
+                email, accountId);
+        if (optionalId(
+                "SELECT user_id FROM student_profiles WHERE user_id = ?", accountId) == null) {
+            jdbc.update("""
+                    INSERT INTO student_profiles(user_id, student_code, class_name, cohort_code)
+                    VALUES (?, ?, ?, ?)
+                    """, accountId, studentCode, className, cohortCode);
+        }
     }
 
     private PeriodWindow period(
@@ -489,7 +492,6 @@ public class LocalDemoSeeder implements ApplicationRunner {
 
     private long topic(
             long periodId,
-            long departmentId,
             long authorId,
             String title,
             String status) {
@@ -501,11 +503,10 @@ public class LocalDemoSeeder implements ApplicationRunner {
         }
         return insert(
                 "INSERT INTO topics("
-                        + "period_id, department_id, author_id, title, description, objectives, "
+                        + "period_id, author_id, title, description, objectives, "
                         + "student_requirements, expected_results, status, version) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
                 periodId,
-                departmentId,
                 authorId,
                 title,
                 "Mô tả tổng hợp phục vụ kiểm tra giao diện và luồng nghiệp vụ local.",
@@ -593,7 +594,6 @@ public class LocalDemoSeeder implements ApplicationRunner {
 
     private CreatedRow council(
             long periodId,
-            long departmentId,
             String name,
             long chairId,
             long secretaryId,
@@ -607,10 +607,9 @@ public class LocalDemoSeeder implements ApplicationRunner {
         }
         return new CreatedRow(insert(
                 "INSERT INTO councils("
-                        + "period_id, department_id, name, chair_id, secretary_id, status, "
-                        + "created_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
+                        + "period_id, name, chair_id, secretary_id, status, "
+                        + "created_at, version) VALUES (?, ?, ?, ?, ?, ?, 0)",
                 periodId,
-                departmentId,
                 name,
                 chairId,
                 secretaryId,

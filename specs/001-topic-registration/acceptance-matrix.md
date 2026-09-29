@@ -111,7 +111,38 @@ database local của người dùng.
 | Hành vi và hợp đồng | PASS | Không đổi route, template, migration hoặc logic nghiệp vụ; production và test compile sạch. Bộ regression không cần MySQL đạt 77/77 test, gồm 2/2 ca `LayeredArchitectureTest`. |
 | Full unit/web suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test` chạy 84 test: 77 đạt, 7 lỗi đều thuộc `PeriodContractTest` vì chưa cấu hình `TEST_DATABASE_URL`; baseline trước refactor có cùng 7 lỗi. Không dùng database local có dữ liệu thật và không bỏ qua test. |
 
-## Bằng chứng feedback ADMIN T080 — 2026-09-16
+## Bằng chứng TASK-001 — bỏ import tài khoản — 2026-09-28
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Runtime | PASS | Đã xóa endpoint upload CSV/tải file mẫu, parser CSV và DTO kết quả import; luồng tạo từng tài khoản giữ nguyên. |
+| UI | PASS | Trang `/admin/accounts/new` chỉ còn form tạo từng tài khoản; không còn upload, file mẫu hoặc bảng mã bộ môn dành cho CSV. |
+| Route cũ | PASS | `AdminAccountControllerTest` xác nhận `POST /admin/accounts/import` và `GET /admin/accounts/import-template.csv` không còn mapping và trả 404. |
+| Kiểm thử mục tiêu | PASS | `AdminAccountServiceTest,AdminAccountControllerTest,DashboardServiceTest`: 17 test, 0 failure/error. |
+| Full suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test` chạy 220 test: 208 đạt, 12 lỗi thuộc `AuthorizationMatrixTest` và `PeriodContractTest` vì thiếu `TEST_DATABASE_URL`; không có failure và không dùng database local có dữ liệu thật. |
+
+## Bằng chứng TASK-002 — phạm vi chỉ theo Khoa — 2026-09-28
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Runtime/model | PASS | Không còn Department trong Java runtime/templates; account học vụ dùng `faculty_id`, topic/council kế thừa khoa từ period. |
+| Authorization/rules | PASS | Test cùng-khoa và từ chối chéo-khoa cho author, GVHD, hội đồng và chấm trực tiếp đạt trong bộ 78/78 test mục tiêu. |
+| Migration contract | PASS tĩnh | V13 thêm FK account→faculty, bỏ ba `department_id`, xóa bảng departments; schema contract test đạt. |
+| Migration MySQL | BLOCKED do môi trường | Đã thêm `FacultyScopeMigrationIT` và cập nhật schema/seed integration tests nhưng chưa chạy vì thiếu `TEST_DATABASE_URL`. |
+| Full unit/web suite | BLOCKED do môi trường | 221 test: 209 đạt, 12 lỗi môi trường thuộc `AuthorizationMatrixTest`/`PeriodContractTest`, 0 failure. |
+
+## Bằng chứng TASK-003 — tách luồng tạo tài khoản theo vai trò — 2026-09-29
+
+| Phạm vi | Kết quả | Bằng chứng |
+|---|---|---|
+| Route và khóa role | PASS | `AdminAccountControllerTest` kiểm tra ba cặp GET/POST riêng cho STUDENT, LECTURER, DEAN; field giả mạo `accountType`, username/email/khoa của sinh viên không được bind; POST gộp không còn handler tạo account. |
+| Dữ liệu sinh viên | PASS | `AdminAccountServiceTest` kiểm tra MSSV được chuẩn hóa thành username, email `{mssv}@student.hcmute.edu.vn`, lớp/khóa được lưu vào profile và role chỉ là STUDENT. |
+| Giảng viên/trưởng khoa | PASS | Service test kiểm tra email null; LECTURER nhận đúng một role và DEAN nhận đồng thời DEAN+LECTURER; mật khẩu chỉ lưu dưới dạng BCrypt. |
+| Migration/transaction contract | PASS tĩnh | V14 thêm email nullable unique và `student_profiles`; `ReviewSchemaContractTest` đạt. `AccountProfileMigrationIT` kiểm tra nâng cấp V13→V14, giữ account cũ, nhiều email null, unique email/MSSV, định dạng khóa và cascade profile. `AccountProvisioningIT` kiểm tra rollback account/role khi ghi profile lỗi. |
+| Kiểm thử mục tiêu | PASS | `AdminAccountServiceTest,AdminAccountControllerTest,DashboardServiceTest,ReviewSchemaContractTest`: 24 test, 0 failure/error. |
+| Full suite | BLOCKED một phần do môi trường | `env -u JAVA_HOME ./mvnw test` chạy 224 test: 212 đạt, 12 lỗi môi trường thuộc `AuthorizationMatrixTest`/`PeriodContractTest` vì thiếu `TEST_DATABASE_URL`; 0 failure. `AccountProfileMigrationIT` và `AccountProvisioningIT` cũng cần cùng biến môi trường nên chưa chạy trên MySQL. |
+
+## Bằng chứng feedback ADMIN T080 — 2026-09-16 *(lịch sử; import bị loại bỏ bởi TASK-001)*
 
 | Phạm vi | Kết quả | Bằng chứng |
 |---|---|---|
@@ -122,7 +153,7 @@ database local của người dùng.
 | Kiểm thử mục tiêu | PASS | `AdminAccountServiceTest,AdminAccountControllerTest,NavigationModelAdviceTest,DashboardServiceTest,FoundationWebTest`: 32 test, 0 failure/error. |
 | Full unit/web suite | BLOCKED do môi trường | `env -u JAVA_HOME ./mvnw test`: 177 test, 170 đạt; 7 lỗi đều thuộc `PeriodContractTest` vì thiếu `TEST_DATABASE_URL`, không liên quan T080. Không dùng database local có dữ liệu thật. |
 
-## Bằng chứng layout ADMIN T081 — 2026-09-16
+## Bằng chứng layout ADMIN T081 — 2026-09-16 *(lịch sử; import bị loại bỏ bởi TASK-001)*
 
 | Phạm vi | Kết quả | Bằng chứng |
 |---|---|---|

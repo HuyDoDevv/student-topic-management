@@ -637,9 +637,8 @@ public class GroupService {
     private boolean isEligibleStudent(UserAccountEntity account, long facultyId) {
         return account.isEnabled()
                 && account.getRoleCodes().contains(RoleCode.STUDENT)
-                && account.getDepartment() != null
-                && account.getDepartment().getFaculty() != null
-                && Objects.equals(account.getDepartment().getFaculty().getId(), facultyId);
+                && account.getFaculty() != null
+                && Objects.equals(account.getFaculty().getId(), facultyId);
     }
 
     private static boolean isStudentWindowOpen(

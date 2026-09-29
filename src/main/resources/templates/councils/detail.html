@@ -5,7 +5,7 @@
 <section>
   <div class="page-header page-header-actions">
     <div>
-      <div class="page-pretitle" th:text="${board.periodName + ' · ' + board.departmentName}">Đợt · Bộ môn</div>
+      <div class="page-pretitle" th:text="${board.periodName + ' · ' + board.facultyName}">Đợt · Khoa</div>
       <h1 class="page-title" th:text="${board.name}">Hội đồng KLTN</h1>
       <span class="badge mt-2" th:classappend="${board.statusClass}" th:text="${board.statusLabel}">Nháp</span>
     </div>
@@ -89,7 +89,7 @@
   </form>
 
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'SCHEDULED'}">
-    Khi kích hoạt, hệ thống kiểm tra lại vai trò, bộ môn, xung đột giảng viên hướng dẫn và báo cáo hiện hành của mọi nhóm.
+    Khi kích hoạt, hệ thống kiểm tra lại vai trò, khoa, xung đột giảng viên hướng dẫn và báo cáo hiện hành của mọi nhóm.
   </div>
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'ACTIVE'}">
     Chỉ Chủ tịch hiện tại được tổng hợp khi mọi thành viên đã nộp điểm cho tất cả nhóm. Sau khi tổng hợp, điểm và báo cáo đều bị khóa.

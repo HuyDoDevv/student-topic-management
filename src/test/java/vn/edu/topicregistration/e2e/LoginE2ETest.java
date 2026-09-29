@@ -22,8 +22,7 @@ class LoginE2ETest extends BrowserTestSupport {
     @Override
     protected void prepareDatabase(FixtureSupport fixtures) {
         password = requiredEnvironment("E2E_ACCOUNT_PASSWORD");
-        FixtureSupport.OrganizationScope scope = fixtures.createOrganization(
-                "Khoa E2E", "Bộ môn E2E");
+        FixtureSupport.OrganizationScope scope = fixtures.createOrganization("Khoa E2E");
         fixtures.createIdentity(
                 USERNAME,
                 "Giảng viên E2E",

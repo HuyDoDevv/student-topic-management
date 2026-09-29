@@ -17,7 +17,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import vn.edu.topicregistration.entity.RoleCode;
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.repository.UserAccountRepository;
@@ -41,7 +40,7 @@ class AuthorizationPolicyTest {
 
     @Test
     void ignoresAuthoritiesClaimedByTheSessionAndReloadsPersistedRoles() {
-        stubAccount(7L, true, Set.of(RoleCode.STUDENT), 11L, 21L);
+        stubAccount(7L, true, Set.of(RoleCode.STUDENT), 21L);
 
         assertThrows(AccessDeniedException.class, () -> policy.requireEmergencyAdmin());
         assertEquals(7L, policy.requireStudentOfFaculty(21L).accountId());
@@ -49,28 +48,28 @@ class AuthorizationPolicyTest {
 
     @Test
     void lecturerDeanCombinationIsValidAndBothScopesComeFromTheDatabase() {
-        stubAccount(7L, true, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 11L, 21L);
+        stubAccount(7L, true, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 21L);
 
-        assertEquals(7L, policy.requireLecturerOfDepartment(11L).accountId());
+        assertEquals(7L, policy.requireLecturerOfFaculty(21L).accountId());
         assertEquals(7L, policy.requireDeanOfFaculty(21L).accountId());
-        assertThrows(AccessDeniedException.class, () -> policy.requireLecturerOfDepartment(12L));
+        assertThrows(AccessDeniedException.class, () -> policy.requireLecturerOfFaculty(22L));
         assertThrows(AccessDeniedException.class, () -> policy.requireDeanOfFaculty(22L));
     }
 
     @Test
     void authorAndLeaderChecksUsePersistedRelationshipIds() {
-        stubAccount(7L, true, Set.of(RoleCode.LECTURER), 11L, 21L);
-        assertEquals(7L, policy.requireTopicAuthor(7L, 11L).accountId());
-        assertThrows(AccessDeniedException.class, () -> policy.requireTopicAuthor(8L, 11L));
+        stubAccount(7L, true, Set.of(RoleCode.LECTURER), 21L);
+        assertEquals(7L, policy.requireTopicAuthor(7L, 21L).accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireTopicAuthor(8L, 21L));
 
-        stubAccount(7L, true, Set.of(RoleCode.STUDENT), 11L, 21L);
+        stubAccount(7L, true, Set.of(RoleCode.STUDENT), 21L);
         assertEquals(7L, policy.requireGroupLeader(7L).accountId());
         assertThrows(AccessDeniedException.class, () -> policy.requireGroupLeader(8L));
     }
 
     @Test
     void adminHasOnlyEmergencyAuthority() {
-        stubAccount(7L, true, Set.of(RoleCode.ADMIN), null, null);
+        stubAccount(7L, true, Set.of(RoleCode.ADMIN), null);
 
         assertEquals(7L, policy.requireEmergencyAdmin().accountId());
         assertThrows(AccessDeniedException.class, () -> policy.requireDeanOfFaculty(21L));
@@ -82,10 +81,10 @@ class AuthorizationPolicyTest {
         when(accounts.findByUsername("actor")).thenReturn(Optional.empty());
         assertThrows(AccessDeniedException.class, policy::currentActor);
 
-        stubAccount(7L, false, Set.of(RoleCode.LECTURER), 11L, 21L);
+        stubAccount(7L, false, Set.of(RoleCode.LECTURER), 21L);
         assertThrows(AccessDeniedException.class, policy::currentActor);
 
-        stubAccount(7L, true, Set.of(RoleCode.STUDENT, RoleCode.LECTURER), 11L, 21L);
+        stubAccount(7L, true, Set.of(RoleCode.STUDENT, RoleCode.LECTURER), 21L);
         assertThrows(AccessDeniedException.class, policy::currentActor);
     }
 
@@ -98,25 +97,22 @@ class AuthorizationPolicyTest {
     }
 
     private UserAccountEntity account(Long id, boolean enabled, Set<RoleCode> roles,
-            Long departmentId, Long facultyId) {
+            Long facultyId) {
         UserAccountEntity account = mock(UserAccountEntity.class);
         when(account.getId()).thenReturn(id);
         when(account.isEnabled()).thenReturn(enabled);
         when(account.getRoleCodes()).thenReturn(roles);
-        if (departmentId != null) {
+        if (facultyId != null) {
             FacultyEntity faculty = mock(FacultyEntity.class);
-            DepartmentEntity department = mock(DepartmentEntity.class);
             when(faculty.getId()).thenReturn(facultyId);
-            when(department.getId()).thenReturn(departmentId);
-            when(department.getFaculty()).thenReturn(faculty);
-            when(account.getDepartment()).thenReturn(department);
+            when(account.getFaculty()).thenReturn(faculty);
         }
         return account;
     }
 
     private void stubAccount(Long id, boolean enabled, Set<RoleCode> roles,
-            Long departmentId, Long facultyId) {
-        UserAccountEntity account = account(id, enabled, roles, departmentId, facultyId);
+            Long facultyId) {
+        UserAccountEntity account = account(id, enabled, roles, facultyId);
         when(accounts.findByUsername("actor")).thenReturn(Optional.of(account));
     }
 }

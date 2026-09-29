@@ -57,7 +57,7 @@ public class PublishedTopicQueryService {
         return new PublishedTopicView(
                 topic.getId(),
                 topic.getPeriod().getId(),
-                topic.getDepartment().getName(),
+                topic.getPeriod().getFaculty().getName(),
                 displayName(topic.getAuthor()),
                 topic.getTitle(),
                 topic.getDescription(),
@@ -79,7 +79,7 @@ public class PublishedTopicQueryService {
     public record PublishedTopicView(
             long id,
             long periodId,
-            String department,
+            String faculty,
             String author,
             String title,
             String description,

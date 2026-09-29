@@ -32,9 +32,8 @@ class NotificationFlowE2ETest extends BrowserTestSupport {
         password = requiredEnvironment("E2E_ACCOUNT_PASSWORD");
         String passwordHash = new BCryptPasswordEncoder().encode(password);
         FixtureSupport.OrganizationScope it = fixtures.createOrganization(
-                "Khoa Công nghệ thông tin", "Bộ môn Công nghệ phần mềm");
-        FixtureSupport.OrganizationScope civil = fixtures.createOrganization(
-                "Khoa Xây dựng", "Bộ môn Công trình");
+                "Khoa Công nghệ thông tin");
+        FixtureSupport.OrganizationScope civil = fixtures.createOrganization("Khoa Xây dựng");
         fixtures.createIdentity(
                 ADMIN_USERNAME, "Quản trị E2E", passwordHash, true, null,
                 Set.of(RoleCode.ADMIN));

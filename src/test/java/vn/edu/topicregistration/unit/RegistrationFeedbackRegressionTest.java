@@ -24,7 +24,6 @@ import vn.edu.topicregistration.repository.GroupInvitationRepository;
 import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.repository.StudentGroupRepository;
 import vn.edu.topicregistration.entity.RoleCode;
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -83,7 +82,6 @@ class RegistrationFeedbackRegressionTest {
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
         StudentGroupEntity currentGroup = mock(StudentGroupEntity.class);
         TopicEntity topic = mock(TopicEntity.class);
-        DepartmentEntity department = mock(DepartmentEntity.class);
         UserAccountEntity author = account(81L, "lecturer", "Giảng viên");
         UserAccountEntity currentLeader = account(99L, "new-leader", "Trưởng nhóm mới");
         RegistrationEntity registration = mock(RegistrationEntity.class);
@@ -97,10 +95,9 @@ class RegistrationFeedbackRegressionTest {
         when(currentGroup.getId()).thenReturn(21L);
         when(currentGroup.getLeader()).thenReturn(currentLeader);
         when(currentGroup.getMembers()).thenReturn(List.of());
-        when(department.getName()).thenReturn("Công nghệ phần mềm");
         when(topic.getId()).thenReturn(41L);
         when(topic.getTitle()).thenReturn("Đề tài đã gửi");
-        when(topic.getDepartment()).thenReturn(department);
+        when(topic.getPeriod()).thenReturn(period);
         when(topic.getAuthor()).thenReturn(author);
         when(topic.getSupervisors()).thenReturn(List.of());
         when(registration.getId()).thenReturn(51L);
@@ -112,7 +109,7 @@ class RegistrationFeedbackRegressionTest {
         when(registration.getWithdrawnAt()).thenReturn(NOW);
         when(registrations.findDetailedById(51L)).thenReturn(Optional.of(registration));
         when(authorization.currentActor()).thenReturn(new ActorIdentity(
-                31L, Set.of(RoleCode.STUDENT), 3L, 7L));
+                31L, Set.of(RoleCode.STUDENT), 7L));
         when(snapshots.existsByRegistrationIdAndStudentId(51L, 31L)).thenReturn(true);
         List<RegistrationMemberEntity> submittedRoster = List.of(
                 snapshot(31L, "student-1", "Sinh viên 1", true),

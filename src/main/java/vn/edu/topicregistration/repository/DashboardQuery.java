@@ -9,7 +9,7 @@ public interface DashboardQuery {
     long countFacultyTopics(long facultyId, String status, Instant now);
     long countFacultyPendingRegistrations(long facultyId, Instant now);
     long countFacultyActivePeriods(long facultyId, Instant now);
-    long countLecturerTopics(long lecturerId, long departmentId, long facultyId, String status);
+    long countLecturerTopics(long lecturerId, long facultyId, String status);
     long countStudentInvitations(long studentId, long facultyId, Instant now);
     long countStudentGroups(long studentId, long facultyId);
     long countStudentRegistrations(long studentId, long facultyId, String status);

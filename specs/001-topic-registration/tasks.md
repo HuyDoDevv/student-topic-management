@@ -293,6 +293,13 @@ xử lý, cho phép kết hợp cùng tìm kiếm/bộ lọc trạng thái, đ�
 0 và giữ số 0 trung tính; `FoundationWebTest` đã kiểm tra contract render tại thời điểm đó
 và được retire cùng preview ngày 2026-09-28.
 
+## Phase 13: Faculty-only scope 2026-09-28
+
+Quyết định này thay thế mọi mô tả Department/Bộ môn trong các task lịch sử phía trên;
+V1–V12 vẫn giữ nguyên để bảo toàn lịch sử migration.
+
+- [X] T083 [FR-01,FR-05–06] Loại bỏ Department khỏi entity/repository/API/UI; thêm V13 hợp nhất dữ liệu hiện hữu về `Khoa Công nghệ Thông tin`, gắn tài khoản học vụ trực tiếp bằng `faculty_id`, để Topic/Council kế thừa khoa từ period; cập nhật toàn bộ rule cùng-khoa, seeder, fixture, test chéo khoa và tài liệu. Không thêm CRUD khoa, không đổi role hay công thức chấm điểm.
+
 ## Dependencies & execution order
 
 ```mermaid
@@ -345,12 +352,12 @@ kỹ thuật thành REQ PDF. Tests/công việc nền tảng không có REQ ch�
 
 | Requirement | Tasks chính | Tests / nguồn |
 |---|---|---|
-| FR-01 | T006,T008–T011,T016,T061,T070,T075,T077,T080–T081 | REQ-28,31–32; AT-06,09–10,14 |
+| FR-01 | T006,T008–T011,T016,T061,T070,T075,T077,T080–T081,T083 | REQ-28,31–32; AT-06,09–10,14 |
 | FR-02 | T017–T024 | REQ-01,04; AT-01 |
 | FR-03 | T018–T024,T026,T029,T048,T052,T077–T079,T082 | REQ-02–05; AT-02,13 |
 | FR-04 | T017–T023 | REQ-06–07; AT-01 |
-| FR-05 | T025–T032,T070,T078 | REQ-08–09; AT-03,06,12 |
-| FR-06 | T025–T032,T069–T070 | REQ-10–11 phần GVHD; AT-03,06 |
+| FR-05 | T025–T032,T070,T078,T083 | REQ-08–09; AT-03,06,12 |
+| FR-06 | T025–T032,T069–T070,T083 | REQ-10–11 phần GVHD; AT-03,06 |
 | FR-07 | T033–T038,T048,T052,T058 | REQ-02,08,15; AT-05,06,12 |
 | FR-08 | T039–T046,T054,T057–T058,T065–T068,T073,T079 | REQ-12–13; AT-04,06–08 |
 | FR-09 | T040–T046,T050,T057,T065–T068 | REQ-13; AT-04,07 |
@@ -392,6 +399,7 @@ cách gọi `$speckit-implement`.
 
 ## Generation summary
 
-82 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12;
-final 11; architecture maintenance 1; usability feedback 4; ADMIN provisioning/layout 2.
+83 tasks: setup 5; foundation 11; US1 8; US2 10; US3 6; US4 12; US5 12;
+final 11; architecture maintenance 1; usability feedback 4; ADMIN provisioning/layout 2;
+Faculty-only scope 1.
 Tất cả user stories P1 như spec. 16 task có [P], chỉ trong nhóm dependency đã mô tả.

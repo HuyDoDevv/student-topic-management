@@ -231,7 +231,7 @@ public class RegistrationController {
         model.addAttribute("topic", new TopicPageView(
                 page.topicId(),
                 page.topicTitle(),
-                page.topicDepartment(),
+                page.topicFaculty(),
                 page.topicAuthor(),
                 page.supervisors()));
         model.addAttribute("members", page.members());
@@ -246,7 +246,7 @@ public class RegistrationController {
                 registration.topicId(),
                 registration.topicTitle(),
                 registration.topicAuthor(),
-                registration.topicDepartment(),
+                registration.topicFaculty(),
                 String.join(", ", registration.supervisors()),
                 registration.members().stream().map(this::display).toList(),
                 registration.status(),
@@ -266,7 +266,7 @@ public class RegistrationController {
         return new TopicPageView(
                 topic.id(),
                 topic.title(),
-                topic.department(),
+                topic.faculty(),
                 null,
                 String.join(", ", topic.supervisors()));
     }
@@ -332,7 +332,7 @@ public class RegistrationController {
     public record TopicPageView(
             long id,
             String title,
-            String department,
+            String faculty,
             String author,
             String supervisors) {
     }
@@ -352,7 +352,7 @@ public class RegistrationController {
             long topicId,
             String topicTitle,
             String topicAuthor,
-            String topicDepartment,
+            String topicFaculty,
             String supervisors,
             List<MemberPageView> members,
             RegistrationStatus status,

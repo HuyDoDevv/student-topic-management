@@ -16,6 +16,12 @@ class ReviewSchemaContractTest {
             "src/main/resources/db/migration/V10__support_direct_grading_assignments.sql");
     private static final Path INDIVIDUAL_GRADING_MIGRATION = Path.of(
             "src/main/resources/db/migration/V11__grade_each_registration_student.sql");
+    private static final Path FACULTY_SCOPE_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V13__replace_departments_with_faculty_scope.sql");
+    private static final Path ACCOUNT_PROFILE_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V14__add_account_email_and_student_profiles.sql");
+    private static final Path ACCOUNT_SECURITY_MIGRATION = Path.of(
+            "src/main/resources/db/migration/V15__add_account_security_state.sql");
 
     @Test
     void v8AddsLifecycleAndConsistencyGuardsToPlaceholderTables() throws IOException {
@@ -58,5 +64,43 @@ class ReviewSchemaContractTest {
                 () -> assertTrue(sql.contains("fk_final_results_registration_student")),
                 () -> assertTrue(sql.contains("INSERT INTO evaluations")),
                 () -> assertTrue(sql.contains("INSERT INTO final_results")));
+    }
+
+    @Test
+    void v13MovesAcademicScopeDirectlyToFacultyAndRemovesDepartments() throws IOException {
+        String sql = Files.readString(FACULTY_SCOPE_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("ADD COLUMN faculty_id")),
+                () -> assertTrue(sql.contains("fk_accounts_faculty")),
+                () -> assertTrue(sql.contains("DROP COLUMN department_id")),
+                () -> assertTrue(sql.contains("DROP TABLE departments")),
+                () -> assertTrue(sql.contains("Khoa Công nghệ Thông tin")));
+    }
+
+    @Test
+    void v14AddsUniqueEmailAndStudentProfileIdentity() throws IOException {
+        String sql = Files.readString(ACCOUNT_PROFILE_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("ADD COLUMN email")),
+                () -> assertTrue(sql.contains("uq_user_accounts_email")),
+                () -> assertTrue(sql.contains("CREATE TABLE student_profiles")),
+                () -> assertTrue(sql.contains("uq_student_profiles_student_code")),
+                () -> assertTrue(sql.contains("fk_student_profiles_user")),
+                () -> assertTrue(sql.contains("ON DELETE CASCADE")),
+                () -> assertTrue(sql.contains("^K[0-9]{4}$")));
+    }
+
+    @Test
+    void v15AddsTemporaryPasswordAndSessionRevocationState() throws IOException {
+        String sql = Files.readString(ACCOUNT_SECURITY_MIGRATION);
+
+        assertAll(
+                () -> assertTrue(sql.contains("must_change_password")),
+                () -> assertTrue(sql.contains("security_version")),
+                () -> assertTrue(sql.contains("DEFAULT FALSE")),
+                () -> assertTrue(sql.contains("DEFAULT 0")),
+                () -> assertTrue(sql.contains("chk_user_accounts_security_version")));
     }
 }

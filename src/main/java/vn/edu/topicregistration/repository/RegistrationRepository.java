@@ -21,7 +21,7 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
 
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "group", "group.leader",
-            "topic", "topic.department", "topic.author", "topic.supervisors",
+            "topic", "topic.author", "topic.supervisors",
             "topic.supervisors.lecturer", "decisionActor"
     })
     @Query("select registration from RegistrationEntity registration "
@@ -31,24 +31,24 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "group", "group.leader",
-            "topic", "topic.department", "topic.author", "topic.supervisors",
+            "topic", "topic.author", "topic.supervisors",
             "topic.supervisors.lecturer", "decisionActor"
     })
     @Query("select registration from RegistrationEntity registration "
             + "where registration.id = :id")
     Optional<RegistrationEntity> findByIdForUpdate(@Param("id") long id);
 
-    @EntityGraph(attributePaths = {"topic", "topic.department", "decisionActor"})
+    @EntityGraph(attributePaths = {"topic", "topic.period", "topic.period.faculty", "decisionActor"})
     List<RegistrationEntity> findAllByGroupIdOrderBySubmittedAtDescIdDesc(long groupId);
 
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "group", "group.leader",
-            "topic", "topic.department", "topic.author", "topic.supervisors",
+            "topic", "topic.author", "topic.supervisors",
             "topic.supervisors.lecturer", "decisionActor"
     })
     List<RegistrationEntity> findAllByPeriodIdOrderBySubmittedAtDescIdDesc(long periodId);
 
-    @EntityGraph(attributePaths = {"topic", "topic.department", "decisionActor"})
+    @EntityGraph(attributePaths = {"topic", "topic.period", "topic.period.faculty", "decisionActor"})
     Optional<RegistrationEntity>
             findFirstByPeriodIdAndGroupIdAndStatusInOrderBySubmittedAtDescIdDesc(
                     long periodId,

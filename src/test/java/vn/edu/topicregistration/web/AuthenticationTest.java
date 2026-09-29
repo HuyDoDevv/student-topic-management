@@ -2,6 +2,9 @@ package vn.edu.topicregistration.web;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.logout;
@@ -29,6 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -70,6 +74,8 @@ class AuthenticationTest {
                 Set.of(RoleCode.STUDENT, RoleCode.DEAN));
         UserAccountEntity lecturerDean = account("lecturer-dean", true,
                 Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+        UserAccountEntity rateUser = account("rate-user", true, Set.of(RoleCode.LECTURER));
+        UserAccountEntity resetUser = account("reset-user", true, Set.of(RoleCode.LECTURER));
         when(accounts.findByUsername("lecturer")).thenReturn(Optional.of(lecturer));
         when(accounts.findByUsername("student")).thenReturn(Optional.of(student));
         when(accounts.findByUsername("disabled")).thenReturn(Optional.of(disabled));
@@ -77,6 +83,8 @@ class AuthenticationTest {
         when(accounts.findByUsername("student-admin")).thenReturn(Optional.of(studentAdmin));
         when(accounts.findByUsername("student-dean")).thenReturn(Optional.of(studentDean));
         when(accounts.findByUsername("lecturer-dean")).thenReturn(Optional.of(lecturerDean));
+        when(accounts.findByUsername("rate-user")).thenReturn(Optional.of(rateUser));
+        when(accounts.findByUsername("reset-user")).thenReturn(Optional.of(resetUser));
     }
 
     @Test
@@ -130,6 +138,75 @@ class AuthenticationTest {
     }
 
     @Test
+    void disabledAccountIsDisclosedOnlyAfterCorrectPassword() throws Exception {
+        mvc.perform(formLogin().user("disabled").password(PASSWORD))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?disabled"))
+                .andExpect(unauthenticated());
+
+        mvc.perform(formLogin().user("disabled").password("wrong"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?error"))
+                .andExpect(unauthenticated());
+
+        mvc.perform(get("/login").queryParam("disabled", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Tài khoản đã bị quản trị viên khóa")));
+    }
+
+    @Test
+    void usernameRateLimitStopsAuthenticationAfterFiveFailures() throws Exception {
+        String remoteAddress = "198.51.100.10";
+        for (int attempt = 1; attempt < 5; attempt++) {
+            login("rate-user", "wrong", remoteAddress)
+                    .andExpect(redirectedUrl("/login?error"));
+        }
+
+        login("rate-user", "wrong", remoteAddress)
+                .andExpect(redirectedUrl("/login?rateLimited"));
+        login("rate-user", PASSWORD, remoteAddress)
+                .andExpect(redirectedUrl("/login?rateLimited"))
+                .andExpect(unauthenticated());
+
+        verify(accounts, times(5)).findByUsername("rate-user");
+    }
+
+    @Test
+    void ipRateLimitStopsUsernameSprayingAfterFiftyFailures() throws Exception {
+        String remoteAddress = "198.51.100.20";
+        for (int attempt = 1; attempt < 50; attempt++) {
+            login("unknown-" + attempt, "wrong", remoteAddress)
+                    .andExpect(redirectedUrl("/login?error"));
+        }
+
+        login("unknown-50", "wrong", remoteAddress)
+                .andExpect(redirectedUrl("/login?rateLimited"));
+        login("unknown-after-limit", "wrong", remoteAddress)
+                .andExpect(redirectedUrl("/login?rateLimited"));
+
+        verify(accounts, never()).findByUsername("unknown-after-limit");
+    }
+
+    @Test
+    void successfulLoginClearsUsernameFailureCounter() throws Exception {
+        String remoteAddress = "198.51.100.30";
+        for (int attempt = 1; attempt < 5; attempt++) {
+            login("reset-user", "wrong", remoteAddress)
+                    .andExpect(redirectedUrl("/login?error"));
+        }
+
+        login("reset-user", PASSWORD, remoteAddress)
+                .andExpect(redirectedUrl("/"))
+                .andExpect(authenticated().withUsername("reset-user"));
+
+        for (int attempt = 1; attempt < 5; attempt++) {
+            login("reset-user", "wrong", remoteAddress)
+                    .andExpect(redirectedUrl("/login?error"));
+        }
+    }
+
+    @Test
     void logoutRequiresCsrfAndSelfRegistrationDoesNotExist() throws Exception {
         mvc.perform(post("/logout").with(user("lecturer").roles("LECTURER")))
                 .andExpect(status().isForbidden());
@@ -164,6 +241,18 @@ class AuthenticationTest {
                 .andReturn();
 
         assertNotEquals(sessionIdBeforeLogin, result.getRequest().getSession(false).getId());
+    }
+
+    private ResultActions login(String username, String password, String remoteAddress)
+            throws Exception {
+        return mvc.perform(post("/login")
+                .with(csrf())
+                .with(request -> {
+                    request.setRemoteAddr(remoteAddress);
+                    return request;
+                })
+                .param("username", username)
+                .param("password", password));
     }
 
     private UserAccountEntity account(String username, boolean enabled, Set<RoleCode> roles) {

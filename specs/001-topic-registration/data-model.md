@@ -15,14 +15,14 @@ không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã đ
 
 | Entity / bảng dự kiến | Trường chính | Quan hệ và ghi chú |
 |---|---|---|
-| Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope của DEAN và của từng đợt đăng ký |
-| Department / departments | id bigint PK, name varchar(255), faculty_id FK | Bộ môn thuộc khoa, được seed/import sẵn; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
-| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | ADMIN tạo từng tài khoản hoặc import CSV; mật khẩu luôn băm, không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
+| Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope duy nhất của tài khoản học vụ và đợt đăng ký. Phiên bản hiện tại seed đúng một `Khoa Công nghệ Thông tin`; chưa có CRUD khoa |
+| UserAccount / user_accounts | id bigint PK, username text unique, email varchar(254) unique nullable, password_hash text, faculty_id FK nullable, enabled boolean | STUDENT/LECTURER/DEAN liên kết trực tiếp tới khoa; ADMIN có thể không có khoa. Sinh viên mới dùng MSSV làm username và email `{mssv}@student.hcmute.edu.vn`; LECTURER/DEAN mới để email null chờ tự cập nhật ở feature sau; mật khẩu luôn băm |
 | Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
 | UserRole / user_roles | user_id FK, role_code FK | PK hai trường; provisioning chỉ nhận STUDENT→STUDENT, LECTURER→LECTURER hoặc DEAN→DEAN+LECTURER và không tạo ADMIN. Tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN không có quyền học vụ/đăng ký/cơ cấu tổ chức |
+| StudentProfile / student_profiles | user_id PK/FK, student_code varchar(32) unique, class_name varchar(64), cohort_code varchar(16) | Hồ sơ riêng cho sinh viên được tạo mới; `cohort_code` bắt buộc dạng `K2026`. Tài khoản sinh viên đã tồn tại trước V14 được giữ nguyên và có thể chưa có profile |
 | RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
-| Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt và không tách catalog/offering |
-| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng bộ môn; chỉ thay đổi khi topic DRAFT |
+| Topic / topics | id, period_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt và kế thừa khoa từ đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt |
+| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng khoa; chỉ thay đổi khi topic DRAFT |
 | StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version, dissolved_at | Tạo trong hạn SV; nhóm đang hoạt động có trưởng nhóm là thành viên; giải tán bằng `dissolved_at` để giữ lịch sử đăng ký, không thêm tên nhóm bắt buộc hoặc trạng thái nhóm nháp |
 | GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Thành viên đã chấp nhận; một tư cách SV/đợt, slot 1–3 bảo vệ sức chứa; thành viên thường được tự rời theo FR-08 |
 | GroupInvitation / group_invitations | id, group_id, period_id, student_id FK, invited_by FK, slot, status, created_at, responded_at, version, pending guards | Lời mời PENDING giữ slot nhưng chưa tạo membership; ACCEPTED/REJECTED/CANCELLED giữ lịch sử phản hồi; hết hiệu lực được suy ra từ student_end |
@@ -33,11 +33,10 @@ Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đ�
 Trưởng khoa thao tác dữ liệu trong khoa mình; sinh viên xem đề tài công bố trong khoa và
 chỉ thay đổi nhóm/đăng ký mà quan hệ dữ liệu cho phép. Không bỏ trống scope rồi hiểu là toàn quyền.
 
-Tạo tài khoản đơn lẻ và import CSV dùng cùng một transaction service. CSV có header cố định
-`account_type,username,full_name,password,department_id`, UTF-8, tối đa 1 MB và 5.000 dòng
-dữ liệu. Service kiểm tra toàn bộ loại tài khoản, username, mật khẩu, bộ môn, trùng trong file
-và trùng database trước khi ghi; một dòng lỗi trả danh sách lỗi theo số dòng và không ghi tài
-khoản nào. File mẫu chỉ chứa BOM UTF-8 và header, không chứa mật khẩu hoặc dữ liệu thật.
+Tạo từng tài khoản dùng ba route/form riêng và transaction service. Service khóa loại tài khoản
+theo route, kiểm tra mật khẩu, khoa mặc định và dữ liệu trùng trước khi ghi. Với sinh viên,
+MSSV được chuẩn hóa làm username, email được sinh tự động và account/profile được ghi nguyên tử.
+Không có luồng import CSV hoặc file mẫu tài khoản.
 
 Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nội dung cần cờ/trạng thái
 ẩn và metadata `hidden_by`, `hidden_at`, `hidden_reason`; mọi thay đổi schema tương ứng phải
@@ -82,8 +81,8 @@ Mỗi hàng mới chỉ được tạo khi nhóm có đúng ba thành viên; tri
 snapshot thành viên/vị trí/trưởng nhóm. Snapshot không cập nhật hoặc xóa khi nhóm hiện tại
 thay đổi sau rút/từ chối. Dữ liệu lịch sử có trước V7 chỉ được backfill tốt nhất từ membership
 còn tồn tại tại thời điểm migration vì schema cũ không lưu lịch sử membership.
-Không CHECK đọc bảng khác để kiểm tra số GVHD hay department. Service dưới khóa giao dịch
-kiểm tra tối thiểu 1 GVHD khi gửi duyệt, cùng bộ môn, quyền và trạng thái. Bản nháp có thể
+Không CHECK đọc bảng khác để kiểm tra số GVHD hay phạm vi khoa. Service dưới khóa giao dịch
+kiểm tra tối thiểu 1 GVHD khi gửi duyệt, cùng khoa, quyền và trạng thái. Bản nháp có thể
 0 GVHD; giới hạn tối đa vẫn 2. Các đường ghi phải qua cùng service transaction.
 Không cấp quyền ghi DB cho người dùng ứng dụng; sửa DB trực tiếp bằng DBeaver không phải
 luồng nghiệp vụ được hỗ trợ và không thay thế kiểm thử backend.
@@ -112,8 +111,8 @@ trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không 
 
 | Từ → đến | Actor | Điều kiện |
 |---|---|---|
-| DRAFT → DRAFT | GV tác giả không có role DEAN | Chỉ sửa nội dung/GVHD phối hợp của nháp mình tạo; tác giả luôn là GVHD chính, danh mục phối hợp lấy từ tài khoản LECTURER đang hoạt động cùng bộ môn |
-| DRAFT → PENDING_APPROVAL | GV tác giả không có role DEAN | Trong hạn GV, đủ 5 nội dung, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng bộ môn |
+| DRAFT → DRAFT | GV tác giả không có role DEAN | Chỉ sửa nội dung/GVHD phối hợp của nháp mình tạo; tác giả luôn là GVHD chính, danh mục phối hợp lấy từ tài khoản LECTURER đang hoạt động cùng khoa |
+| DRAFT → PENDING_APPROVAL | GV tác giả không có role DEAN | Trong hạn GV, đủ 5 nội dung, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng khoa |
 | PENDING_APPROVAL → APPROVED | Trưởng khoa | Chỉ đề tài thuộc khoa của trưởng khoa |
 | PENDING_APPROVAL → DRAFT | Trưởng khoa | Từ chối; gửi lại vẫn phải trong hạn GV |
 | APPROVED → PUBLISHED | Trưởng khoa | Công bố; không nhảy qua duyệt |
@@ -193,8 +192,8 @@ Lỗi unique/FK/check/stale version chuyển thành lỗi nghiệp vụ thích h
 Deadlock/lock timeout trả xung đột có thể thử lại; không tự retry vô hạn hoặc ghi một phần.
 Không coi version từ client là bằng chứng quyền.
 
-Không có endpoint sửa role/bộ môn của tài khoản hiện hữu. Endpoint tạo mới chỉ gán tổ hợp role
-cố định theo loại tài khoản và lấy bộ môn tồn tại từ database. Nếu sau này bổ sung cập nhật,
+Không có endpoint sửa role/khoa của tài khoản hiện hữu. Endpoint tạo mới chỉ gán tổ hợp role
+cố định theo loại tài khoản và khoa CNTT mặc định từ database. Nếu sau này bổ sung cập nhật,
 phải khóa các hàng danh tính liên quan hoặc phối hợp cùng protocol để không đổi quyền trong lúc command ghi dữ liệu.
 Không dựa vào role cache session để vượt kiểm tra service; thay đổi qua SQL ngoài ứng dụng
 trong khi test không đại diện một luồng quản trị đã chốt.
@@ -216,7 +215,7 @@ thất bại có kiểm soát. Backup trước thay đổi local có dữ liệu
 sửa tiến tiếp, không giả định rollback schema không mất dữ liệu.
 
 Seed local chủ động, idempotent theo mã fixture; một khoa thử nghiệm (không xác nhận scope),
-hai bộ môn, một dean, ba GV, tối thiểu bảy SV, nhóm 1/2/3 người, hai nhóm chờ cùng topic,
+một khoa CNTT, một dean, ba GV, tối thiểu bảy SV, nhóm 1/2/3 người, hai nhóm chờ cùng topic,
 topic ở mỗi trạng thái và các loại đợt. Mật khẩu được cấp qua môi trường rồi hash;
 không lưu mật khẩu sử dụng được trong SQL/docs. Không tự xóa dữ liệu có sẵn hoặc dời
 thời gian đợt mỗi lần restart. Seed là dụng cụ demo; màn hình ADMIN mới là luồng cấp tài khoản

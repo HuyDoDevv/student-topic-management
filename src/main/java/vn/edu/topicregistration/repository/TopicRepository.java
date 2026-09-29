@@ -17,7 +17,7 @@ public interface TopicRepository extends JpaRepository<TopicEntity, Long> {
     Optional<Long> findPeriodIdByTopicId(@Param("id") long id);
 
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "author",
+            "period", "period.faculty", "author", "author.faculty",
             "supervisors", "supervisors.lecturer"
     })
     List<TopicEntity> findAllByPeriodIdAndAuthorIdAndHiddenAtIsNullOrderByIdDesc(
@@ -25,23 +25,23 @@ public interface TopicRepository extends JpaRepository<TopicEntity, Long> {
             long authorId);
 
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "author",
+            "period", "period.faculty", "author", "author.faculty",
             "supervisors", "supervisors.lecturer"
     })
     Optional<TopicEntity> findByIdAndHiddenAtIsNull(long id);
 
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "author",
+            "period", "period.faculty", "author", "author.faculty",
             "supervisors", "supervisors.lecturer"
     })
-    Optional<TopicEntity> findByIdAndAuthorIdAndDepartmentIdAndHiddenAtIsNull(
+    Optional<TopicEntity> findByIdAndAuthorIdAndPeriodFacultyIdAndHiddenAtIsNull(
             long id,
             long authorId,
-            long departmentId);
+            long facultyId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "author",
+            "period", "period.faculty", "author", "author.faculty",
             "supervisors", "supervisors.lecturer"
     })
     @Query("select distinct topic from TopicEntity topic "
@@ -58,7 +58,7 @@ public interface TopicRepository extends JpaRepository<TopicEntity, Long> {
     List<TopicEntity> findAllApprovedByPeriodIdForUpdate(@Param("periodId") long periodId);
 
     @EntityGraph(attributePaths = {
-            "period", "period.faculty", "department", "author",
+            "period", "period.faculty", "author", "author.faculty",
             "supervisors", "supervisors.lecturer"
     })
     @Query("select distinct topic from TopicEntity topic "

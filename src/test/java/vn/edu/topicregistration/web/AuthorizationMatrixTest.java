@@ -92,8 +92,8 @@ class AuthorizationMatrixTest {
         jdbc = new JdbcTemplate(dataSource);
         fixtures = new FixtureSupport(
                 dataSource, Clock.fixed(NOW, TimeConfig.BUSINESS_ZONE));
-        ownScope = fixtures.createOrganization("Khoa CNTT auth", "Phần mềm auth");
-        otherScope = fixtures.createOrganization("Khoa Xây dựng auth", "Xây dựng auth");
+        ownScope = fixtures.createOrganization("Khoa CNTT auth");
+        otherScope = fixtures.createOrganization("Khoa Xây dựng auth");
         dean = identity(
                 "auth-dean", "Trưởng khoa auth", ownScope,
                 Set.of(RoleCode.DEAN, RoleCode.LECTURER));
@@ -120,7 +120,7 @@ class AuthorizationMatrixTest {
 
         periodId = period(ownScope.facultyId(), "Đợt khoa CNTT auth");
         otherPeriodId = period(otherScope.facultyId(), "Đợt khoa Xây dựng auth");
-        topicId = topic(periodId, ownScope.departmentId(), lecturer.accountId());
+        topicId = topic(periodId, lecturer.accountId());
         groupId = completeGroup(periodId);
         registrationId = registration(periodId, groupId, topicId);
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
@@ -209,16 +209,16 @@ class AuthorizationMatrixTest {
         mvc.perform(get("/groups/{id}", groupId).with(actor(leader, "STUDENT")))
                 .andExpect(status().isOk());
 
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "forged-admin-create")
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "23119991")
                         .param("fullName", "Không được tạo")
+                        .param("className", "23110CL9")
+                        .param("cohortCode", "K2023")
                         .param("password", "temporary-password")
-                        .param("departmentId", Long.toString(ownScope.departmentId()))
                         .with(actor(dean, "ADMIN")).with(csrf()))
                 .andExpect(status().isForbidden());
         assertTrue(count("""
-                SELECT COUNT(*) FROM user_accounts WHERE username = 'forged-admin-create'
+                SELECT COUNT(*) FROM user_accounts WHERE username = '23119991'
                 """) == 0L);
     }
 
@@ -232,8 +232,8 @@ class AuthorizationMatrixTest {
                 .andExpect(status().isOk());
 
         jdbc.update(
-                "UPDATE user_accounts SET department_id = ? WHERE id = ?",
-                otherScope.departmentId(),
+                "UPDATE user_accounts SET faculty_id = ? WHERE id = ?",
+                otherScope.facultyId(),
                 lecturer.accountId());
         mvc.perform(get("/topics/{id}", topicId)
                         .with(actor(lecturer, "LECTURER")))
@@ -250,8 +250,8 @@ class AuthorizationMatrixTest {
                 .andExpect(status().isForbidden());
 
         jdbc.update(
-                "UPDATE user_accounts SET department_id = ? WHERE id = ?",
-                otherScope.departmentId(),
+                "UPDATE user_accounts SET faculty_id = ? WHERE id = ?",
+                otherScope.facultyId(),
                 member.accountId());
         mvc.perform(get("/groups/{id}", groupId)
                         .with(actor(member, "STUDENT")))
@@ -264,18 +264,18 @@ class AuthorizationMatrixTest {
     @Test
     void passwordsDoNotAppearInResponsesOrCapturedLogs(CapturedOutput output) throws Exception {
         String secret = "T061-secret-must-never-be-logged";
-        mvc.perform(post("/admin/accounts")
-                        .param("accountType", "STUDENT")
-                        .param("username", "auth-created-student")
+        mvc.perform(post("/admin/accounts/students")
+                        .param("studentCode", "23119992")
                         .param("fullName", "Sinh viên được tạo")
+                        .param("className", "23110CL9")
+                        .param("cohortCode", "K2023")
                         .param("password", secret)
-                        .param("departmentId", Long.toString(ownScope.departmentId()))
                         .with(actor(admin, "ADMIN")).with(csrf()))
                 .andExpect(status().isSeeOther())
                 .andExpect(content().string(not(containsString(secret))));
 
         String storedHash = jdbc.queryForObject("""
-                SELECT password_hash FROM user_accounts WHERE username = 'auth-created-student'
+                SELECT password_hash FROM user_accounts WHERE username = '23119992'
                 """, String.class);
         assertNotNull(storedHash);
         assertFalse(storedHash.contains(secret));
@@ -316,14 +316,14 @@ class AuthorizationMatrixTest {
         return jdbc.queryForObject("SELECT MAX(id) FROM registration_periods", Long.class);
     }
 
-    private long topic(long targetPeriodId, long departmentId, long authorId) {
+    private long topic(long targetPeriodId, long authorId) {
         jdbc.update("""
                 INSERT INTO topics(
-                    period_id, department_id, author_id, title, description, objectives,
+                    period_id, author_id, title, description, objectives,
                     student_requirements, expected_results, status, version)
-                VALUES (?, ?, ?, 'Đề tài phân quyền', 'Mô tả', 'Mục tiêu',
+                VALUES (?, ?, 'Đề tài phân quyền', 'Mô tả', 'Mục tiêu',
                         'Yêu cầu', 'Kết quả', 'PUBLISHED', 0)
-                """, targetPeriodId, departmentId, authorId);
+                """, targetPeriodId, authorId);
         return jdbc.queryForObject("SELECT MAX(id) FROM topics", Long.class);
     }
 

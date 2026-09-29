@@ -167,7 +167,7 @@ public class TopicReviewService {
     private ReviewTopicView toReviewView(TopicEntity topic) {
         return new ReviewTopicView(
                 topic.getId(),
-                topic.getDepartment().getName(),
+                topic.getPeriod().getFaculty().getName(),
                 displayName(topic.getAuthor()),
                 topic.getTitle(),
                 topic.getDescription(),
@@ -249,7 +249,7 @@ public class TopicReviewService {
 
     public record ReviewTopicView(
             long id,
-            String department,
+            String faculty,
             String author,
             String title,
             String description,

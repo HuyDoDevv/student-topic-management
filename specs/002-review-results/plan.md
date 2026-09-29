@@ -8,7 +8,7 @@
 
 Mở rộng monolith Spring MVC hiện tại cho REQ-17–27 và quyết định U ngày 2026-09-17: lưu và
 phân phối PDF báo cáo; phân công một người chấm độc lập cho COURSE/NCKH; lập hội đồng
-TLCN/KLTN 3–5 giảng viên cùng bộ môn cho nhiều nhóm;
+TLCN/KLTN 3–5 giảng viên cùng khoa cho nhiều nhóm;
 thành viên hội đồng chấm một điểm tổng 0–10 riêng cho từng sinh viên snapshot; Chair tổng
 hợp điểm trung bình theo từng sinh viên; Trưởng khoa công bố; sinh viên snapshot chỉ xem
 kết quả của chính mình. Dùng các bảng placeholder từ V1 nhưng bổ sung vòng đời, version và
@@ -40,7 +40,7 @@ transaction nhất quán; một tiến trình; Asia/Ho_Chi_Minh cho hiển thị
 hoặc đường dẫn máy cá nhân trong source
 
 **Scale/Scope**: FR-16–27, AS-6.*–10.*; hội đồng chỉ TLCN/KLTN, mỗi hội đồng 3–5 người và
-nhiều đăng ký cùng period/department; COURSE/NCKH có một lượt chấm DIRECT/một registration
+nhiều đăng ký cùng period/faculty; COURSE/NCKH có một lượt chấm DIRECT/một registration
 
 ## Constitution Check
 

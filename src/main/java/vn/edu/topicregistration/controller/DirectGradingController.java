@@ -73,7 +73,7 @@ public class DirectGradingController {
                 throw exception;
             }
             bindingResult.reject("directGrading.invalid",
-                    "Chỉ phân công đề tài Môn học/NCKH đã có báo cáo; người chấm phải là giảng viên khác mọi GVHD và cùng bộ môn.");
+                    "Chỉ phân công đề tài Môn học/NCKH đã có báo cáo; người chấm phải là giảng viên khác mọi GVHD và cùng khoa.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return render(model, form, directGrading.workspaceForCurrentDean());
         }
@@ -134,7 +134,7 @@ public class DirectGradingController {
                 assignment.topicTitle(),
                 assignment.periodName(),
                 assignment.topicType(),
-                assignment.departmentName(),
+                assignment.facultyName(),
                 assignment.graderName(),
                 assignment.status(),
                 statusLabel(assignment.status()),
@@ -173,7 +173,7 @@ public class DirectGradingController {
             String topicTitle,
             String periodName,
             String topicType,
-            String departmentName,
+            String facultyName,
             String graderName,
             CouncilStatus status,
             String statusLabel,

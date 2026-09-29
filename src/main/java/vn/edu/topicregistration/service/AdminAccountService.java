@@ -1,13 +1,6 @@
 package vn.edu.topicregistration.service;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -20,33 +13,35 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.RoleEntity;
+import vn.edu.topicregistration.entity.StudentProfileEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.UserRoleEntity;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
-import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.repository.FacultyRepository;
 import vn.edu.topicregistration.repository.RoleRepository;
+import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserRoleRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.PasswordPolicy;
 
 @Service
 @Profile("!test")
 public class AdminAccountService {
-    private static final List<String> CSV_HEADER = List.of(
-            "account_type", "username", "full_name", "password", "department_id");
-    private static final int MAX_IMPORT_BYTES = 1_048_576;
-    private static final int MAX_IMPORT_ROWS = 5_000;
-    private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9._-]+$");
+    public static final String DEFAULT_FACULTY_NAME = "Khoa Công nghệ Thông tin";
+    private static final Pattern USERNAME = Pattern.compile(
+            "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$");
+    private static final Pattern STUDENT_CODE = Pattern.compile("^[0-9]{8}$");
+    private static final Pattern CLASS_CODE = Pattern.compile("^[A-Z0-9]+$");
 
     private final UserAccountRepository accounts;
     private final UserRoleRepository userRoles;
     private final RoleRepository roles;
-    private final DepartmentRepository departments;
+    private final StudentProfileRepository studentProfiles;
     private final FacultyRepository faculties;
     private final AuthorizationPolicy authorization;
     private final PasswordEncoder passwordEncoder;
@@ -55,14 +50,14 @@ public class AdminAccountService {
             UserAccountRepository accounts,
             UserRoleRepository userRoles,
             RoleRepository roles,
-            DepartmentRepository departments,
+            StudentProfileRepository studentProfiles,
             FacultyRepository faculties,
             AuthorizationPolicy authorization,
             PasswordEncoder passwordEncoder) {
         this.accounts = accounts;
         this.userRoles = userRoles;
         this.roles = roles;
-        this.departments = departments;
+        this.studentProfiles = studentProfiles;
         this.faculties = faculties;
         this.authorization = authorization;
         this.passwordEncoder = passwordEncoder;
@@ -72,10 +67,6 @@ public class AdminAccountService {
     public AccountWorkspace workspace(AccountFilter filter) {
         authorization.requireRole(RoleCode.ADMIN);
         AccountFilter safeFilter = filter == null ? AccountFilter.empty() : filter.normalized();
-        List<DepartmentOption> departmentOptions = departments
-                .findAllByOrderByFacultyNameAscNameAsc().stream()
-                .map(AdminAccountService::departmentOption)
-                .toList();
         List<FacultyOption> facultyOptions = faculties.findAllByOrderByNameAsc().stream()
                 .map(faculty -> new FacultyOption(faculty.getId(), faculty.getName()))
                 .toList();
@@ -88,8 +79,6 @@ public class AdminAccountService {
         return new AccountWorkspace(
                 visible,
                 facultyOptions,
-                departmentOptions,
-                creatableTypes(),
                 safeFilter,
                 all.size(),
                 all.stream().filter(AccountView::enabled).count(),
@@ -99,128 +88,144 @@ public class AdminAccountService {
     }
 
     @Transactional
-    public AccountView create(CreateAccountCommand command) {
+    public AccountView createStudent(CreateStudentCommand command) {
         authorization.requireRole(RoleCode.ADMIN);
-        PreparedAccount prepared = prepare(command, 0);
-        if (accounts.existsByUsernameIgnoreCase(prepared.username())) {
-            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS);
+        PreparedStudent prepared = prepareStudent(command);
+        ensureAvailable(prepared.account());
+        if (studentProfiles.existsByStudentCodeIgnoreCase(prepared.studentCode())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_STUDENT_CODE_EXISTS);
         }
-        DepartmentEntity department = departments.findById(prepared.departmentId())
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.VALIDATION_FAILED));
-        Map<RoleCode, RoleEntity> roleMap = requiredRoles(prepared.accountType().roles());
-        return accountView(
-                persist(prepared, department, roleMap),
-                prepared.accountType());
+        FacultyEntity faculty = defaultFaculty();
+        Map<RoleCode, RoleEntity> roleMap = requiredRoles(AccountType.STUDENT.roles());
+        UserAccountEntity account = persist(prepared.account(), faculty, roleMap);
+        StudentProfileEntity profile = studentProfiles.saveAndFlush(new StudentProfileEntity(
+                account, prepared.studentCode(), prepared.className(), prepared.cohortCode()));
+        return accountView(account, AccountType.STUDENT, profile);
     }
 
     @Transactional
-    public ImportResult importCsv(byte[] content) {
+    public AccountView createLecturer(CreateLecturerCommand command) {
         authorization.requireRole(RoleCode.ADMIN);
-        if (content == null || content.length == 0) {
-            return failed(1, "Vui lòng chọn file CSV có dữ liệu.");
-        }
-        if (content.length > MAX_IMPORT_BYTES) {
-            return failed(1, "File CSV không được lớn hơn 1 MB.");
-        }
-
-        List<CsvRecord> records;
-        try {
-            records = parseCsv(decodeUtf8(content));
-        } catch (IllegalArgumentException exception) {
-            return failed(1, exception.getMessage());
-        }
-        if (records.isEmpty()) {
-            return failed(1, "File CSV chưa có dòng tiêu đề.");
-        }
-        if (!CSV_HEADER.equals(records.getFirst().fields())) {
-            return failed(1, "Dòng tiêu đề phải đúng: " + String.join(",", CSV_HEADER));
-        }
-
-        List<CsvRecord> dataRows = records.stream()
-                .skip(1)
-                .filter(record -> record.fields().stream().anyMatch(value -> !value.isBlank()))
-                .toList();
-        if (dataRows.isEmpty()) {
-            return failed(2, "File CSV chưa có tài khoản để import.");
-        }
-        if (dataRows.size() > MAX_IMPORT_ROWS) {
-            return failed(2, "Mỗi lần chỉ import tối đa " + MAX_IMPORT_ROWS + " tài khoản.");
-        }
-
-        List<ImportIssue> issues = new ArrayList<>();
-        List<PreparedAccount> prepared = new ArrayList<>();
-        Set<String> usernames = new LinkedHashSet<>();
-        Set<Long> departmentIds = new LinkedHashSet<>();
-        for (CsvRecord row : dataRows) {
-            if (row.fields().size() != CSV_HEADER.size()) {
-                issues.add(new ImportIssue(row.row(), "Dòng phải có đúng 5 cột."));
-                continue;
-            }
-            try {
-                AccountType type = parseAccountType(row.fields().get(0));
-                long departmentId = parseDepartmentId(row.fields().get(4));
-                PreparedAccount item = prepare(new CreateAccountCommand(
-                        type,
-                        row.fields().get(1),
-                        row.fields().get(2),
-                        row.fields().get(3),
-                        departmentId), row.row());
-                String key = item.username().toLowerCase(Locale.ROOT);
-                if (!usernames.add(key)) {
-                    issues.add(new ImportIssue(row.row(),
-                            "Tên đăng nhập bị lặp trong file: " + item.username()));
-                    continue;
-                }
-                prepared.add(item);
-                departmentIds.add(departmentId);
-            } catch (IllegalArgumentException exception) {
-                issues.add(new ImportIssue(row.row(), safeMessage(exception)));
-            }
-        }
-
-        Map<Long, DepartmentEntity> departmentMap = new HashMap<>();
-        departments.findAllById(departmentIds)
-                .forEach(department -> departmentMap.put(department.getId(), department));
-        for (PreparedAccount item : prepared) {
-            if (!departmentMap.containsKey(item.departmentId())) {
-                issues.add(new ImportIssue(item.row(),
-                        "Mã bộ môn không tồn tại: " + item.departmentId()));
-            }
-            if (accounts.existsByUsernameIgnoreCase(item.username())) {
-                issues.add(new ImportIssue(item.row(),
-                        "Tên đăng nhập đã tồn tại: " + item.username()));
-            }
-        }
-        if (!issues.isEmpty()) {
-            return new ImportResult(0, issues);
-        }
-
-        Set<RoleCode> requiredCodes = prepared.stream()
-                .flatMap(item -> item.accountType().roles().stream())
-                .collect(java.util.stream.Collectors.toSet());
-        Map<RoleCode, RoleEntity> roleMap = requiredRoles(requiredCodes);
-        for (PreparedAccount item : prepared) {
-            persist(item, departmentMap.get(item.departmentId()), roleMap);
-        }
-        return new ImportResult(prepared.size(), List.of());
+        return createStaff(AccountType.LECTURER,
+                command == null ? null : command.username(),
+                command == null ? null : command.fullName(),
+                command == null ? null : command.password());
     }
 
-    public byte[] csvTemplate() {
+    @Transactional
+    public AccountView createDean(CreateDeanCommand command) {
         authorization.requireRole(RoleCode.ADMIN);
-        return ("\ufeff" + String.join(",", CSV_HEADER) + "\r\n")
-                .getBytes(StandardCharsets.UTF_8);
+        return createStaff(AccountType.DEAN,
+                command == null ? null : command.username(),
+                command == null ? null : command.fullName(),
+                command == null ? null : command.password());
+    }
+
+    @Transactional(readOnly = true)
+    public PasswordResetTarget passwordResetTarget(long accountId) {
+        authorization.requireRole(RoleCode.ADMIN);
+        UserAccountEntity account = accounts.findDetailedById(accountId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        return new PasswordResetTarget(
+                account.getId(),
+                account.getUsername(),
+                account.getFullName() == null || account.getFullName().isBlank()
+                        ? account.getUsername()
+                        : account.getFullName(),
+                type,
+                type.label(),
+                account.isEnabled());
+    }
+
+    @Transactional
+    public PasswordResetResult resetPassword(ResetPasswordCommand command) {
+        authorization.requireRole(RoleCode.ADMIN);
+        Objects.requireNonNull(command, "command");
+        if (command.accountId() <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        if (!PasswordPolicy.isValid(command.newPassword())
+                || !Objects.equals(command.newPassword(), command.confirmPassword())) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+
+        UserAccountEntity account = accounts.findByIdForUpdate(command.accountId())
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        if (passwordEncoder.matches(command.newPassword(), account.getPasswordHash())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_PASSWORD_REUSED);
+        }
+
+        account.resetPassword(passwordEncoder.encode(command.newPassword()));
+        accounts.flush();
+        return new PasswordResetResult(account.getId(), account.getUsername(), type);
+    }
+
+    @Transactional
+    public AccountStatusResult lockAccount(long accountId) {
+        return changeAccountStatus(accountId, false);
+    }
+
+    @Transactional
+    public AccountStatusResult unlockAccount(long accountId) {
+        return changeAccountStatus(accountId, true);
+    }
+
+    private AccountStatusResult changeAccountStatus(long accountId, boolean enabled) {
+        authorization.requireRole(RoleCode.ADMIN);
+        if (accountId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        UserAccountEntity account = accounts.findByIdForUpdate(accountId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        boolean changed = enabled ? account.enable() : account.disable();
+        if (changed) {
+            accounts.flush();
+        }
+        return new AccountStatusResult(
+                account.getId(), account.getUsername(), type, enabled, changed);
+    }
+
+    private AccountView createStaff(
+            AccountType type, String username, String fullName, String password) {
+        PreparedAccount prepared = prepareAccount(type, username, fullName, password, null);
+        ensureAvailable(prepared);
+        FacultyEntity faculty = defaultFaculty();
+        Map<RoleCode, RoleEntity> roleMap = requiredRoles(type.roles());
+        return accountView(persist(prepared, faculty, roleMap), type);
+    }
+
+    private FacultyEntity defaultFaculty() {
+        return faculties.findByNameIgnoreCase(DEFAULT_FACULTY_NAME)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.VALIDATION_FAILED));
+    }
+
+    private void ensureAvailable(PreparedAccount prepared) {
+        if (accounts.existsByUsernameIgnoreCase(prepared.username())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS);
+        }
+        if (prepared.email() != null && accounts.existsByEmailIgnoreCase(prepared.email())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_EMAIL_EXISTS);
+        }
     }
 
     private UserAccountEntity persist(
             PreparedAccount prepared,
-            DepartmentEntity department,
+            FacultyEntity faculty,
             Map<RoleCode, RoleEntity> roleMap) {
         UserAccountEntity account = new UserAccountEntity(
                 prepared.fullName(),
                 prepared.username(),
                 passwordEncoder.encode(prepared.password()),
-                department);
+                prepared.email(),
+                faculty);
+        account.markPasswordAsTemporary();
         UserAccountEntity saved = accounts.saveAndFlush(account);
         List<UserRoleEntity> assignments = prepared.accountType().roles().stream()
                 .map(code -> new UserRoleEntity(saved, roleMap.get(code)))
@@ -238,17 +243,44 @@ public class AdminAccountService {
         return result;
     }
 
-    private static PreparedAccount prepare(
-            CreateAccountCommand command,
-            int row) {
-        Objects.requireNonNull(command, "command");
-        if (command.accountType() == null || !command.accountType().creatable()) {
-            throw new IllegalArgumentException(
-                    "Loại tài khoản chỉ nhận STUDENT, LECTURER hoặc DEAN.");
+    private static AccountType managedAccountType(UserAccountEntity account) {
+        AccountType type = AccountType.fromRoles(account.getRoleCodes());
+        if (type == null || !type.creatable()) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
         }
-        String username = trim(command.username());
-        String fullName = trim(command.fullName());
-        String password = command.password() == null ? "" : command.password();
+        return type;
+    }
+
+    private static PreparedStudent prepareStudent(CreateStudentCommand command) {
+        Objects.requireNonNull(command, "command");
+        String studentCode = trim(command.studentCode());
+        if (!STUDENT_CODE.matcher(studentCode).matches()) {
+            throw new IllegalArgumentException("MSSV phải gồm đúng 8 chữ số.");
+        }
+        String className = trim(command.className()).toUpperCase(Locale.ROOT);
+        if (className.length() > 64 || !CLASS_CODE.matcher(className).matches()) {
+            throw new IllegalArgumentException(
+                    "Lớp là bắt buộc, chỉ gồm chữ không dấu và số, tối đa 64 ký tự.");
+        }
+        String cohortCode = trim(command.cohortCode()).toUpperCase(Locale.ROOT);
+        if (!cohortCode.matches("^K[0-9]{4}$")) {
+            throw new IllegalArgumentException("Khóa phải có định dạng K2026.");
+        }
+        String email = studentCode.toLowerCase(Locale.ROOT) + "@student.hcmute.edu.vn";
+        PreparedAccount account = prepareAccount(
+                AccountType.STUDENT, studentCode, command.fullName(), command.password(), email);
+        return new PreparedStudent(account, studentCode, className, cohortCode);
+    }
+
+    private static PreparedAccount prepareAccount(
+            AccountType type, String rawUsername, String rawFullName,
+            String rawPassword, String email) {
+        if (type == null || !type.creatable()) {
+            throw new IllegalArgumentException("Loại tài khoản không thể được tạo.");
+        }
+        String username = trim(rawUsername);
+        String fullName = trim(rawFullName);
+        String password = rawPassword == null ? "" : rawPassword;
         if (username.isEmpty() || username.length() > 191 || !USERNAME.matcher(username).matches()) {
             throw new IllegalArgumentException(
                     "Tên đăng nhập chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang và tối đa 191 ký tự.");
@@ -256,16 +288,11 @@ public class AdminAccountService {
         if (fullName.isEmpty() || fullName.length() > 255) {
             throw new IllegalArgumentException("Họ tên là bắt buộc và tối đa 255 ký tự.");
         }
-        int passwordBytes = password.getBytes(StandardCharsets.UTF_8).length;
-        if (password.isBlank() || password.length() < 8 || passwordBytes > 72) {
+        if (!PasswordPolicy.isValid(password)) {
             throw new IllegalArgumentException(
                     "Mật khẩu tạm thời phải có ít nhất 8 ký tự và không quá 72 byte UTF-8.");
         }
-        if (command.departmentId() == null || command.departmentId() <= 0) {
-            throw new IllegalArgumentException("Mã bộ môn phải là số nguyên dương.");
-        }
-        return new PreparedAccount(
-                row, command.accountType(), username, fullName, password, command.departmentId());
+        return new PreparedAccount(type, username, fullName, password, email);
     }
 
     private static boolean matches(AccountView account, AccountFilter filter) {
@@ -273,10 +300,6 @@ public class AdminAccountService {
             return false;
         }
         if (filter.facultyId() != null && !filter.facultyId().equals(account.facultyId())) {
-            return false;
-        }
-        if (filter.departmentId() != null
-                && !filter.departmentId().equals(account.departmentId())) {
             return false;
         }
         if (filter.enabled() != null && filter.enabled() != account.enabled()) {
@@ -296,7 +319,12 @@ public class AdminAccountService {
     }
 
     private static AccountView accountView(UserAccountEntity account, AccountType type) {
-        DepartmentEntity department = account.getDepartment();
+        return accountView(account, type, account.getStudentProfile());
+    }
+
+    private static AccountView accountView(
+            UserAccountEntity account, AccountType type, StudentProfileEntity profile) {
+        FacultyEntity faculty = account.getFaculty();
         return new AccountView(
                 account.getId(),
                 account.getUsername(),
@@ -305,129 +333,17 @@ public class AdminAccountService {
                         : account.getFullName(),
                 type,
                 type == null ? "Chưa xác định" : type.label(),
-                department == null ? null : department.getId(),
-                department == null ? "Chưa gán" : department.getName(),
-                department == null || department.getFaculty() == null
-                        ? null
-                        : department.getFaculty().getId(),
-                department == null || department.getFaculty() == null
-                        ? "Chưa gán"
-                        : department.getFaculty().getName(),
+                faculty == null ? null : faculty.getId(),
+                faculty == null ? "Không áp dụng" : faculty.getName(),
+                account.getEmail(),
+                profile == null ? null : profile.getStudentCode(),
+                profile == null ? null : profile.getClassName(),
+                profile == null ? null : profile.getCohortCode(),
                 account.isEnabled());
-    }
-
-    private static AccountType parseAccountType(String value) {
-        try {
-            AccountType type = AccountType.valueOf(trim(value).toUpperCase(Locale.ROOT));
-            if (!type.creatable()) {
-                throw new IllegalArgumentException();
-            }
-            return type;
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException(
-                    "Loại tài khoản chỉ nhận STUDENT, LECTURER hoặc DEAN.", exception);
-        }
-    }
-
-    private static long parseDepartmentId(String value) {
-        try {
-            long departmentId = Long.parseLong(trim(value));
-            if (departmentId <= 0) {
-                throw new NumberFormatException();
-            }
-            return departmentId;
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException(
-                    "Mã bộ môn phải là số nguyên dương.", exception);
-        }
-    }
-
-    private static DepartmentOption departmentOption(DepartmentEntity department) {
-        return new DepartmentOption(
-                department.getId(),
-                department.getName(),
-                department.getFaculty().getId(),
-                department.getFaculty().getName());
-    }
-
-    private static List<AccountType> creatableTypes() {
-        return List.of(AccountType.STUDENT, AccountType.LECTURER, AccountType.DEAN);
-    }
-
-    private static String decodeUtf8(byte[] content) {
-        try {
-            String value = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(content))
-                    .toString();
-            return value.startsWith("\ufeff") ? value.substring(1) : value;
-        } catch (CharacterCodingException exception) {
-            throw new IllegalArgumentException("File phải dùng mã hóa UTF-8.", exception);
-        }
-    }
-
-    private static List<CsvRecord> parseCsv(String input) {
-        List<CsvRecord> records = new ArrayList<>();
-        List<String> fields = new ArrayList<>();
-        StringBuilder field = new StringBuilder();
-        boolean quoted = false;
-        int row = 1;
-        for (int index = 0; index < input.length(); index++) {
-            char current = input.charAt(index);
-            if (quoted) {
-                if (current == '"') {
-                    if (index + 1 < input.length() && input.charAt(index + 1) == '"') {
-                        field.append('"');
-                        index++;
-                    } else {
-                        quoted = false;
-                    }
-                } else {
-                    field.append(current);
-                }
-                continue;
-            }
-            if (current == '"' && field.length() == 0) {
-                quoted = true;
-            } else if (current == ',') {
-                fields.add(field.toString());
-                field.setLength(0);
-            } else if (current == '\n' || current == '\r') {
-                if (current == '\r' && index + 1 < input.length()
-                        && input.charAt(index + 1) == '\n') {
-                    index++;
-                }
-                fields.add(field.toString());
-                records.add(new CsvRecord(row++, List.copyOf(fields)));
-                fields.clear();
-                field.setLength(0);
-            } else {
-                field.append(current);
-            }
-        }
-        if (quoted) {
-            throw new IllegalArgumentException("File CSV có dấu nháy kép chưa đóng.");
-        }
-        if (field.length() > 0 || !fields.isEmpty()) {
-            fields.add(field.toString());
-            records.add(new CsvRecord(row, List.copyOf(fields)));
-        }
-        return records;
     }
 
     private static String trim(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private static String safeMessage(IllegalArgumentException exception) {
-        return exception.getMessage() == null || exception.getMessage().isBlank()
-                ? "Dữ liệu dòng không hợp lệ."
-                : exception.getMessage();
-    }
-
-    private static ImportResult failed(int row, String message) {
-        return new ImportResult(0, List.of(new ImportIssue(row, message)));
     }
 
     public enum AccountType {
@@ -472,27 +388,60 @@ public class AdminAccountService {
         }
     }
 
-    public record CreateAccountCommand(
-            AccountType accountType,
+    public record CreateStudentCommand(
+            String studentCode,
+            String fullName,
+            String className,
+            String cohortCode,
+            String password) {
+    }
+
+    public record CreateLecturerCommand(String username, String fullName, String password) {
+    }
+
+    public record CreateDeanCommand(String username, String fullName, String password) {
+    }
+
+    public record ResetPasswordCommand(
+            long accountId,
+            String newPassword,
+            String confirmPassword) {
+    }
+
+    public record PasswordResetTarget(
+            long id,
             String username,
             String fullName,
-            String password,
-            Long departmentId) {
+            AccountType accountType,
+            String accountTypeLabel,
+            boolean enabled) {
+    }
+
+    public record PasswordResetResult(
+            long id,
+            String username,
+            AccountType accountType) {
+    }
+
+    public record AccountStatusResult(
+            long id,
+            String username,
+            AccountType accountType,
+            boolean enabled,
+            boolean changed) {
     }
 
     public record AccountFilter(
             String query,
             AccountType accountType,
             Long facultyId,
-            Long departmentId,
             Boolean enabled) {
         public static AccountFilter empty() {
-            return new AccountFilter(null, null, null, null, null);
+            return new AccountFilter(null, null, null, null);
         }
 
         AccountFilter normalized() {
-            return new AccountFilter(trim(query), accountType, positive(facultyId),
-                    positive(departmentId), enabled);
+            return new AccountFilter(trim(query), accountType, positive(facultyId), enabled);
         }
 
         private static Long positive(Long value) {
@@ -506,24 +455,21 @@ public class AdminAccountService {
             String fullName,
             AccountType accountType,
             String accountTypeLabel,
-            Long departmentId,
-            String departmentName,
             Long facultyId,
             String facultyName,
+            String email,
+            String studentCode,
+            String className,
+            String cohortCode,
             boolean enabled) {
     }
 
     public record FacultyOption(long id, String name) {
     }
 
-    public record DepartmentOption(long id, String name, long facultyId, String facultyName) {
-    }
-
     public record AccountWorkspace(
             List<AccountView> accounts,
             List<FacultyOption> faculties,
-            List<DepartmentOption> departments,
-            List<AccountType> creatableTypes,
             AccountFilter filter,
             long totalAccounts,
             long enabledAccounts,
@@ -532,40 +478,27 @@ public class AdminAccountService {
         public AccountWorkspace {
             accounts = List.copyOf(accounts);
             faculties = List.copyOf(faculties);
-            departments = List.copyOf(departments);
-            creatableTypes = List.copyOf(creatableTypes);
         }
 
         public static AccountWorkspace empty() {
             return new AccountWorkspace(
-                    List.of(), List.of(), List.of(), AdminAccountService.creatableTypes(),
-                    AccountFilter.empty(),
+                    List.of(), List.of(), AccountFilter.empty(),
                     0, 0, 0, 0);
         }
     }
 
-    public record ImportIssue(int row, String message) {
-    }
-
-    public record ImportResult(int importedCount, List<ImportIssue> issues) {
-        public ImportResult {
-            issues = List.copyOf(issues);
-        }
-
-        public boolean hasErrors() {
-            return !issues.isEmpty();
-        }
-    }
-
     private record PreparedAccount(
-            int row,
             AccountType accountType,
             String username,
             String fullName,
             String password,
-            long departmentId) {
+            String email) {
     }
 
-    private record CsvRecord(int row, List<String> fields) {
+    private record PreparedStudent(
+            PreparedAccount account,
+            String studentCode,
+            String className,
+            String cohortCode) {
     }
 }

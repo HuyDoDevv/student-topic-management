@@ -160,6 +160,6 @@ class PeriodTransactionServiceTest {
     }
 
     private ActorIdentity actor(long id, long facultyId) {
-        return new ActorIdentity(id, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 11L, facultyId);
+        return new ActorIdentity(id, Set.of(RoleCode.LECTURER, RoleCode.DEAN), facultyId);
     }
 }

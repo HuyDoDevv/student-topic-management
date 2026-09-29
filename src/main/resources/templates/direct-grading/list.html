@@ -12,7 +12,7 @@
   </div>
 
   <div class="alert alert-info" role="status">
-    Người chấm phải là giảng viên cùng bộ môn và khác tất cả GVHD. Hệ thống hiện không có
+    Người chấm phải là giảng viên cùng khoa và khác tất cả GVHD. Hệ thống hiện không có
     mốc hạn nộp báo cáo riêng; khi Trưởng khoa xác nhận phân công, báo cáo hiện tại được khóa
     ngay và trở thành bản dùng để chấm.
   </div>
@@ -33,7 +33,7 @@
     </div>
     <div class="table-responsive" th:if="${!availableRegistrations.isEmpty()}">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Đề tài</th><th>Đợt</th><th>Bộ môn</th><th>Người chấm</th></tr></thead>
+        <thead><tr><th>Đề tài</th><th>Đợt</th><th>Khoa</th><th>Người chấm</th></tr></thead>
         <tbody>
         <tr th:each="registration : ${availableRegistrations}">
           <td data-label="Đề tài">
@@ -46,7 +46,7 @@
             <span th:text="${registration.periodName}">Đợt</span>
             <span class="badge bg-azure-lt ms-1" th:text="${registration.topicType}">COURSE</span>
           </td>
-          <td data-label="Bộ môn" th:text="${registration.departmentName}">Bộ môn</td>
+          <td data-label="Khoa" th:text="${registration.facultyName}">Khoa</td>
           <td data-label="Người chấm">
             <form class="d-flex flex-wrap gap-2" method="post"
                   th:action="@{/faculty/direct-grading}" data-prevent-double-submit>

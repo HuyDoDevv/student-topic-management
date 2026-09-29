@@ -63,9 +63,9 @@ public class DashboardService {
                                 "Tài khoản LECTURER", "/admin/accounts/lecturers"),
                         new Metric("Trưởng khoa", statistics.deans(),
                                 "Tài khoản DEAN", "/admin/accounts/deans")),
-                new Focus("CẤP TÀI KHOẢN", "Tạo tài khoản mới",
-                        "Tạo từng tài khoản hoặc import danh sách Sinh viên, Giảng viên và Trưởng khoa.",
-                        "/admin/accounts/new", "Mở trang tạo tài khoản", "bg-blue-lt"));
+                new Focus("CẤP TÀI KHOẢN", "Quản lý tài khoản",
+                        "Mở từng danh sách để tạo đúng loại tài khoản cần cấp.",
+                        "/admin/accounts/students", "Mở quản lý sinh viên", "bg-blue-lt"));
     }
 
     private DashboardView dean(ActorIdentity actor) {
@@ -100,12 +100,11 @@ public class DashboardService {
 
     private DashboardView lecturer(ActorIdentity actor) {
         long accountId = required(actor.accountId());
-        long departmentId = required(actor.departmentId());
         long facultyId = required(actor.facultyId());
-        long drafts = query.countLecturerTopics(accountId, departmentId, facultyId, "DRAFT");
-        long pending = query.countLecturerTopics(accountId, departmentId, facultyId, "PENDING_APPROVAL");
-        long approved = query.countLecturerTopics(accountId, departmentId, facultyId, "APPROVED");
-        long published = query.countLecturerTopics(accountId, departmentId, facultyId, "PUBLISHED");
+        long drafts = query.countLecturerTopics(accountId, facultyId, "DRAFT");
+        long pending = query.countLecturerTopics(accountId, facultyId, "PENDING_APPROVAL");
+        long approved = query.countLecturerTopics(accountId, facultyId, "APPROVED");
+        long published = query.countLecturerTopics(accountId, facultyId, "PUBLISHED");
         Focus focus = drafts > 0
                 ? new Focus("VIỆC CỦA BẠN", "Có " + drafts + " đề tài nháp",
                         "Hoàn thiện nội dung và gửi trưởng khoa duyệt khi đợt còn mở cho giảng viên.",
@@ -118,7 +117,7 @@ public class DashboardService {
                         "Tạo đề tài trong đợt phù hợp hoặc xem trạng thái công bố.",
                         "/topics", "Xem đề tài của tôi", "bg-green-lt");
         return new DashboardView("Giảng viên", "Tổng quan đề tài của tôi",
-                "Theo dõi đề tài bạn đề xuất trong bộ môn của mình.", List.of(
+                "Theo dõi đề tài bạn đề xuất trong khoa của mình.", List.of(
                 new Metric("Bản nháp", drafts, "Chưa gửi duyệt", "/topics"),
                 new Metric("Chờ duyệt", pending, "Đã gửi trưởng khoa", "/topics"),
                 new Metric("Đã duyệt", approved, "Chưa công bố cho sinh viên", "/topics"),

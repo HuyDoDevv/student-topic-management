@@ -48,8 +48,7 @@ public class CouncilController {
 
     @InitBinder("councilForm")
     void whitelistCouncilFields(WebDataBinder binder) {
-        binder.setAllowedFields(
-                "periodId", "departmentId", "name", "chairId", "secretaryId", "memberIds");
+        binder.setAllowedFields("periodId", "name", "chairId", "secretaryId", "memberIds");
     }
 
     @InitBinder("assignmentForm")
@@ -70,12 +69,10 @@ public class CouncilController {
     @GetMapping("/faculty/boards/new")
     public String createForm(
             @RequestParam long periodId,
-            @RequestParam long departmentId,
             Model model) {
         CouncilForm form = new CouncilForm();
         form.setPeriodId(periodId);
-        form.setDepartmentId(departmentId);
-        return renderCreate(model, form, councils.creationWorkspace(periodId, departmentId));
+        return renderCreate(model, form, councils.creationWorkspace(periodId));
     }
 
     @PostMapping("/faculty/boards")
@@ -98,7 +95,7 @@ public class CouncilController {
                 throw exception;
             }
             bindingResult.reject("council.invalid",
-                    "Hội đồng phải có 3–5 giảng viên cùng bộ môn, Chủ tịch và Thư ký khác nhau.");
+                    "Hội đồng phải có 3–5 giảng viên cùng khoa, Chủ tịch và Thư ký khác nhau.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderCreate(model, form, creationWorkspace(form));
         }
@@ -132,7 +129,7 @@ public class CouncilController {
                 throw exception;
             }
             bindingResult.reject("assignment.invalid",
-                    "Đăng ký phải cùng đợt, cùng bộ môn, đã được chấp nhận và không xung đột giảng viên hướng dẫn.");
+                    "Đăng ký phải cùng đợt và khoa, đã được chấp nhận và không xung đột giảng viên hướng dẫn.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderDetail(model, councils.detailForCurrentDean(id), form);
         }
@@ -204,11 +201,10 @@ public class CouncilController {
     }
 
     private CreationWorkspace creationWorkspace(CouncilForm form) {
-        if (form.getPeriodId() == null || form.getDepartmentId() == null
-                || form.getPeriodId() <= 0 || form.getDepartmentId() <= 0) {
+        if (form.getPeriodId() == null || form.getPeriodId() <= 0) {
             return new CreationWorkspace(0L, "", 0L, "", List.of());
         }
-        return councils.creationWorkspace(form.getPeriodId(), form.getDepartmentId());
+        return councils.creationWorkspace(form.getPeriodId());
     }
 
     private CouncilAssignmentPageView display(CouncilAssignmentView assignment) {
@@ -225,8 +221,8 @@ public class CouncilController {
                 council.id(),
                 council.periodId(),
                 council.periodName(),
-                council.departmentId(),
-                council.departmentName(),
+                council.facultyId(),
+                council.facultyName(),
                 council.name(),
                 council.status(),
                 statusLabel(council.status()),
@@ -285,8 +281,8 @@ public class CouncilController {
             Long id,
             Long periodId,
             String periodName,
-            Long departmentId,
-            String departmentName,
+            Long facultyId,
+            String facultyName,
             String name,
             CouncilStatus status,
             String statusLabel,

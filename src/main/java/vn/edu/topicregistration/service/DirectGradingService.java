@@ -18,7 +18,6 @@ import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
-import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.NotificationEventType;
 import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
@@ -107,14 +106,13 @@ public class DirectGradingService {
         UserAccountEntity grader = accounts.findByIdForUpdate(command.graderId())
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT));
-        DepartmentEntity department = registration.getTopic().getDepartment();
-        if (department.getFaculty() == null
-                || !Objects.equals(
-                        department.getFaculty().getId(), period.getFaculty().getId())) {
+        if (!Objects.equals(
+                registration.getTopic().getPeriod().getFaculty().getId(),
+                period.getFaculty().getId())) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
-        boolean sameDepartment = grader.getDepartment() != null
-                && Objects.equals(grader.getDepartment().getId(), department.getId());
+        boolean sameFaculty = grader.getFaculty() != null
+                && Objects.equals(grader.getFaculty().getId(), period.getFaculty().getId());
         boolean supervisor = isSupervisor(registration, grader.getId());
 
         applyRules(new AssignmentContext(
@@ -124,14 +122,13 @@ public class DirectGradingService {
                 alreadyAssigned,
                 grader.isEnabled(),
                 grader.getRoleCodes().contains(RoleCode.LECTURER),
-                sameDepartment,
+                sameFaculty,
                 supervisor));
 
         Instant assignedAt = clock.instant();
         CouncilEntity directAssignment = councils.saveAndFlush(
                 CouncilEntity.directGrading(
                         period,
-                        department,
                         directName(registration),
                         grader,
                         assignedAt));
@@ -205,8 +202,8 @@ public class DirectGradingService {
                 .map(TopicSupervisorEntity::getLecturer)
                 .map(UserAccountEntity::getId)
                 .collect(java.util.stream.Collectors.toSet());
-        return accounts.findEnabledByDepartmentAndRole(
-                        registration.getTopic().getDepartment().getId(),
+        return accounts.findEnabledByFacultyAndRole(
+                        registration.getPeriod().getFaculty().getId(),
                         RoleCode.LECTURER)
                 .stream()
                 .filter(account -> !supervisorIds.contains(account.getId()))
@@ -225,7 +222,7 @@ public class DirectGradingService {
                 registration.getTopic().getTitle(),
                 period.getName(),
                 period.getTopicType(),
-                registration.getTopic().getDepartment().getName(),
+                period.getFaculty().getName(),
                 graders);
     }
 
@@ -241,7 +238,7 @@ public class DirectGradingService {
                 registration.getTopic().getTitle(),
                 council.getPeriod().getName(),
                 council.getPeriod().getTopicType(),
-                council.getDepartment().getName(),
+                council.getPeriod().getFaculty().getName(),
                 council.getChair().getId(),
                 displayName(council.getChair()),
                 council.getStatus(),
@@ -307,7 +304,7 @@ public class DirectGradingService {
             String topicTitle,
             String periodName,
             String topicType,
-            String departmentName,
+            String facultyName,
             List<LecturerOption> eligibleGraders) {
         public AvailableRegistrationView {
             eligibleGraders = List.copyOf(eligibleGraders);
@@ -322,7 +319,7 @@ public class DirectGradingService {
             String topicTitle,
             String periodName,
             String topicType,
-            String departmentName,
+            String facultyName,
             Long graderId,
             String graderName,
             CouncilStatus status,
