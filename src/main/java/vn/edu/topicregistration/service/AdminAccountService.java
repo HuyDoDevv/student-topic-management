@@ -121,6 +121,49 @@ public class AdminAccountService {
                 command == null ? null : command.password());
     }
 
+    @Transactional(readOnly = true)
+    public PasswordResetTarget passwordResetTarget(long accountId) {
+        authorization.requireRole(RoleCode.ADMIN);
+        UserAccountEntity account = accounts.findDetailedById(accountId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        return new PasswordResetTarget(
+                account.getId(),
+                account.getUsername(),
+                account.getFullName() == null || account.getFullName().isBlank()
+                        ? account.getUsername()
+                        : account.getFullName(),
+                type,
+                type.label(),
+                account.isEnabled());
+    }
+
+    @Transactional
+    public PasswordResetResult resetPassword(ResetPasswordCommand command) {
+        authorization.requireRole(RoleCode.ADMIN);
+        Objects.requireNonNull(command, "command");
+        if (command.accountId() <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        if (!PasswordPolicy.isValid(command.newPassword())
+                || !Objects.equals(command.newPassword(), command.confirmPassword())) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+
+        UserAccountEntity account = accounts.findByIdForUpdate(command.accountId())
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        if (passwordEncoder.matches(command.newPassword(), account.getPasswordHash())) {
+            throw new ApplicationException(ApplicationErrorCode.ACCOUNT_PASSWORD_REUSED);
+        }
+
+        account.resetPassword(passwordEncoder.encode(command.newPassword()));
+        accounts.flush();
+        return new PasswordResetResult(account.getId(), account.getUsername(), type);
+    }
+
     private AccountView createStaff(
             AccountType type, String username, String fullName, String password) {
         PreparedAccount prepared = prepareAccount(type, username, fullName, password, null);
@@ -171,6 +214,14 @@ public class AdminAccountService {
             throw new IllegalStateException("Required account roles are missing");
         }
         return result;
+    }
+
+    private static AccountType managedAccountType(UserAccountEntity account) {
+        AccountType type = AccountType.fromRoles(account.getRoleCodes());
+        if (type == null || !type.creatable()) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return type;
     }
 
     private static PreparedStudent prepareStudent(CreateStudentCommand command) {
@@ -322,6 +373,27 @@ public class AdminAccountService {
     }
 
     public record CreateDeanCommand(String username, String fullName, String password) {
+    }
+
+    public record ResetPasswordCommand(
+            long accountId,
+            String newPassword,
+            String confirmPassword) {
+    }
+
+    public record PasswordResetTarget(
+            long id,
+            String username,
+            String fullName,
+            AccountType accountType,
+            String accountTypeLabel,
+            boolean enabled) {
+    }
+
+    public record PasswordResetResult(
+            long id,
+            String username,
+            AccountType accountType) {
     }
 
     public record AccountFilter(

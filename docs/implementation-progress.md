@@ -255,9 +255,47 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Filter thêm một truy vấn account nhẹ cho mỗi request đã đăng nhập để thu hồi session ngay ở request tiếp theo; phù hợp phạm vi hiện tại nhưng cần theo dõi nếu tải hệ thống tăng lớn.
 - `security_version` mới chỉ tăng khi người dùng tự đổi mật khẩu trong TASK-006; ADMIN reset và khóa/mở khóa sẽ sử dụng cùng cơ chế trong TASK-007/008.
 
+## TASK-007 — ADMIN đặt lại mật khẩu tài khoản
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; visual QA và test MySQL chờ môi trường
+- Commit: `HEAD` (`feat(admin): add account password reset`)
+- Yêu cầu: Cho phép ADMIN cấp mật khẩu tạm thời mới cho tài khoản Sinh viên, Giảng viên hoặc Trưởng khoa; thu hồi session cũ và bắt buộc người dùng đổi mật khẩu sau khi đăng nhập lại.
+- Ngoài phạm vi: Khóa/mở khóa tài khoản (TASK-008), reset tài khoản ADMIN, gửi mật khẩu qua email, sinh mật khẩu ngẫu nhiên, quên mật khẩu, OTP/MFA và audit log.
+
+### File đã thay đổi
+
+- Domain/service/controller: `UserAccountEntity.java`, `AdminAccountService.java` và `AdminAccountController.java`.
+- Form/UI: `AdminResetPasswordForm.java`, `admin/accounts/list.html` và `admin/accounts/reset-password.html`.
+- Test: `AdminAccountServiceTest.java` và `AdminAccountControllerTest.java`.
+- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/implementation-progress.md`.
+
+### Thay đổi
+
+- Thêm route `GET` và `POST /admin/accounts/{accountId}/password/reset`; account id lấy từ path, form chỉ cho bind mật khẩu mới và xác nhận mật khẩu.
+- Danh sách Sinh viên, Giảng viên và Trưởng khoa có nút “Đặt lại mật khẩu”; form riêng hiển thị đúng tài khoản, loại và trạng thái khóa.
+- Backend chỉ cho ADMIN thao tác và chỉ chấp nhận target STUDENT/LECTURER/DEAN; target có role ADMIN hoặc không tồn tại trả `404`.
+- Mật khẩu tạm thời áp dụng cùng policy 8–72 ký tự, tối đa 72 byte UTF-8, không trim, xác nhận phải khớp và không được trùng mật khẩu hiện tại.
+- Reset chạy trong transaction với row lock, lưu BCrypt hash mới, bật `must_change_password`, tăng `security_version` và giữ nguyên `enabled`.
+- Session hiện tại của target bị `AccountStateFilter` thu hồi ở request tiếp theo; tài khoản đang khóa vẫn khóa cho tới TASK-008.
+- Thành công redirect về đúng danh sách theo role và hiển thị flash message; không thêm migration hoặc thay đổi schema.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw -q -DskipTests compile`: PASS.
+- `env -u JAVA_HOME ./mvnw -q -Dtest=AdminAccountServiceTest,AdminAccountControllerTest,AccountStateFilterTest test`: PASS, 30/30 test.
+- `env -u JAVA_HOME ./mvnw test`: 251 test, 239 đạt, 12 lỗi môi trường do thiếu `TEST_DATABASE_URL` trong `AuthorizationMatrixTest` và `PeriodContractTest`; 0 failure.
+- `git diff --check`: PASS.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa visual QA form đặt lại mật khẩu và cột thao tác trên browser thật ở desktop/mobile.
+- Chưa chạy 12 test MySQL vì môi trường chưa cung cấp `TEST_DATABASE_URL`.
+- Mật khẩu tạm thời được ADMIN nhập trực tiếp; TASK-007 không gửi mật khẩu qua email và không có audit log theo đúng phạm vi đã duyệt.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 đến TASK-006 đã được tách thành sáu commit liên tiếp.
-- Working tree chỉ còn `mvnw.cmd` nằm ngoài các task vì đây là chênh lệch line-ending đã tồn tại trước đó.
+- TASK-001 đến TASK-007 đã được tách thành bảy commit liên tiếp.
+- `mvnw.cmd` vẫn nằm ngoài TASK-007 vì chỉ có chênh lệch line-ending đã tồn tại trước đó.
 - Chưa push lên remote.

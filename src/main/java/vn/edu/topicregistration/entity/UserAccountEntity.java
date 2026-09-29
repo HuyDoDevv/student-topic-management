@@ -149,4 +149,13 @@ public class UserAccountEntity {
         this.mustChangePassword = false;
         this.securityVersion = Math.addExact(this.securityVersion, 1);
     }
+
+    public void resetPassword(String encodedPassword) {
+        if (encodedPassword == null || encodedPassword.isBlank()) {
+            throw new IllegalArgumentException("Encoded password is required");
+        }
+        this.passwordHash = encodedPassword;
+        this.mustChangePassword = true;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
+    }
 }

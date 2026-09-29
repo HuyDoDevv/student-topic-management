@@ -20,9 +20,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import vn.edu.topicregistration.controller.AdminAccountController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.AccountWorkspace;
+import vn.edu.topicregistration.service.AdminAccountService.PasswordResetResult;
+import vn.edu.topicregistration.service.AdminAccountService.PasswordResetTarget;
 
 class AdminAccountControllerTest {
     AdminAccountService accounts;
@@ -32,6 +36,9 @@ class AdminAccountControllerTest {
     void setUp() {
         accounts = mock(AdminAccountService.class);
         when(accounts.workspace(any())).thenReturn(AccountWorkspace.empty());
+        when(accounts.passwordResetTarget(7L)).thenReturn(new PasswordResetTarget(
+                7L, "23110001", "Sinh viên Một", AccountType.STUDENT,
+                "Sinh viên", true));
         mvc = standaloneSetup(new AdminAccountController(accounts))
                 .setControllerAdvice(new WebExceptionHandler())
                 .build();
@@ -213,6 +220,88 @@ class AdminAccountControllerTest {
                 .andExpect(model().attributeHasErrors("deanAccountForm"));
 
         verify(accounts, never()).createDean(any());
+    }
+
+    @Test
+    void rendersResetPasswordFormForManagedAccount() throws Exception {
+        mvc.perform(get("/admin/accounts/7/password/reset"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/accounts/reset-password"))
+                .andExpect(model().attributeExists(
+                        "adminResetPasswordForm", "target", "cancelPath"))
+                .andExpect(model().attribute("cancelPath", "/admin/accounts/students"));
+    }
+
+    @Test
+    void resetPasswordValidationFailsBeforeWriting() throws Exception {
+        mvc.perform(post("/admin/accounts/7/password/reset")
+                        .param("newPassword", "short")
+                        .param("confirmPassword", "different"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("admin/accounts/reset-password"))
+                .andExpect(model().attributeHasErrors("adminResetPasswordForm"));
+
+        verify(accounts, never()).resetPassword(any());
+    }
+
+    @Test
+    void resetPasswordUsesPathAccountAndRedirectsByTargetRole() throws Exception {
+        when(accounts.resetPassword(argThat(
+                command -> command != null && command.accountId() == 7L)))
+                .thenReturn(new PasswordResetResult(7L, "23110001", AccountType.STUDENT));
+        when(accounts.resetPassword(argThat(
+                command -> command != null && command.accountId() == 8L)))
+                .thenReturn(new PasswordResetResult(8L, "lecturer01", AccountType.LECTURER));
+        when(accounts.resetPassword(argThat(
+                command -> command != null && command.accountId() == 9L)))
+                .thenReturn(new PasswordResetResult(9L, "dean01", AccountType.DEAN));
+
+        mvc.perform(post("/admin/accounts/7/password/reset")
+                        .param("newPassword", "new-temporary-password")
+                        .param("confirmPassword", "new-temporary-password")
+                        .param("accountId", "999")
+                        .param("accountType", "ADMIN")
+                        .param("username", "forged"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/students"));
+        mvc.perform(post("/admin/accounts/8/password/reset")
+                        .param("newPassword", "new-temporary-password")
+                        .param("confirmPassword", "new-temporary-password"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/lecturers"));
+        mvc.perform(post("/admin/accounts/9/password/reset")
+                        .param("newPassword", "new-temporary-password")
+                        .param("confirmPassword", "new-temporary-password"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/deans"));
+
+        verify(accounts).resetPassword(argThat(command ->
+                command.accountId() == 7L
+                        && command.newPassword().equals("new-temporary-password")));
+    }
+
+    @Test
+    void reusedPasswordRendersInlineError() throws Exception {
+        when(accounts.resetPassword(any())).thenThrow(new ApplicationException(
+                ApplicationErrorCode.ACCOUNT_PASSWORD_REUSED));
+
+        mvc.perform(post("/admin/accounts/7/password/reset")
+                        .param("newPassword", "current-password")
+                        .param("confirmPassword", "current-password"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("admin/accounts/reset-password"))
+                .andExpect(model().attributeHasFieldErrors(
+                        "adminResetPasswordForm", "newPassword"));
+    }
+
+    @Test
+    void unknownOrAdminTargetReturnsNotFound() throws Exception {
+        when(accounts.passwordResetTarget(99L)).thenThrow(new ApplicationException(
+                ApplicationErrorCode.RESOURCE_NOT_FOUND));
+
+        mvc.perform(get("/admin/accounts/99/password/reset"))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("error/error"));
     }
 
     @Test

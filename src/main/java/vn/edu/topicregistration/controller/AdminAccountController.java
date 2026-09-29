@@ -12,10 +12,12 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import vn.edu.topicregistration.dto.AdminResetPasswordForm;
 import vn.edu.topicregistration.dto.DeanAccountForm;
 import vn.edu.topicregistration.dto.LecturerAccountForm;
 import vn.edu.topicregistration.dto.StudentAccountForm;
@@ -24,6 +26,7 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.AccountFilter;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
+import vn.edu.topicregistration.service.AdminAccountService.PasswordResetResult;
 
 @Controller
 @Profile("!test")
@@ -47,6 +50,11 @@ public class AdminAccountController {
     @InitBinder("deanAccountForm")
     void whitelistDeanFields(WebDataBinder binder) {
         binder.setAllowedFields("fullName", "username", "password");
+    }
+
+    @InitBinder("adminResetPasswordForm")
+    void whitelistResetPasswordFields(WebDataBinder binder) {
+        binder.setAllowedFields("newPassword", "confirmPassword");
     }
 
     @GetMapping("/admin/accounts")
@@ -176,6 +184,41 @@ public class AdminAccountController {
         return WebRedirects.seeOther(AccountSection.DEANS.path);
     }
 
+    @GetMapping("/admin/accounts/{accountId}/password/reset")
+    public String resetPasswordForm(
+            @PathVariable("accountId") long accountId,
+            Model model) {
+        return renderResetPasswordForm(model, accountId, new AdminResetPasswordForm());
+    }
+
+    @PostMapping("/admin/accounts/{accountId}/password/reset")
+    public Object resetPassword(
+            @PathVariable("accountId") long accountId,
+            @Valid @ModelAttribute("adminResetPasswordForm") AdminResetPasswordForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderResetPasswordForm(model, accountId, form);
+        }
+        PasswordResetResult result;
+        try {
+            result = accounts.resetPassword(form.toCommand(accountId));
+        } catch (ApplicationException exception) {
+            rejectResetPassword(exception, bindingResult);
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderResetPasswordForm(model, accountId, form);
+        }
+
+        redirectAttributes.addFlashAttribute(
+                "successMessage",
+                "Đã đặt lại mật khẩu cho " + result.username()
+                        + ". Người dùng phải đổi mật khẩu khi đăng nhập.");
+        return WebRedirects.seeOther(sectionFor(result.accountType()).path);
+    }
+
     private String renderList(
             Model model, AccountFilter filter, AccountSection section) {
         common(model, section.activeNav);
@@ -216,6 +259,19 @@ public class AdminAccountController {
         return "admin/accounts/dean-form";
     }
 
+    private String renderResetPasswordForm(
+            Model model, long accountId, AdminResetPasswordForm form) {
+        var target = accounts.passwordResetTarget(accountId);
+        AccountSection section = sectionFor(target.accountType());
+        common(model, section.activeNav);
+        if (!model.containsAttribute("adminResetPasswordForm")) {
+            model.addAttribute("adminResetPasswordForm", form);
+        }
+        model.addAttribute("target", target);
+        model.addAttribute("cancelPath", section.path);
+        return "admin/accounts/reset-password";
+    }
+
     private static void rejectStudent(
             ApplicationException exception, BindingResult bindingResult) {
         switch (exception.code()) {
@@ -242,6 +298,29 @@ public class AdminAccountController {
         } else {
             throw exception;
         }
+    }
+
+    private static void rejectResetPassword(
+            ApplicationException exception, BindingResult bindingResult) {
+        if (exception.code() == ApplicationErrorCode.ACCOUNT_PASSWORD_REUSED) {
+            bindingResult.rejectValue("newPassword", "account.password.reused",
+                    "Mật khẩu tạm thời phải khác mật khẩu hiện tại.");
+        } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
+            bindingResult.reject("account.password.invalid",
+                    "Thông tin đặt lại mật khẩu chưa hợp lệ.");
+        } else {
+            throw exception;
+        }
+    }
+
+    private static AccountSection sectionFor(AccountType type) {
+        return switch (type) {
+            case STUDENT -> AccountSection.STUDENTS;
+            case LECTURER -> AccountSection.LECTURERS;
+            case DEAN -> AccountSection.DEANS;
+            case ADMIN -> throw new ApplicationException(
+                    ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        };
     }
 
     private static void common(Model model, String activeNav) {

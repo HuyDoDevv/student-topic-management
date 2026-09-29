@@ -59,7 +59,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Tài khoản</th><th th:if="${workspace.filter.accountType.name() == 'STUDENT'}">Lớp / Khóa</th><th>Email</th><th>Loại</th><th>Khoa</th><th>Trạng thái</th></tr></thead>
+        <thead><tr><th>Tài khoản</th><th th:if="${workspace.filter.accountType.name() == 'STUDENT'}">Lớp / Khóa</th><th>Email</th><th>Loại</th><th>Khoa</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
         <tbody>
         <tr th:each="account : ${workspace.accounts}">
           <td data-label="Tài khoản"><strong th:text="${account.fullName}">Nguyễn Văn A</strong><br><span class="text-secondary" th:text="${account.studentCode != null ? account.studentCode : account.username}">username</span></td>
@@ -71,6 +71,10 @@
           <td data-label="Loại"><span class="badge" th:classappend="${accountBadgeClass}" th:text="${account.accountTypeLabel}">Sinh viên</span></td>
           <td data-label="Khoa" th:text="${account.facultyName}">CNTT</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${account.enabled ? 'bg-green-lt' : 'bg-secondary-lt'}" th:text="${account.enabled ? 'Đang hoạt động' : 'Đã khóa'}">Đang hoạt động</span></td>
+          <td data-label="Thao tác">
+            <a class="btn btn-sm btn-outline-primary"
+               th:href="@{/admin/accounts/{id}/password/reset(id=${account.id})}">Đặt lại mật khẩu</a>
+          </td>
         </tr>
         </tbody>
       </table>

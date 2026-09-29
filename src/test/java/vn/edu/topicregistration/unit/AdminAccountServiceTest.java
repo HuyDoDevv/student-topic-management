@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -40,6 +41,7 @@ import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.CreateDeanCommand;
 import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
 import vn.edu.topicregistration.service.AdminAccountService.CreateStudentCommand;
+import vn.edu.topicregistration.service.AdminAccountService.ResetPasswordCommand;
 
 class AdminAccountServiceTest {
 
@@ -214,6 +216,84 @@ class AdminAccountServiceTest {
     }
 
     @Test
+    void resetsManagedAccountWithEncodedTemporaryPassword() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        UserAccountEntity account = mock(UserAccountEntity.class);
+        when(account.getId()).thenReturn(7L);
+        when(account.getUsername()).thenReturn("lecturer01");
+        when(account.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(account.getPasswordHash())
+                .thenReturn(dependencies.passwords().encode("current-password"));
+        when(dependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(account));
+
+        var result = dependencies.service().resetPassword(new ResetPasswordCommand(
+                7L, "new-temporary-password", "new-temporary-password"));
+
+        assertEquals(7L, result.id());
+        assertEquals("lecturer01", result.username());
+        assertEquals(AdminAccountService.AccountType.LECTURER, result.accountType());
+        ArgumentCaptor<String> encodedPassword = ArgumentCaptor.forClass(String.class);
+        verify(account).resetPassword(encodedPassword.capture());
+        assertTrue(dependencies.passwords().matches(
+                "new-temporary-password", encodedPassword.getValue()));
+        verify(dependencies.accounts()).flush();
+    }
+
+    @Test
+    void entityResetMarksPasswordTemporaryAndRevokesExistingSessions() {
+        UserAccountEntity account = new UserAccountEntity(
+                "Sinh viên Một", "23110001", "old-hash", null);
+
+        account.resetPassword("new-hash");
+
+        assertEquals("new-hash", account.getPasswordHash());
+        assertTrue(account.isMustChangePassword());
+        assertEquals(1L, account.getSecurityVersion());
+    }
+
+    @Test
+    void rejectsInvalidReusedAndAdminTargetPasswords() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        AdminAccountService service = dependencies.service();
+
+        ApplicationException invalid = assertThrows(ApplicationException.class,
+                () -> service.resetPassword(new ResetPasswordCommand(
+                        7L, "short", "different")));
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, invalid.code());
+        verify(dependencies.accounts(), never()).findByIdForUpdate(7L);
+
+        UserAccountEntity managed = mock(UserAccountEntity.class);
+        when(managed.getRoleCodes()).thenReturn(Set.of(RoleCode.STUDENT));
+        when(managed.getPasswordHash())
+                .thenReturn(dependencies.passwords().encode("current-password"));
+        when(dependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(managed));
+        ApplicationException reused = assertThrows(ApplicationException.class,
+                () -> service.resetPassword(new ResetPasswordCommand(
+                        7L, "current-password", "current-password")));
+        assertEquals(ApplicationErrorCode.ACCOUNT_PASSWORD_REUSED, reused.code());
+        verify(managed, never()).resetPassword(any());
+
+        UserAccountEntity admin = mock(UserAccountEntity.class);
+        when(admin.getRoleCodes()).thenReturn(Set.of(RoleCode.ADMIN));
+        when(dependencies.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(admin));
+        when(dependencies.accounts().findDetailedById(8L))
+                .thenReturn(Optional.of(admin));
+        ApplicationException resetAdmin = assertThrows(ApplicationException.class,
+                () -> service.resetPassword(new ResetPasswordCommand(
+                        8L, "new-temporary-password", "new-temporary-password")));
+        ApplicationException viewAdmin = assertThrows(ApplicationException.class,
+                () -> service.passwordResetTarget(8L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, resetAdmin.code());
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, viewAdmin.code());
+        verify(admin, never()).resetPassword(any());
+    }
+
+    @Test
     void rejectsNonAdminBeforeEveryAccountManagementOperation() {
         Dependencies dependencies = dependencies();
         when(dependencies.authorization().requireRole(RoleCode.ADMIN))
@@ -224,8 +304,10 @@ class AdminAccountServiceTest {
         assertThrows(AccessDeniedException.class, () -> service.createStudent(null));
         assertThrows(AccessDeniedException.class, () -> service.createLecturer(null));
         assertThrows(AccessDeniedException.class, () -> service.createDean(null));
+        assertThrows(AccessDeniedException.class, () -> service.passwordResetTarget(7L));
+        assertThrows(AccessDeniedException.class, () -> service.resetPassword(null));
 
-        verify(dependencies.authorization(), times(4)).requireRole(RoleCode.ADMIN);
+        verify(dependencies.authorization(), times(6)).requireRole(RoleCode.ADMIN);
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
                 dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
     }
