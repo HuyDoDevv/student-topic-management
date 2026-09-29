@@ -72,8 +72,21 @@
           <td data-label="Khoa" th:text="${account.facultyName}">CNTT</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${account.enabled ? 'bg-green-lt' : 'bg-secondary-lt'}" th:text="${account.enabled ? 'Đang hoạt động' : 'Đã khóa'}">Đang hoạt động</span></td>
           <td data-label="Thao tác">
-            <a class="btn btn-sm btn-outline-primary"
-               th:href="@{/admin/accounts/{id}/password/reset(id=${account.id})}">Đặt lại mật khẩu</a>
+            <div class="d-flex flex-wrap gap-2">
+              <a class="btn btn-sm btn-outline-primary"
+                 th:href="@{/admin/accounts/{id}/password/reset(id=${account.id})}">Đặt lại mật khẩu</a>
+              <form class="m-0" method="post" th:if="${account.enabled}"
+                    th:action="@{/admin/accounts/{id}/lock(id=${account.id})}"
+                    data-prevent-double-submit
+                    data-confirm="Bạn chắc chắn muốn khóa tài khoản này? Các phiên đăng nhập hiện tại sẽ bị thu hồi.">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Khóa</button>
+              </form>
+              <form class="m-0" method="post" th:if="${!account.enabled}"
+                    th:action="@{/admin/accounts/{id}/unlock(id=${account.id})}"
+                    data-prevent-double-submit>
+                <button class="btn btn-sm btn-outline-success" type="submit">Mở khóa</button>
+              </form>
+            </div>
           </td>
         </tr>
         </tbody>

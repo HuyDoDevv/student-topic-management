@@ -77,9 +77,6 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             vn.edu.topicregistration.entity.GroupInvitationStatus invitationStatus);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
-    @Query("select distinct account from UserAccountEntity account "
-            + "left join account.roles assignment "
-            + "where account.id = :id")
+    @Query("select account from UserAccountEntity account where account.id = :id")
     Optional<UserAccountEntity> findByIdForUpdate(@Param("id") long id);
 }

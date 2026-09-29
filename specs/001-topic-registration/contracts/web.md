@@ -90,6 +90,8 @@ Mọi POST cần CSRF; actor lấy từ session. Payload whitelist, input không
 | GET /admin/accounts/lecturers/new; POST /admin/accounts/lecturers | fullName,username,password | ADMIN nhận form riêng; backend khóa role LECTURER, gán khoa CNTT mặc định và để email null chờ người dùng tự cập nhật ở feature sau | 01 |
 | GET /admin/accounts/deans/new; POST /admin/accounts/deans | fullName,username,password | ADMIN nhận form riêng; backend khóa DEAN+LECTURER, gán khoa CNTT mặc định và để email null chờ người dùng tự cập nhật ở feature sau | 01 |
 | GET /admin/accounts/{accountId}/password/reset; POST /admin/accounts/{accountId}/password/reset | newPassword,confirmPassword | Chỉ ADMIN; target chỉ là STUDENT/LECTURER/DEAN. POST băm mật khẩu tạm thời mới, buộc đổi ở lần đăng nhập tiếp theo, tăng security version để thu hồi session cũ và không thay đổi trạng thái khóa | 01 |
+| POST /admin/accounts/{accountId}/lock | — | Chỉ ADMIN; target chỉ là STUDENT/LECTURER/DEAN. Khóa idempotent, tăng security version khi trạng thái thực sự đổi và thu hồi session cũ; không xóa dữ liệu học vụ | 01 |
+| POST /admin/accounts/{accountId}/unlock | — | Chỉ ADMIN; target chỉ là STUDENT/LECTURER/DEAN. Mở khóa idempotent, tăng security version khi trạng thái thực sự đổi và không làm sống lại session cũ | 01 |
 | POST /admin/moderation/topics/{id}/hide | reason,version | Ẩn mềm đề tài, ghi audit và khóa tài khoản tác giả trong một transaction | 01 |
 
 Không có GET gây mutation. Không route tự chuyển sang nhóm khác; SV rời nhóm cũ rồi chỉ tham

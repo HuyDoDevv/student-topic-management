@@ -23,6 +23,7 @@ import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
+import vn.edu.topicregistration.service.AdminAccountService.AccountStatusResult;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.AccountWorkspace;
 import vn.edu.topicregistration.service.AdminAccountService.PasswordResetResult;
@@ -300,6 +301,51 @@ class AdminAccountControllerTest {
                 ApplicationErrorCode.RESOURCE_NOT_FOUND));
 
         mvc.perform(get("/admin/accounts/99/password/reset"))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("error/error"));
+    }
+
+    @Test
+    void locksAndUnlocksUsingPathAccountAndRedirectsByRole() throws Exception {
+        when(accounts.lockAccount(7L)).thenReturn(new AccountStatusResult(
+                7L, "23110001", AccountType.STUDENT, false, true));
+        when(accounts.unlockAccount(8L)).thenReturn(new AccountStatusResult(
+                8L, "lecturer01", AccountType.LECTURER, true, true));
+        when(accounts.lockAccount(9L)).thenReturn(new AccountStatusResult(
+                9L, "dean01", AccountType.DEAN, false, true));
+
+        mvc.perform(post("/admin/accounts/7/lock")
+                        .param("accountId", "999")
+                        .param("enabled", "true")
+                        .param("accountType", "ADMIN"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/students"));
+        mvc.perform(post("/admin/accounts/8/unlock")
+                        .param("enabled", "false"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/lecturers"));
+        mvc.perform(post("/admin/accounts/9/lock"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/deans"));
+
+        verify(accounts).lockAccount(7L);
+        verify(accounts).unlockAccount(8L);
+        verify(accounts).lockAccount(9L);
+        verify(accounts, never()).lockAccount(999L);
+    }
+
+    @Test
+    void accountStatusRoutesRejectGetMutationAndInvalidTarget() throws Exception {
+        MockMvc routeOnlyMvc = standaloneSetup(new AdminAccountController(accounts)).build();
+
+        routeOnlyMvc.perform(get("/admin/accounts/7/lock"))
+                .andExpect(status().isMethodNotAllowed());
+        routeOnlyMvc.perform(get("/admin/accounts/7/unlock"))
+                .andExpect(status().isMethodNotAllowed());
+
+        when(accounts.lockAccount(99L)).thenThrow(new ApplicationException(
+                ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        mvc.perform(post("/admin/accounts/99/lock"))
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("error/error"));
     }

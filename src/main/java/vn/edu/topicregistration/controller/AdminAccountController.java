@@ -25,6 +25,7 @@ import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.AccountFilter;
+import vn.edu.topicregistration.service.AdminAccountService.AccountStatusResult;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.PasswordResetResult;
 
@@ -219,6 +220,22 @@ public class AdminAccountController {
         return WebRedirects.seeOther(sectionFor(result.accountType()).path);
     }
 
+    @PostMapping("/admin/accounts/{accountId}/lock")
+    public Object lockAccount(
+            @PathVariable("accountId") long accountId,
+            RedirectAttributes redirectAttributes) {
+        return redirectAfterStatusChange(
+                accounts.lockAccount(accountId), redirectAttributes);
+    }
+
+    @PostMapping("/admin/accounts/{accountId}/unlock")
+    public Object unlockAccount(
+            @PathVariable("accountId") long accountId,
+            RedirectAttributes redirectAttributes) {
+        return redirectAfterStatusChange(
+                accounts.unlockAccount(accountId), redirectAttributes);
+    }
+
     private String renderList(
             Model model, AccountFilter filter, AccountSection section) {
         common(model, section.activeNav);
@@ -321,6 +338,23 @@ public class AdminAccountController {
             case ADMIN -> throw new ApplicationException(
                     ApplicationErrorCode.RESOURCE_NOT_FOUND);
         };
+    }
+
+    private static Object redirectAfterStatusChange(
+            AccountStatusResult result, RedirectAttributes redirectAttributes) {
+        String message;
+        if (result.enabled()) {
+            message = result.changed()
+                    ? "Đã mở khóa tài khoản " + result.username() + "."
+                    : "Tài khoản " + result.username() + " đang hoạt động.";
+        } else {
+            message = result.changed()
+                    ? "Đã khóa tài khoản " + result.username()
+                            + ". Các phiên đăng nhập hiện tại đã bị thu hồi."
+                    : "Tài khoản " + result.username() + " đã bị khóa.";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", message);
+        return WebRedirects.seeOther(sectionFor(result.accountType()).path);
     }
 
     private static void common(Model model, String activeNav) {

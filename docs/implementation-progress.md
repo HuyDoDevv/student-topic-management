@@ -293,9 +293,52 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Chưa chạy 12 test MySQL vì môi trường chưa cung cấp `TEST_DATABASE_URL`.
 - Mật khẩu tạm thời được ADMIN nhập trực tiếp; TASK-007 không gửi mật khẩu qua email và không có audit log theo đúng phạm vi đã duyệt.
 
+## TASK-008 — ADMIN khóa/mở khóa tài khoản
+
+- Ngày: 2026-09-29
+- Trạng thái: Completed; visual QA và test MySQL chờ môi trường
+- Commit: Chưa commit theo yêu cầu
+- Yêu cầu: Cho phép ADMIN khóa/mở khóa tài khoản Sinh viên, Giảng viên và Trưởng khoa; thu hồi session cũ chắc chắn và không làm mất dữ liệu học vụ.
+- Ngoài phạm vi: Xóa tài khoản, khóa tài khoản ADMIN, khóa theo thời hạn/lý do, email thông báo và audit log riêng cho quản lý tài khoản.
+
+### File đã thay đổi
+
+- Domain/service/controller: `UserAccountEntity.java`, `AdminAccountService.java` và `AdminAccountController.java`.
+- UI: `admin/accounts/list.html`.
+- Test: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`, `AccountStateFilterTest.java` và `UserAccountLockPersistenceIT.java`.
+- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/implementation-progress.md`.
+
+### Thay đổi
+
+- Thêm `POST /admin/accounts/{accountId}/lock` và `POST /admin/accounts/{accountId}/unlock`; không có GET mutation và client không được gửi trạng thái hoặc role quyết định.
+- Backend chỉ cho ADMIN thao tác trên STUDENT/LECTURER/DEAN; account không tồn tại, id không hợp lệ hoặc target ADMIN trả `404`.
+- Cập nhật trạng thái trong transaction với row lock; transition idempotent nên lệnh lặp lại không tăng version hoặc ghi database lần nữa.
+- `disable()` và `enable()` tăng `security_version` khi trạng thái thực sự đổi, giữ nguyên mật khẩu và `must_change_password`; session cũ không thể sống lại sau khi mở khóa.
+- Danh sách tài khoản hiển thị nút Khóa hoặc Mở khóa theo trạng thái, giữ nút Đặt lại mật khẩu, chống submit lặp và yêu cầu xác nhận trước khi khóa.
+- Khóa/mở khóa không xóa hoặc thay đổi dữ liệu đề tài, nhóm, đăng ký, điểm, báo cáo, role, khoa hay email.
+- Luồng ADMIN ẩn đề tài tiếp tục gọi `disable()` và nay đồng thời thu hồi session của tác giả; không cần sửa `TopicModerationService`.
+- Sửa lỗi runtime Hibernate 7.4 khi row lock kết hợp `DISTINCT`, join collection và `EntityGraph`: `findByIdForUpdate()` nay chỉ khóa hàng `user_accounts`; role được tải riêng bên trong transaction, tránh lỗi `Unable to determine TableReference (student_profiles)`.
+- Không thêm migration, không thay đổi schema, JavaScript hoặc CSS.
+
+### Verification
+
+- `env -u JAVA_HOME ./mvnw -q -DskipTests test-compile`: PASS, gồm compile regression test `UserAccountLockPersistenceIT`.
+- `env -u JAVA_HOME ./mvnw -q -DskipTests compile`: PASS.
+- `env -u JAVA_HOME ./mvnw -q -Dtest=AdminAccountServiceTest,AdminAccountControllerTest,AccountStateFilterTest,AuthenticationTest test`: PASS, 42/42 test.
+- `env -u JAVA_HOME ./mvnw -q test`: 258 test, 246 đạt, 12 lỗi môi trường do thiếu `TEST_DATABASE_URL` trong `AuthorizationMatrixTest` và `PeriodContractTest`; 0 failure.
+- `git diff --check`: PASS.
+- Chẩn đoán runtime trên MySQL 8.4 đã tái hiện lỗi follow-on locking của truy vấn cũ; truy vấn khóa hàng tối giản đã trả `PESSIMISTIC_WRITE` và tải đúng role `STUDENT` trong transaction rollback.
+- Probe sau khi sửa bằng chính `UserAccountRepository.findByIdForUpdate()` trên MySQL 8.4 đã khóa account `38`, tải role `STUDENT`, thực hiện `disable()` và `flush()` thành công trong transaction rollback; dữ liệu sau rollback vẫn giữ `enabled = TRUE`, `security_version = 0`.
+
+### Chưa verify / rủi ro còn lại
+
+- Chưa visual QA nhóm nút Đặt lại mật khẩu/Khóa/Mở khóa trên browser thật ở desktop/mobile.
+- Chưa chạy 12 test MySQL và `UserAccountLockPersistenceIT` vì môi trường chưa cung cấp `TEST_DATABASE_URL`; regression test đã được thêm để chạy trên database test biệt lập khi biến môi trường sẵn sàng.
+- Session đang mở bị thu hồi ở request HTTP tiếp theo, không phải bằng cơ chế quét/xóa tập trung ngay tại thời điểm ADMIN bấm khóa.
+
 ## Trạng thái Git sau khi hoàn thành
 
 - Branch: `feature/admin-account-management`.
-- TASK-001 đến TASK-007 đã được tách thành bảy commit liên tiếp.
-- `mvnw.cmd` vẫn nằm ngoài TASK-007 vì chỉ có chênh lệch line-ending đã tồn tại trước đó.
+- TASK-001 đến TASK-007 đã được tách thành bảy commit liên tiếp; TASK-008 hiện là uncommitted changes.
+- `mvnw.cmd` vẫn nằm ngoài TASK-008 vì chỉ có chênh lệch line-ending đã tồn tại trước đó.
 - Chưa push lên remote.

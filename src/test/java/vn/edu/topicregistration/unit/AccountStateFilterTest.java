@@ -75,6 +75,28 @@ class AccountStateFilterTest {
     }
 
     @Test
+    void unlockingDoesNotReviveOldSessionButAllowsNewVersion() throws Exception {
+        UserAccountEntity account = account();
+        account.disable();
+        account.enable();
+
+        Dependencies oldSession = dependencies(account, 0);
+        MockHttpServletRequest oldRequest = request("/dashboard");
+        MockHttpServletResponse oldResponse = new MockHttpServletResponse();
+        oldSession.filter().doFilter(oldRequest, oldResponse, oldSession.chain());
+
+        assertEquals("/login?sessionExpired", oldResponse.getRedirectedUrl());
+        verify(oldSession.chain(), never()).doFilter(oldRequest, oldResponse);
+
+        Dependencies newSession = dependencies(account, account.getSecurityVersion());
+        MockHttpServletRequest newRequest = request("/dashboard");
+        MockHttpServletResponse newResponse = new MockHttpServletResponse();
+        newSession.filter().doFilter(newRequest, newResponse, newSession.chain());
+
+        verify(newSession.chain()).doFilter(newRequest, newResponse);
+    }
+
+    @Test
     void temporaryPasswordCanOnlyReachPasswordPage() throws Exception {
         UserAccountEntity account = account();
         account.markPasswordAsTemporary();

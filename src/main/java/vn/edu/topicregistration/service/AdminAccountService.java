@@ -164,6 +164,33 @@ public class AdminAccountService {
         return new PasswordResetResult(account.getId(), account.getUsername(), type);
     }
 
+    @Transactional
+    public AccountStatusResult lockAccount(long accountId) {
+        return changeAccountStatus(accountId, false);
+    }
+
+    @Transactional
+    public AccountStatusResult unlockAccount(long accountId) {
+        return changeAccountStatus(accountId, true);
+    }
+
+    private AccountStatusResult changeAccountStatus(long accountId, boolean enabled) {
+        authorization.requireRole(RoleCode.ADMIN);
+        if (accountId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        UserAccountEntity account = accounts.findByIdForUpdate(accountId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        boolean changed = enabled ? account.enable() : account.disable();
+        if (changed) {
+            accounts.flush();
+        }
+        return new AccountStatusResult(
+                account.getId(), account.getUsername(), type, enabled, changed);
+    }
+
     private AccountView createStaff(
             AccountType type, String username, String fullName, String password) {
         PreparedAccount prepared = prepareAccount(type, username, fullName, password, null);
@@ -394,6 +421,14 @@ public class AdminAccountService {
             long id,
             String username,
             AccountType accountType) {
+    }
+
+    public record AccountStatusResult(
+            long id,
+            String username,
+            AccountType accountType,
+            boolean enabled,
+            boolean changed) {
     }
 
     public record AccountFilter(

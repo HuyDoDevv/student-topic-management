@@ -133,8 +133,22 @@ public class UserAccountEntity {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    public void disable() {
+    public boolean disable() {
+        if (!this.enabled) {
+            return false;
+        }
         this.enabled = false;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
+        return true;
+    }
+
+    public boolean enable() {
+        if (this.enabled) {
+            return false;
+        }
+        this.enabled = true;
+        this.securityVersion = Math.addExact(this.securityVersion, 1);
+        return true;
     }
 
     public void markPasswordAsTemporary() {

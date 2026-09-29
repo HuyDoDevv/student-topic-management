@@ -294,6 +294,109 @@ class AdminAccountServiceTest {
     }
 
     @Test
+    void locksAndUnlocksManagedAccountsWithRowLock() {
+        Dependencies lockDependencies = dependencies();
+        allowAdmin(lockDependencies);
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(7L);
+        when(student.getUsername()).thenReturn("23110001");
+        when(student.getRoleCodes()).thenReturn(Set.of(RoleCode.STUDENT));
+        when(student.disable()).thenReturn(true);
+        when(lockDependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(student));
+
+        var locked = lockDependencies.service().lockAccount(7L);
+
+        assertFalse(locked.enabled());
+        assertTrue(locked.changed());
+        assertEquals(AdminAccountService.AccountType.STUDENT, locked.accountType());
+        verify(student).disable();
+        verify(lockDependencies.accounts()).flush();
+
+        Dependencies unlockDependencies = dependencies();
+        allowAdmin(unlockDependencies);
+        UserAccountEntity lecturer = mock(UserAccountEntity.class);
+        when(lecturer.getId()).thenReturn(8L);
+        when(lecturer.getUsername()).thenReturn("lecturer01");
+        when(lecturer.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(lecturer.enable()).thenReturn(true);
+        when(unlockDependencies.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(lecturer));
+
+        var unlocked = unlockDependencies.service().unlockAccount(8L);
+
+        assertTrue(unlocked.enabled());
+        assertTrue(unlocked.changed());
+        assertEquals(AdminAccountService.AccountType.LECTURER, unlocked.accountType());
+        verify(lecturer).enable();
+        verify(unlockDependencies.accounts()).flush();
+    }
+
+    @Test
+    void accountStatusTransitionsAreIdempotentAndPreservePasswordState() {
+        UserAccountEntity account = new UserAccountEntity(
+                "Sinh viên Một", "23110001", "encoded-password", null);
+        account.markPasswordAsTemporary();
+
+        assertTrue(account.disable());
+        assertFalse(account.disable());
+        assertFalse(account.isEnabled());
+        assertEquals(1L, account.getSecurityVersion());
+        assertEquals("encoded-password", account.getPasswordHash());
+        assertTrue(account.isMustChangePassword());
+
+        assertTrue(account.enable());
+        assertFalse(account.enable());
+        assertTrue(account.isEnabled());
+        assertEquals(2L, account.getSecurityVersion());
+        assertEquals("encoded-password", account.getPasswordHash());
+        assertTrue(account.isMustChangePassword());
+    }
+
+    @Test
+    void repeatedStatusAndAdminTargetDoNotMutateAccount() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(7L);
+        when(student.getUsername()).thenReturn("23110001");
+        when(student.getRoleCodes()).thenReturn(Set.of(RoleCode.STUDENT));
+        when(student.disable()).thenReturn(false);
+        when(dependencies.accounts().findByIdForUpdate(7L))
+                .thenReturn(Optional.of(student));
+
+        var unchanged = dependencies.service().lockAccount(7L);
+
+        assertFalse(unchanged.changed());
+        verify(dependencies.accounts(), never()).flush();
+
+        UserAccountEntity admin = mock(UserAccountEntity.class);
+        when(admin.getRoleCodes()).thenReturn(Set.of(RoleCode.ADMIN));
+        when(dependencies.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(admin));
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().unlockAccount(8L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, rejected.code());
+        verify(admin, never()).enable();
+    }
+
+    @Test
+    void missingAccountCannotBeLockedOrUnlocked() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        when(dependencies.accounts().findByIdForUpdate(404L))
+                .thenReturn(Optional.empty());
+
+        ApplicationException lockFailure = assertThrows(ApplicationException.class,
+                () -> dependencies.service().lockAccount(404L));
+        ApplicationException unlockFailure = assertThrows(ApplicationException.class,
+                () -> dependencies.service().unlockAccount(404L));
+
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, lockFailure.code());
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, unlockFailure.code());
+    }
+
+    @Test
     void rejectsNonAdminBeforeEveryAccountManagementOperation() {
         Dependencies dependencies = dependencies();
         when(dependencies.authorization().requireRole(RoleCode.ADMIN))
@@ -306,8 +409,10 @@ class AdminAccountServiceTest {
         assertThrows(AccessDeniedException.class, () -> service.createDean(null));
         assertThrows(AccessDeniedException.class, () -> service.passwordResetTarget(7L));
         assertThrows(AccessDeniedException.class, () -> service.resetPassword(null));
+        assertThrows(AccessDeniedException.class, () -> service.lockAccount(7L));
+        assertThrows(AccessDeniedException.class, () -> service.unlockAccount(7L));
 
-        verify(dependencies.authorization(), times(6)).requireRole(RoleCode.ADMIN);
+        verify(dependencies.authorization(), times(8)).requireRole(RoleCode.ADMIN);
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
                 dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());
     }
