@@ -29,9 +29,10 @@ khi verification bắt buộc đạt; code đã viết nhưng test bị chặn v
 
 ## Phase 3: ADMIN catalog and assignment
 
-- [ ] T003 [US1] [FR-004-01–02,FR-004-10] Viết service/web/integration test trước rồi triển khai
+- [X] T003 [US1] [FR-004-01–02,FR-004-10] Viết service/web/integration test trước rồi triển khai
   danh sách, tạo, sửa Department trong workspace ADMIN; unique theo Faculty, không route xóa và
-  không cho non-ADMIN truy cập.
+  không cho non-ADMIN truy cập. Đã verify trên MySQL 8.4 cổng 3307: 5 service test,
+  6 web test và 4 integration test đều pass.
 - [ ] T004 [US2] [FR-004-02–03] Viết test trước rồi bổ sung Department vào form/service tạo và
   cập nhật LECTURER/DEAN; kiểm tra Department cùng Faculty ở backend. STUDENT/ADMIN không nhận
   Department từ các form này.
@@ -75,7 +76,7 @@ T006 + confirmed mapping → T007 → T008
 T008 + T009 → T010
 ```
 
-- T001–T002 đã hoàn thành; T003 là task kế tiếp và cần plan/approval riêng.
+- T001–T003 đã hoàn thành; T004 là task kế tiếp và cần plan/approval riêng.
 - T007 có data gate độc lập và không được suy đoán mapping.
 - T008 không được gộp vào T007 để giữ expand/backfill/enforce có thể kiểm chứng riêng.
 - Mỗi task cần plan/approval riêng theo `AGENTS.md`; task chưa check không tự cấp quyền implement.
