@@ -138,6 +138,16 @@ public class UserAccountEntity {
         return department;
     }
 
+    public void assignDepartment(DepartmentEntity department) {
+        if (department == null) {
+            throw new IllegalArgumentException("Department is required");
+        }
+        if (this.department != null && !this.department.getId().equals(department.getId())) {
+            throw new IllegalStateException("Department transfer is not supported");
+        }
+        this.department = department;
+    }
+
     public StudentProfileEntity getStudentProfile() {
         return studentProfile;
     }

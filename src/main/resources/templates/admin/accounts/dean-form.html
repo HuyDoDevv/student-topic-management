@@ -44,6 +44,15 @@
           </div>
           <div class="row g-3">
             <div class="col-md-6">
+              <label class="form-label" for="departmentId">Bộ môn <span class="text-danger">*</span></label>
+              <select class="form-select" id="departmentId" th:field="*{departmentId}" th:errorclass="is-invalid" required>
+                <option value="">Chọn Bộ môn</option>
+                <option th:each="department : ${departmentOptions}" th:value="${department.id}"
+                  th:text="${department.name}">Bộ môn</option>
+              </select>
+              <div class="invalid-feedback" th:errors="*{departmentId}">Bộ môn chưa hợp lệ.</div>
+            </div>
+            <div class="col-md-6">
               <label class="form-label" for="fullName">Họ tên <span class="text-danger">*</span></label>
               <input class="form-control" id="fullName" type="text" th:field="*{fullName}" th:errorclass="is-invalid"
                 maxlength="255" autocomplete="name" placeholder="Ví dụ: Nguyễn Văn An" required>

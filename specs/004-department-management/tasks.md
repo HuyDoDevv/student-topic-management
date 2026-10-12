@@ -33,9 +33,10 @@ khi verification bắt buộc đạt; code đã viết nhưng test bị chặn v
   danh sách, tạo, sửa Department trong workspace ADMIN; unique theo Faculty, không route xóa và
   không cho non-ADMIN truy cập. Đã verify trên MySQL 8.4 cổng 3307: 5 service test,
   6 web test và 4 integration test đều pass.
-- [ ] T004 [US2] [FR-004-02–03] Viết test trước rồi bổ sung Department vào form/service tạo và
+- [X] T004 [US2] [FR-004-02–03] Viết test trước rồi bổ sung Department vào form/service tạo và
   cập nhật LECTURER/DEAN; kiểm tra Department cùng Faculty ở backend. STUDENT/ADMIN không nhận
-  Department từ các form này.
+  Department từ các form này. Đã verify 17 service test, 20 web test, 4 integration test
+  trên MySQL 8.4 cổng 3307 và full `./mvnw test`.
 
 **Checkpoint**: ADMIN duy trì được danh mục và cấp tài khoản nhân sự đúng Department.
 
@@ -76,7 +77,7 @@ T006 + confirmed mapping → T007 → T008
 T008 + T009 → T010
 ```
 
-- T001–T003 đã hoàn thành; T004 là task kế tiếp và cần plan/approval riêng.
+- T001–T004 đã hoàn thành; T005 là task kế tiếp và cần plan/approval riêng.
 - T007 có data gate độc lập và không được suy đoán mapping.
 - T008 không được gộp vào T007 để giữ expand/backfill/enforce có thể kiểm chứng riêng.
 - Mỗi task cần plan/approval riêng theo `AGENTS.md`; task chưa check không tự cấp quyền implement.

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.RoleEntity;
 import vn.edu.topicregistration.entity.StudentProfileEntity;
@@ -22,6 +23,7 @@ import vn.edu.topicregistration.entity.UserRoleEntity;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.FacultyRepository;
+import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.repository.RoleRepository;
 import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
@@ -43,6 +45,7 @@ public class AdminAccountService {
     private final RoleRepository roles;
     private final StudentProfileRepository studentProfiles;
     private final FacultyRepository faculties;
+    private final DepartmentRepository departments;
     private final AuthorizationPolicy authorization;
     private final PasswordEncoder passwordEncoder;
 
@@ -52,6 +55,7 @@ public class AdminAccountService {
             RoleRepository roles,
             StudentProfileRepository studentProfiles,
             FacultyRepository faculties,
+            DepartmentRepository departments,
             AuthorizationPolicy authorization,
             PasswordEncoder passwordEncoder) {
         this.accounts = accounts;
@@ -59,6 +63,7 @@ public class AdminAccountService {
         this.roles = roles;
         this.studentProfiles = studentProfiles;
         this.faculties = faculties;
+        this.departments = departments;
         this.authorization = authorization;
         this.passwordEncoder = passwordEncoder;
     }
@@ -97,7 +102,7 @@ public class AdminAccountService {
         }
         FacultyEntity faculty = defaultFaculty();
         Map<RoleCode, RoleEntity> roleMap = requiredRoles(AccountType.STUDENT.roles());
-        UserAccountEntity account = persist(prepared.account(), faculty, roleMap);
+        UserAccountEntity account = persist(prepared.account(), faculty, null, roleMap);
         StudentProfileEntity profile = studentProfiles.saveAndFlush(new StudentProfileEntity(
                 account, prepared.studentCode(), prepared.className(), prepared.cohortCode()));
         return accountView(account, AccountType.STUDENT, profile);
@@ -109,7 +114,8 @@ public class AdminAccountService {
         return createStaff(AccountType.LECTURER,
                 command == null ? null : command.username(),
                 command == null ? null : command.fullName(),
-                command == null ? null : command.password());
+                command == null ? null : command.password(),
+                command == null ? null : command.departmentId());
     }
 
     @Transactional
@@ -118,7 +124,83 @@ public class AdminAccountService {
         return createStaff(AccountType.DEAN,
                 command == null ? null : command.username(),
                 command == null ? null : command.fullName(),
-                command == null ? null : command.password());
+                command == null ? null : command.password(),
+                command == null ? null : command.departmentId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DepartmentOption> staffDepartmentOptions() {
+        authorization.requireRole(RoleCode.ADMIN);
+        return departments.findAllByFacultyIdOrderByNameAsc(defaultFaculty().getId()).stream()
+                .map(department -> new DepartmentOption(department.getId(), department.getName()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DepartmentOption> staffDepartmentOptionsForAccount(long accountId) {
+        authorization.requireRole(RoleCode.ADMIN);
+        if (accountId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        UserAccountEntity account = accounts.findDetailedById(accountId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        staffType(account);
+        if (account.getFaculty() == null) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return departments.findAllByFacultyIdOrderByNameAsc(account.getFaculty().getId()).stream()
+                .map(department -> new DepartmentOption(department.getId(), department.getName()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public StaffDepartmentTarget staffDepartmentTarget(long accountId) {
+        authorization.requireRole(RoleCode.ADMIN);
+        if (accountId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        UserAccountEntity account = accounts.findDetailedById(accountId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = staffType(account);
+        FacultyEntity faculty = account.getFaculty();
+        if (faculty == null) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return new StaffDepartmentTarget(
+                account.getId(), account.getUsername(), account.getFullName(), type,
+                faculty.getName(),
+                account.getDepartment() == null ? null : account.getDepartment().getId());
+    }
+
+    @Transactional
+    public StaffDepartmentTarget assignStaffDepartment(long accountId, Long departmentId) {
+        authorization.requireRole(RoleCode.ADMIN);
+        if (accountId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        if (departmentId == null || departmentId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        UserAccountEntity account = accounts.findByIdForUpdate(accountId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = staffType(account);
+        FacultyEntity faculty = account.getFaculty();
+        if (faculty == null) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        DepartmentEntity existing = account.getDepartment();
+        if (existing != null && !departmentId.equals(existing.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        DepartmentEntity department = departments.findByIdAndFacultyId(departmentId, faculty.getId())
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED));
+        if (existing == null) {
+            account.assignDepartment(department);
+            accounts.flush();
+        }
+        return new StaffDepartmentTarget(
+                account.getId(), account.getUsername(), account.getFullName(), type,
+                faculty.getName(), department.getId());
     }
 
     @Transactional(readOnly = true)
@@ -191,13 +273,30 @@ public class AdminAccountService {
                 account.getId(), account.getUsername(), type, enabled, changed);
     }
 
+    private static AccountType staffType(UserAccountEntity account) {
+        AccountType type = managedAccountType(account);
+        if (type != AccountType.LECTURER && type != AccountType.DEAN) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return type;
+    }
+
     private AccountView createStaff(
-            AccountType type, String username, String fullName, String password) {
+            AccountType type, String username, String fullName, String password, Long departmentId) {
         PreparedAccount prepared = prepareAccount(type, username, fullName, password, null);
         ensureAvailable(prepared);
         FacultyEntity faculty = defaultFaculty();
+        DepartmentEntity department = staffDepartment(departmentId, faculty);
         Map<RoleCode, RoleEntity> roleMap = requiredRoles(type.roles());
-        return accountView(persist(prepared, faculty, roleMap), type);
+        return accountView(persist(prepared, faculty, department, roleMap), type);
+    }
+
+    private DepartmentEntity staffDepartment(Long departmentId, FacultyEntity faculty) {
+        if (departmentId == null || departmentId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        return departments.findByIdAndFacultyId(departmentId, faculty.getId())
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED));
     }
 
     private FacultyEntity defaultFaculty() {
@@ -218,13 +317,14 @@ public class AdminAccountService {
     private UserAccountEntity persist(
             PreparedAccount prepared,
             FacultyEntity faculty,
+            DepartmentEntity department,
             Map<RoleCode, RoleEntity> roleMap) {
         UserAccountEntity account = new UserAccountEntity(
                 prepared.fullName(),
                 prepared.username(),
                 passwordEncoder.encode(prepared.password()),
                 prepared.email(),
-                faculty);
+                faculty, department);
         account.markPasswordAsTemporary();
         UserAccountEntity saved = accounts.saveAndFlush(account);
         List<UserRoleEntity> assignments = prepared.accountType().roles().stream()
@@ -396,10 +496,20 @@ public class AdminAccountService {
             String password) {
     }
 
-    public record CreateLecturerCommand(String username, String fullName, String password) {
+    public record CreateLecturerCommand(
+            String username, String fullName, String password, Long departmentId) {
     }
 
-    public record CreateDeanCommand(String username, String fullName, String password) {
+    public record CreateDeanCommand(
+            String username, String fullName, String password, Long departmentId) {
+    }
+
+    public record DepartmentOption(long id, String name) {
+    }
+
+    public record StaffDepartmentTarget(
+            long id, String username, String fullName, AccountType accountType,
+            String facultyName, Long departmentId) {
     }
 
     public record ResetPasswordCommand(

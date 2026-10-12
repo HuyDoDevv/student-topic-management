@@ -4,7 +4,7 @@
 |---|---|---|---|---|
 | FR-004-01,08 | V16 khôi phục schema, giữ dữ liệu, không fake backfill | `FacultyScopeMigrationIT`, `SchemaSeedMigrationIT` | T001 | Complete |
 | FR-004-01 | Tên Department hợp lệ/unique theo Faculty | Repository/service/integration tests | T002–T003 | Complete |
-| FR-004-02–03 | Chỉ ADMIN gán Department đúng Faculty cho LECTURER/DEAN | Unit + MockMvc security tests | T004 | Planned |
+| FR-004-02–03 | Chỉ ADMIN gán Department đúng Faculty cho LECTURER/DEAN | Unit + MockMvc security tests | T004 | Complete |
 | FR-004-04 | Topic lấy Department từ actor, không tin request | Topic author unit/web tests | T005 | Planned |
 | FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Planned |
 | FR-004-06 | DEAN quản lý mọi Department trong Faculty | Moderation regression tests | T005–T006 | Planned |
@@ -32,3 +32,9 @@
   -Dit.test=AdminDepartmentCatalogIT,DepartmentPersistenceIT,AccountProvisioningIT` exit 0.
   Báo cáo T003: `AdminDepartmentServiceTest` 5 test, `AdminDepartmentControllerTest`
   6 test, `AdminDepartmentCatalogIT` 4 test; tổng 15 test, 0 failure, 0 error.
+- T004 trên MySQL 8.4 cổng 3307, DB `topic_registration_test`: `./mvnw -q verify
+  -Pintegration -Dtest=AdminAccountServiceTest,AdminAccountControllerTest
+  -Dit.test=AccountProvisioningIT` exit 0. Báo cáo: 17 service test, 20 web test,
+  4 integration test; 0 failure, 0 error. `./mvnw -q test` exit 0.
+- T004 chỉ gán Department lần đầu cho staff cũ; chuyển tài khoản đã thuộc Bộ môn khác
+  không nằm trong phiên bản này và bị service từ chối.

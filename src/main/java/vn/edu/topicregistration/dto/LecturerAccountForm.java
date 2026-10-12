@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
@@ -23,8 +25,12 @@ public class LecturerAccountForm {
     @Size(min = 8, max = 72, message = "Mật khẩu tạm thời phải có từ 8 đến 72 ký tự.")
     private String password;
 
+    @NotNull(message = "Vui lòng chọn Bộ môn.")
+    @Positive(message = "Bộ môn chưa hợp lệ.")
+    private Long departmentId;
+
     public CreateLecturerCommand toCommand() {
-        return new CreateLecturerCommand(username, fullName, password);
+        return new CreateLecturerCommand(username, fullName, password, departmentId);
     }
 
     @AssertTrue(message = "Mật khẩu tạm thời không được quá 72 byte UTF-8.")
@@ -38,4 +44,6 @@ public class LecturerAccountForm {
     public void setFullName(String fullName) { this.fullName = fullName; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    public Long getDepartmentId() { return departmentId; }
+    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
 }

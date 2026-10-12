@@ -21,6 +21,7 @@ import vn.edu.topicregistration.dto.AdminResetPasswordForm;
 import vn.edu.topicregistration.dto.DeanAccountForm;
 import vn.edu.topicregistration.dto.LecturerAccountForm;
 import vn.edu.topicregistration.dto.StudentAccountForm;
+import vn.edu.topicregistration.dto.StaffDepartmentForm;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AdminAccountService;
@@ -28,6 +29,7 @@ import vn.edu.topicregistration.service.AdminAccountService.AccountFilter;
 import vn.edu.topicregistration.service.AdminAccountService.AccountStatusResult;
 import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.PasswordResetResult;
+import vn.edu.topicregistration.service.AdminAccountService.StaffDepartmentTarget;
 
 @Controller
 @Profile("!test")
@@ -45,12 +47,17 @@ public class AdminAccountController {
 
     @InitBinder("lecturerAccountForm")
     void whitelistLecturerFields(WebDataBinder binder) {
-        binder.setAllowedFields("fullName", "username", "password");
+        binder.setAllowedFields("fullName", "username", "password", "departmentId");
     }
 
     @InitBinder("deanAccountForm")
     void whitelistDeanFields(WebDataBinder binder) {
-        binder.setAllowedFields("fullName", "username", "password");
+        binder.setAllowedFields("fullName", "username", "password", "departmentId");
+    }
+
+    @InitBinder("staffDepartmentForm")
+    void whitelistStaffDepartmentFields(WebDataBinder binder) {
+        binder.setAllowedFields("departmentId");
     }
 
     @InitBinder("adminResetPasswordForm")
@@ -185,6 +192,43 @@ public class AdminAccountController {
         return WebRedirects.seeOther(AccountSection.DEANS.path);
     }
 
+    @GetMapping("/admin/accounts/{accountId}/department")
+    public String staffDepartmentForm(@PathVariable("accountId") long accountId, Model model) {
+        StaffDepartmentTarget target = accounts.staffDepartmentTarget(accountId);
+        StaffDepartmentForm form = new StaffDepartmentForm();
+        form.setDepartmentId(target.departmentId());
+        return renderStaffDepartmentForm(model, target, form);
+    }
+
+    @PostMapping("/admin/accounts/{accountId}/department")
+    public Object assignStaffDepartment(
+            @PathVariable("accountId") long accountId,
+            @Valid @ModelAttribute("staffDepartmentForm") StaffDepartmentForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        StaffDepartmentTarget target = accounts.staffDepartmentTarget(accountId);
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderStaffDepartmentForm(model, target, form);
+        }
+        try {
+            target = accounts.assignStaffDepartment(accountId, form.getDepartmentId());
+        } catch (ApplicationException exception) {
+            if (exception.code() != ApplicationErrorCode.VALIDATION_FAILED) {
+                throw exception;
+            }
+            bindingResult.rejectValue("departmentId", "staff.department.invalid",
+                    "Bộ môn không hợp lệ, khác Khoa hoặc tài khoản đã thuộc Bộ môn khác.");
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderStaffDepartmentForm(model, target, form);
+        }
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Đã gán Bộ môn cho " + target.username() + ".");
+        return WebRedirects.seeOther(sectionFor(target.accountType()).path);
+    }
+
     @GetMapping("/admin/accounts/{accountId}/password/reset")
     public String resetPasswordForm(
             @PathVariable("accountId") long accountId,
@@ -265,6 +309,7 @@ public class AdminAccountController {
         if (!model.containsAttribute("lecturerAccountForm")) {
             model.addAttribute("lecturerAccountForm", form);
         }
+        model.addAttribute("departmentOptions", accounts.staffDepartmentOptions());
         return "admin/accounts/lecturer-form";
     }
 
@@ -273,7 +318,20 @@ public class AdminAccountController {
         if (!model.containsAttribute("deanAccountForm")) {
             model.addAttribute("deanAccountForm", form);
         }
+        model.addAttribute("departmentOptions", accounts.staffDepartmentOptions());
         return "admin/accounts/dean-form";
+    }
+
+    private String renderStaffDepartmentForm(
+            Model model, StaffDepartmentTarget target, StaffDepartmentForm form) {
+        common(model, sectionFor(target.accountType()).activeNav);
+        if (!model.containsAttribute("staffDepartmentForm")) {
+            model.addAttribute("staffDepartmentForm", form);
+        }
+        model.addAttribute("target", target);
+        model.addAttribute("departmentOptions", accounts.staffDepartmentOptionsForAccount(target.id()));
+        model.addAttribute("cancelPath", sectionFor(target.accountType()).path);
+        return "admin/accounts/department-form";
     }
 
     private String renderResetPasswordForm(
@@ -310,8 +368,8 @@ public class AdminAccountController {
             bindingResult.rejectValue("username", "account.username.exists",
                     "Tên đăng nhập đã tồn tại.");
         } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
-            bindingResult.reject("account.invalid",
-                    "Thông tin tài khoản hoặc Khoa mặc định chưa hợp lệ.");
+            bindingResult.rejectValue("departmentId", "account.department.invalid",
+                    "Bộ môn không tồn tại hoặc không thuộc Khoa của tài khoản.");
         } else {
             throw exception;
         }

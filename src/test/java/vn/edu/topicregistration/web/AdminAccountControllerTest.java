@@ -37,6 +37,7 @@ class AdminAccountControllerTest {
     void setUp() {
         accounts = mock(AdminAccountService.class);
         when(accounts.workspace(any())).thenReturn(AccountWorkspace.empty());
+        when(accounts.staffDepartmentOptions()).thenReturn(java.util.List.of());
         when(accounts.passwordResetTarget(7L)).thenReturn(new PasswordResetTarget(
                 7L, "23110001", "Sinh viên Một", AccountType.STUDENT,
                 "Sinh viên", true));
@@ -103,6 +104,7 @@ class AdminAccountControllerTest {
                         .param("username", "forged")
                         .param("email", "forged@example.com")
                         .param("accountType", "ADMIN")
+                        .param("departmentId", "11")
                         .param("facultyId", "999"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/accounts/students"));
@@ -120,6 +122,7 @@ class AdminAccountControllerTest {
                         .param("username", "lecturer01")
                         .param("fullName", "Giảng viên Một")
                         .param("password", "temporary-password")
+                        .param("departmentId", "11")
                         .param("accountType", "ADMIN"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/accounts/lecturers"));
@@ -127,13 +130,61 @@ class AdminAccountControllerTest {
                         .param("username", "dean01")
                         .param("fullName", "Trưởng khoa Một")
                         .param("password", "temporary-password")
+                        .param("departmentId", "11")
                         .param("accountType", "ADMIN"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/accounts/deans"));
 
         verify(accounts).createLecturer(argThat(command ->
-                command.username().equals("lecturer01")));
-        verify(accounts).createDean(argThat(command -> command.username().equals("dean01")));
+                command.username().equals("lecturer01") && command.departmentId() == 11L));
+        verify(accounts).createDean(argThat(command ->
+                command.username().equals("dean01") && command.departmentId() == 11L));
+    }
+
+    @Test
+    void staffCreationRequiresDepartmentAndIgnoresForgedFaculty() throws Exception {
+        mvc.perform(post("/admin/accounts/lecturers")
+                        .param("username", "lecturer02")
+                        .param("fullName", "Giảng viên Hai")
+                        .param("password", "temporary-password"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(model().attributeHasFieldErrors("lecturerAccountForm", "departmentId"));
+        verify(accounts, never()).createLecturer(any());
+
+        mvc.perform(post("/admin/accounts/deans")
+                        .param("username", "dean02")
+                        .param("fullName", "Trưởng khoa Hai")
+                        .param("password", "temporary-password")
+                        .param("departmentId", "11")
+                        .param("facultyId", "999"))
+                .andExpect(status().isSeeOther());
+        verify(accounts).createDean(argThat(command -> command.departmentId() == 11L));
+    }
+
+    @Test
+    void departmentAssignmentUsesPathIdentityAndValidatesForm() throws Exception {
+        when(accounts.staffDepartmentTarget(7L)).thenReturn(
+                new AdminAccountService.StaffDepartmentTarget(
+                        7L, "lecturer01", "Giảng viên Một", AccountType.LECTURER,
+                        "Khoa CNTT", null));
+        when(accounts.assignStaffDepartment(7L, 11L)).thenReturn(
+                new AdminAccountService.StaffDepartmentTarget(
+                        7L, "lecturer01", "Giảng viên Một", AccountType.LECTURER,
+                        "Khoa CNTT", 11L));
+        mvc.perform(get("/admin/accounts/7/department"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/accounts/department-form"));
+        mvc.perform(post("/admin/accounts/7/department")
+                        .param("departmentId", "11")
+                        .param("accountId", "999")
+                        .param("facultyId", "999"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/admin/accounts/lecturers"));
+        verify(accounts).assignStaffDepartment(7L, 11L);
+
+        mvc.perform(post("/admin/accounts/7/department"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(model().attributeHasFieldErrors("staffDepartmentForm", "departmentId"));
     }
 
     @Test
