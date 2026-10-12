@@ -9,7 +9,7 @@
 | FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Complete |
 | FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; Faculty-wide regression | T005–T006 | Complete |
 | FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | T006 verified; T010 pending |
-| FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | Data gate |
+| FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | T007 verified; T008 pending |
 | FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/E2E tests | T009 | Planned |
 | FR-004-10 | Không xóa Department đang được dùng | Service/integration tests; không có route xóa | T003 | Complete |
 
@@ -54,3 +54,12 @@
   10 error ở fixture/migration test ngoài T006 (trùng tên Faculty khi tạo fixture,
   assertion schema cũ, seeder dùng cột chưa có ở V7). Không coi full integration/E2E
   của T010 là hoàn thành; cần xử lý bằng plan riêng.
+- T007: Chủ dự án xác nhận gán LECTURER/DEAN và Topic còn thiếu Department về
+  `Công nghệ phần mềm` thuộc `Khoa Công nghệ Thông tin`, giữ nguyên gán đã có.
+  `DepartmentBackfillMigrationIT`: 5 test pass trên MySQL 8.4
+  `127.0.0.1:3307/topic_registration_test`, gồm tạo/dùng lại Department, giữ nguyên
+  bản ghi đã gán và rollback khi Faculty/tác giả/GVHD mâu thuẫn. Targeted
+  `./mvnw -q verify -Pintegration -Dtest=TopicRulesTest
+  -Dit.test=DepartmentBackfillMigrationIT,FacultyScopeMigrationIT,SchemaSeedMigrationIT,AccountProvisioningIT`
+  exit 0; full `./mvnw -q test` exit 0. Chưa chạy migration trên DB dev/shared;
+  T008 và full integration/E2E vẫn chưa nghiệm thu.

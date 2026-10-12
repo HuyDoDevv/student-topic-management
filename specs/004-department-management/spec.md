@@ -22,6 +22,10 @@
 - **U-004-06**: Council thuộc RegistrationPeriod/Faculty, không thuộc Department; một Bộ môn
   không đồng nghĩa có một hội đồng riêng.
 - **U-004-07**: Không sửa migration V1–V15 và không tạo Bộ môn giả để backfill.
+- **U-004-08 (2026-10-12)**: Chủ dự án xác nhận Bộ môn thật `Công nghệ phần mềm`
+  thuộc `Khoa Công nghệ Thông tin` làm đích backfill T007. Chỉ gán LECTURER/DEAN
+  và Topic có `department_id = NULL`; giữ nguyên mọi Department đã được gán.
+  Nếu tác giả/GVHD hoặc Faculty mâu thuẫn với đích này, dừng migration để đối chiếu.
 
 ## Phạm vi
 
@@ -79,7 +83,8 @@ khi mọi bản ghi cần thiết đã được gán Department bằng dữ li�
 
 1. V16 khôi phục schema nullable mà không backfill hoặc tạo dữ liệu giả.
 2. Tài khoản/đề tài cũ vẫn tồn tại và có `department_id = NULL` sau bước expand.
-3. Backfill không chạy khi thiếu bảng ánh xạ được xác nhận.
+3. T007 dùng quyết định ánh xạ một Bộ môn U-004-08; không suy đoán Bộ môn lịch sử
+   đã bị V13 xóa, không ghi đè Department hiện có và dừng khi phát hiện mâu thuẫn.
 4. `topics.department_id` chỉ chuyển sang bắt buộc sau khi không còn Topic NULL.
 
 ## Functional Requirements
@@ -105,5 +110,6 @@ khi mọi bản ghi cần thiết đã được gán Department bằng dữ li�
 
 ## Open Data Gate
 
-Danh sách Bộ môn thật và ánh xạ tài khoản/đề tài hiện hữu phải được chủ dự án cung cấp hoặc
-xác nhận trước T007. Thiếu dữ liệu này không chặn T001–T006 nhưng chặn backfill và enforce.
+U-004-08 đã chốt đích backfill cho T007 mà không cần danh sách ánh xạ từng dòng.
+T008 vẫn phải chờ bằng chứng không còn Topic cần thiết `department_id = NULL` và
+không có mâu thuẫn sau backfill; không tự gán dữ liệu của Khoa khác.

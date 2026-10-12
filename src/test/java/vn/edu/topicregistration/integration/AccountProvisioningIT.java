@@ -218,6 +218,10 @@ class AccountProvisioningIT {
         jdbc.update("""
                 INSERT INTO departments(faculty_id, name)
                 SELECT id, 'Công nghệ phần mềm' FROM faculties WHERE name = ?
+                  AND NOT EXISTS (
+                      SELECT 1 FROM departments department
+                      WHERE department.faculty_id = faculties.id
+                        AND department.name = 'Công nghệ phần mềm')
                 """, AdminAccountService.DEFAULT_FACULTY_NAME);
         return jdbc.queryForObject(
                 "SELECT id FROM departments WHERE name = 'Công nghệ phần mềm'", Long.class);

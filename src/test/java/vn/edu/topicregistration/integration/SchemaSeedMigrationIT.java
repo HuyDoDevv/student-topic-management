@@ -33,13 +33,13 @@ class SchemaSeedMigrationIT {
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV16WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV17WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -142,7 +142,7 @@ class SchemaSeedMigrationIT {
         fixture.seeder().run(new DefaultApplicationArguments(new String[0]));
 
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM faculties"));
-        assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM departments"));
+        assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM departments"));
         assertEquals(12, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(7, count(jdbc, "SELECT COUNT(*) FROM student_profiles"));
         assertEquals(7, count(jdbc, """
@@ -275,9 +275,13 @@ class SchemaSeedMigrationIT {
         jdbc.update("DELETE FROM group_memberships WHERE group_id = ?", historicalGroupId);
         Map<String, Integer> oldChecksums = appliedChecksums(jdbc);
 
-        Flyway allVersions = flyway(database);
-        allVersions.migrate();
-        assertDoesNotThrow(allVersions::validate);
+        Flyway throughV16 = Flyway.configure()
+                .dataSource(database.dataSource())
+                .locations(MIGRATION_LOCATION)
+                .target(MigrationVersion.fromVersion("16"))
+                .load();
+        throughV16.migrate();
+        assertDoesNotThrow(throughV16::validate);
         assertEquals(oldChecksums, appliedChecksums(jdbc).entrySet().stream()
                 .filter(entry -> Integer.parseInt(entry.getKey()) <= 6)
                 .collect(java.util.stream.Collectors.toMap(
@@ -301,7 +305,7 @@ class SchemaSeedMigrationIT {
                     HAVING SUM(leader_at_submission) <> 1
                 ) invalid_leader
                 """));
-        assertEquals(0, allVersions.migrate().migrationsExecuted);
+        assertEquals(0, throughV16.migrate().migrationsExecuted);
     }
 
     private static void seedLegacyV6Fixture(JdbcTemplate jdbc) {

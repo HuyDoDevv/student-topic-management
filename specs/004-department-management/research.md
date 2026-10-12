@@ -27,6 +27,12 @@ mô hình và gây bùng nổ role.
 **Rationale**: V13 đã xóa dữ liệu Department cũ; không có cơ sở phục hồi chính xác tự động.
 Một migration tạo “Chưa phân công” sẽ che mất lỗi dữ liệu và vi phạm quyết định người dùng.
 
+**T007 owner decision (2026-10-12)**: Chủ dự án chọn `Công nghệ phần mềm` trong
+`Khoa Công nghệ Thông tin` là Bộ môn thật để gán các LECTURER/DEAN và Topic còn thiếu
+Department. Đây là quy tắc gán mới, không phải khôi phục Bộ môn lịch sử. Chỉ cập nhật
+giá trị NULL; giữ nguyên các gán đã có. Nếu phép gán dự kiến làm lệch Faculty,
+tác giả hoặc GVHD, migration phải thất bại trước khi ghi dữ liệu.
+
 ## R5 — Department của Topic do backend suy ra
 
 **Decision**: Khi tạo Topic, service lấy Department từ actor đã xác thực, không tin `departmentId`

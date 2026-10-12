@@ -116,12 +116,13 @@ class FacultyScopeMigrationIT {
         assertEquals(2, count(jdbc, "SELECT COUNT(*) FROM topics"));
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM councils"));
 
-        Flyway allVersions = Flyway.configure()
+        Flyway throughV16 = Flyway.configure()
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
+                .target(MigrationVersion.fromVersion("16"))
                 .load();
-        assertEquals(1, allVersions.migrate().migrationsExecuted);
-        assertDoesNotThrow(allVersions::validate);
+        assertEquals(1, throughV16.migrate().migrationsExecuted);
+        assertDoesNotThrow(throughV16::validate);
 
         assertEquals(1, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
