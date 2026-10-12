@@ -6,9 +6,9 @@
 | FR-004-01 | Tên Department hợp lệ/unique theo Faculty | Repository/service/integration tests | T002–T003 | Complete |
 | FR-004-02–03 | Chỉ ADMIN gán Department đúng Faculty cho LECTURER/DEAN | Unit + MockMvc security tests | T004 | Complete |
 | FR-004-04 | Topic lấy Department từ actor, không tin request | `TopicAuthorServiceTest`, `TopicDepartmentIT` | T005 | Complete |
-| FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Planned |
-| FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; T006 regression còn chờ | T005–T006 | T005 verified; T006 pending |
-| FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | Planned |
+| FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Complete |
+| FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; Faculty-wide regression | T005–T006 | Complete |
+| FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | T006 verified; T010 pending |
 | FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | Data gate |
 | FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/E2E tests | T009 | Planned |
 | FR-004-10 | Không xóa Department đang được dùng | Service/integration tests; không có route xóa | T003 | Complete |
@@ -43,5 +43,14 @@
   Topic mới lấy Department từ tác giả, bỏ qua `departmentId` giả mạo, từ chối actor thiếu
   Department/khác Faculty, không gửi nháp cũ thiếu Department, và DEAN duyệt xuyên Bộ môn
   trong Khoa nhưng không qua Khoa khác. Full `./mvnw test` exit 0.
-- T006 chưa thực hiện: GVHD phối hợp vẫn được chọn và kiểm tra theo Faculty thay vì
-  Department; không coi FR-004-05 hoặc checkpoint Phase 4 là hoàn thành.
+- T006: `TopicRulesTest`, `TopicReviewRulesTest`, `TopicAuthorServiceTest`,
+  `CouncilServiceTest`, `DirectGradingServiceTest` và `TopicDepartmentIT` đều pass.
+  Form chỉ liệt kê GVHD cùng Department; backend từ chối ID khác Department khi tạo/sửa,
+  kiểm tra lại lúc gửi duyệt; tác giả ở slot 1, GVHD phối hợp ở slot 2. Student vẫn thấy
+  đề tài từ hai Department cùng Faculty; Council và grading giữ Faculty scope.
+  `TopicDepartmentIT`: 11 test pass trên MySQL 8.4
+  `127.0.0.1:3307/topic_registration_test`; full `./mvnw test` exit 0.
+- Full `./mvnw verify -Pintegration` chưa đạt: 50 integration test, 3 failure và
+  10 error ở fixture/migration test ngoài T006 (trùng tên Faculty khi tạo fixture,
+  assertion schema cũ, seeder dùng cột chưa có ở V7). Không coi full integration/E2E
+  của T010 là hoàn thành; cần xử lý bằng plan riêng.

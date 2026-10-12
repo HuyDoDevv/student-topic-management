@@ -46,9 +46,10 @@ khi verification bắt buộc đạt; code đã viết nhưng test bị chặn v
   giả đã xác thực; chặn actor thiếu Department/khác Faculty; DEAN vẫn duyệt toàn Faculty.
   Đã verify 6 unit test, 6 web/DB integration test trên MySQL 8.4 cổng 3307 và full
   `./mvnw test`. Nháp legacy thiếu Department chưa được gửi duyệt cho đến T007.
-- [ ] T006 [US3] [FR-004-05–07] Viết unit/web regression test trước rồi đổi danh mục và validation
+- [X] T006 [US3] [FR-004-05–07] Viết unit/web regression test trước rồi đổi danh mục và validation
   GVHD phối hợp từ cùng Faculty thành cùng Department; giữ tác giả ở slot 1 và chứng minh Student,
-  Council, grading không bị đổi sang Department scope.
+  Council, grading không bị đổi sang Department scope. Đã verify unit tests, 11
+  `TopicDepartmentIT` web/DB tests trên MySQL 8.4 cổng 3307 và full `./mvnw test`.
 
 **Checkpoint**: Topic mới có Department và mọi supervisor cùng Department; Council không đổi.
 
@@ -79,7 +80,7 @@ T006 + confirmed mapping → T007 → T008
 T008 + T009 → T010
 ```
 
-- T001–T005 đã hoàn thành; T006 là task kế tiếp và cần approval triển khai riêng.
+- T001–T006 đã hoàn thành; T007 chỉ bắt đầu sau khi có mapping được xác nhận.
 - T007 có data gate độc lập và không được suy đoán mapping.
 - T008 không được gộp vào T007 để giữ expand/backfill/enforce có thể kiểm chứng riêng.
 - Mỗi task cần plan/approval riêng theo `AGENTS.md`; task chưa check không tự cấp quyền implement.

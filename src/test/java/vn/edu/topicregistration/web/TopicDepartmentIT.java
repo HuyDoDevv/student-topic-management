@@ -39,7 +39,7 @@ import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
 
-/** T005: persisted Department scope for topic authoring and Faculty-wide dean review. */
+/** T005–T006: topic and supervisor Department scope with Faculty-wide workflows. */
 @SpringBootTest
 @ActiveProfiles("local")
 @Import(TopicDepartmentIT.FixedClockConfiguration.class)
@@ -203,6 +203,128 @@ class TopicDepartmentIT {
                         .with(actor(outsideDean, "DEAN", "LECTURER")).with(csrf())
                         .param("version", "1"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void coSupervisorFormShowsOnlyEnabledLecturersInAuthorsDepartment() throws Exception {
+        FixtureSupport.IdentityFixture sameDepartment = identity(
+                "topic-dept-colleague", faculty, Set.of(RoleCode.LECTURER));
+        FixtureSupport.IdentityFixture disabled = identity(
+                "topic-dept-disabled", faculty, Set.of(RoleCode.LECTURER));
+        FixtureSupport.IdentityFixture student = identity(
+                "topic-dept-student-option", faculty, Set.of(RoleCode.STUDENT));
+        assignDepartment(sameDepartment, departmentId);
+        assignDepartment(disabled, departmentId);
+        jdbc.update("UPDATE user_accounts SET enabled = false WHERE id = ?", disabled.accountId());
+
+        mvc.perform(get("/periods/{periodId}/topics/new", periodId)
+                        .with(actor(lecturer, "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(sameDepartment.username())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString(otherLecturer.username()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString(disabled.username()))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString(student.username()))))
+                .andExpect(content().string(containsString("cùng Bộ môn")));
+    }
+
+    @Test
+    void sameDepartmentCoSupervisorIsSavedInSlotTwo() throws Exception {
+        FixtureSupport.IdentityFixture colleague = identity(
+                "topic-dept-slot-two", faculty, Set.of(RoleCode.LECTURER));
+        assignDepartment(colleague, departmentId);
+
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Đề tài hai GVHD")
+                        .param("coSupervisorIds", Long.toString(colleague.accountId())))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+
+        assertEquals(lecturer.accountId(), jdbc.queryForObject(
+                "SELECT lecturer_id FROM topic_supervisors WHERE topic_id = ? AND slot = 1",
+                Long.class, topicId));
+        assertEquals(colleague.accountId(), jdbc.queryForObject(
+                "SELECT lecturer_id FROM topic_supervisors WHERE topic_id = ? AND slot = 2",
+                Long.class, topicId));
+    }
+
+    @Test
+    void forgedCoSupervisorFromAnotherDepartmentCannotCreateOrEditDraft() throws Exception {
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Sai Bộ môn")
+                        .param("coSupervisorIds", Long.toString(otherLecturer.accountId())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(content().string(containsString("không cùng Bộ môn")));
+        assertEquals(0L, topicCount());
+
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Bản nháp hợp lệ"))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+        mvc.perform(post("/topics/{id}/draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Bản nháp bị giả mạo")
+                        .param("version", "0")
+                        .param("coSupervisorIds", Long.toString(otherLecturer.accountId())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(content().string(containsString("không cùng Bộ môn")));
+        assertEquals("Bản nháp hợp lệ", jdbc.queryForObject(
+                "SELECT title FROM topics WHERE id = ?", String.class, topicId));
+        assertEquals(1L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM topic_supervisors WHERE topic_id = ?", Long.class, topicId));
+    }
+
+    @Test
+    void submitRechecksStoredCoSupervisorDepartmentWithoutChangingDraft() throws Exception {
+        FixtureSupport.IdentityFixture colleague = identity(
+                "topic-dept-moved-colleague", faculty, Set.of(RoleCode.LECTURER));
+        assignDepartment(colleague, departmentId);
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Kiểm lại GVHD")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả")
+                        .param("coSupervisorIds", Long.toString(colleague.accountId())))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+        assignDepartment(colleague, otherDepartmentId);
+
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isUnprocessableEntity());
+        assertEquals("DRAFT", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, topicId));
+    }
+
+    @Test
+    void studentInFacultySeesPublishedTopicsFromBothDepartments() throws Exception {
+        FixtureSupport.IdentityFixture student = identity(
+                "topic-dept-student-leader", faculty, Set.of(RoleCode.STUDENT));
+        long first = pendingTopic(lecturer, departmentId, "Chọn đề tài phần mềm");
+        long second = pendingTopic(otherLecturer, otherDepartmentId, "Chọn đề tài hệ thống");
+        jdbc.update("UPDATE topics SET status = 'PUBLISHED' WHERE id IN (?, ?)", first, second);
+        jdbc.update("INSERT INTO student_groups(period_id, leader_student_id, version) VALUES (?, ?, 0)",
+                periodId, student.accountId());
+        long groupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
+
+        mvc.perform(get("/groups/{groupId}/registrations/new", groupId)
+                        .with(actor(student, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Chọn đề tài phần mềm")))
+                .andExpect(content().string(containsString("Chọn đề tài hệ thống")));
+    }
+
+    private long latestTopicId() {
+        return jdbc.queryForObject("SELECT MAX(id) FROM topics WHERE author_id = ?",
+                Long.class, lecturer.accountId());
     }
 
     private FixtureSupport.IdentityFixture identity(String username,

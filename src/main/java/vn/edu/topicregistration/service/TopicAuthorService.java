@@ -69,7 +69,8 @@ public class TopicAuthorService {
         DepartmentEntity department = requireAuthorDepartment(author, period.getFaculty().getId());
         LoadedDraft loaded = loadDraft(command, author);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
-                loaded.draft(), access(actor, actor.accountId(), actor.facultyId(), "DRAFT")));
+                loaded.draft(), access(actor, actor.accountId(), actor.facultyId(),
+                        department.getId(), "DRAFT")));
 
         TopicEntity topic = new TopicEntity(period, author, department);
         applyDraft(topic, valid, loaded.lecturers());
@@ -81,6 +82,12 @@ public class TopicAuthorService {
         Objects.requireNonNull(command, "command");
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         ActorIdentity actor = requireAuthor(locked.topic());
+        DepartmentEntity department = requireAuthorDepartment(
+                locked.topic().getAuthor(), locked.period().getFaculty().getId());
+        if (locked.topic().getDepartment() == null
+                || !Objects.equals(locked.topic().getDepartment().getId(), department.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
         LoadedDraft loaded = loadDraft(command, locked.topic().getAuthor());
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, locked.topic())));
@@ -190,8 +197,13 @@ public class TopicAuthorService {
                 .findByIdAndFacultyId(periodId, actor.facultyId())
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
-        List<LecturerOption> coSupervisors = accounts
-                .findEnabledByFacultyAndRole(actor.facultyId(), RoleCode.LECTURER)
+        Long departmentId = author.getDepartment() == null
+                ? null : author.getDepartment().getId();
+        List<UserAccountEntity> eligibleLecturers = departmentId == null
+                ? List.of()
+                : accounts.findEnabledByFacultyAndDepartmentAndRole(
+                        actor.facultyId(), departmentId, RoleCode.LECTURER);
+        List<LecturerOption> coSupervisors = eligibleLecturers
                 .stream()
                 .filter(account -> !Objects.equals(account.getId(), actor.accountId()))
                 .map(account -> new LecturerOption(
@@ -313,9 +325,13 @@ public class TopicAuthorService {
         Long facultyId = lecturer.getFaculty() == null
                 ? null
                 : lecturer.getFaculty().getId();
+        Long departmentId = lecturer.getDepartment() == null
+                ? null
+                : lecturer.getDepartment().getId();
         return new SupervisorCandidate(
                 lecturer.getId(),
                 facultyId == null ? Long.MIN_VALUE : facultyId,
+                departmentId,
                 lecturer.isEnabled(),
                 lecturer.getRoleCodes().contains(RoleCode.LECTURER));
     }
@@ -325,6 +341,7 @@ public class TopicAuthorService {
                 actor,
                 topic.getAuthor().getId(),
                 topic.getPeriod().getFaculty().getId(),
+                topic.getDepartment() == null ? null : topic.getDepartment().getId(),
                 topic.getStatus());
     }
 
@@ -332,6 +349,7 @@ public class TopicAuthorService {
             ActorIdentity actor,
             long authorId,
             long topicFacultyId,
+            Long topicDepartmentId,
             String status) {
         if (actor.facultyId() == null) {
             throw new AccessDeniedException("Lecturer faculty is missing");
@@ -342,6 +360,7 @@ public class TopicAuthorService {
                     authorId,
                     actor.facultyId(),
                     topicFacultyId,
+                    topicDepartmentId,
                     TopicStatus.valueOf(status));
         } catch (IllegalArgumentException exception) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
@@ -351,13 +370,7 @@ public class TopicAuthorService {
     private TopicDraft draftFrom(TopicEntity topic) {
         List<SupervisorCandidate> supervisors = topic.getSupervisors().stream()
                 .map(TopicSupervisorEntity::getLecturer)
-                .map(lecturer -> new SupervisorCandidate(
-                        lecturer.getId(),
-                        lecturer.getFaculty() == null
-                                ? Long.MIN_VALUE
-                                : lecturer.getFaculty().getId(),
-                        lecturer.isEnabled(),
-                        lecturer.getRoleCodes().contains(RoleCode.LECTURER)))
+                .map(this::candidateFrom)
                 .toList();
         return new TopicDraft(
                 topic.getTitle(),

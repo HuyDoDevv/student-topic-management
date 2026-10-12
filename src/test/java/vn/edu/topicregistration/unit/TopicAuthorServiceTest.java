@@ -105,6 +105,107 @@ class TopicAuthorServiceTest {
         verify(scenario.topics(), never()).flush();
     }
 
+    @Test
+    void coSupervisorFromAnotherDepartmentIsRejectedBeforeDraftPersistence() {
+        Scenario scenario = openScenario();
+        DepartmentEntity authorDepartment = department(31L, scenario.faculty());
+        DepartmentEntity otherDepartment = department(32L, scenario.faculty());
+        when(scenario.author().getDepartment()).thenReturn(authorDepartment);
+        UserAccountEntity otherLecturer = mock(UserAccountEntity.class);
+        when(otherLecturer.getId()).thenReturn(8L);
+        when(otherLecturer.getFaculty()).thenReturn(scenario.faculty());
+        when(otherLecturer.getDepartment()).thenReturn(otherDepartment);
+        when(otherLecturer.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(otherLecturer.isEnabled()).thenReturn(true);
+        when(scenario.entityManager().find(UserAccountEntity.class, 8L))
+                .thenReturn(otherLecturer);
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().createDraft(1L, commandWithCoSupervisor(8L)));
+
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, failure.code());
+        verify(scenario.topics(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void coSupervisorInSameDepartmentIsStoredInSecondSlot() {
+        Scenario scenario = openScenario();
+        DepartmentEntity department = department(31L, scenario.faculty());
+        when(scenario.author().getDepartment()).thenReturn(department);
+        UserAccountEntity coSupervisor = mock(UserAccountEntity.class);
+        when(coSupervisor.getId()).thenReturn(8L);
+        when(coSupervisor.getFaculty()).thenReturn(scenario.faculty());
+        when(coSupervisor.getDepartment()).thenReturn(department);
+        when(coSupervisor.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(coSupervisor.isEnabled()).thenReturn(true);
+        when(scenario.entityManager().find(UserAccountEntity.class, 8L))
+                .thenReturn(coSupervisor);
+        when(scenario.topics().saveAndFlush(any(TopicEntity.class)))
+                .thenAnswer(call -> call.getArgument(0));
+
+        scenario.service().createDraft(1L, commandWithCoSupervisor(8L));
+
+        org.mockito.ArgumentCaptor<TopicEntity> saved =
+                org.mockito.ArgumentCaptor.forClass(TopicEntity.class);
+        verify(scenario.topics()).saveAndFlush(saved.capture());
+        assertEquals(scenario.author(), saved.getValue().getSupervisors().getFirst().getLecturer());
+        assertEquals(1, saved.getValue().getSupervisors().getFirst().getSlot());
+        assertEquals(coSupervisor, saved.getValue().getSupervisors().get(1).getLecturer());
+        assertEquals(2, saved.getValue().getSupervisors().get(1).getSlot());
+    }
+
+    @Test
+    void formContextListsOnlyLecturersInAuthorsDepartment() {
+        Scenario scenario = openScenario();
+        DepartmentEntity department = department(31L, scenario.faculty());
+        when(scenario.author().getDepartment()).thenReturn(department);
+        when(scenario.periods().findByIdAndFacultyId(1L, 21L))
+                .thenReturn(Optional.of(scenario.period()));
+        when(scenario.period().getStudentEnd()).thenReturn(NOW.plusSeconds(1200));
+        UserAccountEntity colleague = mock(UserAccountEntity.class);
+        when(colleague.getId()).thenReturn(8L);
+        when(colleague.getUsername()).thenReturn("colleague");
+        when(scenario.accounts().findEnabledByFacultyAndDepartmentAndRole(
+                21L, 31L, RoleCode.LECTURER))
+                .thenReturn(List.of(scenario.author(), colleague));
+
+        var context = scenario.service().formContext(1L);
+
+        assertEquals(List.of(8L), context.coSupervisors().stream()
+                .map(option -> option.id()).toList());
+        verify(scenario.accounts(), never()).findEnabledByFacultyAndRole(21L, RoleCode.LECTURER);
+    }
+
+    @Test
+    void legacyDraftWithoutDepartmentCannotBeEdited() {
+        Scenario scenario = openScenario();
+        DepartmentEntity authorDepartment = department(31L, scenario.faculty());
+        when(scenario.author().getDepartment()).thenReturn(authorDepartment);
+        TopicEntity legacy = new TopicEntity(scenario.period(), scenario.author());
+        when(scenario.topics().findPeriodIdByTopicId(5L)).thenReturn(Optional.of(1L));
+        when(scenario.topics().findByIdForUpdate(5L)).thenReturn(Optional.of(legacy));
+        when(scenario.authorization().requireTopicAuthor(7L, 21L))
+                .thenReturn(new ActorIdentity(7L, Set.of(RoleCode.LECTURER), 21L));
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().saveDraft(5L, 0L, completeCommand()));
+
+        assertEquals(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED, failure.code());
+        verify(scenario.topics(), never()).flush();
+    }
+
+    private static DepartmentEntity department(long id, FacultyEntity faculty) {
+        DepartmentEntity department = mock(DepartmentEntity.class);
+        when(department.getId()).thenReturn(id);
+        when(department.getFaculty()).thenReturn(faculty);
+        return department;
+    }
+
+    private static TopicDraftCommand commandWithCoSupervisor(long accountId) {
+        return new TopicDraftCommand("Tên", "Mô tả", "Mục tiêu", "Yêu cầu", "Kết quả",
+                List.of(accountId));
+    }
+
     private static TopicDraftCommand completeCommand() {
         return new TopicDraftCommand("Tên", "Mô tả", "Mục tiêu", "Yêu cầu", "Kết quả", List.of());
     }
@@ -134,11 +235,13 @@ class TopicAuthorServiceTest {
         when(authorization.requireTopicAuthoringLecturer()).thenReturn(new ActorIdentity(
                 7L, Set.of(RoleCode.LECTURER), 21L));
         when(entityManager.find(UserAccountEntity.class, 7L)).thenReturn(author);
-        return new Scenario(service, topics, authorization, faculty, author, period);
+        return new Scenario(service, periods, topics, accounts, authorization, entityManager,
+                faculty, author, period);
     }
 
-    private record Scenario(TopicAuthorService service, TopicRepository topics,
-            AuthorizationPolicy authorization, FacultyEntity faculty,
+    private record Scenario(TopicAuthorService service, RegistrationPeriodRepository periods,
+            TopicRepository topics, UserAccountRepository accounts,
+            AuthorizationPolicy authorization, EntityManager entityManager, FacultyEntity faculty,
             UserAccountEntity author, RegistrationPeriodEntity period) {
     }
 

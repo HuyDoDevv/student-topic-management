@@ -27,6 +27,7 @@ import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
@@ -104,6 +105,30 @@ class DirectGradingServiceTest {
         assertEquals("Chấm độc lập", assignmentCaptor.getValue().getLocation());
         assertEquals(7L, assigned.periodId());
         assertEquals(CouncilStatus.ACTIVE, assigned.status());
+    }
+
+    @Test
+    void directGraderMayBeFromAnotherDepartmentInTheSameFaculty() throws Exception {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, "COURSE", List.of());
+        when(fixture.topic().getDepartment()).thenReturn(mock(DepartmentEntity.class));
+        when(fixture.grader().getDepartment()).thenReturn(mock(DepartmentEntity.class));
+        when(dependencies.reports().findCurrentByRegistrationIdForUpdate(51L))
+                .thenReturn(Optional.of(mock(ProjectReportEntity.class)));
+        when(dependencies.councilTopics().findByRegistrationId(51L))
+                .thenReturn(Optional.empty());
+        when(dependencies.councils().saveAndFlush(any())).thenAnswer(invocation -> {
+            CouncilEntity council = invocation.getArgument(0);
+            setId(council, 41L);
+            return council;
+        });
+        when(dependencies.councilTopics().saveAndFlush(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var assigned = dependencies.service().assign(new AssignCommand(51L, 11L));
+
+        assertEquals(CouncilStatus.ACTIVE, assigned.status());
+        verify(dependencies.councils()).saveAndFlush(any());
     }
 
     @Test

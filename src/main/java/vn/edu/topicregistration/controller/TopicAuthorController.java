@@ -97,7 +97,7 @@ public class TopicAuthorController {
                 throw exception;
             }
             bindingResult.reject("topic.invalid",
-                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng khoa.");
+                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng Bộ môn.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, null, false);
         }
@@ -144,7 +144,7 @@ public class TopicAuthorController {
                 throw exception;
             }
             bindingResult.reject("topic.invalid",
-                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng khoa.");
+                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng Bộ môn.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, TopicPageView.from(current), true);
         }

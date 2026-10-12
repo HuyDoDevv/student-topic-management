@@ -28,6 +28,7 @@ import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
@@ -92,6 +93,29 @@ class CouncilServiceTest {
         assertEquals("Hội đồng KLTN", created.name());
         assertEquals(CouncilStatus.DRAFT, created.status());
         assertEquals(2L, fixture.faculty().getId());
+    }
+
+    @Test
+    void councilStillAcceptsLecturersFromDifferentDepartmentsOfSameFaculty() throws Exception {
+        Dependencies dependencies = dependencies();
+        validCreation(dependencies);
+        DepartmentEntity firstDepartment = mock(DepartmentEntity.class);
+        DepartmentEntity secondDepartment = mock(DepartmentEntity.class);
+        when(dependencies.accounts().findDetailedById(11L).orElseThrow().getDepartment())
+                .thenReturn(firstDepartment);
+        when(dependencies.accounts().findDetailedById(12L).orElseThrow().getDepartment())
+                .thenReturn(secondDepartment);
+        when(dependencies.councils().saveAndFlush(any())).thenAnswer(invocation -> {
+            CouncilEntity council = invocation.getArgument(0);
+            setId(council, 41L);
+            return council;
+        });
+
+        var created = dependencies.service().create(new CreateCouncilCommand(
+                7L, "Hội đồng nhiều Bộ môn", 11L, 12L, List.of(13L)));
+
+        assertEquals(CouncilStatus.DRAFT, created.status());
+        verify(dependencies.councils()).saveAndFlush(any());
     }
 
     @Test
