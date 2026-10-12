@@ -43,4 +43,8 @@ public class DepartmentEntity {
     public String getName() {
         return name;
     }
+
+    public void rename(String name) {
+        this.name = name;
+    }
 }
