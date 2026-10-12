@@ -5,7 +5,7 @@
 - JDK 21.
 - MySQL 8.4 test database riêng, được phép xóa hoàn toàn.
 - `TEST_DATABASE_URL`, `TEST_DATABASE_USERNAME`, `TEST_DATABASE_PASSWORD` trỏ đúng
-  `topic_registration_test` trên `127.0.0.1:3306` theo `MySqlTestSupport`.
+  `topic_registration_test` trên `127.0.0.1:3307` theo `MySqlTestSupport`.
 
 Không dùng database dev/prod cho migration test.
 

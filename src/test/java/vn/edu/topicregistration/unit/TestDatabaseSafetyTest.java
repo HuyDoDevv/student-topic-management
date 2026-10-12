@@ -12,7 +12,7 @@ import vn.edu.topicregistration.integration.MySqlTestSupport;
 class TestDatabaseSafetyTest {
     @Test
     void acceptsOnlyExplicitMySqlTestDatabases() {
-        String safeUrl = "jdbc:mysql://127.0.0.1:3306/topic_registration_test";
+        String safeUrl = "jdbc:mysql://127.0.0.1:3307/topic_registration_test";
         String safeUrlWithParameters = safeUrl + "?connectionTimeZone=UTC&useSSL=false";
         assertEquals(safeUrl, MySqlTestSupport.assertSafeTestDatabaseUrl(safeUrl));
         assertEquals(
@@ -25,7 +25,7 @@ class TestDatabaseSafetyTest {
                 "jdbc:mysql://10.0.0.5:3306/topic_registration_test",
                 "jdbc:mysql://127.0.0.1.example.com:3306/topic_registration_test",
                 "jdbc:mysql://127.0.0.1/topic_registration_test",
-                "jdbc:mysql://127.0.0.1:3307/topic_registration_test",
+                "jdbc:mysql://127.0.0.1:3306/topic_registration_test",
                 "jdbc:mysql://127.0.0.1:3306/topic_registration_local",
                 "jdbc:mysql://127.0.0.1:3306/contest_prod",
                 "jdbc:mysql://127.0.0.1:3306/topic_registration_test_backup",

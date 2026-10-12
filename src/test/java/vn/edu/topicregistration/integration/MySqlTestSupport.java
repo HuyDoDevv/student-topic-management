@@ -14,7 +14,7 @@ public final class MySqlTestSupport {
     private static final String USERNAME_VARIABLE = "TEST_DATABASE_USERNAME";
     private static final String PASSWORD_VARIABLE = "TEST_DATABASE_PASSWORD";
     private static final String SAFE_HOST = "127.0.0.1";
-    private static final int SAFE_PORT = 3306;
+    private static final int SAFE_PORT = 3307;
     private static final String SAFE_DATABASE = "topic_registration_test";
     private static final String SAFE_AUTHORITY = SAFE_HOST + ":" + SAFE_PORT;
     private static final String SAFE_PATH = "/" + SAFE_DATABASE;
