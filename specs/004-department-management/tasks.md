@@ -60,8 +60,10 @@ khi verification bắt buộc đạt; code đã viết nhưng test bị chặn v
   Topic còn thiếu Department; integration test chứng minh giữ nguyên gán cũ và dừng
   không ghi dở khi Faculty, tác giả hoặc GVHD mâu thuẫn. Đã verify 5 migration test
   T007, targeted integration suite trên MySQL 8.4 cổng 3307 và full `./mvnw test`.
-- [ ] T008 [US4] [FR-004-03–05,FR-004-08] Sau khi T007 chứng minh không còn Topic cần thiết NULL,
+- [X] T008 [US4] [FR-004-03–05,FR-004-08] Sau khi T007 chứng minh không còn Topic cần thiết NULL,
   tạo migration enforce riêng cho constraint cuối cùng và test nâng cấp/idempotent validation.
+  V18 từ chối dữ liệu thiếu/sai Bộ môn trước khi siết `topics.department_id NOT NULL`;
+  migration, schema/seed, persistence và các fixture liên quan đã verify trên DB test 3307.
 
 **Checkpoint**: Dữ liệu hiện hữu được ánh xạ có bằng chứng; schema cuối bảo vệ runtime invariant.
 
@@ -82,7 +84,7 @@ T006 + confirmed mapping → T007 → T008
 T008 + T009 → T010
 ```
 
-- T001–T007 đã hoàn thành; T008 cần plan và approval riêng.
+- T001–T008 đã hoàn thành; T009 cần plan và approval riêng.
 - T007 dùng quy tắc ánh xạ một Bộ môn U-004-08; không suy đoán lịch sử hoặc ghi đè gán cũ.
 - T008 không được gộp vào T007 để giữ expand/backfill/enforce có thể kiểm chứng riêng.
 - Mỗi task cần plan/approval riêng theo `AGENTS.md`; task chưa check không tự cấp quyền implement.

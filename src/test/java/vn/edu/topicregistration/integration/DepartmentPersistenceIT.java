@@ -3,6 +3,7 @@ package vn.edu.topicregistration.integration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -47,6 +50,9 @@ class DepartmentPersistenceIT {
 
     @Autowired
     EntityManager entityManager;
+
+    @Autowired
+    JdbcTemplate jdbc;
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -118,7 +124,7 @@ class DepartmentPersistenceIT {
 
     @Test
     @Transactional
-    void legacyRowsWithNullDepartmentRemainLoadable() {
+    void legacyAccountCanRemainWithoutDepartmentButTopicCannot() {
         FacultyEntity faculty = new FacultyEntity("Khoa legacy Department");
         entityManager.persist(faculty);
         UserAccountEntity author = accounts.saveAndFlush(new UserAccountEntity(
@@ -128,11 +134,12 @@ class DepartmentPersistenceIT {
                 faculty));
         RegistrationPeriodEntity period = period(faculty, "Đợt legacy Department");
         entityManager.persist(period);
-        TopicEntity topic = topics.saveAndFlush(new TopicEntity(period, author));
         entityManager.clear();
 
         assertNull(accounts.findById(author.getId()).orElseThrow().getDepartment());
-        assertNull(topics.findById(topic.getId()).orElseThrow().getDepartment());
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "INSERT INTO topics(period_id, author_id, department_id) VALUES (?, ?, NULL)",
+                period.getId(), author.getId()));
     }
 
     private static RegistrationPeriodEntity period(FacultyEntity faculty, String name) {

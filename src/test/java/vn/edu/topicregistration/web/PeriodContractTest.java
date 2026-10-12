@@ -165,11 +165,22 @@ class PeriodContractTest {
     }
 
     private void insertTopic(long periodId, long authorId, String status) {
+        long facultyId = jdbc.queryForObject(
+                "SELECT faculty_id FROM registration_periods WHERE id = ?", Long.class, periodId);
+        if (jdbc.queryForObject(
+                "SELECT COUNT(*) FROM departments WHERE faculty_id = ? AND name = ?",
+                Integer.class, facultyId, "Bộ môn fixture " + periodId) == 0) {
+            jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+                    facultyId, "Bộ môn fixture " + periodId);
+        }
+        long departmentId = jdbc.queryForObject(
+                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
+                Long.class, facultyId, "Bộ môn fixture " + periodId);
         jdbc.update("""
-                INSERT INTO topics(period_id, author_id, title, description,
+                INSERT INTO topics(period_id, author_id, department_id, title, description,
                                    objectives, student_requirements, expected_results, status)
-                VALUES (?, ?, 'Đề tài mẫu', 'Nội dung', 'Mục tiêu', 'Yêu cầu', 'Kết quả', ?)
-                """, periodId, authorId, status);
+                VALUES (?, ?, ?, 'Đề tài mẫu', 'Nội dung', 'Mục tiêu', 'Yêu cầu', 'Kết quả', ?)
+                """, periodId, authorId, departmentId, status);
     }
 
     @Test

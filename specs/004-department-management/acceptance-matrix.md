@@ -9,7 +9,7 @@
 | FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Complete |
 | FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; Faculty-wide regression | T005–T006 | Complete |
 | FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | T006 verified; T010 pending |
-| FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | T007 verified; T008 pending |
+| FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | T007–T008 verified on isolated test DB |
 | FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/E2E tests | T009 | Planned |
 | FR-004-10 | Không xóa Department đang được dùng | Service/integration tests; không có route xóa | T003 | Complete |
 
@@ -62,4 +62,14 @@
   `./mvnw -q verify -Pintegration -Dtest=TopicRulesTest
   -Dit.test=DepartmentBackfillMigrationIT,FacultyScopeMigrationIT,SchemaSeedMigrationIT,AccountProvisioningIT`
   exit 0; full `./mvnw -q test` exit 0. Chưa chạy migration trên DB dev/shared;
-  T008 và full integration/E2E vẫn chưa nghiệm thu.
+  full integration/E2E vẫn chưa nghiệm thu.
+- T008: `DepartmentEnforceMigrationIT` (3 test) xác nhận V18 nâng cấp hợp lệ,
+  validate idempotent và từ chối Topic NULL hoặc tác giả khác Bộ môn trước khi
+  đổi schema. V18 giữ FK Department và đặt `topics.department_id NOT NULL`.
+  Targeted `./mvnw -q verify -Pintegration -Dtest=PeriodContractTest
+  -Dit.test=SchemaSeedMigrationIT,DepartmentPersistenceIT,RegistrationNotificationIT,DepartmentEnforceMigrationIT`
+  exit 0 trên MySQL 8.4 DB test `127.0.0.1:3307/topic_registration_test`;
+  `AuthorizationMatrixTest` chạy riêng đạt 5/5 và full `./mvnw -q test` exit 0.
+  Test cố ý cho V18 thất bại tạo Flyway history `success=0` trên MySQL;
+  cần reset DB test trước khi chạy suite khác. Chưa chạy migration trên DB dev/shared,
+  chưa verify full integration/E2E T010.

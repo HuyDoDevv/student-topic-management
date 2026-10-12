@@ -168,9 +168,9 @@ class RegistrationNotificationIT {
 
         jdbc.update("""
                 INSERT INTO topics(
-                    period_id, author_id, title, description,
+                    period_id, author_id, department_id, title, description,
                     objectives, student_requirements, expected_results, status, version)
-                SELECT period_id, author_id,
+                SELECT period_id, author_id, department_id,
                        '[TEST] Đề tài bị từ chối', description, objectives,
                        student_requirements, expected_results, 'PENDING_APPROVAL', 0
                 FROM topics WHERE id = ?

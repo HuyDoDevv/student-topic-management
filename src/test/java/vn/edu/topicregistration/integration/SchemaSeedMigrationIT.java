@@ -33,13 +33,13 @@ class SchemaSeedMigrationIT {
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
     @Test
-    void emptyDatabaseMigratesThroughV17WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV18WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -85,7 +85,7 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "fk_accounts_faculty", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_departments_faculty", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_accounts_department", "FOREIGN KEY");
-        assertConstraint(jdbc, "fk_topics_department", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_topics_department_required", "FOREIGN KEY");
         assertConstraint(jdbc, "uq_departments_faculty_name", "UNIQUE");
         assertConstraint(jdbc, "uq_user_accounts_email", "UNIQUE");
         assertConstraint(jdbc, "uq_student_profiles_student_code", "UNIQUE");
@@ -112,6 +112,11 @@ class SchemaSeedMigrationIT {
                 WHERE table_schema = DATABASE()
                   AND table_name IN ('user_accounts', 'topics')
                   AND column_name = 'department_id'
+                """));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'topics'
+                  AND column_name = 'department_id' AND is_nullable = 'NO'
                 """));
         assertEquals(0, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.columns
@@ -151,9 +156,9 @@ class SchemaSeedMigrationIT {
                 """));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(6, count(jdbc, "SELECT COUNT(*) FROM topics"));
-        assertEquals(6, count(jdbc,
+        assertEquals(0, count(jdbc,
                 "SELECT COUNT(*) FROM topics WHERE department_id IS NULL"));
-        assertEquals(12, count(jdbc,
+        assertEquals(8, count(jdbc,
                 "SELECT COUNT(*) FROM user_accounts WHERE department_id IS NULL"));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM student_groups"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
