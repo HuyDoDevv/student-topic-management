@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.service;
 
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -65,11 +66,12 @@ public class TopicAuthorService {
         ActorIdentity actor = currentLecturerFor(period);
         requireLecturerWindow(period, clock.instant());
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
+        DepartmentEntity department = requireAuthorDepartment(author, period.getFaculty().getId());
         LoadedDraft loaded = loadDraft(command, author);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, actor.accountId(), actor.facultyId(), "DRAFT")));
 
-        TopicEntity topic = new TopicEntity(period, author);
+        TopicEntity topic = new TopicEntity(period, author, department);
         applyDraft(topic, valid, loaded.lecturers());
         return toView(topics.saveAndFlush(topic));
     }
@@ -93,6 +95,12 @@ public class TopicAuthorService {
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         TopicEntity topic = locked.topic();
         ActorIdentity actor = requireAuthor(topic);
+        DepartmentEntity department = requireAuthorDepartment(
+                topic.getAuthor(), locked.period().getFaculty().getId());
+        if (topic.getDepartment() == null
+                || !Objects.equals(topic.getDepartment().getId(), department.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
         TopicDraft current = draftFrom(topic);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSubmit(
                 current,
@@ -147,6 +155,9 @@ public class TopicAuthorService {
         if (!context.period().lecturerOpen()) {
             throw new ApplicationException(ApplicationErrorCode.WINDOW_CLOSED);
         }
+        ActorIdentity actor = currentLecturer();
+        UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
+        requireAuthorDepartment(author, context.facultyId());
         return context;
     }
 
@@ -253,6 +264,20 @@ public class TopicAuthorService {
             throw new AccessDeniedException("Topic is outside the lecturer faculty");
         }
         return actor;
+    }
+
+    private static DepartmentEntity requireAuthorDepartment(
+            UserAccountEntity author, Long facultyId) {
+        DepartmentEntity department = author.getDepartment();
+        if (author.getFaculty() == null
+                || !Objects.equals(author.getFaculty().getId(), facultyId)
+                || department == null
+                || department.getId() == null
+                || department.getFaculty() == null
+                || !Objects.equals(department.getFaculty().getId(), facultyId)) {
+            throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
+        return department;
     }
 
     private LoadedDraft loadDraft(

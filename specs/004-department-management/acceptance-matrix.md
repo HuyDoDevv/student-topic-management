@@ -5,9 +5,9 @@
 | FR-004-01,08 | V16 khôi phục schema, giữ dữ liệu, không fake backfill | `FacultyScopeMigrationIT`, `SchemaSeedMigrationIT` | T001 | Complete |
 | FR-004-01 | Tên Department hợp lệ/unique theo Faculty | Repository/service/integration tests | T002–T003 | Complete |
 | FR-004-02–03 | Chỉ ADMIN gán Department đúng Faculty cho LECTURER/DEAN | Unit + MockMvc security tests | T004 | Complete |
-| FR-004-04 | Topic lấy Department từ actor, không tin request | Topic author unit/web tests | T005 | Planned |
+| FR-004-04 | Topic lấy Department từ actor, không tin request | `TopicAuthorServiceTest`, `TopicDepartmentIT` | T005 | Complete |
 | FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Planned |
-| FR-004-06 | DEAN quản lý mọi Department trong Faculty | Moderation regression tests | T005–T006 | Planned |
+| FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; T006 regression còn chờ | T005–T006 | T005 verified; T006 pending |
 | FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | Planned |
 | FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | Data gate |
 | FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/E2E tests | T009 | Planned |
@@ -38,3 +38,10 @@
   4 integration test; 0 failure, 0 error. `./mvnw -q test` exit 0.
 - T004 chỉ gán Department lần đầu cho staff cũ; chuyển tài khoản đã thuộc Bộ môn khác
   không nằm trong phiên bản này và bị service từ chối.
+- T005: `TopicAuthorServiceTest` 6 test và `TopicDepartmentIT` 6 test đều pass; MySQL
+  8.4 `127.0.0.1:3307/topic_registration_test`, 0 failure, 0 error. Test xác nhận
+  Topic mới lấy Department từ tác giả, bỏ qua `departmentId` giả mạo, từ chối actor thiếu
+  Department/khác Faculty, không gửi nháp cũ thiếu Department, và DEAN duyệt xuyên Bộ môn
+  trong Khoa nhưng không qua Khoa khác. Full `./mvnw test` exit 0.
+- T006 chưa thực hiện: GVHD phối hợp vẫn được chọn và kiểm tra theo Faculty thay vì
+  Department; không coi FR-004-05 hoặc checkpoint Phase 4 là hoàn thành.
