@@ -20,9 +20,10 @@ khi verification bắt buộc đạt; code đã viết nhưng test bị chặn v
 
 ## Phase 2: Persistence adoption
 
-- [ ] T002 [FR-004-01,FR-004-03–04] Viết persistence test trước rồi thêm `DepartmentEntity`,
+- [X] T002 [FR-004-01,FR-004-03–04] Viết persistence test trước rồi thêm `DepartmentEntity`,
   `DepartmentRepository`, mapping nullable trên `UserAccountEntity` và `TopicEntity`; không đổi
-  runtime behavior hoặc schema ngoài V16.
+  runtime behavior hoặc schema ngoài V16. Đã verify `DepartmentPersistenceIT` trên MySQL
+  8.4 và full test suite.
 
 **Checkpoint**: JPA đọc/ghi được Department và các quan hệ nullable; legacy row vẫn load được.
 
@@ -74,7 +75,7 @@ T006 + confirmed mapping → T007 → T008
 T008 + T009 → T010
 ```
 
-- T001 đã hoàn thành; T002 là task kế tiếp và cần plan/approval riêng.
+- T001–T002 đã hoàn thành; T003 là task kế tiếp và cần plan/approval riêng.
 - T007 có data gate độc lập và không được suy đoán mapping.
 - T008 không được gộp vào T007 để giữ expand/backfill/enforce có thể kiểm chứng riêng.
 - Mỗi task cần plan/approval riêng theo `AGENTS.md`; task chưa check không tự cấp quyền implement.

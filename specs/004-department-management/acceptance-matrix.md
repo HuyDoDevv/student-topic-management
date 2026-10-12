@@ -3,7 +3,7 @@
 | Requirement | Scenario | Planned evidence | Task | Status |
 |---|---|---|---|---|
 | FR-004-01,08 | V16 khôi phục schema, giữ dữ liệu, không fake backfill | `FacultyScopeMigrationIT`, `SchemaSeedMigrationIT` | T001 | Complete |
-| FR-004-01 | Tên Department hợp lệ/unique theo Faculty | Repository/service/integration tests | T002–T003 | Planned |
+| FR-004-01 | Tên Department hợp lệ/unique theo Faculty | Repository/service/integration tests | T002–T003 | In progress: persistence complete; catalog planned |
 | FR-004-02–03 | Chỉ ADMIN gán Department đúng Faculty cho LECTURER/DEAN | Unit + MockMvc security tests | T004 | Planned |
 | FR-004-04 | Topic lấy Department từ actor, không tin request | Topic author unit/web tests | T005 | Planned |
 | FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Planned |
@@ -23,3 +23,8 @@
 - `FacultyScopeMigrationIT` xác nhận V13 giữ business rows và V16 không tự tạo
   Department/backfill `department_id`; `SchemaSeedMigrationIT` xác nhận schema V16, constraint,
   trigger và lịch sử migration V1–V16.
+- `DepartmentPersistenceIT`: 3 test pass, 0 failure, 0 error trên MySQL 8.4; xác nhận
+  repository truy vấn theo Faculty, account/topic lưu được Department và legacy row NULL
+  vẫn load được.
+- Sau T002, `./mvnw test`: 262 test pass, 0 failure, 0 error; runtime tạo account/topic
+  hiện tại vẫn giữ `department_id = NULL` cho đến T004/T005.
