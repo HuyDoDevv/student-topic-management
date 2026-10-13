@@ -1,14 +1,19 @@
 package vn.edu.topicregistration.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** T001: inventory query distinguishes evidence from an approved period mapping. */
+/** T001/T002: inventory evidence and non-destructive period Department expansion. */
 class PeriodDepartmentMigrationIT {
     @AfterEach
     void restoreIsolatedTestDatabase() {
@@ -49,6 +54,57 @@ class PeriodDepartmentMigrationIT {
         assertEquals(List.of(departmentA, departmentB), departmentIds(jdbc, mixed));
         assertEquals("STOP_CONFLICT", classify(inventory(jdbc, mismatch)));
         assertEquals("STOP_CONFLICT", classify(inventory(jdbc, supervisorMismatch)));
+    }
+
+    @Test
+    void v18BusinessRowsUpgradeToNullableV19WithoutBackfill() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        Flyway throughV18 = Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("18"))
+                .cleanDisabled(false).load();
+        throughV18.clean();
+        throughV18.migrate();
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+
+        jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa T002 migration')");
+        long faculty = id(jdbc, "SELECT id FROM faculties WHERE name = 'Khoa T002 migration'");
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, 'Bộ môn T002')", faculty);
+        long department = id(jdbc, "SELECT id FROM departments WHERE name = 'Bộ môn T002'");
+        long chair = account(jdbc, "t002.chair", faculty, department);
+        long secretary = account(jdbc, "t002.secretary", faculty, department);
+        long period = period(jdbc, faculty, "T002 legacy period");
+        topic(jdbc, period, chair, department, chair);
+        jdbc.update("""
+                INSERT INTO councils(period_id, name, chair_id, secretary_id)
+                VALUES (?, 'T002 legacy council', ?, ?)
+                """, period, chair, secretary);
+        long periodsBefore = id(jdbc, "SELECT COUNT(*) FROM registration_periods");
+        long topicsBefore = id(jdbc, "SELECT COUNT(*) FROM topics");
+        long councilsBefore = id(jdbc, "SELECT COUNT(*) FROM councils");
+
+        Flyway latest = Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration").load();
+        assertEquals(1, latest.migrate().migrationsExecuted);
+        latest.validate();
+        assertEquals(0, latest.migrate().migrationsExecuted);
+
+        assertEquals(periodsBefore, id(jdbc, "SELECT COUNT(*) FROM registration_periods"));
+        assertEquals(topicsBefore, id(jdbc, "SELECT COUNT(*) FROM topics"));
+        assertEquals(councilsBefore, id(jdbc, "SELECT COUNT(*) FROM councils"));
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, period));
+        assertEquals(1, id(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
+                  AND column_name = 'department_id' AND is_nullable = 'YES'
+                """));
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "UPDATE registration_periods SET department_id = -1 WHERE id = ?", period));
+        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
+                department, period);
+        assertEquals(department, jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, period));
     }
 
     private static Inventory inventory(JdbcTemplate jdbc, long periodId) {

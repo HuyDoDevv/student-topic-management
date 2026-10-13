@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/web.md](contracts/web.md), [quickstart.md](quickstart.md), [acceptance-matrix.md](acceptance-matrix.md).
 
-**Status rule**: T001 đã kiểm kê và test; các task còn lại hiện `[ ]`. Mỗi task cần INSPECT→PLAN→APPROVE→IMPLEMENT→VERIFY→REPORT riêng theo `AGENTS.md`; checklist và tài liệu này không cấp quyền sửa code/DB. Viết test cho behavior quan trọng và chỉ tick sau khi evidence đạt.
+**Status rule**: T001–T002 đã kiểm chứng; các task còn lại hiện `[ ]`. Mỗi task cần INSPECT→PLAN→APPROVE→IMPLEMENT→VERIFY→REPORT riêng theo `AGENTS.md`; checklist và tài liệu này không cấp quyền sửa code/DB. Viết test cho behavior quan trọng và chỉ tick sau khi evidence đạt.
 
 ## Phase 1: Setup and data inventory
 
@@ -16,7 +16,7 @@
 
 **Goal**: có quan hệ Bộ môn nullable để nâng cấp an toàn từ V18.
 
-- [ ] T002 Tạo migration expand-only mới cho `registration_periods.department_id` cùng FK/index cần thiết tại `src/main/resources/db/migration/V19__add_period_department.sql`; chứng minh nâng cấp giữ business rows trong `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`.
+- [X] T002 Tạo migration expand-only mới cho `registration_periods.department_id` cùng FK/index cần thiết tại `src/main/resources/db/migration/V19__add_period_department.sql`; chứng minh nâng cấp giữ business rows trong `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`. Đã verify V18→V19 trên MySQL 8.4 DB test 3307: 16 migration/inventory test và 8 `PeriodRulesTest` đều đạt; legacy period giữ `department_id = NULL`, FK từ chối ID không tồn tại, Flyway validate/rerun đạt. DB ứng dụng vẫn V18; chưa backfill hay enforce.
 - [ ] T003 Ánh xạ Department nullable và truy vấn có phạm vi trong `src/main/java/vn/edu/topicregistration/entity/RegistrationPeriodEntity.java`, `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java`; kiểm chứng legacy/new row tại `src/test/java/vn/edu/topicregistration/integration/RegistrationPeriodPersistenceIT.java`.
 
 **Checkpoint**: V18→V19 và Flyway validate đạt trên DB test; legacy period vẫn đọc được, runtime chưa tự gán.
