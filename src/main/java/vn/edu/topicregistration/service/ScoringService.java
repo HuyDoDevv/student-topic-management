@@ -103,6 +103,10 @@ public class ScoringService {
         return councilTopics.findAllForLecturerByCouncilStatus(
                         lecturer.accountId(), CouncilStatus.ACTIVE)
                 .stream()
+                .filter(assignment -> assignment.getCouncil().getStatus()
+                        == CouncilStatus.ACTIVE)
+                .filter(assignment -> sameFaculty(lecturer, assignment))
+                .filter(ScoringService::samePeriod)
                 .filter(assignment -> assignment.getRegistration().getStatus()
                         == RegistrationStatus.ACCEPTED)
                 .filter(assignment -> !isSupervisor(
@@ -118,6 +122,12 @@ public class ScoringService {
                 .findByCouncilIdAndRegistrationId(councilId, registrationId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (!sameFaculty(lecturer, assignment)) {
+            throw new AccessDeniedException("Scoring assignment is outside lecturer faculty");
+        }
+        if (!samePeriod(assignment)) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
         CouncilMemberEntity member = members.findByCouncilIdAndLecturerId(
                         councilId, lecturer.accountId())
                 .orElse(null);
@@ -184,6 +194,9 @@ public class ScoringService {
         if (!Objects.equals(council.getPeriod().getId(), period.getId())) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
+        if (!Objects.equals(actor.facultyId(), period.getFaculty().getId())) {
+            throw new AccessDeniedException("Scoring assignment is outside lecturer faculty");
+        }
 
         List<CouncilTopicEntity> lockedAssignments = councilTopics
                 .findAllByCouncilIdForUpdate(councilId);
@@ -195,6 +208,10 @@ public class ScoringService {
                 .findFirst()
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (!Objects.equals(assignment.getCouncil().getId(), councilId)
+                || !samePeriod(assignment)) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
         CouncilMemberEntity member = lockedMembers.stream()
                 .filter(candidate -> Objects.equals(
                         candidate.getLecturer().getId(), actor.accountId()))
@@ -218,11 +235,6 @@ public class ScoringService {
                 assignedMember,
                 supervisor,
                 command.score()));
-        if (!Objects.equals(registration.getPeriod().getId(), periodId)
-                || !Objects.equals(assignment.getCouncil().getId(), councilId)) {
-            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
-        }
-
         List<EvaluationEntity> lockedEvaluations = evaluations
                 .findAllByCouncilIdForUpdate(councilId);
         ScoreComponentEntity component = components
@@ -296,6 +308,21 @@ public class ScoringService {
                 .map(TopicSupervisorEntity::getLecturer)
                 .map(UserAccountEntity::getId)
                 .anyMatch(id -> Objects.equals(id, actorId));
+    }
+
+    private static boolean sameFaculty(
+            ActorIdentity actor,
+            CouncilTopicEntity assignment) {
+        return Objects.equals(actor.facultyId(),
+                assignment.getCouncil().getPeriod().getFaculty().getId());
+    }
+
+    private static boolean samePeriod(CouncilTopicEntity assignment) {
+        Long periodId = assignment.getCouncil().getPeriod().getId();
+        return Objects.equals(assignment.getRegistration().getPeriod().getId(), periodId)
+                && Objects.equals(
+                        assignment.getRegistration().getTopic().getPeriod().getId(),
+                        periodId);
     }
 
     private static ScoringAssignmentView toAssignmentView(

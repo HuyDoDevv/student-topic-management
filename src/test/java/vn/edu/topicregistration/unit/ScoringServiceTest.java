@@ -27,6 +27,7 @@ import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.EvaluationEntity;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FacultyEntity;
@@ -215,6 +216,111 @@ class ScoringServiceTest {
         verify(dependencies.evaluations(), never()).saveAndFlush(any());
     }
 
+    @Test
+    void activeAssignmentIsVisibleOnlyToCurrentLecturerInFaculty() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = readFixture(dependencies, CouncilStatus.ACTIVE);
+        when(fixture.evaluator().getDepartment()).thenReturn(mock(DepartmentEntity.class));
+        when(fixture.topic().getDepartment()).thenReturn(mock(DepartmentEntity.class));
+
+        assertEquals(1, dependencies.service().listForCurrentLecturer().size());
+        assertEquals(51L, dependencies.service().workspace(41L, 51L)
+                .assignment().registrationId());
+    }
+
+    @Test
+    void transferredLecturerCannotListOpenOrWriteFormerAssignment() {
+        Dependencies dependencies = dependencies();
+        readFixture(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 99L));
+
+        assertEquals(0, dependencies.service().listForCurrentLecturer().size());
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().workspace(41L, 51L));
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().saveDraft(41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void missingMembershipOrAssignmentRevokesDirectUrlAndWriteAccess() {
+        Dependencies dependencies = dependencies();
+        readFixture(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.councilTopics().findAllForLecturerByCouncilStatus(
+                11L, CouncilStatus.ACTIVE)).thenReturn(List.of());
+        when(dependencies.members().findByCouncilIdAndLecturerId(41L, 11L))
+                .thenReturn(Optional.empty());
+        when(dependencies.members().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of());
+
+        assertEquals(0, dependencies.service().listForCurrentLecturer().size());
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().workspace(41L, 51L));
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().submit(41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+
+        when(dependencies.councilTopics().findByCouncilIdAndRegistrationId(41L, 51L))
+                .thenReturn(Optional.empty());
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of());
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().workspace(41L, 51L));
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().submit(41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void completedCouncilNoLongerExposesAssignmentOrAllowsWrite() {
+        Dependencies dependencies = dependencies();
+        readFixture(dependencies, CouncilStatus.COMPLETED);
+
+        assertEquals(0, dependencies.service().listForCurrentLecturer().size());
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().workspace(41L, 51L));
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().submit(41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void inconsistentTopicPeriodDoesNotGrantScoringAccess() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = readFixture(dependencies, CouncilStatus.ACTIVE);
+        RegistrationPeriodEntity otherPeriod = mock(RegistrationPeriodEntity.class);
+        when(otherPeriod.getId()).thenReturn(8L);
+        when(fixture.topic().getPeriod()).thenReturn(otherPeriod);
+
+        assertEquals(0, dependencies.service().listForCurrentLecturer().size());
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().workspace(41L, 51L));
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().saveDraft(41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+    }
+
+    private static Fixture readFixture(Dependencies dependencies, CouncilStatus status) {
+        Fixture fixture = validFixture(dependencies, status);
+        CouncilTopicEntity assignment = dependencies.councilTopics()
+                .findAllByCouncilIdForUpdate(41L).getFirst();
+        CouncilMemberEntity member = dependencies.members()
+                .findAllByCouncilIdForUpdate(41L).getFirst();
+        when(dependencies.councilTopics().findAllForLecturerByCouncilStatus(
+                11L, CouncilStatus.ACTIVE)).thenReturn(List.of(assignment));
+        when(dependencies.councilTopics().findByCouncilIdAndRegistrationId(41L, 51L))
+                .thenReturn(Optional.of(assignment));
+        when(dependencies.members().findByCouncilIdAndLecturerId(41L, 11L))
+                .thenReturn(Optional.of(member));
+        return fixture;
+    }
+
     private static Fixture validFixture(Dependencies dependencies, CouncilStatus status) {
         FacultyEntity faculty = mock(FacultyEntity.class);
         when(faculty.getId()).thenReturn(2L);
@@ -231,11 +337,13 @@ class ScoringServiceTest {
         UserAccountEntity evaluator = mock(UserAccountEntity.class);
         when(evaluator.getId()).thenReturn(11L);
         when(evaluator.getFullName()).thenReturn("Giảng viên A");
+        when(council.getChair()).thenReturn(evaluator);
         CouncilMemberEntity member = mock(CouncilMemberEntity.class);
         when(member.getLecturer()).thenReturn(evaluator);
 
         TopicEntity topic = mock(TopicEntity.class);
         when(topic.getTitle()).thenReturn("Đề tài thử nghiệm");
+        when(topic.getPeriod()).thenReturn(period);
         when(topic.getSupervisors()).thenReturn(List.of());
         StudentGroupEntity group = mock(StudentGroupEntity.class);
         when(group.getId()).thenReturn(21L);

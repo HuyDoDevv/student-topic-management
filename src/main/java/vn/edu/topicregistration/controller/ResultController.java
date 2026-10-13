@@ -142,7 +142,7 @@ public class ResultController {
             HttpServletResponse response) {
         requireValidAction(bindingResult, response);
         results.complete(id, form.getVersion());
-        return WebRedirects.seeOther("/faculty/boards/" + id);
+        return WebRedirects.seeOther("/lecturer/scoring");
     }
 
     @PostMapping("/faculty/boards/{id}/publish")

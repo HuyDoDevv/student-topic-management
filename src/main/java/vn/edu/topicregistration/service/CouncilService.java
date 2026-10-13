@@ -281,7 +281,10 @@ public class CouncilService {
         boolean scopedDean = actor.roles().contains(RoleCode.DEAN)
                 && Objects.equals(actor.facultyId(), facultyId);
         boolean currentChair = actor.roles().contains(RoleCode.LECTURER)
-                && Objects.equals(actor.accountId(), council.getChair().getId());
+                && Objects.equals(actor.facultyId(), facultyId)
+                && Objects.equals(actor.accountId(), council.getChair().getId())
+                && council.getStatus() == CouncilStatus.ACTIVE
+                && members.existsByCouncilIdAndLecturerId(councilId, actor.accountId());
         if (!scopedDean && !currentChair) {
             throw new AccessDeniedException("Council is outside actor scope");
         }
