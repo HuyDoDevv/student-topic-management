@@ -174,6 +174,22 @@ class CouncilServiceTest {
     }
 
     @Test
+    void assignmentRejectsTopicFromAnotherPeriodInSameFaculty() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
+        RegistrationPeriodEntity otherPeriod = mockPeriod("TLCN");
+        when(otherPeriod.getId()).thenReturn(8L);
+        when(fixture.topic().getPeriod()).thenReturn(otherPeriod);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().saveAssignment(41L, new AssignmentCommand(
+                        51L, REVIEW_AT, "Phòng A1-01", 4L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
     void assignmentRevalidatesCurrentLecturerEligibility() {
         Dependencies dependencies = dependencies();
         AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
@@ -239,6 +255,31 @@ class CouncilServiceTest {
 
         verify(fixture.council()).transitionTo(CouncilStatus.ACTIVE);
         verify(dependencies.councils()).flush();
+    }
+
+    @Test
+    void activationRejectsAssignedTopicMovedToAnotherPeriodInSameFaculty() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(
+                dependencies, CouncilStatus.SCHEDULED, 4L);
+        RegistrationPeriodEntity otherPeriod = mockPeriod("TLCN");
+        when(otherPeriod.getId()).thenReturn(8L);
+        when(fixture.topic().getPeriod()).thenReturn(otherPeriod);
+        CouncilTopicEntity assignment = mock(CouncilTopicEntity.class);
+        when(assignment.getRegistration()).thenReturn(fixture.registration());
+        when(assignment.getScheduledAt()).thenReturn(REVIEW_AT);
+        when(assignment.getLocation()).thenReturn("Phòng A1-01");
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(assignment));
+        when(dependencies.reports().findCurrentByRegistrationIdForUpdate(51L))
+                .thenReturn(Optional.of(mock(ProjectReportEntity.class)));
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().transition(
+                        41L, 4L, CouncilStatus.ACTIVE));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, exception.code());
+        verify(fixture.council(), never()).transitionTo(any());
     }
 
     private static CreationFixture validCreation(Dependencies dependencies) {

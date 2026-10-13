@@ -152,6 +152,24 @@ class DirectGradingServiceTest {
     }
 
     @Test
+    void rejectsTopicFromAnotherPeriodInSameFacultyWithoutCreatingAssignment() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, "COURSE", List.of());
+        RegistrationPeriodEntity otherPeriod = mock(RegistrationPeriodEntity.class);
+        when(otherPeriod.getId()).thenReturn(8L);
+        FacultyEntity faculty = fixture.period().getFaculty();
+        when(otherPeriod.getFaculty()).thenReturn(faculty);
+        when(fixture.topic().getPeriod()).thenReturn(otherPeriod);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().assign(new AssignCommand(51L, 11L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councils(), never()).saveAndFlush(any());
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
     void requiresCurrentReportBeforeAssignment() {
         Dependencies dependencies = dependencies();
         fixture(dependencies, "COURSE", List.of());

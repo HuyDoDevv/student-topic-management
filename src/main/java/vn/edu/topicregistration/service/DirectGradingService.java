@@ -96,6 +96,9 @@ public class DirectGradingService {
         if (!Objects.equals(registration.getPeriod().getId(), period.getId())) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
+        if (!Objects.equals(registration.getTopic().getPeriod().getId(), period.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
+        }
 
         boolean reportPresent = reports
                 .findCurrentByRegistrationIdForUpdate(command.registrationId())

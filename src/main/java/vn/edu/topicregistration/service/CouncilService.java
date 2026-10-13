@@ -160,7 +160,9 @@ public class CouncilService {
                 council.getStatus(),
                 locked.period().getTopicType(),
                 registration.getStatus(),
-                Objects.equals(registration.getPeriod().getId(), locked.period().getId()),
+                Objects.equals(registration.getPeriod().getId(), locked.period().getId())
+                        && Objects.equals(registration.getTopic().getPeriod().getId(),
+                                locked.period().getId()),
                 Objects.equals(
                         registration.getTopic().getPeriod().getFaculty().getId(),
                         council.getPeriod().getFaculty().getId()),
@@ -365,6 +367,7 @@ public class CouncilService {
             RegistrationEntity registration = assignment.getRegistration();
             return registration.getStatus() == RegistrationStatus.ACCEPTED
                     && Objects.equals(registration.getPeriod().getId(), period.getId())
+                    && Objects.equals(registration.getTopic().getPeriod().getId(), period.getId())
                     && Objects.equals(
                             registration.getTopic().getPeriod().getFaculty().getId(),
                             council.getPeriod().getFaculty().getId());

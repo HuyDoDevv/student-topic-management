@@ -45,7 +45,7 @@
 
 **Independent test**: GV B được giao đúng một đề tài A chỉ xem nhiệm vụ đó; không xem list A; GVHD không chấm đề tài mình.
 
-- [ ] T009 [US4] Kiểm tra hội đồng/đề tài cùng đợt, thành viên cùng Khoa và xung đột GVHD khi phân công trong `src/main/java/vn/edu/topicregistration/service/CouncilService.java`, `src/main/java/vn/edu/topicregistration/service/DirectGradingService.java`; test tại `src/test/java/vn/edu/topicregistration/unit/CouncilServiceTest.java`.
+- [X] T009 [US4] Kiểm tra hội đồng/đề tài cùng đợt, thành viên cùng Khoa và xung đột GVHD khi phân công trong `src/main/java/vn/edu/topicregistration/service/CouncilService.java`, `src/main/java/vn/edu/topicregistration/service/DirectGradingService.java`; test tại `src/test/java/vn/edu/topicregistration/unit/CouncilServiceTest.java` và `src/test/java/vn/edu/topicregistration/unit/DirectGradingServiceTest.java`. Đã verify: hai lớp unit test 17/17, `./mvnw -q test` 320/320 (53 report) trên DB test MySQL 8.4 cổng 3307, `git diff --check` đạt. Gán/kích hoạt hội đồng và chấm trực tiếp từ chối đề tài khác đợt dù cùng Khoa; không tạo phân công khi bị từ chối. Quy tắc thành viên/người chấm cùng Khoa, khác Bộ môn được phép và GVHD không tự chấm vẫn giữ nguyên; quyền xem URL nhiệm vụ thuộc T010. DB ứng dụng không được sửa/migrate.
 - [ ] T010 [US4] Giới hạn quyền xem đúng nhiệm vụ còn hiệu lực trong `src/main/java/vn/edu/topicregistration/service/CouncilService.java`, `src/main/java/vn/edu/topicregistration/service/DirectGradingService.java`; test quyền URL và hủy phân công tại `src/test/java/vn/edu/topicregistration/web/CouncilControllerTest.java`.
 
 ## Phase 7: US5 — Tối đa một DEAN hoạt động/Khoa (P2)
