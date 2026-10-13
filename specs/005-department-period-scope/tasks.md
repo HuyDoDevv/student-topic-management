@@ -32,7 +32,7 @@
 
 **Independent test**: GV A chỉ thấy đợt A; ID đợt B qua GET/POST bị chặn; đề tài/tác giả/1–2 GVHD cùng A.
 
-- [ ] T006 [US2] Giới hạn truy vấn danh sách/chi tiết đợt cho GV theo Bộ môn trong `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java` và `src/main/java/vn/edu/topicregistration/service/TopicAuthorService.java`; test từ chối URL tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`.
+- [X] T006 [US2] Giới hạn truy vấn danh sách/chi tiết đợt cho GV theo Bộ môn trong `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java` và `src/main/java/vn/edu/topicregistration/service/TopicAuthorService.java`; test từ chối URL tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`. Tái sử dụng query Khoa+Bộ môn có sẵn từ T003; GV chỉ thấy đợt Bộ môn mình, URL đợt khác/legacy NULL trả 404 trước khi ghi đề tài, và quyền DEAN toàn Khoa không đổi. Đã verify `TopicAuthorServiceTest` 13/13, `TopicDepartmentIT` 16/16, `AuthorizationMatrixTest` 5/5; toàn bộ `./mvnw -q test` đạt 330 test/54 report, 0 lỗi trên MySQL 8.4 DB test riêng cổng 3307 với tài khoản có quyền đã xác minh; `git diff --check` đạt. DB ứng dụng không được sửa/migrate; kiểm tra invariant đầy đủ đề tài/tác giả/GVHD thuộc T007.
 - [ ] T007 [US2] Ràng buộc Bộ môn đợt=đề tài=tác giả/GVHD tại tạo/sửa/gửi duyệt trong `src/main/java/vn/edu/topicregistration/service/TopicAuthorService.java`, `src/main/java/vn/edu/topicregistration/service/TopicRules.java`; test giả mạo ID/đổi Bộ môn đồng thời tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`.
 
 ## Phase 5: US3 — STUDENT không bị khóa Bộ môn (P1)

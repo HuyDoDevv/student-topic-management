@@ -66,7 +66,7 @@ public class TopicAuthorService {
         ActorIdentity actor = currentLecturerFor(period);
         requireLecturerWindow(period, clock.instant());
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
-        DepartmentEntity department = requireAuthorDepartment(author, period.getFaculty().getId());
+        DepartmentEntity department = requirePeriodDepartment(period, author, actor.facultyId());
         LoadedDraft loaded = loadDraft(command, author);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, actor.accountId(), actor.facultyId(),
@@ -82,8 +82,8 @@ public class TopicAuthorService {
         Objects.requireNonNull(command, "command");
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         ActorIdentity actor = requireAuthor(locked.topic());
-        DepartmentEntity department = requireAuthorDepartment(
-                locked.topic().getAuthor(), locked.period().getFaculty().getId());
+        DepartmentEntity department = requirePeriodDepartment(
+                locked.period(), locked.topic().getAuthor(), actor.facultyId());
         if (locked.topic().getDepartment() == null
                 || !Objects.equals(locked.topic().getDepartment().getId(), department.getId())) {
             throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
@@ -102,8 +102,8 @@ public class TopicAuthorService {
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         TopicEntity topic = locked.topic();
         ActorIdentity actor = requireAuthor(topic);
-        DepartmentEntity department = requireAuthorDepartment(
-                topic.getAuthor(), locked.period().getFaculty().getId());
+        DepartmentEntity department = requirePeriodDepartment(
+                locked.period(), topic.getAuthor(), actor.facultyId());
         if (topic.getDepartment() == null
                 || !Objects.equals(topic.getDepartment().getId(), department.getId())) {
             throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
@@ -143,8 +143,11 @@ public class TopicAuthorService {
     @Transactional(readOnly = true)
     public List<TopicPeriodView> listPeriodsForAuthor() {
         ActorIdentity actor = currentLecturer();
+        UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
+        DepartmentEntity department = requireAuthorDepartment(author, actor.facultyId());
         Instant now = clock.instant();
-        return periods.findAllByFacultyIdOrderByLecturerStartDesc(actor.facultyId()).stream()
+        return periods.findAllByFacultyIdAndDepartmentIdOrderByLecturerStartDesc(
+                        actor.facultyId(), department.getId()).stream()
                 .map(period -> new TopicPeriodView(
                         period.getId(),
                         period.getName(),
@@ -178,6 +181,7 @@ public class TopicAuthorService {
         if (!Objects.equals(actor.facultyId(), topic.getPeriod().getFaculty().getId())) {
             throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
         }
+        requirePeriodDepartment(topic.getPeriod(), topic.getAuthor(), actor.facultyId());
         return toView(topic);
     }
 
@@ -193,16 +197,15 @@ public class TopicAuthorService {
     @Transactional(readOnly = true)
     public TopicFormContext formContext(long periodId) {
         ActorIdentity actor = currentLecturer();
-        RegistrationPeriodEntity period = periods
-                .findByIdAndFacultyId(periodId, actor.facultyId())
-                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
-        Long departmentId = author.getDepartment() == null
-                ? null : author.getDepartment().getId();
-        List<UserAccountEntity> eligibleLecturers = departmentId == null
-                ? List.of()
-                : accounts.findEnabledByFacultyAndDepartmentAndRole(
-                        actor.facultyId(), departmentId, RoleCode.LECTURER);
+        DepartmentEntity department = requireAuthorDepartment(author, actor.facultyId());
+        RegistrationPeriodEntity period = periods
+                .findByIdAndFacultyIdAndDepartmentId(
+                        periodId, actor.facultyId(), department.getId())
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        List<UserAccountEntity> eligibleLecturers =
+                accounts.findEnabledByFacultyAndDepartmentAndRole(
+                        actor.facultyId(), department.getId(), RoleCode.LECTURER);
         List<LecturerOption> coSupervisors = eligibleLecturers
                 .stream()
                 .filter(account -> !Objects.equals(account.getId(), actor.accountId()))
@@ -288,6 +291,16 @@ public class TopicAuthorService {
                 || department.getFaculty() == null
                 || !Objects.equals(department.getFaculty().getId(), facultyId)) {
             throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
+        return department;
+    }
+
+    private static DepartmentEntity requirePeriodDepartment(
+            RegistrationPeriodEntity period, UserAccountEntity author, Long facultyId) {
+        DepartmentEntity department = requireAuthorDepartment(author, facultyId);
+        if (period.getDepartment() == null
+                || !Objects.equals(period.getDepartment().getId(), department.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
         }
         return department;
     }

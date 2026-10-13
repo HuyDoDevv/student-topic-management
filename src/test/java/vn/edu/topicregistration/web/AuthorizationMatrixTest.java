@@ -325,6 +325,10 @@ class AuthorizationMatrixTest {
         long departmentId = jdbc.queryForObject(
                 "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
                 Long.class, facultyId, "Bộ môn phân quyền " + targetPeriodId);
+        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
+                departmentId, targetPeriodId);
+        jdbc.update("UPDATE user_accounts SET department_id = ? WHERE id = ?",
+                departmentId, authorId);
         jdbc.update("""
                 INSERT INTO topics(
                     period_id, author_id, department_id, title, description, objectives,

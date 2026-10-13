@@ -61,6 +61,7 @@ class TopicAuthorServiceTest {
     @Test
     void createDraftRejectsAuthorWithoutDepartmentBeforeSaving() {
         Scenario scenario = openScenario();
+        when(scenario.author().getDepartment()).thenReturn(null);
 
         ApplicationException failure = assertThrows(ApplicationException.class,
                 () -> scenario.service().createDraft(1L, completeCommand()));
@@ -159,7 +160,7 @@ class TopicAuthorServiceTest {
         Scenario scenario = openScenario();
         DepartmentEntity department = department(31L, scenario.faculty());
         when(scenario.author().getDepartment()).thenReturn(department);
-        when(scenario.periods().findByIdAndFacultyId(1L, 21L))
+        when(scenario.periods().findByIdAndFacultyIdAndDepartmentId(1L, 21L, 31L))
                 .thenReturn(Optional.of(scenario.period()));
         when(scenario.period().getStudentEnd()).thenReturn(NOW.plusSeconds(1200));
         UserAccountEntity colleague = mock(UserAccountEntity.class);
@@ -192,6 +193,42 @@ class TopicAuthorServiceTest {
 
         assertEquals(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED, failure.code());
         verify(scenario.topics(), never()).flush();
+    }
+
+    @Test
+    void periodListUsesPersistedLecturerDepartment() {
+        Scenario scenario = openScenario();
+        when(scenario.periods().findAllByFacultyIdAndDepartmentIdOrderByLecturerStartDesc(
+                21L, 31L)).thenReturn(List.of(scenario.period()));
+        when(scenario.period().getStudentEnd()).thenReturn(NOW.plusSeconds(1200));
+
+        assertEquals(1, scenario.service().listPeriodsForAuthor().size());
+        verify(scenario.periods()).findAllByFacultyIdAndDepartmentIdOrderByLecturerStartDesc(
+                21L, 31L);
+        verify(scenario.periods(), never()).findAllByFacultyIdOrderByLecturerStartDesc(21L);
+    }
+
+    @Test
+    void directPeriodLookupOutsideDepartmentIsNotFound() {
+        Scenario scenario = openScenario();
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().formContext(2L));
+
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, failure.code());
+        verify(scenario.periods()).findByIdAndFacultyIdAndDepartmentId(2L, 21L, 31L);
+    }
+
+    @Test
+    void directDraftCreationForLegacyPeriodDoesNotPersist() {
+        Scenario scenario = openScenario();
+        when(scenario.period().getDepartment()).thenReturn(null);
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().createDraft(1L, completeCommand()));
+
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, failure.code());
+        verify(scenario.topics(), never()).saveAndFlush(any());
     }
 
     private static DepartmentEntity department(long id, FacultyEntity faculty) {
@@ -227,8 +264,11 @@ class TopicAuthorServiceTest {
         when(author.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
         when(author.isEnabled()).thenReturn(true);
         when(author.getUsername()).thenReturn("lecturer");
+        DepartmentEntity department = department(31L, faculty);
+        when(author.getDepartment()).thenReturn(department);
         when(period.getId()).thenReturn(1L);
         when(period.getFaculty()).thenReturn(faculty);
+        when(period.getDepartment()).thenReturn(department);
         when(period.getLecturerStart()).thenReturn(NOW.minusSeconds(600));
         when(period.getLecturerEnd()).thenReturn(NOW.plusSeconds(600));
         when(periods.findByIdForUpdate(1L)).thenReturn(Optional.of(period));
@@ -309,13 +349,17 @@ class TopicAuthorServiceTest {
         when(author.getId()).thenReturn(7L);
         when(author.getUsername()).thenReturn("lecturer");
         when(author.getFaculty()).thenReturn(faculty);
+        DepartmentEntity department = department(31L, faculty);
+        when(author.getDepartment()).thenReturn(department);
         when(period.getId()).thenReturn(1L);
         when(period.getName()).thenReturn("Đợt cũ");
         when(period.getFaculty()).thenReturn(faculty);
+        when(period.getDepartment()).thenReturn(department);
         when(period.getLecturerStart()).thenReturn(NOW.minusSeconds(600));
         when(period.getLecturerEnd()).thenReturn(NOW.minusSeconds(1));
         when(period.getStudentEnd()).thenReturn(NOW.plusSeconds(600));
-        when(periods.findByIdAndFacultyId(1L, 21L)).thenReturn(Optional.of(period));
+        when(periods.findByIdAndFacultyIdAndDepartmentId(1L, 21L, 31L))
+                .thenReturn(Optional.of(period));
         when(authorization.requireTopicAuthoringLecturer()).thenReturn(new ActorIdentity(
                 7L, Set.of(RoleCode.LECTURER), 21L));
         when(entityManager.find(UserAccountEntity.class, 7L)).thenReturn(author);

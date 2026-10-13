@@ -89,8 +89,73 @@ class TopicDepartmentIT {
         assignDepartment(dean, departmentId);
         long outsideDepartmentId = department(otherFaculty.facultyId(), "Bộ môn ngoài Khoa");
         assignDepartment(outsideDean, outsideDepartmentId);
-        periodId = period(faculty.facultyId());
+        periodId = period(faculty.facultyId(), departmentId, "Đợt phần mềm");
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
+    }
+
+    @Test
+    void lecturerPeriodListContainsOnlyOwnDepartmentAndDeanKeepsFacultyScope()
+            throws Exception {
+        long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
+        period(faculty.facultyId(), null, "Đợt legacy");
+
+        mvc.perform(get("/topics").with(actor(lecturer, "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đợt phần mềm")))
+                .andExpect(content().string(not(containsString("Đợt hệ thống"))))
+                .andExpect(content().string(not(containsString("Đợt legacy"))));
+        mvc.perform(get("/topics").with(actor(otherLecturer, "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đợt hệ thống")))
+                .andExpect(content().string(not(containsString("Đợt phần mềm"))));
+        mvc.perform(get("/periods").with(actor(dean, "DEAN", "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đợt phần mềm")))
+                .andExpect(content().string(containsString("Đợt hệ thống")));
+        assertEquals(otherDepartmentId, jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?",
+                Long.class, otherPeriodId));
+    }
+
+    @Test
+    void directOtherDepartmentOrLegacyPeriodUrlIsNotFoundAndDoesNotCreateTopic()
+            throws Exception {
+        long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
+        long legacyPeriodId = period(faculty.facultyId(), null, "Đợt legacy");
+
+        for (long blockedPeriodId : new long[] {otherPeriodId, legacyPeriodId}) {
+            mvc.perform(get("/periods/{periodId}/topics", blockedPeriodId)
+                            .with(actor(lecturer, "LECTURER")))
+                    .andExpect(status().isNotFound());
+            mvc.perform(get("/periods/{periodId}/topics/new", blockedPeriodId)
+                            .with(actor(lecturer, "LECTURER")))
+                    .andExpect(status().isNotFound());
+            mvc.perform(post("/periods/{periodId}/topics", blockedPeriodId)
+                            .with(actor(lecturer, "LECTURER")).with(csrf())
+                            .param("title", "Đề tài không được tạo"))
+                    .andExpect(status().isNotFound());
+        }
+        assertEquals(0L, topicCount());
+    }
+
+    @Test
+    void authorMovedToOtherDepartmentCannotOpenOrSubmitOwnTopic() throws Exception {
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Đề tài trước khi chuyển Bộ môn"))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+        assignDepartment(lecturer, otherDepartmentId);
+
+        mvc.perform(get("/topics/{id}", topicId)
+                        .with(actor(lecturer, "LECTURER")))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isNotFound());
+        assertEquals("DRAFT", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, topicId));
     }
 
     @Test
@@ -391,13 +456,13 @@ class TopicDepartmentIT {
                 department, identity.accountId());
     }
 
-    private long period(long facultyId) {
+    private long period(long facultyId, Long periodDepartmentId, String name) {
         jdbc.update("""
                 INSERT INTO registration_periods(
-                    faculty_id, name, topic_type, lecturer_start, lecturer_end,
+                    faculty_id, department_id, name, topic_type, lecturer_start, lecturer_end,
                     student_start, student_end, reviewer_score_deadline, council_report_date, version)
-                VALUES (?, 'Đợt topic Bộ môn', 'COURSE', ?, ?, ?, ?, NULL, NULL, 0)
-                """, facultyId, Timestamp.from(NOW.minusSeconds(3600)),
+                VALUES (?, ?, ?, 'COURSE', ?, ?, ?, ?, NULL, NULL, 0)
+                """, facultyId, periodDepartmentId, name, Timestamp.from(NOW.minusSeconds(3600)),
                 Timestamp.from(NOW.plusSeconds(3600)), Timestamp.from(NOW.plusSeconds(7200)),
                 Timestamp.from(NOW.plusSeconds(14400)));
         return jdbc.queryForObject("SELECT MAX(id) FROM registration_periods", Long.class);
