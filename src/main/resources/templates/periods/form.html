@@ -24,7 +24,21 @@
       </div>
 
       <div class="row g-3">
-        <div class="col-md-8">
+        <div class="col-md-4">
+          <label class="form-label required" for="period-department">Bộ môn</label>
+          <select class="form-select" id="period-department" th:field="*{departmentId}"
+                  th:errorclass="is-invalid" th:disabled="${editing and locks.base}"
+                  th:required="${!editing}">
+            <option value="" th:text="${editing and form.departmentId == null ? 'Chưa ánh xạ (đợt cũ)' : 'Chọn Bộ môn'}">Chọn Bộ môn</option>
+            <option th:each="department : ${departmentOptions}" th:value="${department.id}"
+                    th:text="${department.name}">Bộ môn</option>
+          </select>
+          <input th:if="${editing and locks.base}" type="hidden" name="departmentId"
+                 th:value="*{departmentId}">
+          <div class="invalid-feedback" th:errors="*{departmentId}">Bộ môn không hợp lệ.</div>
+          <div class="form-hint">Đợt đã mở hoặc có dữ liệu học vụ sẽ không thể đổi Bộ môn.</div>
+        </div>
+        <div class="col-md-4">
           <label class="form-label required" for="period-name">Tên đợt</label>
           <input class="form-control" id="period-name" th:field="*{name}" th:errorclass="is-invalid"
                  th:readonly="${locks.base}" maxlength="255" required

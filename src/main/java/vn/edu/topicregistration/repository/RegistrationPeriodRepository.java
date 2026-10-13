@@ -29,6 +29,17 @@ public interface RegistrationPeriodRepository
     Optional<RegistrationPeriodEntity> findByIdAndFacultyIdAndDepartmentId(
             long id, long facultyId, long departmentId);
 
+    @Query(value = """
+            SELECT CASE WHEN
+                EXISTS (SELECT 1 FROM topics WHERE period_id = :periodId)
+                OR EXISTS (SELECT 1 FROM student_groups WHERE period_id = :periodId)
+                OR EXISTS (SELECT 1 FROM registrations WHERE period_id = :periodId)
+                OR EXISTS (SELECT 1 FROM councils WHERE period_id = :periodId)
+                OR EXISTS (SELECT 1 FROM score_components WHERE period_id = :periodId)
+            THEN 1 ELSE 0 END
+            """, nativeQuery = true)
+    int dependentDataFlag(@Param("periodId") long periodId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = "faculty")
     @Query("select period from RegistrationPeriodEntity period where period.id = :id")

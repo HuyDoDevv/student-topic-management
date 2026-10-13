@@ -2,6 +2,8 @@ package vn.edu.topicregistration.service;
 
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
@@ -28,26 +30,33 @@ import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 public class PeriodService {
     private final PeriodTransactionService transactions;
     private final RegistrationPeriodRepository periods;
+    private final DepartmentRepository departments;
     private final AuthorizationPolicy authorization;
     private final Clock clock;
 
     public PeriodService(
             PeriodTransactionService transactions,
             RegistrationPeriodRepository periods,
+            DepartmentRepository departments,
             AuthorizationPolicy authorization,
             Clock clock) {
         this.transactions = transactions;
         this.periods = periods;
+        this.departments = departments;
         this.authorization = authorization;
         this.clock = clock;
     }
 
-    public PeriodView create(PeriodConfiguration request) {
+    public PeriodView create(Long departmentId, PeriodConfiguration request) {
         ActorIdentity dean = currentDean();
-        RegistrationPeriodEntity saved = transactions.create(dean.facultyId(), context -> {
+        if (departmentId == null || departmentId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        RegistrationPeriodEntity saved = transactions.create(dean.facultyId(), departmentId, context -> {
             PeriodConfiguration valid = validateCreate(request, context.now());
             return new RegistrationPeriodEntity(
                     context.faculty(),
+                    context.department(),
                     valid.name(),
                     valid.topicType().name(),
                     valid.lecturerStart(),
@@ -60,8 +69,9 @@ public class PeriodService {
         return toView(saved, clock.instant());
     }
 
-    public PeriodView update(long periodId, long expectedVersion, PeriodConfiguration request) {
-        return transactions.mutate(periodId, expectedVersion, context -> {
+    public PeriodView update(
+            long periodId, long expectedVersion, Long departmentId, PeriodConfiguration request) {
+        return transactions.mutate(periodId, expectedVersion, departmentId, context -> {
             RegistrationPeriodEntity period = context.period();
             PeriodConfiguration valid = validateUpdate(
                     toConfiguration(period), request, context.now());
@@ -95,6 +105,14 @@ public class PeriodService {
                 .findByIdAndFacultyId(periodId, dean.facultyId())
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
         return toView(period, clock.instant());
+    }
+
+    @Transactional(readOnly = true)
+    public List<DepartmentOption> departmentOptionsForCurrentDean() {
+        ActorIdentity dean = currentDean();
+        return departments.findAllByFacultyIdOrderByNameAsc(dean.facultyId()).stream()
+                .map(department -> new DepartmentOption(department.getId(), department.getName()))
+                .toList();
     }
 
     private ActorIdentity currentDean() {
@@ -143,9 +161,12 @@ public class PeriodService {
 
     private PeriodView toView(RegistrationPeriodEntity period, Instant now) {
         PeriodConfiguration configuration = toConfiguration(period);
+        DepartmentEntity department = period.getDepartment();
         return new PeriodView(
                 period.getId(),
                 period.getFaculty().getId(),
+                department == null ? null : department.getId(),
+                department == null ? null : department.getName(),
                 configuration.name(),
                 configuration.topicType(),
                 configuration.lecturerStart(),
@@ -161,6 +182,8 @@ public class PeriodService {
     public record PeriodView(
             Long id,
             Long facultyId,
+            Long departmentId,
+            String departmentName,
             String name,
             TopicType topicType,
             Instant lecturerStart,
@@ -171,5 +194,8 @@ public class PeriodService {
             LocalDate councilReportDate,
             long version,
             RegistrationState state) {
+    }
+
+    public record DepartmentOption(Long id, String name) {
     }
 }

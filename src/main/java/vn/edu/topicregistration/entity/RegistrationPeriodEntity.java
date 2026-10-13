@@ -117,6 +117,10 @@ public class RegistrationPeriodEntity {
         this.councilReportDate = councilReportDate;
     }
 
+    public void changeDepartment(DepartmentEntity department) {
+        this.department = department;
+    }
+
     public Long getId() {
         return id;
     }

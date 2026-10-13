@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -15,6 +16,9 @@ import vn.edu.topicregistration.service.PeriodRules.PeriodConfiguration;
 import vn.edu.topicregistration.service.PeriodRules.TopicType;
 
 public class PeriodForm {
+    @Positive(message = "Bộ môn không hợp lệ.")
+    private Long departmentId;
+
     @NotBlank(message = "Vui lòng nhập tên đợt.")
     @Size(max = 255, message = "Tên đợt không được dài quá 255 ký tự.")
     private String name;
@@ -49,6 +53,7 @@ public class PeriodForm {
 
     public static PeriodForm from(PeriodView period, ProjectTime projectTime) {
         PeriodForm form = new PeriodForm();
+        form.departmentId = period.departmentId();
         form.name = period.name();
         form.topicType = period.topicType();
         form.lecturerStart = projectTime.toBusinessDate(period.lecturerStart());
@@ -83,6 +88,14 @@ public class PeriodForm {
 
     public String getName() {
         return name;
+    }
+
+    public Long getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(Long departmentId) {
+        this.departmentId = departmentId;
     }
 
     public void setName(String name) {
