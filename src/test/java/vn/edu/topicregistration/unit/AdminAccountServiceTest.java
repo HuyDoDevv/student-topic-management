@@ -40,12 +40,57 @@ import vn.edu.topicregistration.repository.UserRoleRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.AdminAccountService;
+import vn.edu.topicregistration.service.AdminAccountService.AccountFilter;
+import vn.edu.topicregistration.service.AdminAccountService.AccountType;
 import vn.edu.topicregistration.service.AdminAccountService.CreateDeanCommand;
 import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
 import vn.edu.topicregistration.service.AdminAccountService.CreateStudentCommand;
 import vn.edu.topicregistration.service.AdminAccountService.ResetPasswordCommand;
 
 class AdminAccountServiceTest {
+
+    @Test
+    void workspaceShowsAndFiltersStaffByDepartmentWithinFaculty() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        FacultyEntity faculty = faculty(3L, "Khoa CNTT");
+        FacultyEntity otherFaculty = faculty(4L, "Khoa khác");
+        DepartmentEntity software = mock(DepartmentEntity.class);
+        DepartmentEntity networks = mock(DepartmentEntity.class);
+        when(software.getId()).thenReturn(11L);
+        when(software.getName()).thenReturn("Công nghệ phần mềm");
+        when(software.getFaculty()).thenReturn(faculty);
+        when(networks.getId()).thenReturn(12L);
+        when(networks.getName()).thenReturn("Mạng máy tính");
+        when(networks.getFaculty()).thenReturn(faculty);
+        when(dependencies.departments().findAllDetailed()).thenReturn(List.of(software, networks));
+        UserAccountEntity first = mock(UserAccountEntity.class);
+        when(first.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(first.getId()).thenReturn(21L);
+        when(first.getUsername()).thenReturn("lecturer-software");
+        when(first.getFaculty()).thenReturn(faculty);
+        when(first.getDepartment()).thenReturn(software);
+        UserAccountEntity second = mock(UserAccountEntity.class);
+        when(second.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(second.getId()).thenReturn(22L);
+        when(second.getUsername()).thenReturn("lecturer-networks");
+        when(second.getFaculty()).thenReturn(faculty);
+        when(second.getDepartment()).thenReturn(networks);
+        UserAccountEntity outside = mock(UserAccountEntity.class);
+        when(outside.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(outside.getId()).thenReturn(23L);
+        when(outside.getUsername()).thenReturn("lecturer-outside");
+        when(outside.getFaculty()).thenReturn(otherFaculty);
+        when(dependencies.accounts().findAllDetailed()).thenReturn(List.of(first, second, outside));
+
+        var workspace = dependencies.service().workspace(
+                new AccountFilter(null, AccountType.LECTURER, 3L, 11L, null));
+
+        assertEquals(List.of(21L), workspace.accounts().stream().map(account -> account.id()).toList());
+        assertEquals("Công nghệ phần mềm", workspace.accounts().getFirst().departmentName());
+        assertEquals(List.of(11L, 12L), workspace.departments().stream()
+                .map(option -> option.id()).toList());
+    }
 
     @Test
     void createsDeanWithLecturerRoleAndEncodedPassword() {

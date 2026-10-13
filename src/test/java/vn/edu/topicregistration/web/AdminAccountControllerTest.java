@@ -78,6 +78,23 @@ class AdminAccountControllerTest {
     }
 
     @Test
+    void staffListsPassDepartmentFilterButStudentListDoesNot() throws Exception {
+        mvc.perform(get("/admin/accounts/lecturers").param("departmentId", "11"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/admin/accounts/deans").param("departmentId", "11"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/admin/accounts/students").param("departmentId", "11"))
+                .andExpect(status().isOk());
+
+        verify(accounts).workspace(argThat(filter -> filter.accountType() == AccountType.LECTURER
+                && Long.valueOf(11L).equals(filter.departmentId())));
+        verify(accounts).workspace(argThat(filter -> filter.accountType() == AccountType.DEAN
+                && Long.valueOf(11L).equals(filter.departmentId())));
+        verify(accounts).workspace(argThat(filter -> filter.accountType() == AccountType.STUDENT
+                && filter.departmentId() == null));
+    }
+
+    @Test
     void rendersThreeIndependentCreatePages() throws Exception {
         mvc.perform(get("/admin/accounts/students/new"))
                 .andExpect(status().isOk())

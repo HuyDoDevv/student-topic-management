@@ -69,8 +69,10 @@ khi verification bắt buộc đạt; code đã viết nhưng test bị chặn v
 
 ## Phase 6: Presentation and acceptance
 
-- [ ] T009 [FR-004-06,FR-004-09] Viết MockMvc test trước rồi hiển thị/lọc Department trên các
+- [X] T009 [FR-004-06,FR-004-09] Viết MockMvc test trước rồi hiển thị/lọc Department trên các
   danh sách tài khoản, đề tài và moderation phù hợp; mọi query tiếp tục khóa Faculty ở backend.
+  Đã verify lọc tài khoản staff và trang DEAN duyệt theo Bộ môn; danh sách đề tài của
+  giảng viên hiển thị Bộ môn, thống kê/công bố vẫn áp dụng toàn đợt.
 - [ ] T010 Chạy full unit/integration/E2E, kiểm tra migration từ các mốc hỗ trợ, cập nhật
   `acceptance-matrix.md`, `quickstart.md` và tài liệu database; không đóng feature khi còn data gate
   hoặc test bắt buộc chưa đạt.
@@ -84,7 +86,7 @@ T006 + confirmed mapping → T007 → T008
 T008 + T009 → T010
 ```
 
-- T001–T008 đã hoàn thành; T009 cần plan và approval riêng.
+- T001–T009 đã hoàn thành; T010 cần plan và approval riêng.
 - T007 dùng quy tắc ánh xạ một Bộ môn U-004-08; không suy đoán lịch sử hoặc ghi đè gán cũ.
 - T008 không được gộp vào T007 để giữ expand/backfill/enforce có thể kiểm chứng riêng.
 - Mỗi task cần plan/approval riêng theo `AGENTS.md`; task chưa check không tự cấp quyền implement.

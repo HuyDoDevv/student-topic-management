@@ -77,7 +77,7 @@ public class AdminAccountController {
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.STUDENT, facultyId, enabled),
+                query, AccountType.STUDENT, facultyId, null, enabled),
                 AccountSection.STUDENTS);
     }
 
@@ -85,10 +85,11 @@ public class AdminAccountController {
     public String lecturers(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long facultyId,
+            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.LECTURER, facultyId, enabled),
+                query, AccountType.LECTURER, facultyId, departmentId, enabled),
                 AccountSection.LECTURERS);
     }
 
@@ -96,10 +97,11 @@ public class AdminAccountController {
     public String deans(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long facultyId,
+            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.DEAN, facultyId, enabled),
+                query, AccountType.DEAN, facultyId, departmentId, enabled),
                 AccountSection.DEANS);
     }
 

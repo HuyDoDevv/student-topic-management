@@ -75,6 +75,15 @@ public class AdminAccountService {
         List<FacultyOption> facultyOptions = faculties.findAllByOrderByNameAsc().stream()
                 .map(faculty -> new FacultyOption(faculty.getId(), faculty.getName()))
                 .toList();
+        List<AccountDepartmentOption> departmentOptions = safeFilter.accountType() == AccountType.STUDENT
+                ? List.of()
+                : departments.findAllDetailed().stream()
+                        .filter(department -> safeFilter.facultyId() == null
+                                || safeFilter.facultyId().equals(department.getFaculty().getId()))
+                        .map(department -> new AccountDepartmentOption(
+                                department.getId(), department.getName(),
+                                department.getFaculty().getName()))
+                        .toList();
         List<AccountView> all = accounts.findAllDetailed().stream()
                 .map(AdminAccountService::accountView)
                 .toList();
@@ -84,6 +93,7 @@ public class AdminAccountService {
         return new AccountWorkspace(
                 visible,
                 facultyOptions,
+                departmentOptions,
                 safeFilter,
                 all.size(),
                 all.stream().filter(AccountView::enabled).count(),
@@ -402,6 +412,10 @@ public class AdminAccountService {
         if (filter.facultyId() != null && !filter.facultyId().equals(account.facultyId())) {
             return false;
         }
+        if (filter.departmentId() != null
+                && !filter.departmentId().equals(account.departmentId())) {
+            return false;
+        }
         if (filter.enabled() != null && filter.enabled() != account.enabled()) {
             return false;
         }
@@ -425,6 +439,7 @@ public class AdminAccountService {
     private static AccountView accountView(
             UserAccountEntity account, AccountType type, StudentProfileEntity profile) {
         FacultyEntity faculty = account.getFaculty();
+        DepartmentEntity department = account.getDepartment();
         return new AccountView(
                 account.getId(),
                 account.getUsername(),
@@ -435,6 +450,8 @@ public class AdminAccountService {
                 type == null ? "Chưa xác định" : type.label(),
                 faculty == null ? null : faculty.getId(),
                 faculty == null ? "Không áp dụng" : faculty.getName(),
+                department == null ? null : department.getId(),
+                department == null ? null : department.getName(),
                 account.getEmail(),
                 profile == null ? null : profile.getStudentCode(),
                 profile == null ? null : profile.getClassName(),
@@ -545,13 +562,15 @@ public class AdminAccountService {
             String query,
             AccountType accountType,
             Long facultyId,
+            Long departmentId,
             Boolean enabled) {
         public static AccountFilter empty() {
-            return new AccountFilter(null, null, null, null);
+            return new AccountFilter(null, null, null, null, null);
         }
 
         AccountFilter normalized() {
-            return new AccountFilter(trim(query), accountType, positive(facultyId), enabled);
+            return new AccountFilter(trim(query), accountType, positive(facultyId),
+                    accountType == AccountType.STUDENT ? null : positive(departmentId), enabled);
         }
 
         private static Long positive(Long value) {
@@ -567,6 +586,8 @@ public class AdminAccountService {
             String accountTypeLabel,
             Long facultyId,
             String facultyName,
+            Long departmentId,
+            String departmentName,
             String email,
             String studentCode,
             String className,
@@ -577,9 +598,13 @@ public class AdminAccountService {
     public record FacultyOption(long id, String name) {
     }
 
+    public record AccountDepartmentOption(long id, String name, String facultyName) {
+    }
+
     public record AccountWorkspace(
             List<AccountView> accounts,
             List<FacultyOption> faculties,
+            List<AccountDepartmentOption> departments,
             AccountFilter filter,
             long totalAccounts,
             long enabledAccounts,
@@ -588,11 +613,12 @@ public class AdminAccountService {
         public AccountWorkspace {
             accounts = List.copyOf(accounts);
             faculties = List.copyOf(faculties);
+            departments = List.copyOf(departments);
         }
 
         public static AccountWorkspace empty() {
             return new AccountWorkspace(
-                    List.of(), List.of(), AccountFilter.empty(),
+                    List.of(), List.of(), List.of(), AccountFilter.empty(),
                     0, 0, 0, 0);
         }
     }

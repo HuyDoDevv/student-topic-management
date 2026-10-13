@@ -10,7 +10,7 @@
 | FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; Faculty-wide regression | T005–T006 | Complete |
 | FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | T006 verified; T010 pending |
 | FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | T007–T008 verified on isolated test DB |
-| FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/E2E tests | T009 | Planned |
+| FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/DB tests | T009 | Verified on isolated test DB; full E2E pending T010 |
 | FR-004-10 | Không xóa Department đang được dùng | Service/integration tests; không có route xóa | T003 | Complete |
 
 ## Current Evidence
@@ -73,3 +73,9 @@
   Test cố ý cho V18 thất bại tạo Flyway history `success=0` trên MySQL;
   cần reset DB test trước khi chạy suite khác. Chưa chạy migration trên DB dev/shared,
   chưa verify full integration/E2E T010.
+- T009: ADMIN xem/lọc Bộ môn trên danh sách LECTURER/DEAN; danh sách STUDENT không
+  nhận bộ lọc này. Danh sách đề tài của giảng viên hiện Bộ môn; DEAN lọc trang duyệt
+  theo Bộ môn trong Khoa của đợt nhưng thống kê và công bố vẫn toàn đợt.
+  `AdminAccountServiceTest` 18 test, `AdminAccountControllerTest` 21 test,
+  `TopicDepartmentIT` 13 test và `AccountProvisioningIT` 4 test đều đạt trên DB test
+  MySQL 8.4 cổng 3307. Full `./mvnw -q test` exit 0; full integration/E2E T010 chưa chạy.

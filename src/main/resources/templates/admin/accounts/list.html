@@ -43,6 +43,15 @@
                     th:text="${faculty.name}">Khoa CNTT</option>
           </select>
         </div>
+        <div class="col-md-3" th:if="${workspace.filter.accountType.name() != 'STUDENT'}">
+          <label class="form-label" for="departmentId">Bộ môn</label>
+          <select class="form-select" id="departmentId" name="departmentId">
+            <option value="">Tất cả Bộ môn</option>
+            <option th:each="department : ${workspace.departments}" th:value="${department.id}"
+                    th:selected="${workspace.filter.departmentId == department.id}"
+                    th:text="${department.name + ' · ' + department.facultyName}">Công nghệ phần mềm</option>
+          </select>
+        </div>
       </div>
     </div>
     <div class="card-footer text-end">
@@ -59,7 +68,7 @@
     </div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Tài khoản</th><th th:if="${workspace.filter.accountType.name() == 'STUDENT'}">Lớp / Khóa</th><th>Email</th><th>Loại</th><th>Khoa</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+        <thead><tr><th>Tài khoản</th><th th:if="${workspace.filter.accountType.name() == 'STUDENT'}">Lớp / Khóa</th><th>Email</th><th>Loại</th><th>Khoa</th><th th:if="${workspace.filter.accountType.name() != 'STUDENT'}">Bộ môn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
         <tbody>
         <tr th:each="account : ${workspace.accounts}">
           <td data-label="Tài khoản"><strong th:text="${account.fullName}">Nguyễn Văn A</strong><br><span class="text-secondary" th:text="${account.studentCode != null ? account.studentCode : account.username}">username</span></td>
@@ -70,6 +79,8 @@
           <td data-label="Email" th:text="${account.email != null ? account.email : 'Chưa cập nhật'}">Email</td>
           <td data-label="Loại"><span class="badge" th:classappend="${accountBadgeClass}" th:text="${account.accountTypeLabel}">Sinh viên</span></td>
           <td data-label="Khoa" th:text="${account.facultyName}">CNTT</td>
+          <td data-label="Bộ môn" th:if="${workspace.filter.accountType.name() != 'STUDENT'}"
+              th:text="${account.departmentName != null ? account.departmentName : 'Chưa gán'}">Công nghệ phần mềm</td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${account.enabled ? 'bg-green-lt' : 'bg-secondary-lt'}" th:text="${account.enabled ? 'Đang hoạt động' : 'Đã khóa'}">Đang hoạt động</span></td>
           <td data-label="Thao tác">
             <div class="d-flex flex-wrap gap-2">

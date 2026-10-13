@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.web;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -203,6 +204,53 @@ class TopicDepartmentIT {
                         .with(actor(outsideDean, "DEAN", "LECTURER")).with(csrf())
                         .param("version", "1"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deanFiltersReviewByDepartmentWithoutChangingFacultyScopeOrSummary() throws Exception {
+        pendingTopic(lecturer, departmentId, "Đề tài phần mềm T009");
+        pendingTopic(otherLecturer, otherDepartmentId, "Đề tài hệ thống T009");
+        long outsideDepartment = department(otherFaculty.facultyId(), "Bộ môn ngoài T009");
+
+        mvc.perform(get("/periods/{periodId}/topics/review", periodId)
+                        .param("departmentId", Long.toString(departmentId))
+                        .with(actor(dean, "DEAN", "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đề tài phần mềm T009")))
+                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
+                .andExpect(content().string(containsString("<span>2</span> chờ duyệt")));
+        mvc.perform(get("/periods/{periodId}/topics/review", periodId)
+                        .param("departmentId", Long.toString(outsideDepartment))
+                        .with(actor(dean, "DEAN", "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Đề tài phần mềm T009"))))
+                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
+                .andExpect(content().string(not(containsString("Bộ môn ngoài T009"))));
+        mvc.perform(get("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Công nghệ phần mềm")))
+                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))));
+    }
+
+    @Test
+    void adminAccountListFiltersStaffByDepartmentAndKeepsStudentListUnchanged() throws Exception {
+        FixtureSupport.IdentityFixture admin = identity(
+                "topic-dept-admin", null, Set.of(RoleCode.ADMIN));
+
+        mvc.perform(get("/admin/accounts/lecturers")
+                        .param("facultyId", Long.toString(faculty.facultyId()))
+                        .param("departmentId", Long.toString(departmentId))
+                        .with(actor(admin, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(lecturer.username())))
+                .andExpect(content().string(containsString("Công nghệ phần mềm")))
+                .andExpect(content().string(not(containsString(otherLecturer.username()))));
+        mvc.perform(get("/admin/accounts/students")
+                        .param("departmentId", Long.toString(departmentId))
+                        .with(actor(admin, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Lọc theo Bộ môn"))));
     }
 
     @Test
