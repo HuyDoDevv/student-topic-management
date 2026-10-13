@@ -1,0 +1,78 @@
+# Tasks: Đợt đăng ký theo Bộ môn
+
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/web.md](contracts/web.md), [quickstart.md](quickstart.md), [acceptance-matrix.md](acceptance-matrix.md).
+
+**Status rule**: T001 đã kiểm kê và test; các task còn lại hiện `[ ]`. Mỗi task cần INSPECT→PLAN→APPROVE→IMPLEMENT→VERIFY→REPORT riêng theo `AGENTS.md`; checklist và tài liệu này không cấp quyền sửa code/DB. Viết test cho behavior quan trọng và chỉ tick sau khi evidence đạt.
+
+## Phase 1: Setup and data inventory
+
+**Goal**: xác định baseline V18 và dữ liệu legacy trước migration; không suy đoán ánh xạ.
+
+- [X] T001 Kiểm kê đợt cũ, Bộ môn của đề tài/tác giả/GVHD và quan hệ nhóm/hội đồng/kết quả; ghi danh sách ánh xạ chờ chủ dự án xác nhận tại `specs/005-department-period-scope/legacy-period-mapping.md` và test inventory tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`. Đã kiểm kê DB ứng dụng V18 bằng truy vấn read-only: 1 đợt chưa có đề tài, không đủ chứng cứ gán Bộ môn; integration test T001 đạt 1/1 trên DB test riêng, `PeriodRulesTest` đạt 8/8. Quyết định ánh xạ đợt ID 1 vẫn mở, không cho phép backfill T012.
+
+**Checkpoint**: đợt trộn Bộ môn hoặc không xác định được ánh xạ bị đánh dấu STOP, không có DB dev/shared bị sửa.
+
+## Phase 2: Foundational — expand and persistence
+
+**Goal**: có quan hệ Bộ môn nullable để nâng cấp an toàn từ V18.
+
+- [ ] T002 Tạo migration expand-only mới cho `registration_periods.department_id` cùng FK/index cần thiết tại `src/main/resources/db/migration/V19__add_period_department.sql`; chứng minh nâng cấp giữ business rows trong `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`.
+- [ ] T003 Ánh xạ Department nullable và truy vấn có phạm vi trong `src/main/java/vn/edu/topicregistration/entity/RegistrationPeriodEntity.java`, `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java`; kiểm chứng legacy/new row tại `src/test/java/vn/edu/topicregistration/integration/RegistrationPeriodPersistenceIT.java`.
+
+**Checkpoint**: V18→V19 và Flyway validate đạt trên DB test; legacy period vẫn đọc được, runtime chưa tự gán.
+
+## Phase 3: US1 — DEAN tạo/quản lý đợt theo Bộ môn (P1)
+
+**Independent test**: DEAN Khoa X tạo đợt A/B, xem cả hai; C ở Khoa Y bị từ chối; đợt đã mở/có dữ liệu không đổi Bộ môn.
+
+- [ ] T004 [US1] Bổ sung `departmentId` trên `src/main/java/vn/edu/topicregistration/dto/PeriodForm.java`, kiểm tra cùng Khoa và khóa đổi phạm vi trong `src/main/java/vn/edu/topicregistration/service/PeriodService.java` và `src/main/java/vn/edu/topicregistration/service/PeriodTransactionService.java`; viết test tại `src/test/java/vn/edu/topicregistration/unit/PeriodServiceTest.java`.
+- [ ] T005 [US1] Hiển thị/chọn Bộ môn trên `src/main/java/vn/edu/topicregistration/controller/PeriodController.java`, `src/main/resources/templates/periods/form.html`, `src/main/resources/templates/periods/list.html`, `src/main/resources/templates/periods/detail.html`; kiểm tra form, quyền và URL tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java`.
+
+## Phase 4: US2 — LECTURER chỉ ở Bộ môn mình (P1)
+
+**Independent test**: GV A chỉ thấy đợt A; ID đợt B qua GET/POST bị chặn; đề tài/tác giả/1–2 GVHD cùng A.
+
+- [ ] T006 [US2] Giới hạn truy vấn danh sách/chi tiết đợt cho GV theo Bộ môn trong `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java` và `src/main/java/vn/edu/topicregistration/service/TopicAuthorService.java`; test từ chối URL tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`.
+- [ ] T007 [US2] Ràng buộc Bộ môn đợt=đề tài=tác giả/GVHD tại tạo/sửa/gửi duyệt trong `src/main/java/vn/edu/topicregistration/service/TopicAuthorService.java`, `src/main/java/vn/edu/topicregistration/service/TopicRules.java`; test giả mạo ID/đổi Bộ môn đồng thời tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`.
+
+## Phase 5: US3 — STUDENT không bị khóa Bộ môn (P1)
+
+**Independent test**: SV cùng Khoa thấy đợt A/B nhưng chỉ đề tài công bố; đăng ký trực tiếp đề tài ẩn bị chặn.
+
+- [ ] T008 [US3] Giữ query SV theo Khoa và trạng thái công bố trong `src/main/java/vn/edu/topicregistration/service/PublishedTopicQueryService.java`, `src/main/java/vn/edu/topicregistration/service/RegistrationService.java`; hiển thị Bộ môn ở `src/main/resources/templates/topics/period-selection.html` và test tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`.
+
+## Phase 6: US4 — Phân công chấm/hội đồng chéo Bộ môn có giới hạn (P2)
+
+**Independent test**: GV B được giao đúng một đề tài A chỉ xem nhiệm vụ đó; không xem list A; GVHD không chấm đề tài mình.
+
+- [ ] T009 [US4] Kiểm tra hội đồng/đề tài cùng đợt, thành viên cùng Khoa và xung đột GVHD khi phân công trong `src/main/java/vn/edu/topicregistration/service/CouncilService.java`, `src/main/java/vn/edu/topicregistration/service/DirectGradingService.java`; test tại `src/test/java/vn/edu/topicregistration/unit/CouncilServiceTest.java`.
+- [ ] T010 [US4] Giới hạn quyền xem đúng nhiệm vụ còn hiệu lực trong `src/main/java/vn/edu/topicregistration/service/CouncilService.java`, `src/main/java/vn/edu/topicregistration/service/DirectGradingService.java`; test quyền URL và hủy phân công tại `src/test/java/vn/edu/topicregistration/web/CouncilControllerTest.java`.
+
+## Phase 7: US5 — Tối đa một DEAN hoạt động/Khoa (P2)
+
+**Independent test**: tạo/kích hoạt DEAN thứ hai bị từ chối kể cả concurrent; thay DEAN không làm đổi đợt cũ.
+
+- [ ] T011 [US5] Chặn tạo/kích hoạt DEAN hoạt động thứ hai cùng Khoa bằng cơ chế nhất quán được duyệt trong `src/main/java/vn/edu/topicregistration/service/AdminAccountService.java`, `src/main/java/vn/edu/topicregistration/repository/UserAccountRepository.java`; test race và chuyển giao tại `src/test/java/vn/edu/topicregistration/integration/AccountProvisioningIT.java`.
+
+## Phase 8: Backfill, enforce and acceptance
+
+**Goal**: chỉ siết schema sau ánh xạ được xác nhận; nghiệm thu toàn feature có evidence.
+
+- [ ] T012 Đối chiếu và ghi lại quyết định ánh xạ từng đợt legacy ở `specs/005-department-period-scope/legacy-period-mapping.md`; sau xác nhận riêng, tạo migration backfill mới tại `src/main/java/db/migration/V20__backfill_period_department.java` và test bảo toàn/mơ hồ tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`.
+- [ ] T013 Chỉ sau T012 đạt data gate, tạo migration enforce mới cho Bộ môn bắt buộc và nhất quán Khoa tại `src/main/resources/db/migration/V21__enforce_period_department.sql`; test nâng cấp/idempotent/failure an toàn tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`.
+- [ ] T014 Chạy suite theo `specs/005-department-period-scope/quickstart.md`, ghi evidence thực tế và kết quả SC-005-01–06 vào `specs/005-department-period-scope/acceptance-matrix.md`; giữ task mở nếu baseline 004 hoặc suite bắt buộc chưa đạt.
+
+## Dependencies and delivery strategy
+
+```text
+T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008
+                  │                    └────────→ T009 → T010
+                  └──────────────────────────────→ T011
+T001 + confirmed mapping + T007 → T012 → T013
+T008 + T010 + T011 + T013 → T014
+```
+
+- MVP: T001–T008 (US1–US3), chưa tuyên bố full 005 khi US4/US5/data gate còn mở.
+- Sau T003, US5 có thể được lập plan riêng song song với US1; T009–T010 có thể bắt đầu sau invariant US2 đã ổn định. Không chạy song song migration test dùng chung DB test.
+- V19/V20/V21 là tên migration **dự kiến** trên baseline V18; trước mỗi task phải kiểm tra version hiện tại và dừng nếu đã bị chiếm.
+- T012 cần quyết định ánh xạ dữ liệu cụ thể của chủ dự án, không được coi việc duyệt tài liệu 005 là duyệt backfill dữ liệu thật.
