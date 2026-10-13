@@ -39,6 +39,28 @@ public final class FixtureSupport {
         }
     }
 
+    public OrganizationScope existingOrganization(String facultyName) {
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement statement = connection.prepareStatement(
+                        "SELECT id FROM faculties WHERE name = ?")) {
+            statement.setString(1, facultyName);
+            try (var rows = statement.executeQuery()) {
+                if (!rows.next()) {
+                    throw new IllegalStateException("Organization fixture does not exist: "
+                            + facultyName);
+                }
+                long id = rows.getLong(1);
+                if (rows.next()) {
+                    throw new IllegalStateException("Organization fixture is not unique: "
+                            + facultyName);
+                }
+                return new OrganizationScope(id);
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Could not read organization fixture", exception);
+        }
+    }
+
     public IdentityFixture createIdentity(String username, String fullName, String passwordHash,
             boolean enabled, OrganizationScope scope, Set<RoleCode> roles) {
         if (roles == null || roles.isEmpty()) {

@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.dao.DataAccessException;
@@ -31,6 +32,11 @@ import vn.edu.topicregistration.util.ProjectTime;
 class SchemaSeedMigrationIT {
     private static final Instant DEMO_NOW = Instant.parse("2026-09-13T03:00:00Z");
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
+
+    @AfterEach
+    void restoreCleanTestDatabase() {
+        MySqlTestSupport.fromEnvironment().resetAndMigrate();
+    }
 
     @Test
     void emptyDatabaseMigratesThroughV18WithEveryTableConstraintAndTrigger() {

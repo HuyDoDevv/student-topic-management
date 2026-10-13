@@ -35,6 +35,7 @@ class AccountSecurityMigrationIT {
         Flyway allVersions = Flyway.configure()
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
+                .target(MigrationVersion.fromVersion("15"))
                 .load();
         assertEquals(1, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);

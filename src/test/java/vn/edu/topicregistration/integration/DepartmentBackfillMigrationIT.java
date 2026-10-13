@@ -8,11 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** T007: the approved single-department backfill must preserve existing assignments. */
 class DepartmentBackfillMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
+
+    @AfterEach
+    void restoreCleanTestDatabase() {
+        MySqlTestSupport.fromEnvironment().resetAndMigrate();
+    }
 
     @Test
     void backfillsOnlyMissingStaffAndTopicsIntoSoftwareDepartment() {
@@ -38,7 +44,7 @@ class DepartmentBackfillMigrationIT {
         long topicCount = count(jdbc, "SELECT COUNT(*) FROM topics");
 
         Flyway flyway = latest();
-        assertEquals(1, flyway.migrate().migrationsExecuted);
+        assertEquals(2, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
         Long software = jdbc.queryForObject("""
@@ -85,7 +91,7 @@ class DepartmentBackfillMigrationIT {
         long lecturer = account(jdbc, "legacy.reuse", faculty, null, "LECTURER");
         long missingTopic = topic(jdbc, period(jdbc, faculty), lecturer, null);
 
-        assertEquals(1, latest().migrate().migrationsExecuted);
+        assertEquals(2, latest().migrate().migrationsExecuted);
 
         assertEquals(software, accountDepartment(jdbc, lecturer));
         assertEquals(software, topicDepartment(jdbc, missingTopic));

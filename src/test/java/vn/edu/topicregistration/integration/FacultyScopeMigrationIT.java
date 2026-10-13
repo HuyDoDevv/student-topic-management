@@ -15,6 +15,92 @@ class FacultyScopeMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
 
     @Test
+    void v12FixtureUpgradesThroughV18WithoutLosingBusinessRows() {
+        verifyUpgradeToV18("12");
+    }
+
+    @Test
+    void v15FixtureUpgradesThroughV18WithoutLosingBusinessRows() {
+        verifyUpgradeToV18("15");
+    }
+
+    private static void verifyUpgradeToV18(String startingVersion) {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        Flyway starting = Flyway.configure().dataSource(database.dataSource())
+                .locations(MIGRATIONS).target(MigrationVersion.fromVersion(startingVersion))
+                .cleanDisabled(false).load();
+        starting.clean();
+        starting.migrate();
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty;
+        if ("12".equals(startingVersion)) {
+            jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa legacy T010')");
+            faculty = requiredLong(jdbc,
+                    "SELECT id FROM faculties WHERE name = 'Khoa legacy T010'");
+            jdbc.update("INSERT INTO departments(name, faculty_id) VALUES ('Bộ môn legacy', ?)",
+                    faculty);
+            long oldDepartment = requiredLong(jdbc,
+                    "SELECT id FROM departments WHERE name = 'Bộ môn legacy'");
+            jdbc.update("""
+                    INSERT INTO user_accounts(full_name, username, password_hash, department_id)
+                    VALUES ('T010 author', 't010.author', 'NOT_A_LOGIN_HASH', ?),
+                           ('T010 secretary', 't010.secretary', 'NOT_A_LOGIN_HASH', ?)
+                    """, oldDepartment, oldDepartment);
+        } else {
+            faculty = requiredLong(jdbc,
+                    "SELECT id FROM faculties WHERE name = 'Khoa Công nghệ Thông tin'");
+            jdbc.update("""
+                    INSERT INTO user_accounts(full_name, username, password_hash, faculty_id)
+                    VALUES ('T010 author', 't010.author', 'NOT_A_LOGIN_HASH', ?),
+                           ('T010 secretary', 't010.secretary', 'NOT_A_LOGIN_HASH', ?)
+                    """, faculty, faculty);
+        }
+        long author = account(jdbc, "t010.author");
+        long secretary = account(jdbc, "t010.secretary");
+        jdbc.update("INSERT INTO user_roles(user_id, role_code) VALUES (?, 'LECTURER'), (?, 'LECTURER')",
+                author, secretary);
+        jdbc.update("""
+                INSERT INTO registration_periods(faculty_id, name, topic_type,
+                    lecturer_start, lecturer_end, student_start, student_end,
+                    reviewer_score_deadline, council_report_date)
+                VALUES (?, 'Đợt T010', 'KLTN', '2026-01-01', '2026-01-02',
+                    '2026-01-03', '2026-01-04', '2026-01-10', '2026-01-15')
+                """, faculty);
+        long period = requiredLong(jdbc,
+                "SELECT id FROM registration_periods WHERE name = 'Đợt T010'");
+        if ("12".equals(startingVersion)) {
+            long oldDepartment = requiredLong(jdbc,
+                    "SELECT id FROM departments WHERE name = 'Bộ môn legacy'");
+            jdbc.update("INSERT INTO topics(period_id, department_id, author_id) VALUES (?, ?, ?)",
+                    period, oldDepartment, author);
+            jdbc.update("""
+                    INSERT INTO councils(period_id, department_id, name, chair_id, secretary_id)
+                    VALUES (?, ?, 'Hội đồng T010', ?, ?)
+                    """, period, oldDepartment, author, secretary);
+        } else {
+            jdbc.update("INSERT INTO topics(period_id, author_id) VALUES (?, ?)", period, author);
+            jdbc.update("""
+                    INSERT INTO councils(period_id, name, chair_id, secretary_id)
+                    VALUES (?, 'Hội đồng T010', ?, ?)
+                    """, period, author, secretary);
+        }
+        long accountsBefore = count(jdbc, "SELECT COUNT(*) FROM user_accounts");
+        long topicsBefore = count(jdbc, "SELECT COUNT(*) FROM topics");
+        long councilsBefore = count(jdbc, "SELECT COUNT(*) FROM councils");
+        Flyway latest = Flyway.configure().dataSource(database.dataSource())
+                .locations(MIGRATIONS).load();
+        latest.migrate();
+        assertDoesNotThrow(latest::validate);
+        assertEquals(accountsBefore, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(topicsBefore, count(jdbc, "SELECT COUNT(*) FROM topics"));
+        assertEquals(councilsBefore, count(jdbc, "SELECT COUNT(*) FROM councils"));
+        assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM topics WHERE department_id IS NULL"));
+        assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM user_accounts WHERE username LIKE 't010.%' AND department_id IS NULL"));
+        assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'councils' AND column_name = 'department_id'"));
+        assertEquals(0, latest.migrate().migrationsExecuted);
+    }
+
+    @Test
     void v13ConsolidatesDataAndV16RestoresNullableDepartmentScope() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV12 = Flyway.configure()

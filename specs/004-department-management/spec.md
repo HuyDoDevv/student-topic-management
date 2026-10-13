@@ -111,5 +111,6 @@ khi mọi bản ghi cần thiết đã được gán Department bằng dữ li�
 ## Open Data Gate
 
 U-004-08 đã chốt đích backfill cho T007 mà không cần danh sách ánh xạ từng dòng.
-T008 vẫn phải chờ bằng chứng không còn Topic cần thiết `department_id = NULL` và
-không có mâu thuẫn sau backfill; không tự gán dữ liệu của Khoa khác.
+T008 đã thêm V18: migration dừng nếu còn Topic thiếu Bộ môn hoặc có mâu thuẫn
+tác giả/GVHD/Faculty, trước khi siết `topics.department_id NOT NULL`. Dữ liệu trên DB
+dev/shared vẫn cần được đối chiếu riêng trước khi triển khai; không tự gán dữ liệu của Khoa khác.

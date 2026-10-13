@@ -59,6 +59,7 @@ class NotificationPersistenceIT {
         Flyway allVersions = Flyway.configure()
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
+                .target(MigrationVersion.fromVersion("15"))
                 .load();
         assertEquals(4, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);

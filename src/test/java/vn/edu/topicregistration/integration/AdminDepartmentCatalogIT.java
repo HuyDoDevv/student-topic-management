@@ -126,6 +126,7 @@ class AdminDepartmentCatalogIT {
 
     @Test
     void csrfAndPersistedAdminRoleProtectEveryMutation() throws Exception {
+        long departmentsBefore = countAllDepartments();
         mvc.perform(post("/admin/departments")
                         .param("facultyId", Long.toString(faculty.facultyId()))
                         .param("name", "Không có CSRF")
@@ -140,11 +141,12 @@ class AdminDepartmentCatalogIT {
                         .with(actor(lecturer, "ADMIN")).with(csrf()))
                 .andExpect(status().isForbidden());
 
-        assertEquals(0L, countAllDepartments());
+        assertEquals(departmentsBefore, countAllDepartments());
     }
 
     @Test
     void noDeleteRouteExistsAndForeignKeysProtectReferencedDepartment() throws Exception {
+        long departmentsBefore = countAllDepartments();
         createDepartment(faculty.facultyId(), "Mạng máy tính");
         long departmentId = departmentId(faculty.facultyId(), "Mạng máy tính");
         jdbc.update("UPDATE user_accounts SET department_id = ? WHERE id = ?",
@@ -155,7 +157,7 @@ class AdminDepartmentCatalogIT {
                 .andExpect(status().isNotFound());
         assertThrows(DataIntegrityViolationException.class,
                 () -> jdbc.update("DELETE FROM departments WHERE id = ?", departmentId));
-        assertEquals(1L, countAllDepartments());
+        assertEquals(departmentsBefore + 1, countAllDepartments());
     }
 
     private void createDepartment(long facultyId, String name) {

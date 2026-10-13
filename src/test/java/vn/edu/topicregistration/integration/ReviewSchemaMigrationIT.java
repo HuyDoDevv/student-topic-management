@@ -5,27 +5,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
-import vn.edu.topicregistration.seed.DemoSeedProperties;
-import vn.edu.topicregistration.seed.LocalDemoSeeder;
-import vn.edu.topicregistration.util.ProjectTime;
 
 /** T008–T010: verifies review migrations against representative V7 rows. */
 class ReviewSchemaMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
-    private static final Instant NOW = Instant.parse("2026-09-14T08:00:00Z");
+
+    @AfterEach
+    void restoreCleanTestDatabase() {
+        MySqlTestSupport.fromEnvironment().resetAndMigrate();
+    }
 
     @Test
     void v7ReviewRowsAreBackfilledWithoutLosingFilesScoresOrResults() {
@@ -39,12 +35,7 @@ class ReviewSchemaMigrationIT {
         throughV7.clean();
         throughV7.migrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
-        new LocalDemoSeeder(
-                jdbc,
-                new BCryptPasswordEncoder(4),
-                new ProjectTime(Clock.fixed(NOW, ZoneOffset.UTC)),
-                new DemoSeedProperties(true, "not-a-real-test-password"))
-                .run(new DefaultApplicationArguments(new String[0]));
+        seedV7ReviewFixture(jdbc);
 
         long registrationId = requiredLong(jdbc, """
                 SELECT registration.id
@@ -124,6 +115,7 @@ class ReviewSchemaMigrationIT {
         Flyway allVersions = Flyway.configure()
                 .dataSource(database.dataSource())
                 .locations(MIGRATIONS)
+                .target(MigrationVersion.fromVersion("15"))
                 .load();
         assertEquals(8, allVersions.migrate().migrationsExecuted);
         assertDoesNotThrow(allVersions::validate);
@@ -201,6 +193,55 @@ class ReviewSchemaMigrationIT {
     private static long account(JdbcTemplate jdbc, String username) {
         return requiredLong(jdbc,
                 "SELECT id FROM user_accounts WHERE username = ?", username);
+    }
+
+    private static void seedV7ReviewFixture(JdbcTemplate jdbc) {
+        jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa review legacy')");
+        long faculty = requiredLong(jdbc,
+                "SELECT id FROM faculties WHERE name = 'Khoa review legacy'");
+        jdbc.update("INSERT INTO departments(name, faculty_id) VALUES ('Bộ môn review legacy', ?)",
+                faculty);
+        long department = requiredLong(jdbc,
+                "SELECT id FROM departments WHERE name = 'Bộ môn review legacy'");
+        for (String username : List.of("lecturer1.demo", "dean.demo", "lecturer3.demo",
+                "student1.demo", "student2.demo", "student3.demo")) {
+            jdbc.update("""
+                    INSERT INTO user_accounts(full_name, username, password_hash, department_id)
+                    VALUES (?, ?, 'NOT_A_LOGIN_HASH', ?)
+                    """, username, username, department);
+            jdbc.update("INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)",
+                    account(jdbc, username), username.startsWith("student") ? "STUDENT" : "LECTURER");
+        }
+        jdbc.update("""
+                INSERT INTO registration_periods(faculty_id, name, topic_type,
+                    lecturer_start, lecturer_end, student_start, student_end,
+                    reviewer_score_deadline, council_report_date)
+                VALUES (?, 'Legacy review period', 'KLTN',
+                    '2026-09-01', '2026-09-02', '2026-09-03', '2026-09-10',
+                    '2026-09-19', '2026-09-20')
+                """, faculty);
+        long period = requiredLong(jdbc,
+                "SELECT id FROM registration_periods WHERE name = 'Legacy review period'");
+        jdbc.update("""
+                INSERT INTO topics(period_id, department_id, author_id, title)
+                VALUES (?, ?, ?, '[DEMO] Nền tảng quản lý khóa luận')
+                """, period, department, account(jdbc, "lecturer1.demo"));
+        long topic = requiredLong(jdbc,
+                "SELECT id FROM topics WHERE title = '[DEMO] Nền tảng quản lý khóa luận'");
+        long leader = account(jdbc, "student1.demo");
+        jdbc.update("INSERT INTO student_groups(period_id, leader_student_id) VALUES (?, ?)",
+                period, leader);
+        long group = requiredLong(jdbc,
+                "SELECT id FROM student_groups WHERE leader_student_id = ?", leader);
+        jdbc.update("""
+                INSERT INTO group_memberships(group_id, period_id, student_id, slot)
+                VALUES (?, ?, ?, 2), (?, ?, ?, 3)
+                """, group, period, account(jdbc, "student2.demo"), group, period,
+                account(jdbc, "student3.demo"));
+        jdbc.update("""
+                INSERT INTO registrations(period_id, group_id, topic_id, status, decided_at)
+                VALUES (?, ?, ?, 'ACCEPTED', '2026-09-11 08:00:00')
+                """, period, group, topic);
     }
 
     private static long requiredLong(JdbcTemplate jdbc, String sql, Object... arguments) {

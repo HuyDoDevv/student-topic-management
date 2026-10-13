@@ -8,9 +8,9 @@
 | FR-004-04 | Topic lấy Department từ actor, không tin request | `TopicAuthorServiceTest`, `TopicDepartmentIT` | T005 | Complete |
 | FR-004-05 | Tác giả/GVHD phối hợp cùng Department | Topic rule/unit/web tests | T006 | Complete |
 | FR-004-06 | DEAN quản lý mọi Department trong Faculty | `TopicDepartmentIT`; Faculty-wide regression | T005–T006 | Complete |
-| FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | T006 verified; T010 pending |
+| FR-004-07 | Student/Council không bị đổi scope | Registration/Council regression tests | T006,T010 | T006 verified; T010 full regression blocked |
 | FR-004-08 | Backfill có evidence trước enforce | Migration integration tests | T007–T008 | T007–T008 verified on isolated test DB |
-| FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/DB tests | T009 | Verified on isolated test DB; full E2E pending T010 |
+| FR-004-09 | Hiển thị/lọc không làm lộ cross-Faculty | MockMvc/DB tests | T009 | T009 verified on isolated test DB; full E2E not run because integration failed |
 | FR-004-10 | Không xóa Department đang được dùng | Service/integration tests; không có route xóa | T003 | Complete |
 
 ## Current Evidence
@@ -79,3 +79,22 @@
   `AdminAccountServiceTest` 18 test, `AdminAccountControllerTest` 21 test,
   `TopicDepartmentIT` 13 test và `AccountProvisioningIT` 4 test đều đạt trên DB test
   MySQL 8.4 cổng 3307. Full `./mvnw -q test` exit 0; full integration/E2E T010 chưa chạy.
+
+## T010 acceptance attempt — 2026-10-13
+
+- Targeted `FacultyScopeMigrationIT`, `DepartmentBackfillMigrationIT`,
+  `DepartmentEnforceMigrationIT` trên MySQL 8.4 test `127.0.0.1:3307/topic_registration_test`:
+  11 test pass. Fixture V12 và V15 nâng cấp tới V18 giữ nguyên số account/Topic/Council,
+  có Department cho staff/Topic, Council không có `department_id`; Flyway validate và
+  migrate lần hai không đổi dữ liệu. Migration test reset DB test sau ca thất bại cố ý.
+- `./mvnw -q test` với biến `TEST_DATABASE_*`: 291 test pass, 0 failure/error.
+- `./mvnw -q verify -Pintegration`: **không đạt**, 60 test, 5 failure và 11 error.
+  Các lỗi nằm ở fixture/assertion ngoài scope T010: tên Faculty trùng trong
+  `NotificationReadIT`, `AnnouncementPublicationIT`, `NotificationConcurrencyIT`;
+  `FoundationDatabaseIT` vẫn đếm 24 thay vì 25 bảng;
+  `AccountSecurityMigrationIT`/`NotificationPersistenceIT` còn kỳ vọng số migration cũ;
+  `ReviewSchemaMigrationIT` dùng cột không tồn tại tại V7; ngoài ra
+  `AdminDepartmentCatalogIT` và `ReviewWorkflowIT` có lỗi cần điều tra riêng.
+- Full E2E và SQL fixture chưa chạy vì integration gate thất bại. T010 giữ `[ ]`;
+  chưa thể kết luận nghiệm thu toàn feature, chưa commit. Cần plan/approval riêng để
+  sửa các test ngoài 11 file đã duyệt, sau đó chạy lại toàn bộ acceptance sequence.

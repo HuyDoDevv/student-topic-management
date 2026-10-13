@@ -7,12 +7,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /** T008: V18 enforces non-null topic departments only after validating V17 data. */
 class DepartmentEnforceMigrationIT {
     private static final String MIGRATIONS = "classpath:db/migration";
+
+    @AfterEach
+    void restoreCleanTestDatabase() {
+        MySqlTestSupport.fromEnvironment().resetAndMigrate();
+    }
 
     @Test
     void validV17DataUpgradesAndRerunsWithoutChangingBusinessRows() {
