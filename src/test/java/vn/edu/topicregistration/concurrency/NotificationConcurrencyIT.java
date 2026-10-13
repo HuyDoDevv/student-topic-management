@@ -85,7 +85,7 @@ class NotificationConcurrencyIT {
         DATABASE.resetAndMigrate();
         FixtureSupport fixtures = new FixtureSupport(
                 DATABASE.dataSource(), Clock.fixed(NOW, ZoneOffset.UTC));
-        OrganizationScope scope = fixtures.createOrganization("Khoa Công nghệ thông tin");
+        OrganizationScope scope = fixtures.existingOrganization("Khoa Công nghệ Thông tin");
         admin = fixtures.createIdentity(
                 "notification.concurrent.admin", "Quản trị", "NOT_A_LOGIN_HASH", true,
                 null, Set.of(RoleCode.ADMIN));

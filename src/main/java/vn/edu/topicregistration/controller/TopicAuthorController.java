@@ -97,7 +97,7 @@ public class TopicAuthorController {
                 throw exception;
             }
             bindingResult.reject("topic.invalid",
-                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng khoa.");
+                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng Bộ môn.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, null, false);
         }
@@ -144,7 +144,7 @@ public class TopicAuthorController {
                 throw exception;
             }
             bindingResult.reject("topic.invalid",
-                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng khoa.");
+                    "Bản nháp có giảng viên hướng dẫn không hợp lệ hoặc không cùng Bộ môn.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, context, TopicPageView.from(current), true);
         }
@@ -193,6 +193,7 @@ public class TopicAuthorController {
             Long id,
             Long periodId,
             String faculty,
+            String department,
             String author,
             String title,
             String description,
@@ -209,6 +210,7 @@ public class TopicAuthorController {
                     topic.id(),
                     topic.periodId(),
                     topic.facultyName(),
+                    topic.departmentName(),
                     topic.authorName(),
                     topic.title(),
                     topic.description(),

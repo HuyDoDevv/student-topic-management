@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.service;
 
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -65,11 +66,13 @@ public class TopicAuthorService {
         ActorIdentity actor = currentLecturerFor(period);
         requireLecturerWindow(period, clock.instant());
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
+        DepartmentEntity department = requireAuthorDepartment(author, period.getFaculty().getId());
         LoadedDraft loaded = loadDraft(command, author);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
-                loaded.draft(), access(actor, actor.accountId(), actor.facultyId(), "DRAFT")));
+                loaded.draft(), access(actor, actor.accountId(), actor.facultyId(),
+                        department.getId(), "DRAFT")));
 
-        TopicEntity topic = new TopicEntity(period, author);
+        TopicEntity topic = new TopicEntity(period, author, department);
         applyDraft(topic, valid, loaded.lecturers());
         return toView(topics.saveAndFlush(topic));
     }
@@ -79,6 +82,12 @@ public class TopicAuthorService {
         Objects.requireNonNull(command, "command");
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         ActorIdentity actor = requireAuthor(locked.topic());
+        DepartmentEntity department = requireAuthorDepartment(
+                locked.topic().getAuthor(), locked.period().getFaculty().getId());
+        if (locked.topic().getDepartment() == null
+                || !Objects.equals(locked.topic().getDepartment().getId(), department.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
         LoadedDraft loaded = loadDraft(command, locked.topic().getAuthor());
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, locked.topic())));
@@ -93,6 +102,12 @@ public class TopicAuthorService {
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         TopicEntity topic = locked.topic();
         ActorIdentity actor = requireAuthor(topic);
+        DepartmentEntity department = requireAuthorDepartment(
+                topic.getAuthor(), locked.period().getFaculty().getId());
+        if (topic.getDepartment() == null
+                || !Objects.equals(topic.getDepartment().getId(), department.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
         TopicDraft current = draftFrom(topic);
         TopicDraft valid = applyRules(() -> TopicRules.validateForSubmit(
                 current,
@@ -147,6 +162,9 @@ public class TopicAuthorService {
         if (!context.period().lecturerOpen()) {
             throw new ApplicationException(ApplicationErrorCode.WINDOW_CLOSED);
         }
+        ActorIdentity actor = currentLecturer();
+        UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
+        requireAuthorDepartment(author, context.facultyId());
         return context;
     }
 
@@ -179,8 +197,13 @@ public class TopicAuthorService {
                 .findByIdAndFacultyId(periodId, actor.facultyId())
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
         UserAccountEntity author = requiredEntity(UserAccountEntity.class, actor.accountId());
-        List<LecturerOption> coSupervisors = accounts
-                .findEnabledByFacultyAndRole(actor.facultyId(), RoleCode.LECTURER)
+        Long departmentId = author.getDepartment() == null
+                ? null : author.getDepartment().getId();
+        List<UserAccountEntity> eligibleLecturers = departmentId == null
+                ? List.of()
+                : accounts.findEnabledByFacultyAndDepartmentAndRole(
+                        actor.facultyId(), departmentId, RoleCode.LECTURER);
+        List<LecturerOption> coSupervisors = eligibleLecturers
                 .stream()
                 .filter(account -> !Objects.equals(account.getId(), actor.accountId()))
                 .map(account -> new LecturerOption(
@@ -255,6 +278,20 @@ public class TopicAuthorService {
         return actor;
     }
 
+    private static DepartmentEntity requireAuthorDepartment(
+            UserAccountEntity author, Long facultyId) {
+        DepartmentEntity department = author.getDepartment();
+        if (author.getFaculty() == null
+                || !Objects.equals(author.getFaculty().getId(), facultyId)
+                || department == null
+                || department.getId() == null
+                || department.getFaculty() == null
+                || !Objects.equals(department.getFaculty().getId(), facultyId)) {
+            throw new ApplicationException(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
+        }
+        return department;
+    }
+
     private LoadedDraft loadDraft(
             TopicDraftCommand command,
             UserAccountEntity author) {
@@ -288,9 +325,13 @@ public class TopicAuthorService {
         Long facultyId = lecturer.getFaculty() == null
                 ? null
                 : lecturer.getFaculty().getId();
+        Long departmentId = lecturer.getDepartment() == null
+                ? null
+                : lecturer.getDepartment().getId();
         return new SupervisorCandidate(
                 lecturer.getId(),
                 facultyId == null ? Long.MIN_VALUE : facultyId,
+                departmentId,
                 lecturer.isEnabled(),
                 lecturer.getRoleCodes().contains(RoleCode.LECTURER));
     }
@@ -300,6 +341,7 @@ public class TopicAuthorService {
                 actor,
                 topic.getAuthor().getId(),
                 topic.getPeriod().getFaculty().getId(),
+                topic.getDepartment() == null ? null : topic.getDepartment().getId(),
                 topic.getStatus());
     }
 
@@ -307,6 +349,7 @@ public class TopicAuthorService {
             ActorIdentity actor,
             long authorId,
             long topicFacultyId,
+            Long topicDepartmentId,
             String status) {
         if (actor.facultyId() == null) {
             throw new AccessDeniedException("Lecturer faculty is missing");
@@ -317,6 +360,7 @@ public class TopicAuthorService {
                     authorId,
                     actor.facultyId(),
                     topicFacultyId,
+                    topicDepartmentId,
                     TopicStatus.valueOf(status));
         } catch (IllegalArgumentException exception) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
@@ -326,13 +370,7 @@ public class TopicAuthorService {
     private TopicDraft draftFrom(TopicEntity topic) {
         List<SupervisorCandidate> supervisors = topic.getSupervisors().stream()
                 .map(TopicSupervisorEntity::getLecturer)
-                .map(lecturer -> new SupervisorCandidate(
-                        lecturer.getId(),
-                        lecturer.getFaculty() == null
-                                ? Long.MIN_VALUE
-                                : lecturer.getFaculty().getId(),
-                        lecturer.isEnabled(),
-                        lecturer.getRoleCodes().contains(RoleCode.LECTURER)))
+                .map(this::candidateFrom)
                 .toList();
         return new TopicDraft(
                 topic.getTitle(),
@@ -395,6 +433,7 @@ public class TopicAuthorService {
                 topic.getPeriod().getId(),
                 topic.getPeriod().getFaculty().getId(),
                 topic.getPeriod().getFaculty().getName(),
+                topic.getDepartment() == null ? null : topic.getDepartment().getName(),
                 topic.getAuthor().getId(),
                 displayName(topic.getAuthor()),
                 topic.getTitle(),
@@ -477,6 +516,7 @@ public class TopicAuthorService {
             Long periodId,
             Long facultyId,
             String facultyName,
+            String departmentName,
             Long authorId,
             String authorName,
             String title,

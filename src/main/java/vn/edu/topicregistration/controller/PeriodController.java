@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
 
 import vn.edu.topicregistration.service.PeriodService.PeriodView;
@@ -127,16 +128,19 @@ public class PeriodController {
     }
 
     @GetMapping("/{id}/topics/review")
-    String reviewTopics(@PathVariable long id, Model model) {
+    String reviewTopics(@PathVariable long id,
+            @RequestParam(required = false) Long departmentId, Model model) {
         common(model);
         PeriodView period = periodService.getForCurrentDean(id);
-        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id);
+        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id, departmentId);
         ReviewSummary summary = reviewSummary(workspace);
         model.addAttribute("period", display(period));
         model.addAttribute("reviewTopics", workspace.topics().stream()
                 .map(ReviewTopicPageView::from)
                 .toList());
         model.addAttribute("reviewSummary", summary);
+        model.addAttribute("departmentOptions", workspace.departmentOptions());
+        model.addAttribute("selectedDepartmentId", workspace.selectedDepartmentId());
         model.addAttribute("reviewNotice", reviewNotice(period, summary));
         return "topics/review";
     }
@@ -427,6 +431,7 @@ public class PeriodController {
     public record ReviewTopicPageView(
             long id,
             String faculty,
+            String department,
             String author,
             String title,
             String description,
@@ -444,6 +449,7 @@ public class PeriodController {
             return new ReviewTopicPageView(
                     topic.id(),
                     topic.faculty(),
+                    topic.departmentName(),
                     topic.author(),
                     topic.title(),
                     topic.description(),

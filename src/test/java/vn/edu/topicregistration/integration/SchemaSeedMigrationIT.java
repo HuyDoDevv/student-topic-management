@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.dao.DataAccessException;
@@ -32,27 +33,32 @@ class SchemaSeedMigrationIT {
     private static final Instant DEMO_NOW = Instant.parse("2026-09-13T03:00:00Z");
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
 
+    @AfterEach
+    void restoreCleanTestDatabase() {
+        MySqlTestSupport.fromEnvironment().resetAndMigrate();
+    }
+
     @Test
-    void emptyDatabaseMigratesThroughV15WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV18WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
         assertDoesNotThrow(() -> flyway(database).validate());
-        assertEquals(24, count(jdbc, """
+        assertEquals(25, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(71, constraintCount(jdbc, "CHECK"));
-        assertEquals(55, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(27, constraintCount(jdbc, "UNIQUE"));
-        assertEquals(25, constraintCount(jdbc, "PRIMARY KEY"));
+        assertEquals(72, constraintCount(jdbc, "CHECK"));
+        assertEquals(58, constraintCount(jdbc, "FOREIGN KEY"));
+        assertEquals(28, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(26, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
                 "trg_councils_validate_officers",
@@ -83,6 +89,10 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_project_reports_current_registration", "UNIQUE");
         assertConstraint(jdbc, "chk_project_reports_content_type", "CHECK");
         assertConstraint(jdbc, "fk_accounts_faculty", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_departments_faculty", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_accounts_department", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_topics_department_required", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_departments_faculty_name", "UNIQUE");
         assertConstraint(jdbc, "uq_user_accounts_email", "UNIQUE");
         assertConstraint(jdbc, "uq_student_profiles_student_code", "UNIQUE");
         assertConstraint(jdbc, "fk_student_profiles_user", "FOREIGN KEY");
@@ -99,6 +109,27 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_user_notifications_event_recipient", "UNIQUE");
         assertConstraint(jdbc, "fk_notification_events_actor", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_user_notifications_recipient", "FOREIGN KEY");
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_schema = DATABASE() AND table_name = 'departments'
+                """));
+        assertEquals(2, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name IN ('user_accounts', 'topics')
+                  AND column_name = 'department_id'
+                """));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'topics'
+                  AND column_name = 'department_id' AND is_nullable = 'NO'
+                """));
+        assertEquals(0, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'councils'
+                  AND column_name = 'department_id'
+                """));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM roles"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM user_accounts"),
                 "Flyway must not enable the optional demo seed");
@@ -122,10 +153,7 @@ class SchemaSeedMigrationIT {
         fixture.seeder().run(new DefaultApplicationArguments(new String[0]));
 
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM faculties"));
-        assertEquals(0, count(jdbc, """
-                SELECT COUNT(*) FROM information_schema.tables
-                WHERE table_schema = DATABASE() AND table_name = 'departments'
-                """));
+        assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM departments"));
         assertEquals(12, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(7, count(jdbc, "SELECT COUNT(*) FROM student_profiles"));
         assertEquals(7, count(jdbc, """
@@ -134,6 +162,10 @@ class SchemaSeedMigrationIT {
                 """));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(6, count(jdbc, "SELECT COUNT(*) FROM topics"));
+        assertEquals(0, count(jdbc,
+                "SELECT COUNT(*) FROM topics WHERE department_id IS NULL"));
+        assertEquals(8, count(jdbc,
+                "SELECT COUNT(*) FROM user_accounts WHERE department_id IS NULL"));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM student_groups"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(9, count(jdbc, "SELECT COUNT(*) FROM registration_members"));
@@ -224,7 +256,7 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void v6WithExistingFixtureUpgradesThroughV12WithoutLosingHistory() {
+    void v6WithExistingFixtureUpgradesThroughV16WithoutLosingHistory() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV6 = Flyway.configure()
                 .dataSource(database.dataSource())
@@ -235,7 +267,7 @@ class SchemaSeedMigrationIT {
         throughV6.clean();
         throughV6.migrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
-        demoFixture(jdbc).seeder().run(new DefaultApplicationArguments(new String[0]));
+        seedLegacyV6Fixture(jdbc);
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(0, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
@@ -254,14 +286,18 @@ class SchemaSeedMigrationIT {
         jdbc.update("DELETE FROM group_memberships WHERE group_id = ?", historicalGroupId);
         Map<String, Integer> oldChecksums = appliedChecksums(jdbc);
 
-        Flyway allVersions = flyway(database);
-        allVersions.migrate();
-        assertDoesNotThrow(allVersions::validate);
+        Flyway throughV16 = Flyway.configure()
+                .dataSource(database.dataSource())
+                .locations(MIGRATION_LOCATION)
+                .target(MigrationVersion.fromVersion("16"))
+                .load();
+        throughV16.migrate();
+        assertDoesNotThrow(throughV16::validate);
         assertEquals(oldChecksums, appliedChecksums(jdbc).entrySet().stream()
                 .filter(entry -> Integer.parseInt(entry.getKey()) <= 6)
                 .collect(java.util.stream.Collectors.toMap(
                         Map.Entry::getKey, Map.Entry::getValue)));
-        assertEquals(14, count(jdbc,
+        assertEquals(16, count(jdbc,
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1"));
         assertEquals(3, count(jdbc, "SELECT COUNT(*) FROM registrations"));
         assertEquals(7, count(jdbc, "SELECT COUNT(*) FROM registration_members"));
@@ -280,7 +316,102 @@ class SchemaSeedMigrationIT {
                     HAVING SUM(leader_at_submission) <> 1
                 ) invalid_leader
                 """));
-        assertEquals(0, allVersions.migrate().migrationsExecuted);
+        assertEquals(0, throughV16.migrate().migrationsExecuted);
+    }
+
+    private static void seedLegacyV6Fixture(JdbcTemplate jdbc) {
+        jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa fixture V6')");
+        long facultyId = requiredId(jdbc,
+                "SELECT id FROM faculties WHERE name = 'Khoa fixture V6'");
+        jdbc.update("INSERT INTO departments(name, faculty_id) VALUES ('Bộ môn fixture V6', ?)",
+                facultyId);
+        long departmentId = requiredId(jdbc,
+                "SELECT id FROM departments WHERE name = 'Bộ môn fixture V6'");
+
+        jdbc.update("""
+                INSERT INTO user_accounts(full_name, username, password_hash, department_id)
+                VALUES
+                  ('Giảng viên fixture', 'legacy.lecturer', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 1', 'legacy.student1', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 2', 'legacy.student2', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 3', 'legacy.student3', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 4', 'legacy.student4', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 5', 'legacy.student5', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 6', 'legacy.student6', 'NOT_A_LOGIN_HASH', ?),
+                  ('Sinh viên fixture 7', 'legacy.student7', 'NOT_A_LOGIN_HASH', ?)
+                """, departmentId, departmentId, departmentId, departmentId,
+                departmentId, departmentId, departmentId, departmentId);
+        long lecturerId = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.lecturer'");
+        long student1 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student1'");
+        long student2 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student2'");
+        long student3 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student3'");
+        long student4 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student4'");
+        long student5 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student5'");
+        long student6 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student6'");
+        long student7 = requiredId(jdbc,
+                "SELECT id FROM user_accounts WHERE username = 'legacy.student7'");
+
+        jdbc.update("""
+                INSERT INTO registration_periods(
+                    faculty_id, name, topic_type,
+                    lecturer_start, lecturer_end, student_start, student_end)
+                VALUES
+                  (?, 'Đợt fixture V6 A', 'COURSE',
+                      '2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04'),
+                  (?, 'Đợt fixture V6 B', 'COURSE',
+                      '2026-02-01', '2026-02-02', '2026-02-03', '2026-02-04')
+                """, facultyId, facultyId);
+        long periodA = requiredId(jdbc,
+                "SELECT id FROM registration_periods WHERE name = 'Đợt fixture V6 A'");
+        long periodB = requiredId(jdbc,
+                "SELECT id FROM registration_periods WHERE name = 'Đợt fixture V6 B'");
+        jdbc.update("""
+                INSERT INTO topics(period_id, department_id, author_id)
+                VALUES (?, ?, ?), (?, ?, ?)
+                """, periodA, departmentId, lecturerId,
+                periodB, departmentId, lecturerId);
+        long topicA = requiredId(jdbc,
+                "SELECT id FROM topics WHERE period_id = ?", periodA);
+        long topicB = requiredId(jdbc,
+                "SELECT id FROM topics WHERE period_id = ?", periodB);
+
+        jdbc.update("""
+                INSERT INTO student_groups(period_id, leader_student_id)
+                VALUES (?, ?), (?, ?), (?, ?)
+                """, periodA, student1, periodA, student4, periodB, student6);
+        long groupA1 = requiredId(jdbc,
+                "SELECT id FROM student_groups WHERE period_id = ? AND leader_student_id = ?",
+                periodA, student1);
+        long groupA2 = requiredId(jdbc,
+                "SELECT id FROM student_groups WHERE period_id = ? AND leader_student_id = ?",
+                periodA, student4);
+        long groupB = requiredId(jdbc,
+                "SELECT id FROM student_groups WHERE period_id = ? AND leader_student_id = ?",
+                periodB, student6);
+        jdbc.update("""
+                INSERT INTO group_memberships(group_id, period_id, student_id, slot)
+                VALUES
+                  (?, ?, ?, 2), (?, ?, ?, 3),
+                  (?, ?, ?, 2), (?, ?, ?, 3),
+                  (?, ?, ?, 2), (?, ?, ?, 3)
+                """,
+                groupA1, periodA, student2, groupA1, periodA, student3,
+                groupA2, periodA, student5, groupA2, periodA, student7,
+                groupB, periodB, student1, groupB, periodB, student2);
+        jdbc.update("""
+                INSERT INTO registrations(period_id, group_id, topic_id, status)
+                VALUES (?, ?, ?, 'PENDING'), (?, ?, ?, 'PENDING'), (?, ?, ?, 'ACCEPTED')
+                """,
+                periodA, groupA1, topicA,
+                periodA, groupA2, topicA,
+                periodB, groupB, topicB);
     }
 
     private static Flyway flyway(MySqlTestSupport database) {
@@ -316,6 +447,14 @@ class SchemaSeedMigrationIT {
 
     private static int count(JdbcTemplate jdbc, String sql) {
         return jdbc.queryForObject(sql, Integer.class);
+    }
+
+    private static long requiredId(JdbcTemplate jdbc, String sql, Object... arguments) {
+        Long value = jdbc.queryForObject(sql, Long.class, arguments);
+        if (value == null) {
+            throw new IllegalStateException("Required migration fixture value is missing");
+        }
+        return value;
     }
 
     private static int constraintCount(JdbcTemplate jdbc, String type) {

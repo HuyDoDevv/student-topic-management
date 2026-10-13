@@ -415,10 +415,16 @@ public class LocalDemoSeeder implements ApplicationRunner {
         if (existing != null) {
             return existing;
         }
+        boolean staff = java.util.Arrays.stream(roles)
+                .anyMatch(role -> role.equals("LECTURER") || role.equals("DEAN"));
+        Long departmentId = staff && facultyId != null
+                ? optionalId("SELECT id FROM departments WHERE faculty_id = ? "
+                        + "AND name = 'Công nghệ phần mềm' ORDER BY id LIMIT 1", facultyId)
+                : null;
         long accountId = insert(
                 "INSERT INTO user_accounts(full_name, enabled, username, password_hash, "
-                        + "faculty_id) VALUES (?, TRUE, ?, ?, ?)",
-                fullName, username, passwordHash, facultyId);
+                        + "faculty_id, department_id) VALUES (?, TRUE, ?, ?, ?, ?)",
+                fullName, username, passwordHash, facultyId, departmentId);
         for (String role : roles) {
             jdbc.update(
                     "INSERT INTO user_roles(user_id, role_code) VALUES (?, ?)",
@@ -501,13 +507,19 @@ public class LocalDemoSeeder implements ApplicationRunner {
         if (existing != null) {
             return existing;
         }
+        Long departmentId = optionalId(
+                "SELECT department_id FROM user_accounts WHERE id = ?", authorId);
+        if (departmentId == null) {
+            throw new IllegalStateException("Demo Topic author has no Department: " + authorId);
+        }
         return insert(
                 "INSERT INTO topics("
-                        + "period_id, author_id, title, description, objectives, "
+                        + "period_id, author_id, department_id, title, description, objectives, "
                         + "student_requirements, expected_results, status, version) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                 periodId,
                 authorId,
+                departmentId,
                 title,
                 "Mô tả tổng hợp phục vụ kiểm tra giao diện và luồng nghiệp vụ local.",
                 "Minh họa đầy đủ quy trình quản lý đề tài của hệ thống.",

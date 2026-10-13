@@ -81,11 +81,11 @@
 
         <div class="mt-4">
           <div class="fw-bold">GVHD phối hợp <span class="text-secondary fw-normal">(không bắt buộc)</span></div>
-          <p class="form-hint mb-3">Có thể chọn thêm tối đa một giảng viên đang hoạt động cùng khoa.</p>
+          <p class="form-hint mb-3">Có thể chọn thêm tối đa một giảng viên đang hoạt động cùng Bộ môn.</p>
         </div>
 
         <div class="alert alert-info mb-0" th:if="${coSupervisors.isEmpty()}">
-          Khoa hiện không có giảng viên khác phù hợp để làm GVHD phối hợp.
+          Bộ môn hiện không có giảng viên khác phù hợp để làm GVHD phối hợp.
         </div>
 
         <div class="supervisor-grid" th:if="${!coSupervisors.isEmpty()}"

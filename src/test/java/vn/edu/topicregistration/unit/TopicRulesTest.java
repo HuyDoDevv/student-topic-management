@@ -21,6 +21,7 @@ import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 class TopicRulesTest {
     private static final long AUTHOR_ID = 11L;
     private static final long FACULTY_ID = 7L;
+    private static final long DEPARTMENT_ID = 3L;
     private static final Instant START = Instant.parse("2026-09-12T00:00:00Z");
     private static final Instant END = Instant.parse("2026-09-12T02:00:00Z");
     private static final Instant MIDDLE = Instant.parse("2026-09-12T01:00:00Z");
@@ -43,7 +44,7 @@ class TopicRulesTest {
         assertFailure(Failure.VALIDATION_FAILED,
                 () -> submit(completeDraft(List.of()), ownDraft(), MIDDLE));
         assertFailure(Failure.VALIDATION_FAILED,
-                () -> submit(completeDraft(List.of(primary(), coSupervisor(), candidate(13, 7, true, true))),
+                () -> submit(completeDraft(List.of(primary(), coSupervisor(), candidate(13, 7, 3L, true, true))),
                         ownDraft(), MIDDLE));
     }
 
@@ -56,16 +57,34 @@ class TopicRulesTest {
     }
 
     @Test
-    void coSupervisorMustBeEnabledLecturerInAuthorsFaculty() {
+    void coSupervisorMustBeEnabledLecturerInTopicsDepartmentAndFaculty() {
         assertFailure(Failure.VALIDATION_FAILED,
-                () -> submit(completeDraft(List.of(primary(), candidate(12, 8, true, true))),
+                () -> submit(completeDraft(List.of(primary(), candidate(12, 8, 3L, true, true))),
                         ownDraft(), MIDDLE));
         assertFailure(Failure.VALIDATION_FAILED,
-                () -> submit(completeDraft(List.of(primary(), candidate(12, 7, false, true))),
+                () -> submit(completeDraft(List.of(primary(), candidate(12, 7, 4L, true, true))),
                         ownDraft(), MIDDLE));
         assertFailure(Failure.VALIDATION_FAILED,
-                () -> submit(completeDraft(List.of(primary(), candidate(12, 7, true, false))),
+                () -> submit(completeDraft(List.of(primary(), candidate(12, 7, null, true, true))),
                         ownDraft(), MIDDLE));
+        assertFailure(Failure.VALIDATION_FAILED,
+                () -> submit(completeDraft(List.of(primary(), candidate(12, 7, 3L, false, true))),
+                        ownDraft(), MIDDLE));
+        assertFailure(Failure.VALIDATION_FAILED,
+                () -> submit(completeDraft(List.of(primary(), candidate(12, 7, 3L, true, false))),
+                        ownDraft(), MIDDLE));
+    }
+
+    @Test
+    void primaryMustAlsoBelongToTopicsDepartmentAndTopicNeedsDepartment() {
+        assertFailure(Failure.VALIDATION_FAILED,
+                () -> TopicRules.validateForSave(
+                        completeDraft(List.of(candidate(AUTHOR_ID, FACULTY_ID, 4L, true, true))),
+                        ownDraft()));
+        TopicAccess noDepartment = new TopicAccess(AUTHOR_ID, AUTHOR_ID,
+                FACULTY_ID, FACULTY_ID, null, TopicStatus.DRAFT);
+        assertFailure(Failure.VALIDATION_FAILED,
+                () -> TopicRules.validateForSave(completeDraft(List.of(primary())), noDepartment));
     }
 
     @Test
@@ -101,9 +120,9 @@ class TopicRulesTest {
     @Test
     void onlyAuthorFromTopicsFacultyCanSaveOrSubmit() {
         TopicAccess otherLecturer = new TopicAccess(12, AUTHOR_ID, FACULTY_ID,
-                FACULTY_ID, TopicStatus.DRAFT);
+                FACULTY_ID, DEPARTMENT_ID, TopicStatus.DRAFT);
         TopicAccess otherFaculty = new TopicAccess(AUTHOR_ID, AUTHOR_ID, 8,
-                FACULTY_ID, TopicStatus.DRAFT);
+                FACULTY_ID, DEPARTMENT_ID, TopicStatus.DRAFT);
 
         for (TopicAccess denied : List.of(otherLecturer, otherFaculty)) {
             assertFailure(Failure.ACCESS_DENIED,
@@ -118,7 +137,7 @@ class TopicRulesTest {
         for (TopicStatus status : List.of(
                 TopicStatus.PENDING_APPROVAL, TopicStatus.APPROVED, TopicStatus.PUBLISHED)) {
             TopicAccess access = new TopicAccess(AUTHOR_ID, AUTHOR_ID, FACULTY_ID,
-                    FACULTY_ID, status);
+                    FACULTY_ID, DEPARTMENT_ID, status);
             assertFailure(Failure.INVALID_STATE,
                     () -> TopicRules.validateForSave(completeDraft(List.of(primary())), access));
             assertFailure(Failure.INVALID_STATE,
@@ -146,7 +165,7 @@ class TopicRulesTest {
 
     private static TopicAccess ownDraft() {
         return new TopicAccess(AUTHOR_ID, AUTHOR_ID, FACULTY_ID,
-                FACULTY_ID, TopicStatus.DRAFT);
+                FACULTY_ID, DEPARTMENT_ID, TopicStatus.DRAFT);
     }
 
     private static TopicDraft completeDraft(List<SupervisorCandidate> supervisors) {
@@ -161,15 +180,15 @@ class TopicRulesTest {
     }
 
     private static SupervisorCandidate primary() {
-        return candidate(AUTHOR_ID, FACULTY_ID, true, true);
+        return candidate(AUTHOR_ID, FACULTY_ID, DEPARTMENT_ID, true, true);
     }
 
     private static SupervisorCandidate coSupervisor() {
-        return candidate(12, FACULTY_ID, true, true);
+        return candidate(12, FACULTY_ID, DEPARTMENT_ID, true, true);
     }
 
     private static SupervisorCandidate candidate(
-            long accountId, long facultyId, boolean enabled, boolean lecturer) {
-        return new SupervisorCandidate(accountId, facultyId, enabled, lecturer);
+            long accountId, long facultyId, Long departmentId, boolean enabled, boolean lecturer) {
+        return new SupervisorCandidate(accountId, facultyId, departmentId, enabled, lecturer);
     }
 }

@@ -1,15 +1,15 @@
-# Luồng dữ liệu — schema V12 gồm 24 bảng
+# Luồng dữ liệu — schema V18 gồm 25 bảng nghiệp vụ
 
 Tài liệu này đối chiếu toàn bộ migration
 `src/main/resources/db/migration/V1__full_system.sql` đến
-`V12__implement_in_app_notifications.sql`. Flyway là nguồn sự thật của cấu trúc; sơ đồ quan hệ
+`V18__enforce_topic_department.java`. Flyway là nguồn sự thật của cấu trúc; sơ đồ quan hệ
 được duy trì riêng tại [class-diagram.mmd](class-diagram.mmd).
 
 ## Danh mục và mục đích dữ liệu
 
 | Nhóm | Bảng | Vai trò |
 |---|---|---|
-| Tổ chức và tài khoản | `faculties`, `departments`, `roles`, `user_accounts`, `user_roles` | Khoa, bộ môn, danh tính, trạng thái tài khoản và role được backend kiểm tra. |
+| Tổ chức và tài khoản | `faculties`, `departments`, `roles`, `user_accounts`, `user_roles`, `student_profiles` | Khoa, Bộ môn, danh tính, hồ sơ sinh viên, trạng thái tài khoản và role được backend kiểm tra. |
 | Đợt và đề tài | `registration_periods`, `topics`, `topic_supervisors` | Mốc đăng ký, nội dung/trạng thái đề tài, tác giả và giảng viên hướng dẫn. |
 | Nhóm sinh viên | `student_groups`, `group_memberships`, `group_invitations` | Nhóm hiện tại, thành viên hiện tại và lịch sử lời mời/phản hồi. |
 | Đăng ký | `registrations`, `registration_members` | Một lần nhóm đăng ký và snapshot bất biến từng sinh viên tại thời điểm nộp. |
@@ -17,6 +17,10 @@ Tài liệu này đối chiếu toàn bộ migration
 | Thông báo | `announcements`, `notification_events`, `user_notifications` | Bản nháp/công bố chính thức, sự kiện bất biến và bản nhận/read-state riêng từng tài khoản. |
 
 ## Luồng nghiệp vụ chính
+
+LECTURER/DEAN thuộc một Faculty và được gán Department trong Faculty đó. Topic mới lấy
+Department từ tác giả; GVHD phối hợp phải cùng Department. DEAN tiếp tục duyệt toàn Faculty.
+Student, đợt đăng ký và Council vẫn theo Faculty; Council không có `department_id`.
 
 ```mermaid
 flowchart TD
@@ -103,5 +107,7 @@ Ràng buộc DB bảo vệ FK, unique, checks và một số invariants bằng t
 role/scope, mốc thời gian, quyền nhóm, xung đột GVHD–người chấm, trạng thái transition, CSRF và
 quyền tài nguyên đích. Không dựa vào việc ẩn nút ở giao diện.
 
-Các migration V1–V12 là additive theo lịch sử đã commit. Không sửa migration đã chạy trên database
-chia sẻ; thay đổi schema tiếp theo phải dùng migration V13 trở lên.
+V13 hợp nhất dữ liệu về Faculty chuẩn; V16 mở rộng schema Department nullable, V17 chỉ
+backfill dữ liệu thiếu về `Công nghệ phần mềm` thuộc `Khoa Công nghệ Thông tin`, V18 kiểm tra
+nhất quán rồi siết `topics.department_id NOT NULL`. Không sửa migration đã chạy trên database
+chia sẻ; thay đổi schema tiếp theo phải dùng migration V19 trở lên.

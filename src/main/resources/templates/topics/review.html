@@ -25,6 +25,20 @@
     </div>
 
     <div class="card review-card">
+      <form class="card-body border-bottom" method="get"
+            th:action="@{/periods/{id}/topics/review(id=${period.id})}">
+        <label class="form-label" for="departmentId">Lọc theo Bộ môn</label>
+        <div class="d-flex flex-wrap gap-2">
+          <select class="form-select flex-grow-1" id="departmentId" name="departmentId">
+            <option value="">Tất cả Bộ môn trong Khoa</option>
+            <option th:each="department : ${departmentOptions}" th:value="${department.id}"
+                    th:selected="${selectedDepartmentId == department.id}"
+                    th:text="${department.name}">Công nghệ phần mềm</option>
+          </select>
+          <button class="btn btn-outline-primary" type="submit">Áp dụng</button>
+        </div>
+        <p class="small text-secondary mt-2 mb-0">Bộ lọc chỉ thay đổi danh sách đang xem; công bố vẫn áp dụng cho toàn đợt.</p>
+      </form>
       <div class="card-header review-card-header">
         <div>
           <div class="subheader mb-1">ĐỀ XUẤT CỦA GIẢNG VIÊN</div>
@@ -58,6 +72,8 @@
                 <span th:text="${topic.author}">Giảng viên</span>
                 <span aria-hidden="true"> · </span>
                 <span th:text="${topic.faculty}">Khoa</span>
+                <span aria-hidden="true"> · </span>
+                <span th:text="${topic.department != null ? topic.department : 'Chưa gán Bộ môn'}">Bộ môn</span>
               </p>
             </div>
             <div class="review-topic-actions" th:if="${topic.pending}">
@@ -89,7 +105,7 @@
 
       <div class="card-body py-5 text-center" th:if="${#lists.isEmpty(reviewTopics)}">
         <div class="empty-icon" aria-hidden="true">▤</div>
-        <h3 class="h3 mb-2">Chưa có đề tài được gửi duyệt</h3>
+        <h3 class="h3 mb-2" th:text="${selectedDepartmentId != null ? 'Không có đề tài trong Bộ môn đã chọn' : 'Chưa có đề tài được gửi duyệt'}">Chưa có đề tài được gửi duyệt</h3>
         <p class="text-secondary mb-0">
           Đề tài sẽ xuất hiện tại đây sau khi giảng viên hoàn tất và gửi đề xuất.
         </p>

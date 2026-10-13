@@ -23,15 +23,16 @@ DELIMITER ;
 START TRANSACTION;
 
 INSERT INTO faculties(id, name) VALUES (-1, 'Test faculty');
-INSERT INTO user_accounts(id, username, password_hash, faculty_id) VALUES
-    (-1, 'schema-check-1', 'NOT_A_LOGIN_HASH', -1),
-    (-2, 'schema-check-2', 'NOT_A_LOGIN_HASH', -1),
-    (-3, 'schema-check-3', 'NOT_A_LOGIN_HASH', -1),
-    (-4, 'schema-check-4', 'NOT_A_LOGIN_HASH', -1),
-    (-5, 'schema-check-5', 'NOT_A_LOGIN_HASH', -1),
-    (-6, 'schema-check-6', 'NOT_A_LOGIN_HASH', -1),
-    (-7, 'schema-check-7', 'NOT_A_LOGIN_HASH', -1),
-    (-8, 'schema-check-8', 'NOT_A_LOGIN_HASH', -1);
+INSERT INTO departments(id, faculty_id, name) VALUES (-1, -1, 'Test department');
+INSERT INTO user_accounts(id, username, password_hash, faculty_id, department_id) VALUES
+    (-1, 'schema-check-1', 'NOT_A_LOGIN_HASH', -1, -1),
+    (-2, 'schema-check-2', 'NOT_A_LOGIN_HASH', -1, -1),
+    (-3, 'schema-check-3', 'NOT_A_LOGIN_HASH', -1, NULL),
+    (-4, 'schema-check-4', 'NOT_A_LOGIN_HASH', -1, NULL),
+    (-5, 'schema-check-5', 'NOT_A_LOGIN_HASH', -1, NULL),
+    (-6, 'schema-check-6', 'NOT_A_LOGIN_HASH', -1, NULL),
+    (-7, 'schema-check-7', 'NOT_A_LOGIN_HASH', -1, NULL),
+    (-8, 'schema-check-8', 'NOT_A_LOGIN_HASH', -1, NULL);
 INSERT INTO user_roles(user_id, role_code) VALUES
     (-1, 'LECTURER'), (-1, 'ADMIN'), (-2, 'LECTURER'), (-3, 'STUDENT');
 UPDATE user_accounts
@@ -53,8 +54,11 @@ INSERT INTO registration_periods(
     (-2, -1, 'Other period', 'COURSE', '2026-01-01 00:00:00', '2026-02-01 00:00:00',
      '2026-02-02 00:00:00', '2026-03-01 00:00:00');
 
-INSERT INTO topics(id, period_id, author_id) VALUES
-    (-1, -1, -1), (-2, -1, -1), (-3, -2, -1);
+INSERT INTO topics(id, period_id, author_id, department_id) VALUES
+    (-1, -1, -1, -1), (-2, -1, -1, -1), (-3, -2, -1, -1);
+CALL expect_failure('INSERT INTO topics(period_id,author_id,department_id) VALUES (-1,-1,NULL)');
+CALL expect_failure('UPDATE topics SET department_id=NULL WHERE id=-1');
+CALL expect_failure('UPDATE topics SET department_id=-999 WHERE id=-1');
 INSERT INTO topic_supervisors(topic_id, lecturer_id, slot) VALUES
     (-1, -1, 1), (-1, -2, 2);
 

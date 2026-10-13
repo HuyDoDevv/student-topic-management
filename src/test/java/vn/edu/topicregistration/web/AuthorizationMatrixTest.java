@@ -317,13 +317,21 @@ class AuthorizationMatrixTest {
     }
 
     private long topic(long targetPeriodId, long authorId) {
+        long facultyId = jdbc.queryForObject(
+                "SELECT faculty_id FROM registration_periods WHERE id = ?",
+                Long.class, targetPeriodId);
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+                facultyId, "Bộ môn phân quyền " + targetPeriodId);
+        long departmentId = jdbc.queryForObject(
+                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
+                Long.class, facultyId, "Bộ môn phân quyền " + targetPeriodId);
         jdbc.update("""
                 INSERT INTO topics(
-                    period_id, author_id, title, description, objectives,
+                    period_id, author_id, department_id, title, description, objectives,
                     student_requirements, expected_results, status, version)
-                VALUES (?, ?, 'Đề tài phân quyền', 'Mô tả', 'Mục tiêu',
+                VALUES (?, ?, ?, 'Đề tài phân quyền', 'Mô tả', 'Mục tiêu',
                         'Yêu cầu', 'Kết quả', 'PUBLISHED', 0)
-                """, targetPeriodId, authorId);
+                """, targetPeriodId, authorId, departmentId);
         return jdbc.queryForObject("SELECT MAX(id) FROM topics", Long.class);
     }
 

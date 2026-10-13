@@ -64,7 +64,7 @@ class TopicReviewRulesTest {
     void rejectedDraftMayBeResubmittedByAuthorAtBothWindowBoundaries() {
         TopicStatus rejected = TopicReviewRules.review(
                 TopicStatus.PENDING_APPROVAL, ReviewDecision.REJECT);
-        TopicAccess author = new TopicAccess(10, 10, 20, 20, rejected);
+        TopicAccess author = new TopicAccess(10, 10, 20, 20, 30L, rejected);
 
         assertEquals(draft(), TopicRules.validateForSubmit(
                 draft(), author, LECTURER_START, LECTURER_START, LECTURER_END));
@@ -76,14 +76,14 @@ class TopicReviewRulesTest {
     void rejectedDraftCannotBeResubmittedOutsideLecturerWindowOrByAnotherLecturer() {
         TopicStatus rejected = TopicReviewRules.review(
                 TopicStatus.PENDING_APPROVAL, ReviewDecision.REJECT);
-        TopicAccess author = new TopicAccess(10, 10, 20, 20, rejected);
+        TopicAccess author = new TopicAccess(10, 10, 20, 20, 30L, rejected);
         assertFailure(Failure.WINDOW_CLOSED, () -> TopicRules.validateForSubmit(
                 draft(), author, LECTURER_START.minusNanos(1),
                 LECTURER_START, LECTURER_END));
         assertFailure(Failure.WINDOW_CLOSED, () -> TopicRules.validateForSubmit(
                 draft(), author, LECTURER_END.plusNanos(1),
                 LECTURER_START, LECTURER_END));
-        TopicAccess anotherLecturer = new TopicAccess(11, 10, 20, 20, rejected);
+        TopicAccess anotherLecturer = new TopicAccess(11, 10, 20, 20, 30L, rejected);
         assertFailure(Failure.ACCESS_DENIED, () -> TopicRules.validateForSubmit(
                 draft(), anotherLecturer, LECTURER_START,
                 LECTURER_START, LECTURER_END));
@@ -92,7 +92,7 @@ class TopicReviewRulesTest {
     @Test
     void approvedOrPublishedTopicCannotBeResubmittedThroughDraftFlow() {
         for (TopicStatus status : List.of(TopicStatus.APPROVED, TopicStatus.PUBLISHED)) {
-            TopicAccess author = new TopicAccess(10, 10, 20, 20, status);
+            TopicAccess author = new TopicAccess(10, 10, 20, 20, 30L, status);
             assertFailure(Failure.INVALID_STATE, () -> TopicRules.validateForSubmit(
                     draft(), author, LECTURER_START,
                     LECTURER_START, LECTURER_END));
@@ -102,7 +102,7 @@ class TopicReviewRulesTest {
     private static TopicDraft draft() {
         return new TopicDraft(
                 "Tên đề tài", "Mô tả", "Mục tiêu", "Yêu cầu sinh viên", "Kết quả dự kiến",
-                List.of(new SupervisorCandidate(10, 20, true, true)));
+                List.of(new SupervisorCandidate(10, 20, 30L, true, true)));
     }
 
     private static void assertFailure(Failure expected, org.junit.jupiter.api.function.Executable action) {

@@ -16,6 +16,7 @@ class roles {
 }
 class user_accounts {
   +bigint id PK
+  +bigint faculty_id FK_nullable
   +varchar full_name nullable
   +boolean enabled
   +varchar username UK
@@ -132,7 +133,6 @@ class project_reports {
 class councils {
   +bigint id PK
   +bigint period_id FK
-  +bigint department_id FK
   +varchar name
   +bigint chair_id FK
   +bigint secretary_id FK
@@ -256,7 +256,6 @@ user_accounts "1" <-- "0..*" reviewer_assignments : lecturer_id
 registrations "1" <-- "0..*" project_reports : registration_id_status
 user_accounts "1" <-- "0..*" project_reports : submitted_by
 registration_periods "1" <-- "0..*" councils : period_id
-departments "1" <-- "0..*" councils : department_id
 user_accounts "1" <-- "0..*" councils : chair_id
 user_accounts "1" <-- "0..*" councils : secretary_id
 councils "1" <-- "1..*" council_members : council_id

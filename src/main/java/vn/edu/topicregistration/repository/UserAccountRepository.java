@@ -53,6 +53,19 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             @Param("facultyId") long facultyId,
             @Param("role") RoleCode role);
 
+    @EntityGraph(attributePaths = {"faculty", "department", "roles", "roles.role"})
+    @Query("select distinct account from UserAccountEntity account "
+            + "join account.roles assignment "
+            + "where account.enabled = true "
+            + "and account.faculty.id = :facultyId "
+            + "and account.department.id = :departmentId "
+            + "and assignment.role.code = :role "
+            + "order by account.fullName, account.username")
+    List<UserAccountEntity> findEnabledByFacultyAndDepartmentAndRole(
+            @Param("facultyId") long facultyId,
+            @Param("departmentId") long departmentId,
+            @Param("role") RoleCode role);
+
     @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account "
             + "join account.roles assignment "

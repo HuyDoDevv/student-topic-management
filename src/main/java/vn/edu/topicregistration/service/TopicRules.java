@@ -16,7 +16,8 @@ public final class TopicRules {
         validateSupervisors(
                 normalized.supervisors(),
                 access.authorId(),
-                access.topicFacultyId());
+                access.topicFacultyId(),
+                access.topicDepartmentId());
         return normalized;
     }
 
@@ -69,8 +70,10 @@ public final class TopicRules {
     private static void validateSupervisors(
             List<SupervisorCandidate> supervisors,
             long authorId,
-            long topicFacultyId) {
-        if (supervisors.isEmpty()
+            long topicFacultyId,
+            Long topicDepartmentId) {
+        if (topicDepartmentId == null
+                || supervisors.isEmpty()
                 || supervisors.size() > 2
                 || supervisors.getFirst().accountId() != authorId) {
             throw failure(Failure.VALIDATION_FAILED);
@@ -81,7 +84,8 @@ public final class TopicRules {
                     || !uniqueIds.add(supervisor.accountId())
                     || !supervisor.enabled()
                     || !supervisor.lecturer()
-                    || supervisor.facultyId() != topicFacultyId) {
+                    || supervisor.facultyId() != topicFacultyId
+                    || !Objects.equals(supervisor.departmentId(), topicDepartmentId)) {
                 throw failure(Failure.VALIDATION_FAILED);
             }
         }
@@ -118,6 +122,7 @@ public final class TopicRules {
             long authorId,
             long actorFacultyId,
             long topicFacultyId,
+            Long topicDepartmentId,
             TopicStatus status) {
         public TopicAccess {
             Objects.requireNonNull(status, "status");
@@ -127,6 +132,7 @@ public final class TopicRules {
     public record SupervisorCandidate(
             long accountId,
             long facultyId,
+            Long departmentId,
             boolean enabled,
             boolean lecturer) {
     }

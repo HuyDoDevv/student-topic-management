@@ -31,6 +31,10 @@ public class TopicEntity {
     @JoinColumn(name = "period_id", nullable = false)
     private RegistrationPeriodEntity period;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private DepartmentEntity department;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)
     private UserAccountEntity author;
@@ -77,8 +81,16 @@ public class TopicEntity {
     public TopicEntity(
             RegistrationPeriodEntity period,
             UserAccountEntity author) {
+        this(period, author, null);
+    }
+
+    public TopicEntity(
+            RegistrationPeriodEntity period,
+            UserAccountEntity author,
+            DepartmentEntity department) {
         this.period = period;
         this.author = author;
+        this.department = department;
         this.status = "DRAFT";
     }
 
@@ -118,6 +130,10 @@ public class TopicEntity {
 
     public RegistrationPeriodEntity getPeriod() {
         return period;
+    }
+
+    public DepartmentEntity getDepartment() {
+        return department;
     }
 
     public UserAccountEntity getAuthor() {
