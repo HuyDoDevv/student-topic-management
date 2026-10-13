@@ -317,6 +317,7 @@ public class GroupService {
                 .map(period -> new GroupPeriodView(
                         period.getId(),
                         period.getName(),
+                        periodDepartmentName(period),
                         period.getStudentStart(),
                         period.getStudentEnd(),
                         StudentPeriodPhase.at(
@@ -374,6 +375,7 @@ public class GroupService {
         GroupPeriodView periodView = new GroupPeriodView(
                 period.getId(),
                 period.getName(),
+                periodDepartmentName(period),
                 period.getStudentStart(),
                 period.getStudentEnd(),
                 StudentPeriodPhase.at(
@@ -696,9 +698,16 @@ public class GroupService {
     private record InvitationRoute(long periodId, long groupId) {
     }
 
+    private static String periodDepartmentName(RegistrationPeriodEntity period) {
+        return period.getDepartment() == null
+                ? "Chưa xác định Bộ môn"
+                : period.getDepartment().getName();
+    }
+
     public record GroupPeriodView(
             long id,
             String name,
+            String departmentName,
             Instant studentStart,
             Instant studentEnd,
             StudentPeriodPhase phase,

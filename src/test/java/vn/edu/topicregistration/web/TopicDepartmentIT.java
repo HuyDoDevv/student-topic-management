@@ -50,7 +50,7 @@ import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
 
-/** T005–T006: topic and supervisor Department scope with Faculty-wide workflows. */
+/** Topic and supervisor Department scope with Faculty-wide student workflows. */
 @SpringBootTest
 @ActiveProfiles("local")
 @Import(TopicDepartmentIT.FixedClockConfiguration.class)
@@ -505,21 +505,99 @@ class TopicDepartmentIT {
     }
 
     @Test
-    void studentInFacultySeesPublishedTopicsFromBothDepartments() throws Exception {
+    void studentSeesDepartmentPeriodsInFacultyIncludingLegacyButNotAnotherFaculty()
+            throws Exception {
         FixtureSupport.IdentityFixture student = identity(
                 "topic-dept-student-leader", faculty, Set.of(RoleCode.STUDENT));
+        period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
+        period(faculty.facultyId(), null, "Đợt legacy");
+        period(otherFaculty.facultyId(), null, "Đợt Khoa khác");
+
+        mvc.perform(get("/groups").with(actor(student, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đợt phần mềm")))
+                .andExpect(content().string(containsString("Đợt hệ thống")))
+                .andExpect(content().string(containsString("Công nghệ phần mềm")))
+                .andExpect(content().string(containsString("Hệ thống thông tin")))
+                .andExpect(content().string(containsString("Chưa xác định Bộ môn")))
+                .andExpect(content().string(not(containsString("Đợt Khoa khác"))));
+    }
+
+    @Test
+    void studentSeesOnlyPublishedTopicsWithinEachDepartmentPeriod() throws Exception {
+        FixtureSupport.IdentityFixture student = identity(
+                "topic-dept-student-leader", faculty, Set.of(RoleCode.STUDENT));
+        long secondPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
         long first = pendingTopic(lecturer, departmentId, "Chọn đề tài phần mềm");
-        long second = pendingTopic(otherLecturer, otherDepartmentId, "Chọn đề tài hệ thống");
+        long second = pendingTopic(secondPeriodId, otherLecturer, otherDepartmentId,
+                "Chọn đề tài hệ thống");
+        pendingTopic(lecturer, departmentId, "Đề tài chưa công bố");
         jdbc.update("UPDATE topics SET status = 'PUBLISHED' WHERE id IN (?, ?)", first, second);
         jdbc.update("INSERT INTO student_groups(period_id, leader_student_id, version) VALUES (?, ?, 0)",
                 periodId, student.accountId());
-        long groupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
+        long firstGroupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
+        jdbc.update("INSERT INTO student_groups(period_id, leader_student_id, version) VALUES (?, ?, 0)",
+                secondPeriodId, student.accountId());
+        long secondGroupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
 
-        mvc.perform(get("/groups/{groupId}/registrations/new", groupId)
+        mvc.perform(get("/groups/{groupId}/registrations/new", firstGroupId)
                         .with(actor(student, "STUDENT")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Chọn đề tài phần mềm")))
-                .andExpect(content().string(containsString("Chọn đề tài hệ thống")));
+                .andExpect(content().string(not(containsString("Chọn đề tài hệ thống"))))
+                .andExpect(content().string(not(containsString("Đề tài chưa công bố"))));
+        mvc.perform(get("/groups/{groupId}/registrations/new", secondGroupId)
+                        .with(actor(student, "STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Chọn đề tài hệ thống")))
+                .andExpect(content().string(not(containsString("Chọn đề tài phần mềm"))));
+    }
+
+    @Test
+    void directRegistrationRejectsUnpublishedAndOtherPeriodTopics() throws Exception {
+        FixtureSupport.IdentityFixture leader = identity(
+                "topic-dept-submit-leader", faculty, Set.of(RoleCode.STUDENT));
+        FixtureSupport.IdentityFixture memberTwo = identity(
+                "topic-dept-submit-member-two", faculty, Set.of(RoleCode.STUDENT));
+        FixtureSupport.IdentityFixture memberThree = identity(
+                "topic-dept-submit-member-three", faculty, Set.of(RoleCode.STUDENT));
+        long secondPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
+        long unpublished = pendingTopic(lecturer, departmentId, "Chưa công bố trực tiếp");
+        long eligible = pendingTopic(lecturer, departmentId, "Đề tài hợp lệ");
+        long otherPeriodTopic = pendingTopic(secondPeriodId, otherLecturer,
+                otherDepartmentId, "Đề tài đợt khác");
+        jdbc.update("UPDATE topics SET status = 'PUBLISHED' WHERE id IN (?, ?)",
+                eligible, otherPeriodTopic);
+        jdbc.update("""
+                UPDATE registration_periods
+                SET lecturer_start = ?, lecturer_end = ?, student_start = ?, student_end = ?
+                WHERE id = ?
+                """, Timestamp.from(NOW.minusSeconds(14400)),
+                Timestamp.from(NOW.minusSeconds(10800)),
+                Timestamp.from(NOW.minusSeconds(3600)),
+                Timestamp.from(NOW.plusSeconds(3600)), periodId);
+        jdbc.update("INSERT INTO student_groups(period_id, leader_student_id, version) VALUES (?, ?, 0)",
+                periodId, leader.accountId());
+        long groupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
+        jdbc.update("INSERT INTO group_memberships(group_id, period_id, student_id, slot) VALUES (?, ?, ?, 2)",
+                groupId, periodId, memberTwo.accountId());
+        jdbc.update("INSERT INTO group_memberships(group_id, period_id, student_id, slot) VALUES (?, ?, ?, 3)",
+                groupId, periodId, memberThree.accountId());
+
+        for (long blockedTopic : new long[] {unpublished, otherPeriodTopic}) {
+            mvc.perform(post("/groups/{groupId}/registrations", groupId)
+                            .with(actor(leader, "STUDENT")).with(csrf())
+                            .param("topicId", Long.toString(blockedTopic))
+                            .param("version", "0"))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        assertEquals(0L, jdbc.queryForObject("SELECT COUNT(*) FROM registrations", Long.class));
+        mvc.perform(post("/groups/{groupId}/registrations", groupId)
+                        .with(actor(leader, "STUDENT")).with(csrf())
+                        .param("topicId", Long.toString(eligible))
+                        .param("version", "0"))
+                .andExpect(status().isSeeOther());
+        assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM registrations", Long.class));
     }
 
     private long latestTopicId() {
@@ -556,11 +634,16 @@ class TopicDepartmentIT {
     }
 
     private long pendingTopic(FixtureSupport.IdentityFixture author, long department, String title) {
+        return pendingTopic(periodId, author, department, title);
+    }
+
+    private long pendingTopic(long targetPeriodId, FixtureSupport.IdentityFixture author,
+            long department, String title) {
         jdbc.update("""
                 INSERT INTO topics(period_id, department_id, author_id, title, description,
                     objectives, student_requirements, expected_results, status, version)
                 VALUES (?, ?, ?, ?, 'Mô tả', 'Mục tiêu', 'Yêu cầu', 'Kết quả', 'PENDING_APPROVAL', 0)
-                """, periodId, department, author.accountId(), title);
+                """, targetPeriodId, department, author.accountId(), title);
         return jdbc.queryForObject("SELECT MAX(id) FROM topics", Long.class);
     }
 

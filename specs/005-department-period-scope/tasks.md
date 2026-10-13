@@ -39,7 +39,7 @@
 
 **Independent test**: SV cùng Khoa thấy đợt A/B nhưng chỉ đề tài công bố; đăng ký trực tiếp đề tài ẩn bị chặn.
 
-- [ ] T008 [US3] Giữ query SV theo Khoa và trạng thái công bố trong `src/main/java/vn/edu/topicregistration/service/PublishedTopicQueryService.java`, `src/main/java/vn/edu/topicregistration/service/RegistrationService.java`; hiển thị Bộ môn ở `src/main/resources/templates/topics/period-selection.html` và test tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`.
+- [X] T008 [US3] Giữ query SV theo Khoa và trạng thái công bố trong `src/main/java/vn/edu/topicregistration/service/PublishedTopicQueryService.java`, `src/main/java/vn/edu/topicregistration/service/RegistrationService.java`; hiển thị Bộ môn tại màn hình SV thực tế `/groups` qua `src/main/resources/templates/fragments/group-period-cards.html` và test tại `src/test/java/vn/edu/topicregistration/web/TopicDepartmentIT.java`. Đã verify trên MySQL 8.4 DB test riêng cổng 3307: `TopicDepartmentIT` 20/20, `./mvnw -q test` 317/317 (53 report), `git diff --check` đạt. SV thấy đợt hai Bộ môn trong cùng Khoa và tên Bộ môn/legacy, không thấy đợt Khoa khác; form chỉ có đề tài `PUBLISHED` cùng đợt, POST trực tiếp từ chối đề tài ẩn/khác đợt và chấp nhận đề tài hợp lệ. Hai service lọc/trạng thái đã đúng nên không sửa; DB ứng dụng không được sửa/migrate.
 
 ## Phase 6: US4 — Phân công chấm/hội đồng chéo Bộ môn có giới hạn (P2)
 
