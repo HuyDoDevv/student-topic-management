@@ -118,8 +118,8 @@ class TopicAuthorServiceTest {
         when(otherLecturer.getDepartment()).thenReturn(otherDepartment);
         when(otherLecturer.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
         when(otherLecturer.isEnabled()).thenReturn(true);
-        when(scenario.entityManager().find(UserAccountEntity.class, 8L))
-                .thenReturn(otherLecturer);
+        when(scenario.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(otherLecturer));
 
         ApplicationException failure = assertThrows(ApplicationException.class,
                 () -> scenario.service().createDraft(1L, commandWithCoSupervisor(8L)));
@@ -139,8 +139,8 @@ class TopicAuthorServiceTest {
         when(coSupervisor.getDepartment()).thenReturn(department);
         when(coSupervisor.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
         when(coSupervisor.isEnabled()).thenReturn(true);
-        when(scenario.entityManager().find(UserAccountEntity.class, 8L))
-                .thenReturn(coSupervisor);
+        when(scenario.accounts().findByIdForUpdate(8L))
+                .thenReturn(Optional.of(coSupervisor));
         when(scenario.topics().saveAndFlush(any(TopicEntity.class)))
                 .thenAnswer(call -> call.getArgument(0));
 
@@ -192,6 +192,43 @@ class TopicAuthorServiceTest {
                 () -> scenario.service().saveDraft(5L, 0L, completeCommand()));
 
         assertEquals(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED, failure.code());
+        verify(scenario.topics(), never()).flush();
+    }
+
+    @Test
+    void topicOutsidePeriodsDepartmentCannotBeEdited() {
+        Scenario scenario = openScenario();
+        TopicEntity mismatched = new TopicEntity(scenario.period(), scenario.author(),
+                department(32L, scenario.faculty()));
+        when(scenario.topics().findPeriodIdByTopicId(5L)).thenReturn(Optional.of(1L));
+        when(scenario.topics().findByIdForUpdate(5L)).thenReturn(Optional.of(mismatched));
+        when(scenario.authorization().requireTopicAuthor(7L, 21L))
+                .thenReturn(new ActorIdentity(7L, Set.of(RoleCode.LECTURER), 21L));
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().saveDraft(5L, 0L, completeCommand()));
+
+        assertEquals(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED, failure.code());
+        verify(scenario.topics(), never()).flush();
+    }
+
+    @Test
+    void topicOutsidePeriodsDepartmentCannotBeSubmitted() {
+        Scenario scenario = openScenario();
+        TopicEntity mismatched = new TopicEntity(scenario.period(), scenario.author(),
+                department(32L, scenario.faculty()));
+        mismatched.updateDraft("Tên", "Mô tả", "Mục tiêu", "Yêu cầu", "Kết quả");
+        mismatched.replaceSupervisors(List.of(scenario.author()));
+        when(scenario.topics().findPeriodIdByTopicId(5L)).thenReturn(Optional.of(1L));
+        when(scenario.topics().findByIdForUpdate(5L)).thenReturn(Optional.of(mismatched));
+        when(scenario.authorization().requireTopicAuthor(7L, 21L))
+                .thenReturn(new ActorIdentity(7L, Set.of(RoleCode.LECTURER), 21L));
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().submit(5L, 0L));
+
+        assertEquals(ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED, failure.code());
+        assertEquals("DRAFT", mismatched.getStatus());
         verify(scenario.topics(), never()).flush();
     }
 
@@ -275,6 +312,7 @@ class TopicAuthorServiceTest {
         when(authorization.requireTopicAuthoringLecturer()).thenReturn(new ActorIdentity(
                 7L, Set.of(RoleCode.LECTURER), 21L));
         when(entityManager.find(UserAccountEntity.class, 7L)).thenReturn(author);
+        when(accounts.findByIdForUpdate(7L)).thenReturn(Optional.of(author));
         return new Scenario(service, periods, topics, accounts, authorization, entityManager,
                 faculty, author, period);
     }

@@ -21,6 +21,17 @@ public final class TopicRules {
         return normalized;
     }
 
+    public static void requireDepartmentAlignment(
+            Long periodDepartmentId,
+            Long topicDepartmentId,
+            Long authorDepartmentId) {
+        if (periodDepartmentId == null
+                || !Objects.equals(periodDepartmentId, topicDepartmentId)
+                || !Objects.equals(periodDepartmentId, authorDepartmentId)) {
+            throw failure(Failure.DEPARTMENT_MISMATCH);
+        }
+    }
+
     public static TopicDraft validateForSubmit(
             TopicDraft request,
             TopicAccess access,
@@ -112,6 +123,7 @@ public final class TopicRules {
 
     public enum Failure {
         ACCESS_DENIED,
+        DEPARTMENT_MISMATCH,
         INVALID_STATE,
         VALIDATION_FAILED,
         WINDOW_CLOSED

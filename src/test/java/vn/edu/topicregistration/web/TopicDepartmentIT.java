@@ -3,6 +3,8 @@ package vn.edu.topicregistration.web;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -12,10 +14,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.sql.DataSource;
 
@@ -393,6 +403,35 @@ class TopicDepartmentIT {
     }
 
     @Test
+    void topicDepartmentMismatchBlocksEditAndSubmitWithoutChangingDraft() throws Exception {
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Đề tài gốc")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả"))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+        jdbc.update("UPDATE topics SET department_id = ? WHERE id = ?",
+                otherDepartmentId, topicId);
+
+        mvc.perform(post("/topics/{id}/draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Không được lưu")
+                        .param("version", "0"))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isUnprocessableEntity());
+        assertEquals("Đề tài gốc", jdbc.queryForObject(
+                "SELECT title FROM topics WHERE id = ?", String.class, topicId));
+        assertEquals("DRAFT", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, topicId));
+    }
+
+    @Test
     void submitRechecksStoredCoSupervisorDepartmentWithoutChangingDraft() throws Exception {
         FixtureSupport.IdentityFixture colleague = identity(
                 "topic-dept-moved-colleague", faculty, Set.of(RoleCode.LECTURER));
@@ -407,12 +446,60 @@ class TopicDepartmentIT {
                         .param("coSupervisorIds", Long.toString(colleague.accountId())))
                 .andExpect(status().isSeeOther());
         long topicId = latestTopicId();
+        mvc.perform(get("/topics/{id}/edit", topicId)
+                        .with(actor(lecturer, "LECTURER")))
+                .andExpect(status().isOk());
         assignDepartment(colleague, otherDepartmentId);
 
         mvc.perform(post("/topics/{id}/submit", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("version", "0"))
                 .andExpect(status().isUnprocessableEntity());
+        assertEquals("DRAFT", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, topicId));
+    }
+
+    @Test
+    void concurrentSupervisorDepartmentChangeBlocksSubmit() throws Exception {
+        FixtureSupport.IdentityFixture colleague = identity(
+                "topic-dept-concurrent-colleague", faculty, Set.of(RoleCode.LECTURER));
+        assignDepartment(colleague, departmentId);
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Đề tài kiểm tra đồng thời")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả")
+                        .param("coSupervisorIds", Long.toString(colleague.accountId())))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement update = connection.prepareStatement(
+                    "UPDATE user_accounts SET department_id = ? WHERE id = ?")) {
+                update.setLong(1, otherDepartmentId);
+                update.setLong(2, colleague.accountId());
+                update.executeUpdate();
+            }
+            CountDownLatch requestStarted = new CountDownLatch(1);
+            Future<Integer> pending = executor.submit(() -> {
+                requestStarted.countDown();
+                return mvc.perform(post("/topics/{id}/submit", topicId)
+                                .with(actor(lecturer, "LECTURER")).with(csrf())
+                                .param("version", "0"))
+                        .andReturn().getResponse().getStatus();
+            });
+            assertTrue(requestStarted.await(5, TimeUnit.SECONDS));
+            assertThrows(TimeoutException.class,
+                    () -> pending.get(200, TimeUnit.MILLISECONDS));
+            connection.commit();
+            assertEquals(422, pending.get(10, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+        }
         assertEquals("DRAFT", jdbc.queryForObject(
                 "SELECT status FROM topics WHERE id = ?", String.class, topicId));
     }
