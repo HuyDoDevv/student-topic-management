@@ -18,6 +18,7 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import javax.sql.DataSource;
@@ -42,6 +43,7 @@ import vn.edu.topicregistration.integration.FixtureSupport;
 import vn.edu.topicregistration.integration.MySqlTestSupport;
 import vn.edu.topicregistration.dto.DashboardView;
 import vn.edu.topicregistration.config.TimeConfig;
+import vn.edu.topicregistration.controller.PeriodController.PeriodPageView;
 
 @SpringBootTest
 @ActiveProfiles("local")
@@ -294,8 +296,68 @@ class PeriodContractTest {
                         .with(user("dean").roles("LECTURER", "DEAN"))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
+        mvc.perform(get("/periods/{id}", otherPeriod)
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/periods/{id}/edit", otherPeriod)
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isNotFound());
         assertEquals("Đợt khoa Điện", periodName(otherPeriod));
         assertEquals("Đợt khoa CNTT", periodName(ownPeriod));
+    }
+
+    @Test
+    void deanListAndDetailShowEachDepartmentInTheSameFaculty() throws Exception {
+        long softwarePeriod = insertPeriod(deanScope.facultyId(), "Đợt phần mềm", 0L);
+        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
+                departmentId, softwarePeriod);
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+                deanScope.facultyId(), "Mạng máy tính");
+        long networkDepartmentId = jdbc.queryForObject(
+                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
+                Long.class, deanScope.facultyId(), "Mạng máy tính");
+        long networkPeriod = insertPeriod(deanScope.facultyId(), "Đợt mạng", 0L);
+        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
+                networkDepartmentId, networkPeriod);
+
+        var list = mvc.perform(get("/periods")
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Bộ môn")))
+                .andExpect(content().string(containsString("Công nghệ phần mềm")))
+                .andExpect(content().string(containsString("Mạng máy tính")))
+                .andReturn();
+        @SuppressWarnings("unchecked")
+        List<PeriodPageView> rows = (List<PeriodPageView>) list.getModelAndView()
+                .getModel().get("periods");
+        assertEquals(2, rows.size());
+        assertEquals("Công nghệ phần mềm", rows.stream()
+                .filter(row -> row.id() == softwarePeriod).findFirst().orElseThrow().departmentName());
+        assertEquals("Mạng máy tính", rows.stream()
+                .filter(row -> row.id() == networkPeriod).findFirst().orElseThrow().departmentName());
+
+        mvc.perform(get("/periods/{id}", softwarePeriod)
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Công nghệ phần mềm")));
+        mvc.perform(get("/periods/{id}", networkPeriod)
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Mạng máy tính")));
+    }
+
+    @Test
+    void legacyPeriodWithoutDepartmentHasExplicitLabelOnListAndDetail() throws Exception {
+        long legacyPeriod = insertPeriod(deanScope.facultyId(), "Đợt cũ", 0L);
+
+        mvc.perform(get("/periods")
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Chưa xác định Bộ môn")));
+        mvc.perform(get("/periods/{id}", legacyPeriod)
+                        .with(user("dean").roles("LECTURER", "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Chưa xác định Bộ môn")));
     }
 
     @Test

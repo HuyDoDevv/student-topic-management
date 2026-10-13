@@ -265,6 +265,8 @@ public class PeriodController {
         return new PeriodPageView(
                 period.id(),
                 period.name(),
+                period.departmentName() == null
+                        ? "Chưa xác định Bộ môn" : period.departmentName(),
                 typeLabel(period.topicType()),
                 format(period.lecturerStart()),
                 format(period.lecturerEnd()),
@@ -373,6 +375,7 @@ public class PeriodController {
     public record PeriodPageView(
             Long id,
             String name,
+            String departmentName,
             String type,
             String lecturerStart,
             String lecturerEnd,

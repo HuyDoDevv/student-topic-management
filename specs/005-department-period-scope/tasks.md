@@ -2,7 +2,7 @@
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/web.md](contracts/web.md), [quickstart.md](quickstart.md), [acceptance-matrix.md](acceptance-matrix.md).
 
-**Status rule**: T001–T004 đã kiểm chứng; các task còn lại hiện `[ ]`. Mỗi task cần INSPECT→PLAN→APPROVE→IMPLEMENT→VERIFY→REPORT riêng theo `AGENTS.md`; checklist và tài liệu này không cấp quyền sửa code/DB. Viết test cho behavior quan trọng và chỉ tick sau khi evidence đạt.
+**Status rule**: T001–T005 đã kiểm chứng; các task còn lại hiện `[ ]`. Mỗi task cần INSPECT→PLAN→APPROVE→IMPLEMENT→VERIFY→REPORT riêng theo `AGENTS.md`; checklist và tài liệu này không cấp quyền sửa code/DB. Viết test cho behavior quan trọng và chỉ tick sau khi evidence đạt.
 
 ## Phase 1: Setup and data inventory
 
@@ -26,7 +26,7 @@
 **Independent test**: DEAN Khoa X tạo đợt A/B, xem cả hai; C ở Khoa Y bị từ chối; đợt đã mở/có dữ liệu không đổi Bộ môn.
 
 - [X] T004 [US1] Bổ sung `departmentId` trên `src/main/java/vn/edu/topicregistration/dto/PeriodForm.java`, kiểm tra cùng Khoa và khóa đổi phạm vi trong `src/main/java/vn/edu/topicregistration/service/PeriodService.java` và `src/main/java/vn/edu/topicregistration/service/PeriodTransactionService.java`; viết test tại `src/test/java/vn/edu/topicregistration/unit/PeriodServiceTest.java`. Phạm vi được duyệt mở rộng thêm entity/repository, controller/form tối thiểu và unit/web test để POST tạo đợt vẫn hoạt động trước T005. Đã verify `./mvnw -q test` trên MySQL 8.4 DB test 3307: 309 test/53 report, 0 lỗi; riêng `PeriodServiceTest` 5/5, `PeriodTransactionServiceTest` 10/10, `PeriodContractTest` 10/10; `git diff --check` đạt. Đợt legacy NULL không được tự gán qua form; DB ứng dụng chưa được migrate.
-- [ ] T005 [US1] Hoàn thiện hiển thị Bộ môn trên `src/main/java/vn/edu/topicregistration/controller/PeriodController.java`, `src/main/resources/templates/periods/list.html`, `src/main/resources/templates/periods/detail.html` và tinh chỉnh form nếu cần; kiểm tra danh sách/chi tiết, quyền và URL tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java`. Ô chọn Bộ môn và POST form tối thiểu đã thuộc T004, không làm lại.
+- [X] T005 [US1] Hoàn thiện hiển thị Bộ môn trên `src/main/java/vn/edu/topicregistration/controller/PeriodController.java`, `src/main/resources/templates/periods/list.html`, `src/main/resources/templates/periods/detail.html`; kiểm tra danh sách/chi tiết, quyền và URL tại `src/test/java/vn/edu/topicregistration/web/PeriodContractTest.java`. Ô chọn Bộ môn và POST form tối thiểu đã thuộc T004, không làm lại. Đã verify trên DB test MySQL 8.4 cổng 3307: `PeriodContractTest` đạt 12/12, `./mvnw -q test` đạt 311 test/53 report, không lỗi; `git diff --check` đạt. DEAN thấy đợt của hai Bộ môn cùng Khoa, không xem được chi tiết/edit đợt Khoa khác; legacy NULL hiển thị “Chưa xác định Bộ môn”. Chưa kiểm thử integration/E2E và DB ứng dụng chưa migrate V19.
 
 ## Phase 4: US2 — LECTURER chỉ ở Bộ môn mình (P1)
 
