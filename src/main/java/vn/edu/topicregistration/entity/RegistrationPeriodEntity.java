@@ -26,6 +26,10 @@ public class RegistrationPeriodEntity {
     @JoinColumn(name = "faculty_id", nullable = false)
     private FacultyEntity faculty;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private DepartmentEntity department;
+
     @Column(nullable = false, length = 255)
     private String name;
 
@@ -67,7 +71,23 @@ public class RegistrationPeriodEntity {
             Instant studentEnd,
             LocalDate reviewerScoreDeadline,
             LocalDate councilReportDate) {
+        this(faculty, null, name, topicType, lecturerStart, lecturerEnd,
+                studentStart, studentEnd, reviewerScoreDeadline, councilReportDate);
+    }
+
+    public RegistrationPeriodEntity(
+            FacultyEntity faculty,
+            DepartmentEntity department,
+            String name,
+            String topicType,
+            Instant lecturerStart,
+            Instant lecturerEnd,
+            Instant studentStart,
+            Instant studentEnd,
+            LocalDate reviewerScoreDeadline,
+            LocalDate councilReportDate) {
         this.faculty = faculty;
+        this.department = department;
         this.name = name;
         this.topicType = topicType;
         this.lecturerStart = lecturerStart;
@@ -103,6 +123,10 @@ public class RegistrationPeriodEntity {
 
     public FacultyEntity getFaculty() {
         return faculty;
+    }
+
+    public DepartmentEntity getDepartment() {
+        return department;
     }
 
     public String getName() {

@@ -18,8 +18,16 @@ public interface RegistrationPeriodRepository
     @EntityGraph(attributePaths = "faculty")
     List<RegistrationPeriodEntity> findAllByFacultyIdOrderByLecturerStartDesc(long facultyId);
 
+    @EntityGraph(attributePaths = {"faculty", "department"})
+    List<RegistrationPeriodEntity> findAllByFacultyIdAndDepartmentIdOrderByLecturerStartDesc(
+            long facultyId, long departmentId);
+
     @EntityGraph(attributePaths = "faculty")
     Optional<RegistrationPeriodEntity> findByIdAndFacultyId(long id, long facultyId);
+
+    @EntityGraph(attributePaths = {"faculty", "department"})
+    Optional<RegistrationPeriodEntity> findByIdAndFacultyIdAndDepartmentId(
+            long id, long facultyId, long departmentId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = "faculty")

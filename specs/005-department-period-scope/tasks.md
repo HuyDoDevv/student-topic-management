@@ -17,7 +17,7 @@
 **Goal**: có quan hệ Bộ môn nullable để nâng cấp an toàn từ V18.
 
 - [X] T002 Tạo migration expand-only mới cho `registration_periods.department_id` cùng FK/index cần thiết tại `src/main/resources/db/migration/V19__add_period_department.sql`; chứng minh nâng cấp giữ business rows trong `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`. Đã verify V18→V19 trên MySQL 8.4 DB test 3307: 16 migration/inventory test và 8 `PeriodRulesTest` đều đạt; legacy period giữ `department_id = NULL`, FK từ chối ID không tồn tại, Flyway validate/rerun đạt. DB ứng dụng vẫn V18; chưa backfill hay enforce.
-- [ ] T003 Ánh xạ Department nullable và truy vấn có phạm vi trong `src/main/java/vn/edu/topicregistration/entity/RegistrationPeriodEntity.java`, `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java`; kiểm chứng legacy/new row tại `src/test/java/vn/edu/topicregistration/integration/RegistrationPeriodPersistenceIT.java`.
+- [X] T003 Ánh xạ Department nullable và truy vấn có phạm vi trong `src/main/java/vn/edu/topicregistration/entity/RegistrationPeriodEntity.java`, `src/main/java/vn/edu/topicregistration/repository/RegistrationPeriodRepository.java`; kiểm chứng legacy/new row tại `src/test/java/vn/edu/topicregistration/integration/RegistrationPeriodPersistenceIT.java`. Đã verify trên MySQL 8.4 DB test 3307: `RegistrationPeriodPersistenceIT` đạt 5/5, `PeriodRulesTest` đạt 8/8, Flyway validate V1–V19 và `git diff --check` đạt. Legacy `department_id = NULL` vẫn đọc được; truy vấn Khoa+Bộ môn không trả đợt khác phạm vi. Chưa đổi service/UI/quyền và chưa gán Bộ môn cho đợt legacy ID 1.
 
 **Checkpoint**: V18→V19 và Flyway validate đạt trên DB test; legacy period vẫn đọc được, runtime chưa tự gán.
 
