@@ -9,6 +9,12 @@
 **Input**: Khôi phục quản lý Bộ môn theo yêu cầu khách hàng, thay cho hướng Faculty-only
 đã triển khai trong feature 001.
 
+**Quyết định tiếp nối (2026-10-13)**: [Feature 005](../005-department-period-scope/spec.md)
+quy định thêm mỗi RegistrationPeriod thuộc một Department. Điều này thay thế giả
+định 004 rằng phạm vi Bộ môn chỉ áp dụng cho Topic, còn Period chỉ ở phạm vi
+Faculty. Council vẫn không có Department trực tiếp mà nhận phạm vi gián tiếp
+từ Period; DEAN và STUDENT vẫn được scope theo Faculty như 004 đã xác nhận.
+
 ## Nguồn và quyết định đã xác nhận
 
 - **E — REQ-08–11, REQ-31**: Đề tài và quan hệ hướng dẫn có phạm vi Bộ môn; tài khoản
