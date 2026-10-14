@@ -43,7 +43,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
 
 ## Phase 3 — Independent feedback flows
 
-- [ ] **T003 Bỏ bộ lọc Bộ môn thừa ở trang duyệt đề xuất** `[FB-02]`
+- [x] **T003 Bỏ bộ lọc Bộ môn thừa ở trang duyệt đề xuất** `[FB-02]`
   - File: `TopicReviewService.java`, `TopicRepository.java`,
     `TopicModerationController.java`, `templates/topics/review.html`,
     `TopicDepartmentIT.java` và test service/controller liên quan.

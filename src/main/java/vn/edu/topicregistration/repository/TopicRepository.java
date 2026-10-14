@@ -52,10 +52,29 @@ public interface TopicRepository extends JpaRepository<TopicEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select topic from TopicEntity topic "
             + "where topic.period.id = :periodId "
+            + "and topic.department.id = :departmentId "
             + "and topic.status = 'APPROVED' "
             + "and topic.hiddenAt is null "
             + "order by topic.id")
-    List<TopicEntity> findAllApprovedByPeriodIdForUpdate(@Param("periodId") long periodId);
+    List<TopicEntity> findAllApprovedByPeriodIdAndDepartmentIdForUpdate(
+            @Param("periodId") long periodId,
+            @Param("departmentId") long departmentId);
+
+    @EntityGraph(attributePaths = {
+            "period", "period.faculty", "department", "author", "author.faculty",
+            "supervisors", "supervisors.lecturer"
+    })
+    @Query("select distinct topic from TopicEntity topic "
+            + "left join topic.supervisors supervisor "
+            + "where topic.period.id = :periodId "
+            + "and topic.department.id = :departmentId "
+            + "and topic.status in :statuses "
+            + "and topic.hiddenAt is null "
+            + "order by topic.id desc")
+    List<TopicEntity> findAllVisibleForReview(
+            @Param("periodId") long periodId,
+            @Param("departmentId") long departmentId,
+            @Param("statuses") List<String> statuses);
 
     @EntityGraph(attributePaths = {
             "period", "period.faculty", "department", "author", "author.faculty",

@@ -253,14 +253,21 @@ class TopicDepartmentIT {
 
     @Test
     void deanReviewsAcrossDepartmentsInOwnFacultyButNotAnotherFaculty() throws Exception {
+        long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
         long first = pendingTopic(lecturer, departmentId, "Đề tài phần mềm");
-        long second = pendingTopic(otherLecturer, otherDepartmentId, "Đề tài hệ thống");
+        long second = pendingTopic(otherPeriodId, otherLecturer, otherDepartmentId,
+                "Đề tài hệ thống");
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
                         .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đề tài phần mềm")))
-                .andExpect(content().string(containsString("Đề tài hệ thống")));
+                .andExpect(content().string(not(containsString("Đề tài hệ thống"))));
+        mvc.perform(get("/periods/{periodId}/topics/review", otherPeriodId)
+                        .with(actor(dean, "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đề tài hệ thống")))
+                .andExpect(content().string(not(containsString("Đề tài phần mềm"))));
         mvc.perform(post("/topics/{id}/approve", first)
                         .with(actor(dean, "DEAN")).with(csrf())
                         .param("version", "0"))
@@ -282,30 +289,56 @@ class TopicDepartmentIT {
     }
 
     @Test
-    void deanFiltersReviewByDepartmentWithoutChangingFacultyScopeOrSummary() throws Exception {
-        pendingTopic(lecturer, departmentId, "Đề tài phần mềm T009");
-        pendingTopic(otherLecturer, otherDepartmentId, "Đề tài hệ thống T009");
-        long outsideDepartment = department(otherFaculty.facultyId(), "Bộ môn ngoài T009");
+    void deanReviewRejectsForgedDepartmentAndExcludesMismatchedTopics() throws Exception {
+        long valid = pendingTopic(lecturer, departmentId, "Đề tài đúng Bộ môn");
+        long mismatched = pendingTopic(otherLecturer, otherDepartmentId,
+                "Đề tài lệch Bộ môn");
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .param("departmentId", Long.toString(departmentId))
                         .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Đề tài phần mềm T009")))
-                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
-                .andExpect(content().string(containsString("<span>2</span> chờ duyệt")));
+                .andExpect(content().string(containsString("Đề tài đúng Bộ môn")))
+                .andExpect(content().string(not(containsString("Đề tài lệch Bộ môn"))))
+                .andExpect(content().string(not(containsString("Tất cả Bộ môn trong Khoa"))))
+                .andExpect(content().string(containsString("<span>1</span> chờ duyệt")));
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .param("departmentId", Long.toString(outsideDepartment))
+                        .param("departmentId", Long.toString(otherDepartmentId))
                         .with(actor(dean, "DEAN")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(not(containsString("Đề tài phần mềm T009"))))
-                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
-                .andExpect(content().string(not(containsString("Bộ môn ngoài T009"))));
-        mvc.perform(get("/periods/{periodId}/topics", periodId)
-                        .with(actor(lecturer, "LECTURER")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Công nghệ phần mềm")))
-                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))));
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/topics/{id}/approve", valid)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0")
+                        .param("departmentId", Long.toString(otherDepartmentId)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/topics/{id}/reject", valid)
+                        .queryParam("departmentId", Long.toString(otherDepartmentId))
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/periods/{periodId}/topics/publish", periodId)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("departmentId", Long.toString(otherDepartmentId)))
+                .andExpect(status().isBadRequest());
+        for (long topicId : new long[] {valid, mismatched}) {
+            assertEquals("PENDING_APPROVAL", jdbc.queryForObject(
+                    "SELECT status FROM topics WHERE id = ?", String.class, topicId));
+        }
+        mvc.perform(post("/topics/{id}/approve", mismatched)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/topics/{id}/approve", valid)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isSeeOther());
+        jdbc.update("UPDATE topics SET status = 'APPROVED' WHERE id = ?", mismatched);
+        mvc.perform(post("/periods/{periodId}/topics/publish", periodId)
+                        .with(actor(dean, "DEAN")).with(csrf()))
+                .andExpect(status().isSeeOther());
+        assertEquals("PUBLISHED", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, valid));
+        assertEquals("APPROVED", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, mismatched));
     }
 
     @Test

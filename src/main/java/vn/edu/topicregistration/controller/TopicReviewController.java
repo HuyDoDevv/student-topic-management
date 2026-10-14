@@ -26,7 +26,9 @@ public class TopicReviewController {
     @PostMapping("/topics/{id}/approve")
     RedirectView approve(
             @PathVariable long id,
-            @RequestParam(name = "version", required = false) Long version) {
+            @RequestParam(name = "version", required = false) Long version,
+            @RequestParam(name = "departmentId", required = false) String departmentId) {
+        rejectDepartmentParameter(departmentId);
         ReviewResult result = topics.approve(id, requiredVersion(version));
         return proposalReview(result.periodId());
     }
@@ -34,13 +36,17 @@ public class TopicReviewController {
     @PostMapping("/topics/{id}/reject")
     RedirectView reject(
             @PathVariable long id,
-            @RequestParam(name = "version", required = false) Long version) {
+            @RequestParam(name = "version", required = false) Long version,
+            @RequestParam(name = "departmentId", required = false) String departmentId) {
+        rejectDepartmentParameter(departmentId);
         ReviewResult result = topics.reject(id, requiredVersion(version));
         return proposalReview(result.periodId());
     }
 
     @PostMapping("/periods/{periodId}/topics/publish")
-    RedirectView publish(@PathVariable long periodId) {
+    RedirectView publish(@PathVariable long periodId,
+            @RequestParam(name = "departmentId", required = false) String departmentId) {
+        rejectDepartmentParameter(departmentId);
         PublicationResult result = topics.publishApproved(periodId);
         return proposalReview(result.periodId());
     }
@@ -50,6 +56,12 @@ public class TopicReviewController {
             throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
         }
         return version;
+    }
+
+    private void rejectDepartmentParameter(String departmentId) {
+        if (departmentId != null) {
+            throw new ApplicationException(ApplicationErrorCode.BAD_REQUEST);
+        }
     }
 
     private RedirectView proposalReview(long periodId) {

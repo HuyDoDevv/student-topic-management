@@ -28,12 +28,16 @@ ma trận kể cả khi dữ liệu lịch sử từng có role kép.
 
 ## Topic review and authoring
 
-### `GET /periods/{periodId}/topics`
+### `GET /periods/{periodId}/topics/review`
 
 - DEAN: danh sách duyệt chỉ gồm topic thuộc đúng period và Department của period;
   không hiển thị filter “Tất cả Bộ môn trong Khoa”.
+- Query/request thêm `departmentId` bị từ chối, không được mở rộng kết quả
+  hoặc thay đổi quyết định duyệt/công bố.
+
+### `GET /periods/{periodId}/topics`
+
 - Lecturer: giữ scope authoring hiện hành, DEAN không được vào bằng role kép.
-- Query/request thêm `departmentId` không được mở rộng kết quả.
 
 ### `POST /topics/{id}/return-to-draft` (proposed)
 
