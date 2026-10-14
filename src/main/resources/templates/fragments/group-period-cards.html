@@ -14,6 +14,9 @@
           <span class="group-period-icon" aria-hidden="true">👥</span>
         </div>
         <h3 class="h4 mb-2" th:text="${period.name}">Tên đợt</h3>
+        <p class="text-secondary mb-2">
+          Bộ môn: <strong class="text-body" th:text="${period.departmentName}">Công nghệ phần mềm</strong>
+        </p>
         <p class="text-secondary mb-4">
           Thời gian sinh viên:
           <strong class="text-body" th:text="${period.studentWindow}">01/09/2026 – 10/09/2026</strong>

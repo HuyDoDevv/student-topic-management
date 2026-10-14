@@ -32,7 +32,7 @@ class DepartmentEnforceMigrationIT {
         long topicsBefore = count(jdbc, "SELECT COUNT(*) FROM topics");
 
         Flyway flyway = latest();
-        assertEquals(1, flyway.migrate().migrationsExecuted);
+        assertEquals(2, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
         assertEquals(software, jdbc.queryForObject(

@@ -76,6 +76,7 @@ class PeriodScheduleIT {
     MutableClock clock;
 
     long facultyId;
+    long departmentId;
     long periodId;
 
     @DynamicPropertySource
@@ -92,6 +93,11 @@ class PeriodScheduleIT {
         FixtureSupport.OrganizationScope scope = fixtures.createOrganization(
                 "Khoa CNTT concurrency");
         facultyId = scope.facultyId();
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, 'Bộ môn concurrency')",
+                facultyId);
+        departmentId = jdbc.queryForObject(
+                "SELECT id FROM departments WHERE faculty_id = ? AND name = 'Bộ môn concurrency'",
+                Long.class, facultyId);
         fixtures.createIdentity(
                 "dean-schedule", "Trưởng khoa", "unusable-concurrency-hash", true,
                 scope, Set.of(RoleCode.LECTURER, RoleCode.DEAN));
@@ -178,7 +184,7 @@ class PeriodScheduleIT {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             started.countDown();
             try {
-                return periodService.update(periodId, 0L, request);
+                return periodService.update(periodId, 0L, departmentId, request);
             } finally {
                 SecurityContextHolder.clearContext();
             }
@@ -219,12 +225,12 @@ class PeriodScheduleIT {
     private long insertPeriod() {
         jdbc.update("""
                 INSERT INTO registration_periods(
-                    faculty_id, name, topic_type,
+                    faculty_id, department_id, name, topic_type,
                     lecturer_start, lecturer_end, student_start, student_end,
                     reviewer_score_deadline, council_report_date, version)
-                VALUES (?, 'Đợt ban đầu', 'COURSE', ?, ?, ?, ?, NULL, NULL, 0)
+                VALUES (?, ?, 'Đợt ban đầu', 'COURSE', ?, ?, ?, ?, NULL, NULL, 0)
                 """,
-                facultyId,
+                facultyId, departmentId,
                 Timestamp.from(LECTURER_START), Timestamp.from(LECTURER_END),
                 Timestamp.from(STUDENT_START), Timestamp.from(STUDENT_END));
         return jdbc.queryForObject("SELECT MAX(id) FROM registration_periods", Long.class);

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Test;
 
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.service.PeriodService;
 import vn.edu.topicregistration.service.PeriodTransactionService;
 import vn.edu.topicregistration.service.PeriodTransactionService.CreationContext;
@@ -42,9 +45,11 @@ class PeriodServiceTest {
 
     PeriodTransactionService transactions;
     RegistrationPeriodRepository periods;
+    DepartmentRepository departments;
     AuthorizationPolicy authorization;
     Clock clock;
     FacultyEntity faculty;
+    DepartmentEntity department;
     ActorIdentity dean;
     PeriodService service;
 
@@ -52,28 +57,34 @@ class PeriodServiceTest {
     void setUp() {
         transactions = mock(PeriodTransactionService.class);
         periods = mock(RegistrationPeriodRepository.class);
+        departments = mock(DepartmentRepository.class);
         authorization = mock(AuthorizationPolicy.class);
         clock = mock(Clock.class);
         faculty = mock(FacultyEntity.class);
+        department = mock(DepartmentEntity.class);
         dean = new ActorIdentity(
                 9L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 21L);
         when(faculty.getId()).thenReturn(21L);
+        when(department.getId()).thenReturn(11L);
+        when(department.getName()).thenReturn("Công nghệ phần mềm");
         when(authorization.requireRole(RoleCode.DEAN)).thenReturn(dean);
         when(clock.instant()).thenReturn(NOW);
-        service = new PeriodService(transactions, periods, authorization, clock);
+        service = new PeriodService(transactions, periods, departments, authorization, clock);
     }
 
     @Test
     void createValidatesInsideTheTransactionAndReturnsDerivedState() {
         runCreateFactoryInsideTransaction();
 
-        var result = service.create(configuration("  Đợt HK1  "));
+        var result = service.create(11L, configuration("  Đợt HK1  "));
 
         assertEquals("Đợt HK1", result.name());
         assertEquals(TopicType.COURSE, result.topicType());
         assertEquals(RegistrationState.BEFORE_LECTURER, result.state());
         assertEquals(21L, result.facultyId());
-        verify(transactions).create(eq(21L), any());
+        assertEquals(11L, result.departmentId());
+        assertEquals("Công nghệ phần mềm", result.departmentName());
+        verify(transactions).create(eq(21L), eq(11L), any());
     }
 
     @Test
@@ -81,15 +92,25 @@ class PeriodServiceTest {
         runCreateFactoryInsideTransaction();
 
         ApplicationException failure = assertThrows(ApplicationException.class,
-                () -> service.create(configuration("  ")));
+                () -> service.create(11L, configuration("  ")));
 
         assertEquals(ApplicationErrorCode.VALIDATION_FAILED, failure.code());
+    }
+
+    @Test
+    void createRejectsMissingDepartmentBeforeStartingTransaction() {
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> service.create(null, configuration("Đợt HK1")));
+
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, failure.code());
+        verify(transactions, never()).create(eq(21L), eq(11L), any());
     }
 
     @Test
     void updateUsesLockedTimeAppliesAllowedExtensionAndFlushesVersion() {
         RegistrationPeriodEntity current = new RegistrationPeriodEntity(
                 faculty,
+                department,
                 "Đợt HK1",
                 "COURSE",
                 LECTURER_START,
@@ -99,9 +120,9 @@ class PeriodServiceTest {
                 null,
                 null);
         Instant openingTime = LECTURER_START;
-        when(transactions.mutate(eq(7L), eq(0L), any())).thenAnswer(invocation -> {
+        when(transactions.mutate(eq(7L), eq(0L), eq(11L), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
-            Function<LockedPeriodContext, Object> mutation = invocation.getArgument(2);
+            Function<LockedPeriodContext, Object> mutation = invocation.getArgument(3);
             return mutation.apply(new LockedPeriodContext(current, dean, openingTime));
         });
         PeriodConfiguration extension = new PeriodConfiguration(
@@ -114,7 +135,7 @@ class PeriodServiceTest {
                 null,
                 null);
 
-        var result = service.update(7L, 0L, extension);
+        var result = service.update(7L, 0L, 11L, extension);
 
         assertEquals(LECTURER_END.plusSeconds(60), result.lecturerEnd());
         assertEquals(STUDENT_END.plusSeconds(60), result.studentEnd());
@@ -140,10 +161,10 @@ class PeriodServiceTest {
     }
 
     private void runCreateFactoryInsideTransaction() {
-        when(transactions.create(eq(21L), any())).thenAnswer(invocation -> {
+        when(transactions.create(eq(21L), eq(11L), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
-            Function<CreationContext, RegistrationPeriodEntity> factory = invocation.getArgument(1);
-            return factory.apply(new CreationContext(faculty, dean, NOW));
+            Function<CreationContext, RegistrationPeriodEntity> factory = invocation.getArgument(2);
+            return factory.apply(new CreationContext(faculty, department, dean, NOW));
         });
     }
 

@@ -66,6 +66,28 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             @Param("departmentId") long departmentId,
             @Param("role") RoleCode role);
 
+    @Query("select account.faculty.id from UserAccountEntity account "
+            + "join account.roles assignment "
+            + "where account.id = :accountId and assignment.role.code = :role")
+    Optional<Long> findFacultyIdByAccountIdAndRole(
+            @Param("accountId") long accountId, @Param("role") RoleCode role);
+
+    @Query("select case when count(account) > 0 then true else false end "
+            + "from UserAccountEntity account join account.roles assignment "
+            + "where account.enabled = true and account.faculty.id = :facultyId "
+            + "and assignment.role.code = :role")
+    boolean existsEnabledByFacultyAndRole(
+            @Param("facultyId") long facultyId, @Param("role") RoleCode role);
+
+    @Query("select case when count(account) > 0 then true else false end "
+            + "from UserAccountEntity account join account.roles assignment "
+            + "where account.enabled = true and account.faculty.id = :facultyId "
+            + "and assignment.role.code = :role and account.id <> :excludedAccountId")
+    boolean existsEnabledByFacultyAndRoleExcept(
+            @Param("facultyId") long facultyId,
+            @Param("role") RoleCode role,
+            @Param("excludedAccountId") long excludedAccountId);
+
     @EntityGraph(attributePaths = {"faculty", "roles", "roles.role"})
     @Query("select distinct account from UserAccountEntity account "
             + "join account.roles assignment "

@@ -15,7 +15,7 @@
     <div class="card-header table-toolbar">
       <div class="input-icon flex-fill topic-search">
         <span class="input-icon-addon" aria-hidden="true">⌕</span>
-        <input class="form-control" type="search" placeholder="Tìm theo tên hoặc loại đợt"
+        <input class="form-control" type="search" placeholder="Tìm theo tên, loại đợt hoặc Bộ môn"
                aria-label="Tìm đợt đăng ký" data-table-filter>
       </div>
       <div class="ms-md-auto">
@@ -52,7 +52,7 @@
       <table class="table table-vcenter card-table responsive-table" data-filter-table>
         <thead>
         <tr>
-          <th>Tên đợt</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th>
+          <th>Tên đợt</th><th>Bộ môn</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th>
           <th>Đề tài chờ duyệt</th><th>Nhóm chờ xét</th><th>Đề tài chờ công bố</th>
           <th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th>
         </tr>
@@ -61,6 +61,7 @@
         <tr th:each="item : ${periods}"
             th:attr="data-status=${item.status},data-type=${item.type},data-pending-topics=${item.pendingTopicCount},data-pending-registrations=${item.pendingRegistrationCount},data-pending-publications=${item.approvedTopicCount},data-pending-any=${item.pendingTopicCount + item.pendingRegistrationCount + item.approvedTopicCount}">
           <td data-label="Tên đợt"><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đợt HK1</a></td>
+          <td data-label="Bộ môn" th:text="${item.departmentName}">Công nghệ phần mềm</td>
           <td data-label="Loại" th:text="${item.type}">Đồ án môn học</td>
           <td data-label="Lịch giảng viên" class="text-secondary" th:text="${item.lecturerWindow}">10/09/2026 – 15/09/2026</td>
           <td data-label="Lịch sinh viên" class="text-secondary" th:text="${item.studentWindow}">16/09/2026 – 30/09/2026</td>

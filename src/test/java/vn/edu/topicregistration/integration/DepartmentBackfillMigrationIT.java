@@ -44,7 +44,7 @@ class DepartmentBackfillMigrationIT {
         long topicCount = count(jdbc, "SELECT COUNT(*) FROM topics");
 
         Flyway flyway = latest();
-        assertEquals(2, flyway.migrate().migrationsExecuted);
+        assertEquals(3, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
         Long software = jdbc.queryForObject("""
@@ -91,7 +91,7 @@ class DepartmentBackfillMigrationIT {
         long lecturer = account(jdbc, "legacy.reuse", faculty, null, "LECTURER");
         long missingTopic = topic(jdbc, period(jdbc, faculty), lecturer, null);
 
-        assertEquals(2, latest().migrate().migrationsExecuted);
+        assertEquals(3, latest().migrate().migrationsExecuted);
 
         assertEquals(software, accountDepartment(jdbc, lecturer));
         assertEquals(software, topicDepartment(jdbc, missingTopic));

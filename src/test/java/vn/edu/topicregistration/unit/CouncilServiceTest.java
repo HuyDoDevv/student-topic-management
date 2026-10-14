@@ -26,6 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
@@ -174,6 +175,22 @@ class CouncilServiceTest {
     }
 
     @Test
+    void assignmentRejectsTopicFromAnotherPeriodInSameFaculty() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
+        RegistrationPeriodEntity otherPeriod = mockPeriod("TLCN");
+        when(otherPeriod.getId()).thenReturn(8L);
+        when(fixture.topic().getPeriod()).thenReturn(otherPeriod);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().saveAssignment(41L, new AssignmentCommand(
+                        51L, REVIEW_AT, "Phòng A1-01", 4L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
     void assignmentRevalidatesCurrentLecturerEligibility() {
         Dependencies dependencies = dependencies();
         AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
@@ -239,6 +256,95 @@ class CouncilServiceTest {
 
         verify(fixture.council()).transitionTo(CouncilStatus.ACTIVE);
         verify(dependencies.councils()).flush();
+    }
+
+    @Test
+    void activeChairInFacultyWithCurrentMembershipCanViewOnlyAssignedCouncil() {
+        Dependencies dependencies = dependencies();
+        CouncilEntity council = detailCouncil(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.authorization().currentActor()).thenReturn(
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
+        when(dependencies.members().existsByCouncilIdAndLecturerId(41L, 11L))
+                .thenReturn(true);
+
+        var detail = dependencies.service().detailForCurrentDean(41L);
+
+        assertEquals(41L, detail.council().id());
+        assertEquals(true, detail.canComplete());
+        verify(dependencies.members()).existsByCouncilIdAndLecturerId(41L, 11L);
+    }
+
+    @Test
+    void chairCannotViewCouncilAfterTransferMembershipLossOrCompletion() {
+        Dependencies dependencies = dependencies();
+        CouncilEntity council = detailCouncil(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.authorization().currentActor()).thenReturn(
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 99L));
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().detailForCurrentDean(41L));
+
+        when(dependencies.authorization().currentActor()).thenReturn(
+                new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().detailForCurrentDean(41L));
+
+        when(dependencies.members().existsByCouncilIdAndLecturerId(41L, 11L))
+                .thenReturn(true);
+        when(council.getStatus()).thenReturn(CouncilStatus.COMPLETED);
+        assertThrows(AccessDeniedException.class,
+                () -> dependencies.service().detailForCurrentDean(41L));
+    }
+
+    @Test
+    void deanKeepsFacultyCouncilDetailAccessAfterCompletion() {
+        Dependencies dependencies = dependencies();
+        detailCouncil(dependencies, CouncilStatus.COMPLETED);
+        when(dependencies.authorization().currentActor()).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+
+        var detail = dependencies.service().detailForCurrentDean(41L);
+
+        assertEquals(41L, detail.council().id());
+        assertEquals(true, detail.canPublish());
+    }
+
+    private static CouncilEntity detailCouncil(
+            Dependencies dependencies, CouncilStatus status) {
+        RegistrationPeriodEntity period = mockPeriod("KLTN");
+        UserAccountEntity chair = mockLecturer(11L, period.getFaculty());
+        CouncilEntity council = mock(CouncilEntity.class);
+        when(council.getId()).thenReturn(41L);
+        when(council.getPeriod()).thenReturn(period);
+        when(council.getChair()).thenReturn(chair);
+        when(council.getMode()).thenReturn(CouncilMode.COUNCIL);
+        when(council.getStatus()).thenReturn(status);
+        when(dependencies.councils().findDetailedById(41L)).thenReturn(Optional.of(council));
+        return council;
+    }
+
+    @Test
+    void activationRejectsAssignedTopicMovedToAnotherPeriodInSameFaculty() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(
+                dependencies, CouncilStatus.SCHEDULED, 4L);
+        RegistrationPeriodEntity otherPeriod = mockPeriod("TLCN");
+        when(otherPeriod.getId()).thenReturn(8L);
+        when(fixture.topic().getPeriod()).thenReturn(otherPeriod);
+        CouncilTopicEntity assignment = mock(CouncilTopicEntity.class);
+        when(assignment.getRegistration()).thenReturn(fixture.registration());
+        when(assignment.getScheduledAt()).thenReturn(REVIEW_AT);
+        when(assignment.getLocation()).thenReturn("Phòng A1-01");
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(assignment));
+        when(dependencies.reports().findCurrentByRegistrationIdForUpdate(51L))
+                .thenReturn(Optional.of(mock(ProjectReportEntity.class)));
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().transition(
+                        41L, 4L, CouncilStatus.ACTIVE));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, exception.code());
+        verify(fixture.council(), never()).transitionTo(any());
     }
 
     private static CreationFixture validCreation(Dependencies dependencies) {

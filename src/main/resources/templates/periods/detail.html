@@ -9,6 +9,8 @@
       <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
         <span class="text-secondary" th:text="${period.type}">Đồ án môn học</span>
         <span aria-hidden="true" class="text-secondary">·</span>
+        <span class="text-secondary" th:text="${period.departmentName}">Công nghệ phần mềm</span>
+        <span aria-hidden="true" class="text-secondary">·</span>
         <span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Chưa mở</span>
       </div>
     </div>

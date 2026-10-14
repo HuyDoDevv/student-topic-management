@@ -115,6 +115,72 @@ class AdminAccountServiceTest {
     }
 
     @Test
+    void rejectsSecondEnabledDeanBeforePersistingAccount() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        allowDefaultFaculty(dependencies);
+        when(dependencies.accounts().existsEnabledByFacultyAndRole(
+                3L, RoleCode.DEAN)).thenReturn(true);
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().createDean(new CreateDeanCommand(
+                        "dean02", "Trưởng khoa Hai", "temporary-password", 11L)));
+
+        assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, rejected.code());
+        verify(dependencies.faculties()).findByIdForUpdate(3L);
+        verify(dependencies.accounts(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsUnlockingSecondDeanWithoutEnablingIt() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        FacultyEntity faculty = faculty(3L, AdminAccountService.DEFAULT_FACULTY_NAME);
+        when(dependencies.faculties().findByIdForUpdate(3L)).thenReturn(Optional.of(faculty));
+        when(dependencies.accounts().findFacultyIdByAccountIdAndRole(8L, RoleCode.DEAN))
+                .thenReturn(Optional.of(3L));
+        UserAccountEntity dean = mock(UserAccountEntity.class);
+        when(dean.getId()).thenReturn(8L);
+        when(dean.getUsername()).thenReturn("dean02");
+        when(dean.getFaculty()).thenReturn(faculty);
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dependencies.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
+        when(dependencies.accounts().existsEnabledByFacultyAndRoleExcept(
+                3L, RoleCode.DEAN, 8L)).thenReturn(true);
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().unlockAccount(8L));
+
+        assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, rejected.code());
+        verify(dean, never()).enable();
+        verify(dependencies.accounts(), never()).flush();
+    }
+
+    @Test
+    void enablesDeanWhenNoOtherDeanIsActive() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        FacultyEntity faculty = faculty(3L, AdminAccountService.DEFAULT_FACULTY_NAME);
+        when(dependencies.faculties().findByIdForUpdate(3L)).thenReturn(Optional.of(faculty));
+        when(dependencies.accounts().findFacultyIdByAccountIdAndRole(8L, RoleCode.DEAN))
+                .thenReturn(Optional.of(3L));
+        UserAccountEntity dean = mock(UserAccountEntity.class);
+        when(dean.getId()).thenReturn(8L);
+        when(dean.getUsername()).thenReturn("dean02");
+        when(dean.getFaculty()).thenReturn(faculty);
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dean.enable()).thenReturn(true);
+        when(dependencies.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
+
+        var result = dependencies.service().unlockAccount(8L);
+
+        assertTrue(result.changed());
+        assertTrue(result.enabled());
+        verify(dependencies.accounts()).existsEnabledByFacultyAndRoleExcept(3L, RoleCode.DEAN, 8L);
+        verify(dependencies.accounts()).flush();
+    }
+
+    @Test
     void createsLecturerWithoutEmail() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
@@ -595,6 +661,8 @@ class AdminAccountServiceTest {
                 3L, AdminAccountService.DEFAULT_FACULTY_NAME);
         when(dependencies.faculties().findByNameIgnoreCase(
                 AdminAccountService.DEFAULT_FACULTY_NAME))
+                .thenReturn(Optional.of(defaultFaculty));
+        when(dependencies.faculties().findByIdForUpdate(3L))
                 .thenReturn(Optional.of(defaultFaculty));
         DepartmentEntity department = mock(DepartmentEntity.class);
         when(department.getId()).thenReturn(11L);

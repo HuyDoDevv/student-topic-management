@@ -369,6 +369,9 @@ public class AdminAccountController {
         if (exception.code() == ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS) {
             bindingResult.rejectValue("username", "account.username.exists",
                     "Tên đăng nhập đã tồn tại.");
+        } else if (exception.code() == ApplicationErrorCode.DEAN_ALREADY_ACTIVE) {
+            bindingResult.reject("account.dean.active",
+                    "Khoa đã có Trưởng khoa đang hoạt động. Hãy khóa tài khoản cũ trước.");
         } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
             bindingResult.rejectValue("departmentId", "account.department.invalid",
                     "Bộ môn không tồn tại hoặc không thuộc Khoa của tài khoản.");

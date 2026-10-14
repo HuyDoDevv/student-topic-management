@@ -159,6 +159,27 @@ class AdminAccountControllerTest {
     }
 
     @Test
+    void duplicateDeanShowsSpecificCreateErrorAndUnlockIsRejected() throws Exception {
+        when(accounts.createDean(any())).thenThrow(
+                new ApplicationException(ApplicationErrorCode.DEAN_ALREADY_ACTIVE));
+        when(accounts.unlockAccount(9L)).thenThrow(
+                new ApplicationException(ApplicationErrorCode.DEAN_ALREADY_ACTIVE));
+
+        mvc.perform(post("/admin/accounts/deans")
+                        .param("username", "dean02")
+                        .param("fullName", "Trưởng khoa Hai")
+                        .param("password", "temporary-password")
+                        .param("departmentId", "11"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("admin/accounts/dean-form"))
+                .andExpect(model().attributeHasErrors("deanAccountForm"));
+        mvc.perform(post("/admin/accounts/9/unlock"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("error/error"))
+                .andExpect(model().attribute("errorCode", "DEAN_ALREADY_ACTIVE"));
+    }
+
+    @Test
     void staffCreationRequiresDepartmentAndIgnoresForgedFaculty() throws Exception {
         mvc.perform(post("/admin/accounts/lecturers")
                         .param("username", "lecturer02")

@@ -88,6 +88,19 @@ class TopicRulesTest {
     }
 
     @Test
+    void periodTopicAndAuthorDepartmentsMustAllMatch() {
+        TopicRules.requireDepartmentAlignment(DEPARTMENT_ID, DEPARTMENT_ID, DEPARTMENT_ID);
+        assertFailure(Failure.DEPARTMENT_MISMATCH,
+                () -> TopicRules.requireDepartmentAlignment(null, DEPARTMENT_ID, DEPARTMENT_ID));
+        assertFailure(Failure.DEPARTMENT_MISMATCH,
+                () -> TopicRules.requireDepartmentAlignment(DEPARTMENT_ID, null, DEPARTMENT_ID));
+        assertFailure(Failure.DEPARTMENT_MISMATCH,
+                () -> TopicRules.requireDepartmentAlignment(DEPARTMENT_ID, 4L, DEPARTMENT_ID));
+        assertFailure(Failure.DEPARTMENT_MISMATCH,
+                () -> TopicRules.requireDepartmentAlignment(DEPARTMENT_ID, DEPARTMENT_ID, 4L));
+    }
+
+    @Test
     void allFiveFieldsAreRequiredToSubmitButCanRemainIncompleteInDraft() {
         TopicDraft[] incomplete = {
                 draft(null, "Mô tả", "Mục tiêu", "Yêu cầu", "Kết quả"),

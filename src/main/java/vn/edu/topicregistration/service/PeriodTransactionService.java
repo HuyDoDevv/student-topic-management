@@ -1,7 +1,9 @@
 package vn.edu.topicregistration.service;
 
 import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
@@ -26,16 +28,19 @@ import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 @Profile("!test")
 public class PeriodTransactionService {
     private final RegistrationPeriodRepository periods;
+    private final DepartmentRepository departments;
     private final AuthorizationPolicy authorization;
     private final EntityManager entityManager;
     private final Clock clock;
 
     public PeriodTransactionService(
             RegistrationPeriodRepository periods,
+            DepartmentRepository departments,
             AuthorizationPolicy authorization,
             EntityManager entityManager,
             Clock clock) {
         this.periods = periods;
+        this.departments = departments;
         this.authorization = authorization;
         this.entityManager = entityManager;
         this.clock = clock;
@@ -44,6 +49,7 @@ public class PeriodTransactionService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public RegistrationPeriodEntity create(
             long facultyId,
+            long departmentId,
             Function<CreationContext, RegistrationPeriodEntity> validatedFactory) {
         Objects.requireNonNull(validatedFactory, "validatedFactory");
         ActorIdentity actor = authorization.requireDeanOfFaculty(facultyId);
@@ -52,13 +58,17 @@ public class PeriodTransactionService {
             throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        CreationContext context = new CreationContext(faculty, actor, clock.instant());
+        DepartmentEntity department = requireDepartment(departmentId, facultyId);
+
+        CreationContext context = new CreationContext(faculty, department, actor, clock.instant());
         RegistrationPeriodEntity candidate = Objects.requireNonNull(
                 validatedFactory.apply(context), "validatedFactory result");
         if (candidate.getId() != null
                 || candidate.getFaculty() == null
-                || !Objects.equals(candidate.getFaculty().getId(), facultyId)) {
-            throw new AccessDeniedException("Period faculty must match the authorized scope");
+                || !Objects.equals(candidate.getFaculty().getId(), facultyId)
+                || candidate.getDepartment() == null
+                || !Objects.equals(candidate.getDepartment().getId(), departmentId)) {
+            throw new AccessDeniedException("Period faculty and department must match the authorized scope");
         }
         return periods.saveAndFlush(candidate);
     }
@@ -67,6 +77,7 @@ public class PeriodTransactionService {
     public <T> T mutate(
             long periodId,
             long expectedVersion,
+            Long requestedDepartmentId,
             Function<LockedPeriodContext, T> mutation) {
         Objects.requireNonNull(mutation, "mutation");
 
@@ -78,11 +89,33 @@ public class PeriodTransactionService {
             throw new OptimisticLockingFailureException("Registration period version is stale");
         }
 
+        DepartmentEntity currentDepartment = period.getDepartment();
+        Long currentDepartmentId = currentDepartment == null ? null : currentDepartment.getId();
+        if (!Objects.equals(currentDepartmentId, requestedDepartmentId)) {
+            if (currentDepartment == null || requestedDepartmentId == null
+                    || requestedDepartmentId <= 0
+                    || !now.isBefore(period.getLecturerStart())
+                    || periods.dependentDataFlag(periodId) != 0) {
+                throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+            }
+            period.changeDepartment(requireDepartment(
+                    requestedDepartmentId, period.getFaculty().getId()));
+        }
+
         return mutation.apply(new LockedPeriodContext(period, actor, now));
+    }
+
+    private DepartmentEntity requireDepartment(long departmentId, long facultyId) {
+        if (departmentId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        return departments.findByIdAndFacultyId(departmentId, facultyId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED));
     }
 
     public record CreationContext(
             FacultyEntity faculty,
+            DepartmentEntity department,
             ActorIdentity actor,
             Instant now) {
     }

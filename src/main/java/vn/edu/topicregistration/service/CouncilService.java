@@ -160,7 +160,9 @@ public class CouncilService {
                 council.getStatus(),
                 locked.period().getTopicType(),
                 registration.getStatus(),
-                Objects.equals(registration.getPeriod().getId(), locked.period().getId()),
+                Objects.equals(registration.getPeriod().getId(), locked.period().getId())
+                        && Objects.equals(registration.getTopic().getPeriod().getId(),
+                                locked.period().getId()),
                 Objects.equals(
                         registration.getTopic().getPeriod().getFaculty().getId(),
                         council.getPeriod().getFaculty().getId()),
@@ -279,7 +281,10 @@ public class CouncilService {
         boolean scopedDean = actor.roles().contains(RoleCode.DEAN)
                 && Objects.equals(actor.facultyId(), facultyId);
         boolean currentChair = actor.roles().contains(RoleCode.LECTURER)
-                && Objects.equals(actor.accountId(), council.getChair().getId());
+                && Objects.equals(actor.facultyId(), facultyId)
+                && Objects.equals(actor.accountId(), council.getChair().getId())
+                && council.getStatus() == CouncilStatus.ACTIVE
+                && members.existsByCouncilIdAndLecturerId(councilId, actor.accountId());
         if (!scopedDean && !currentChair) {
             throw new AccessDeniedException("Council is outside actor scope");
         }
@@ -365,6 +370,7 @@ public class CouncilService {
             RegistrationEntity registration = assignment.getRegistration();
             return registration.getStatus() == RegistrationStatus.ACCEPTED
                     && Objects.equals(registration.getPeriod().getId(), period.getId())
+                    && Objects.equals(registration.getTopic().getPeriod().getId(), period.getId())
                     && Objects.equals(
                             registration.getTopic().getPeriod().getFaculty().getId(),
                             council.getPeriod().getFaculty().getId());

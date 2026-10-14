@@ -218,7 +218,7 @@ class ResultControllerTest {
                         .param("actorId", "999")
                         .param("status", "PUBLISHED"))
                 .andExpect(status().isSeeOther())
-                .andExpect(redirectedUrl("/faculty/boards/41"));
+                .andExpect(redirectedUrl("/lecturer/scoring"));
 
         verify(results).complete(41L, 4L);
     }

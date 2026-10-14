@@ -266,6 +266,7 @@ public class GroupController {
         return new GroupPeriodPageView(
                 period.id(),
                 period.name(),
+                period.departmentName(),
                 DATE.format(projectTime.toBusinessDate(period.studentStart())),
                 DATE.format(projectTime.toBusinessDate(period.studentEnd())),
                 period.phase(),
@@ -334,6 +335,7 @@ public class GroupController {
     public record GroupPeriodPageView(
             long id,
             String name,
+            String departmentName,
             String studentStart,
             String studentEnd,
             StudentPeriodPhase phase,

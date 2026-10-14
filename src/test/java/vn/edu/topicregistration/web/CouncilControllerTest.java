@@ -20,6 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import vn.edu.topicregistration.controller.CouncilController;
@@ -144,6 +145,17 @@ class CouncilControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(view().name("error/error"))
                 .andExpect(model().attribute("errorCode", "CONFLICT"));
+    }
+
+    @Test
+    void directCouncilDetailUrlDeniesLecturerWithoutCurrentAssignment() throws Exception {
+        when(councils.detailForCurrentDean(41L))
+                .thenThrow(new AccessDeniedException("No active council assignment"));
+
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isForbidden())
+                .andExpect(view().name("error/error"))
+                .andExpect(model().attribute("errorCode", "ACCESS_DENIED"));
     }
 
     private static CreationWorkspace workspace() {

@@ -96,14 +96,15 @@ public class PeriodController {
             return renderForm(model, form, false, null, FieldLocks.unlocked());
         }
         try {
-            PeriodView created = periodService.create(form.toConfiguration(projectTime));
+            PeriodView created = periodService.create(
+                    form.getDepartmentId(), form.toConfiguration(projectTime));
             return redirectTo(created.id());
         } catch (ApplicationException exception) {
             if (exception.code() != ApplicationErrorCode.VALIDATION_FAILED) {
                 throw exception;
             }
             bindingResult.reject("period.invalid",
-                    "Lịch chưa hợp lệ: không chọn ngày trước hôm nay, ngày sinh viên phải sau ngày kết thúc của giảng viên và các ngày phải đúng với loại đề tài.");
+                    "Bộ môn hoặc lịch chưa hợp lệ. Hãy chọn Bộ môn trong Khoa và kiểm tra các mốc thời gian.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderForm(model, form, false, null, FieldLocks.unlocked());
         }
@@ -173,14 +174,15 @@ public class PeriodController {
         }
         try {
             PeriodView updated = periodService.update(
-                    id, form.getVersion(), form.toConfiguration(projectTime));
+                    id, form.getVersion(), form.getDepartmentId(),
+                    form.toConfiguration(projectTime));
             return redirectTo(updated.id());
         } catch (ApplicationException exception) {
             if (exception.code() != ApplicationErrorCode.VALIDATION_FAILED) {
                 throw exception;
             }
             bindingResult.reject("period.invalid",
-                    "Chỉ được kéo dài mốc còn hiệu lực; thời gian giảng viên phải kết thúc trước khi thời gian sinh viên bắt đầu.");
+                    "Không thể đổi Bộ môn khi đợt đã mở hoặc có dữ liệu phụ thuộc; các mốc thời gian cũng phải hợp lệ.");
             return renderInvalidEdit(id, form, bindingResult, response, model);
         }
     }
@@ -209,6 +211,7 @@ public class PeriodController {
         model.addAttribute("editing", editing);
         model.addAttribute("period", period);
         model.addAttribute("locks", locks);
+        model.addAttribute("departmentOptions", periodService.departmentOptionsForCurrentDean());
         return "periods/form";
     }
 
@@ -262,6 +265,8 @@ public class PeriodController {
         return new PeriodPageView(
                 period.id(),
                 period.name(),
+                period.departmentName() == null
+                        ? "Chưa xác định Bộ môn" : period.departmentName(),
                 typeLabel(period.topicType()),
                 format(period.lecturerStart()),
                 format(period.lecturerEnd()),
@@ -370,6 +375,7 @@ public class PeriodController {
     public record PeriodPageView(
             Long id,
             String name,
+            String departmentName,
             String type,
             String lecturerStart,
             String lecturerEnd,

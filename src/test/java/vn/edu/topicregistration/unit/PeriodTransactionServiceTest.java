@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.DepartmentEntity;
+import vn.edu.topicregistration.repository.DepartmentRepository;
 import vn.edu.topicregistration.service.PeriodTransactionService;
 import vn.edu.topicregistration.service.PeriodTransactionService.CreationContext;
 import vn.edu.topicregistration.service.PeriodTransactionService.LockedPeriodContext;
@@ -40,6 +42,7 @@ class PeriodTransactionServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-10T00:00:00Z");
 
     RegistrationPeriodRepository periods;
+    DepartmentRepository departments;
     AuthorizationPolicy authorization;
     EntityManager entityManager;
     Clock clock;
@@ -48,10 +51,12 @@ class PeriodTransactionServiceTest {
     @BeforeEach
     void setUp() {
         periods = mock(RegistrationPeriodRepository.class);
+        departments = mock(DepartmentRepository.class);
         authorization = mock(AuthorizationPolicy.class);
         entityManager = mock(EntityManager.class);
         clock = mock(Clock.class);
-        transactions = new PeriodTransactionService(periods, authorization, entityManager, clock);
+        transactions = new PeriodTransactionService(
+                periods, departments, authorization, entityManager, clock);
         when(clock.instant()).thenReturn(NOW);
     }
 
@@ -66,7 +71,7 @@ class PeriodTransactionServiceTest {
         Function<LockedPeriodContext, String> mutation = mock(Function.class);
         when(mutation.apply(org.mockito.ArgumentMatchers.any())).thenReturn("updated");
 
-        String result = transactions.mutate(7L, 3L, mutation);
+        String result = transactions.mutate(7L, 3L, null, mutation);
 
         assertEquals("updated", result);
         InOrder order = inOrder(periods, authorization, clock, period, mutation);
@@ -88,7 +93,7 @@ class PeriodTransactionServiceTest {
         Function<LockedPeriodContext, String> mutation = mock(Function.class);
 
         assertThrows(OptimisticLockingFailureException.class,
-                () -> transactions.mutate(7L, 3L, mutation));
+                () -> transactions.mutate(7L, 3L, null, mutation));
 
         verify(mutation, never()).apply(org.mockito.ArgumentMatchers.any());
     }
@@ -100,7 +105,7 @@ class PeriodTransactionServiceTest {
         Function<LockedPeriodContext, String> mutation = mock(Function.class);
 
         ApplicationException failure = assertThrows(ApplicationException.class,
-                () -> transactions.mutate(404L, 0L, mutation));
+                () -> transactions.mutate(404L, 0L, null, mutation));
 
         assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, failure.code());
         verify(authorization, never()).requireDeanOfFaculty(org.mockito.ArgumentMatchers.anyLong());
@@ -112,31 +117,124 @@ class PeriodTransactionServiceTest {
         FacultyEntity faculty = faculty(21L);
         ActorIdentity actor = actor(9L, 21L);
         RegistrationPeriodEntity candidate = period(null, faculty, 0L);
+        DepartmentEntity department = department(11L);
+        when(candidate.getDepartment()).thenReturn(department);
         when(authorization.requireDeanOfFaculty(21L)).thenReturn(actor);
         when(entityManager.find(FacultyEntity.class, 21L)).thenReturn(faculty);
+        when(departments.findByIdAndFacultyId(11L, 21L)).thenReturn(Optional.of(department));
         when(periods.saveAndFlush(candidate)).thenReturn(candidate);
         @SuppressWarnings("unchecked")
         Function<CreationContext, RegistrationPeriodEntity> factory = mock(Function.class);
         when(factory.apply(org.mockito.ArgumentMatchers.argThat(context ->
                 context.faculty() == faculty
+                        && context.department() == department
                         && context.actor() == actor
                         && NOW.equals(context.now())))).thenReturn(candidate);
 
-        RegistrationPeriodEntity saved = transactions.create(21L, factory);
+        RegistrationPeriodEntity saved = transactions.create(21L, 11L, factory);
 
         assertSame(candidate, saved);
-        InOrder order = inOrder(authorization, entityManager, clock, factory, periods);
+        InOrder order = inOrder(authorization, entityManager, departments, clock, factory, periods);
         order.verify(authorization).requireDeanOfFaculty(21L);
         order.verify(entityManager).find(FacultyEntity.class, 21L);
+        order.verify(departments).findByIdAndFacultyId(11L, 21L);
         order.verify(clock).instant();
         order.verify(factory).apply(org.mockito.ArgumentMatchers.any());
         order.verify(periods).saveAndFlush(candidate);
     }
 
     @Test
+    void createRejectsDepartmentOutsideAuthorizedFaculty() {
+        when(authorization.requireDeanOfFaculty(21L)).thenReturn(actor(9L, 21L));
+        FacultyEntity faculty = faculty(21L);
+        when(entityManager.find(FacultyEntity.class, 21L)).thenReturn(faculty);
+        @SuppressWarnings("unchecked")
+        Function<CreationContext, RegistrationPeriodEntity> factory = mock(Function.class);
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> transactions.create(21L, 99L, factory));
+
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, failure.code());
+        verify(factory, never()).apply(org.mockito.ArgumentMatchers.any());
+        verify(periods, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void mutationChangesDepartmentOnlyBeforeOpeningAndWithoutDependentData() {
+        RegistrationPeriodEntity period = period(7L, faculty(21L), 0L);
+        DepartmentEntity original = department(11L);
+        DepartmentEntity replacement = department(12L);
+        when(period.getDepartment()).thenReturn(original);
+        when(period.getLecturerStart()).thenReturn(NOW.plusSeconds(60));
+        when(periods.findByIdForUpdate(7L)).thenReturn(Optional.of(period));
+        when(authorization.requireDeanOfFaculty(21L)).thenReturn(actor(9L, 21L));
+        when(departments.findByIdAndFacultyId(12L, 21L)).thenReturn(Optional.of(replacement));
+
+        String result = transactions.mutate(7L, 0L, 12L, context -> "updated");
+
+        assertEquals("updated", result);
+        verify(periods).dependentDataFlag(7L);
+        verify(period).changeDepartment(replacement);
+    }
+
+    @Test
+    void mutationRejectsDepartmentChangeAfterOpeningOrDependentData() {
+        RegistrationPeriodEntity period = period(7L, faculty(21L), 0L);
+        DepartmentEntity original = department(11L);
+        when(period.getDepartment()).thenReturn(original);
+        when(periods.findByIdForUpdate(7L)).thenReturn(Optional.of(period));
+        when(authorization.requireDeanOfFaculty(21L)).thenReturn(actor(9L, 21L));
+        @SuppressWarnings("unchecked")
+        Function<LockedPeriodContext, String> mutation = mock(Function.class);
+
+        when(period.getLecturerStart()).thenReturn(NOW);
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED,
+                assertThrows(ApplicationException.class,
+                        () -> transactions.mutate(7L, 0L, 12L, mutation)).code());
+
+        when(period.getLecturerStart()).thenReturn(NOW.plusSeconds(60));
+        when(periods.dependentDataFlag(7L)).thenReturn(1);
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED,
+                assertThrows(ApplicationException.class,
+                        () -> transactions.mutate(7L, 0L, 12L, mutation)).code());
+        verify(mutation, never()).apply(org.mockito.ArgumentMatchers.any());
+        verify(period, never()).changeDepartment(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void legacyPeriodCannotBeAssignedByRegularEdit() {
+        RegistrationPeriodEntity period = period(7L, faculty(21L), 0L);
+        when(periods.findByIdForUpdate(7L)).thenReturn(Optional.of(period));
+        when(authorization.requireDeanOfFaculty(21L)).thenReturn(actor(9L, 21L));
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> transactions.mutate(7L, 0L, 11L, context -> null));
+
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, failure.code());
+        verify(period, never()).changeDepartment(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void mutationRejectsDepartmentOutsideThePeriodFaculty() {
+        RegistrationPeriodEntity period = period(7L, faculty(21L), 0L);
+        DepartmentEntity original = department(11L);
+        when(period.getDepartment()).thenReturn(original);
+        when(period.getLecturerStart()).thenReturn(NOW.plusSeconds(60));
+        when(periods.findByIdForUpdate(7L)).thenReturn(Optional.of(period));
+        when(authorization.requireDeanOfFaculty(21L)).thenReturn(actor(9L, 21L));
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> transactions.mutate(7L, 0L, 99L, context -> null));
+
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, failure.code());
+        verify(departments).findByIdAndFacultyId(99L, 21L);
+        verify(period, never()).changeDepartment(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void transactionEntryPointsRequireReadCommittedIsolation() throws Exception {
-        assertReadCommitted("create", long.class, Function.class);
-        assertReadCommitted("mutate", long.class, long.class, Function.class);
+        assertReadCommitted("create", long.class, long.class, Function.class);
+        assertReadCommitted("mutate", long.class, long.class, Long.class, Function.class);
     }
 
     private void assertReadCommitted(String name, Class<?>... parameterTypes) throws Exception {
@@ -149,6 +247,12 @@ class PeriodTransactionServiceTest {
         FacultyEntity faculty = mock(FacultyEntity.class);
         when(faculty.getId()).thenReturn(id);
         return faculty;
+    }
+
+    private DepartmentEntity department(long id) {
+        DepartmentEntity department = mock(DepartmentEntity.class);
+        when(department.getId()).thenReturn(id);
+        return department;
     }
 
     private RegistrationPeriodEntity period(Long id, FacultyEntity faculty, long version) {
