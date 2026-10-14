@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
@@ -128,7 +129,7 @@ public class AdminAccountService {
                 command == null ? null : command.departmentId());
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AccountView createDean(CreateDeanCommand command) {
         authorization.requireRole(RoleCode.ADMIN);
         return createStaff(AccountType.DEAN,
@@ -261,9 +262,30 @@ public class AdminAccountService {
         return changeAccountStatus(accountId, false);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AccountStatusResult unlockAccount(long accountId) {
-        return changeAccountStatus(accountId, true);
+        authorization.requireRole(RoleCode.ADMIN);
+        if (accountId <= 0) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        accounts.findFacultyIdByAccountIdAndRole(accountId, RoleCode.DEAN)
+                .ifPresent(this::lockFaculty);
+        UserAccountEntity account = accounts.findByIdForUpdate(accountId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        AccountType type = managedAccountType(account);
+        if (type == AccountType.DEAN) {
+            FacultyEntity faculty = account.getFaculty();
+            if (faculty == null) {
+                throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+            }
+            ensureDeanSlotAvailable(faculty.getId(), accountId);
+        }
+        boolean changed = account.enable();
+        if (changed) {
+            accounts.flush();
+        }
+        return new AccountStatusResult(
+                account.getId(), account.getUsername(), type, true, changed);
     }
 
     private AccountStatusResult changeAccountStatus(long accountId, boolean enabled) {
@@ -297,8 +319,27 @@ public class AdminAccountService {
         ensureAvailable(prepared);
         FacultyEntity faculty = defaultFaculty();
         DepartmentEntity department = staffDepartment(departmentId, faculty);
+        if (type == AccountType.DEAN) {
+            lockFaculty(faculty.getId());
+            ensureDeanSlotAvailable(faculty.getId(), null);
+        }
         Map<RoleCode, RoleEntity> roleMap = requiredRoles(type.roles());
         return accountView(persist(prepared, faculty, department, roleMap), type);
+    }
+
+    private void lockFaculty(long facultyId) {
+        faculties.findByIdForUpdate(facultyId)
+                .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED));
+    }
+
+    private void ensureDeanSlotAvailable(long facultyId, Long excludedAccountId) {
+        boolean occupied = excludedAccountId == null
+                ? accounts.existsEnabledByFacultyAndRole(facultyId, RoleCode.DEAN)
+                : accounts.existsEnabledByFacultyAndRoleExcept(
+                        facultyId, RoleCode.DEAN, excludedAccountId);
+        if (occupied) {
+            throw new ApplicationException(ApplicationErrorCode.DEAN_ALREADY_ACTIVE);
+        }
     }
 
     private DepartmentEntity staffDepartment(Long departmentId, FacultyEntity faculty) {

@@ -2,6 +2,7 @@ package vn.edu.topicregistration.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -14,6 +15,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +44,8 @@ import vn.edu.topicregistration.repository.StudentProfileRepository;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.CreateStudentCommand;
 import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
+import vn.edu.topicregistration.service.AdminAccountService.CreateDeanCommand;
+import vn.edu.topicregistration.service.PeriodService;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 
@@ -47,6 +57,9 @@ class AccountProvisioningIT {
 
     @Autowired
     AdminAccountService accounts;
+
+    @Autowired
+    PeriodService periods;
 
     @Autowired
     JdbcTemplate jdbc;
@@ -212,6 +225,134 @@ class AccountProvisioningIT {
         assertEquals(departmentId, jdbc.queryForObject(
                 "SELECT department_id FROM user_accounts WHERE username = 'csrf.lecturer'",
                 Long.class));
+    }
+
+    @Test
+    void secondActiveDeanIsRejectedAndTransferPreservesOldPeriods() {
+        long departmentId = addDepartment();
+        accounts.createDean(new CreateDeanCommand(
+                "dean.old", "Trưởng khoa cũ", "temporary-password", departmentId));
+        long oldDeanId = accountId("dean.old");
+        jdbc.update("""
+                INSERT INTO registration_periods
+                    (faculty_id, department_id, name, topic_type,
+                     lecturer_start, lecturer_end, student_start, student_end)
+                SELECT id, ?, 'Đợt cũ', 'COURSE',
+                       '2027-01-01 00:00:00', '2027-01-10 00:00:00',
+                       '2027-01-11 00:00:00', '2027-01-20 00:00:00'
+                FROM faculties WHERE name = ?
+                """, departmentId, AdminAccountService.DEFAULT_FACULTY_NAME);
+        long periodId = jdbc.queryForObject(
+                "SELECT id FROM registration_periods WHERE name = 'Đợt cũ'", Long.class);
+
+        ApplicationException duplicate = assertThrows(ApplicationException.class,
+                () -> accounts.createDean(new CreateDeanCommand(
+                        "dean.blocked", "Trưởng khoa trùng", "temporary-password", departmentId)));
+        assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, duplicate.code());
+        assertEquals(0L, count("SELECT COUNT(*) FROM user_accounts WHERE username = 'dean.blocked'"));
+
+        accounts.lockAccount(oldDeanId);
+        accounts.createDean(new CreateDeanCommand(
+                "dean.new", "Trưởng khoa mới", "temporary-password", departmentId));
+        ApplicationException cannotReenable = assertThrows(ApplicationException.class,
+                () -> accounts.unlockAccount(oldDeanId));
+        assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, cannotReenable.code());
+        assertEquals(1L, activeDeanCount());
+        assertEquals(1L, count("SELECT COUNT(*) FROM user_accounts WHERE username = 'dean.old' AND enabled = FALSE"));
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("dean.new", "N/A",
+                        List.of(new SimpleGrantedAuthority("ROLE_DEAN"))));
+        assertTrue(periods.listForCurrentDean().stream().anyMatch(period -> period.id() == periodId));
+        assertEquals(1L, count("SELECT COUNT(*) FROM registration_periods WHERE name = 'Đợt cũ'"));
+    }
+
+    @Test
+    void concurrentDeanCreationsLeaveOnlyOneEnabledDean() throws Exception {
+        long departmentId = addDepartment();
+        assertOneConcurrentSuccess(
+                () -> accounts.createDean(new CreateDeanCommand(
+                        "dean.race.one", "Trưởng khoa Một", "temporary-password", departmentId)),
+                () -> accounts.createDean(new CreateDeanCommand(
+                        "dean.race.two", "Trưởng khoa Hai", "temporary-password", departmentId)));
+        assertEquals(1L, activeDeanCount());
+    }
+
+    @Test
+    void concurrentDeanUnlocksLeaveOnlyOneEnabledDean() throws Exception {
+        long departmentId = addDepartment();
+        accounts.createDean(new CreateDeanCommand(
+                "dean.locked.one", "Trưởng khoa Một", "temporary-password", departmentId));
+        long firstId = accountId("dean.locked.one");
+        accounts.lockAccount(firstId);
+        accounts.createDean(new CreateDeanCommand(
+                "dean.locked.two", "Trưởng khoa Hai", "temporary-password", departmentId));
+        long secondId = accountId("dean.locked.two");
+        accounts.lockAccount(secondId);
+
+        assertOneConcurrentSuccess(
+                () -> accounts.unlockAccount(firstId),
+                () -> accounts.unlockAccount(secondId));
+        assertEquals(1L, activeDeanCount());
+    }
+
+    private void assertOneConcurrentSuccess(Callable<?> first, Callable<?> second) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<Boolean>> outcomes = new ArrayList<>();
+            for (Callable<?> operation : List.of(first, second)) {
+                outcomes.add(executor.submit(() -> {
+                    SecurityContextHolder.getContext().setAuthentication(
+                            new UsernamePasswordAuthenticationToken(
+                                    "rollback.admin", "N/A",
+                                    List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+                    try {
+                        ready.countDown();
+                        if (!start.await(10, TimeUnit.SECONDS)) {
+                            throw new IllegalStateException("Concurrent test did not start");
+                        }
+                        try {
+                            operation.call();
+                            return true;
+                        } catch (ApplicationException rejected) {
+                            assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, rejected.code());
+                            return false;
+                        }
+                    } finally {
+                        SecurityContextHolder.clearContext();
+                    }
+                }));
+            }
+            assertTrue(ready.await(10, TimeUnit.SECONDS));
+            start.countDown();
+            int successes = 0;
+            for (Future<Boolean> outcome : outcomes) {
+                if (outcome.get(30, TimeUnit.SECONDS)) {
+                    successes++;
+                }
+            }
+            assertEquals(1, successes);
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    private long accountId(String username) {
+        return jdbc.queryForObject(
+                "SELECT id FROM user_accounts WHERE username = ?", Long.class, username);
+    }
+
+    private long activeDeanCount() {
+        return count("""
+                SELECT COUNT(*) FROM user_accounts account
+                JOIN user_roles assignment ON assignment.user_id = account.id
+                JOIN faculties faculty ON faculty.id = account.faculty_id
+                WHERE assignment.role_code = 'DEAN' AND account.enabled = TRUE
+                  AND faculty.name = 'Khoa Công nghệ Thông tin'
+                """);
     }
 
     private long addDepartment() {
