@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** T001/T002/T012: inventory, backfill, and period Department enforcement. */
+/** T001/T002/T012/T013: inventory, backfill, and period Department enforcement. */
 class PeriodDepartmentMigrationIT {
     @AfterEach
     void restoreIsolatedTestDatabase() {
@@ -252,14 +252,129 @@ class PeriodDepartmentMigrationIT {
     }
 
     @Test
-    void freshDatabaseWithoutHistoricalPeriodMigratesThroughV20() {
+    void freshDatabaseWithoutHistoricalPeriodMigratesThroughV21() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
-        resetAndMigrateThrough(database, "20");
-        Flyway throughV20 = flywayThrough(database, "20");
-        throughV20.validate();
-        assertEquals(0, throughV20.migrate().migrationsExecuted);
+        database.resetAndMigrate();
+        Flyway latest = Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration").load();
+        latest.validate();
+        assertEquals(0, latest.migrate().migrationsExecuted);
         assertEquals(0L, id(new JdbcTemplate(database.dataSource()),
                 "SELECT COUNT(*) FROM registration_periods"));
+        assertEquals(1L, id(new JdbcTemplate(database.dataSource()), """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
+                  AND column_name = 'department_id' AND is_nullable = 'NO'
+                """));
+    }
+
+    @Test
+    void v20DataUpgradesToV21WithoutLossAndEnforcesFacultyScope() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        migrateThroughV18(database);
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        long web = department(jdbc, faculty, "Lập Trình Web");
+        jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa T013 khác')");
+        long otherFaculty = id(jdbc, "SELECT id FROM faculties WHERE name = 'Khoa T013 khác'");
+        long otherDepartment = department(jdbc, otherFaculty, "Bộ môn T013 khác");
+        long legacy = period(jdbc, faculty, "Đồ án môn học");
+        assertEquals(1L, legacy);
+        assertEquals(2, flywayThrough(database, "20").migrate().migrationsExecuted);
+        long[] before = businessRowCounts(jdbc);
+
+        Flyway latest = Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration").load();
+        assertEquals(1, latest.migrate().migrationsExecuted);
+        latest.validate();
+        assertEquals(0, latest.migrate().migrationsExecuted);
+        assertArrayEquals(before, businessRowCounts(jdbc));
+        assertEquals(web, id(jdbc,
+                "SELECT department_id FROM registration_periods WHERE id = ?", legacy));
+        assertEquals(1L, id(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
+                  AND column_name = 'department_id' AND is_nullable = 'NO'
+                """));
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "UPDATE registration_periods SET department_id = NULL WHERE id = ?", legacy));
+        assertThrows(DataAccessException.class, () -> jdbc.update(
+                "UPDATE registration_periods SET department_id = ? WHERE id = ?",
+                otherDepartment, legacy));
+        assertThrows(DataAccessException.class, () -> jdbc.update("""
+                INSERT INTO registration_periods(faculty_id, name, topic_type,
+                    lecturer_start, lecturer_end, student_start, student_end)
+                VALUES (?, 'T013 missing Department', 'COURSE',
+                    '2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04')
+                """, faculty));
+        assertThrows(DataAccessException.class, () -> jdbc.update("""
+                INSERT INTO registration_periods(faculty_id, department_id, name, topic_type,
+                    lecturer_start, lecturer_end, student_start, student_end)
+                VALUES (?, ?, 'T013 cross Faculty', 'COURSE',
+                    '2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04')
+                """, faculty, otherDepartment));
+        assertEquals(1L, id(jdbc,
+                "SELECT COUNT(*) FROM registration_periods WHERE id = ? AND department_id = ?",
+                legacy, web));
+    }
+
+    @Test
+    void v21RejectsUnassignedPeriodBeforeChangingPermanentSchema() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        resetAndMigrateThrough(database, "20");
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        long unassigned = period(jdbc, faculty, "T013 chưa ánh xạ");
+        long[] before = businessRowCounts(jdbc);
+
+        assertThrows(FlywayException.class, () -> migrateLatest(database));
+
+        assertEquals(1L, id(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
+                  AND column_name = 'department_id' AND is_nullable = 'YES'
+                """));
+        assertEquals(0L, id(jdbc, """
+                SELECT COUNT(*) FROM information_schema.statistics
+                WHERE table_schema = DATABASE() AND table_name = 'departments'
+                  AND index_name = 'uq_departments_id_faculty'
+                """));
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class,
+                unassigned));
+        assertArrayEquals(before, businessRowCounts(jdbc));
+    }
+
+    @Test
+    void v21RejectsCrossFacultyPeriodBeforeChangingPermanentSchema() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        resetAndMigrateThrough(database, "20");
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa T013 ngoài phạm vi')");
+        long otherFaculty = id(jdbc,
+                "SELECT id FROM faculties WHERE name = 'Khoa T013 ngoài phạm vi'");
+        long otherDepartment = department(jdbc, otherFaculty, "Bộ môn T013 ngoài phạm vi");
+        long period = period(jdbc, faculty, "T013 sai Khoa");
+        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
+                otherDepartment, period);
+        long[] before = businessRowCounts(jdbc);
+
+        assertThrows(FlywayException.class, () -> migrateLatest(database));
+
+        assertEquals(1L, id(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
+                  AND column_name = 'department_id' AND is_nullable = 'YES'
+                """));
+        assertEquals(0L, id(jdbc, """
+                SELECT COUNT(*) FROM information_schema.statistics
+                WHERE table_schema = DATABASE() AND table_name = 'departments'
+                  AND index_name = 'uq_departments_id_faculty'
+                """));
+        assertEquals(otherDepartment, id(jdbc,
+                "SELECT department_id FROM registration_periods WHERE id = ?", period));
+        assertArrayEquals(before, businessRowCounts(jdbc));
     }
 
     private static void migrateThroughV18(MySqlTestSupport database) {
@@ -279,6 +394,11 @@ class PeriodDepartmentMigrationIT {
         return Flyway.configure().dataSource(database.dataSource())
                 .locations("classpath:db/migration")
                 .target(MigrationVersion.fromVersion(version)).load();
+    }
+
+    private static void migrateLatest(MySqlTestSupport database) {
+        Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration").load().migrate();
     }
 
     private static long canonicalFaculty(JdbcTemplate jdbc) {
