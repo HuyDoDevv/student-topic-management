@@ -8,7 +8,7 @@
 
 **Goal**: xác định baseline V18 và dữ liệu legacy trước migration; không suy đoán ánh xạ.
 
-- [X] T001 Kiểm kê đợt cũ, Bộ môn của đề tài/tác giả/GVHD và quan hệ nhóm/hội đồng/kết quả; ghi danh sách ánh xạ chờ chủ dự án xác nhận tại `specs/005-department-period-scope/legacy-period-mapping.md` và test inventory tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`. Đã kiểm kê DB ứng dụng V18 bằng truy vấn read-only: 1 đợt chưa có đề tài, không đủ chứng cứ gán Bộ môn; integration test T001 đạt 1/1 trên DB test riêng, `PeriodRulesTest` đạt 8/8. Quyết định ánh xạ đợt ID 1 vẫn mở, không cho phép backfill T012.
+- [X] T001 Kiểm kê đợt cũ, Bộ môn của đề tài/tác giả/GVHD và quan hệ nhóm/hội đồng/kết quả; ghi danh sách ánh xạ chờ chủ dự án xác nhận tại `specs/005-department-period-scope/legacy-period-mapping.md` và test inventory tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`. Đã kiểm kê DB ứng dụng V18 bằng truy vấn read-only: 1 đợt chưa có đề tài, không đủ chứng cứ gán Bộ môn; integration test T001 đạt 1/1 trên DB test riêng, `PeriodRulesTest` đạt 8/8. Tại thời điểm T001, quyết định ánh xạ đợt ID 1 còn mở; chủ dự án đã xác nhận riêng ở T012.
 
 **Checkpoint**: đợt trộn Bộ môn hoặc không xác định được ánh xạ bị đánh dấu STOP, không có DB dev/shared bị sửa.
 
@@ -58,7 +58,7 @@
 
 **Goal**: chỉ siết schema sau ánh xạ được xác nhận; nghiệm thu toàn feature có evidence.
 
-- [ ] T012 Đối chiếu và ghi lại quyết định ánh xạ từng đợt legacy ở `specs/005-department-period-scope/legacy-period-mapping.md`; sau xác nhận riêng, tạo migration backfill mới tại `src/main/java/db/migration/V20__backfill_period_department.java` và test bảo toàn/mơ hồ tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`.
+- [X] T012 Đối chiếu và ghi lại quyết định ánh xạ từng đợt legacy ở `specs/005-department-period-scope/legacy-period-mapping.md`; sau xác nhận riêng, tạo migration backfill mới tại `src/main/java/db/migration/V20__backfill_period_department.java` và test bảo toàn/mơ hồ tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`. Chủ dự án xác nhận đợt ID 1 `Đồ án môn học` thuộc `Lập Trình Web`; V20 chỉ gán ID 1 sau khi đối chiếu danh tính/Khoa/Bộ môn và đề tài/tác giả/GVHD, dừng nếu có đợt chưa duyệt hoặc dữ liệu mâu thuẫn. Đã verify trên MySQL 8.4 DB test riêng cổng 3307: `PeriodDepartmentMigrationIT` 8/8, `PeriodRulesTest` 8/8, Flyway validate V1–V20 và rerun đạt; `git diff --check` đạt. DB ứng dụng vẫn V18, 1 đợt ID 1 và 0 đề tài; chưa áp V19/V20 lên DB ứng dụng. Full Maven test compile còn lỗi sẵn có ngoài scope tại `PeriodScheduleIT` (gọi `PeriodService.update` thiếu `departmentId`), nên lớp test T012 được biên dịch và chạy riêng; T014/full suite chưa nghiệm thu.
 - [ ] T013 Chỉ sau T012 đạt data gate, tạo migration enforce mới cho Bộ môn bắt buộc và nhất quán Khoa tại `src/main/resources/db/migration/V21__enforce_period_department.sql`; test nâng cấp/idempotent/failure an toàn tại `src/test/java/vn/edu/topicregistration/integration/PeriodDepartmentMigrationIT.java`.
 - [ ] T014 Chạy suite theo `specs/005-department-period-scope/quickstart.md`, ghi evidence thực tế và kết quả SC-005-01–06 vào `specs/005-department-period-scope/acceptance-matrix.md`; giữ task mở nếu baseline 004 hoặc suite bắt buộc chưa đạt.
 

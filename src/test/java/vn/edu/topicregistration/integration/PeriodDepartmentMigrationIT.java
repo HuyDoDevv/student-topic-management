@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -8,12 +9,13 @@ import java.util.List;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
+import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** T001/T002: inventory evidence and non-destructive period Department expansion. */
+/** T001/T002/T012: inventory, backfill, and period Department enforcement. */
 class PeriodDepartmentMigrationIT {
     @AfterEach
     void restoreIsolatedTestDatabase() {
@@ -23,7 +25,7 @@ class PeriodDepartmentMigrationIT {
     @Test
     void classifiesEmptyUniqueMixedAndMismatchedLegacyPeriods() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
-        database.resetAndMigrate();
+        resetAndMigrateThrough(database, "19");
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa T001 inventory')");
@@ -83,11 +85,12 @@ class PeriodDepartmentMigrationIT {
         long topicsBefore = id(jdbc, "SELECT COUNT(*) FROM topics");
         long councilsBefore = id(jdbc, "SELECT COUNT(*) FROM councils");
 
-        Flyway latest = Flyway.configure().dataSource(database.dataSource())
-                .locations("classpath:db/migration").load();
-        assertEquals(1, latest.migrate().migrationsExecuted);
-        latest.validate();
-        assertEquals(0, latest.migrate().migrationsExecuted);
+        Flyway throughV19 = Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("19")).load();
+        assertEquals(1, throughV19.migrate().migrationsExecuted);
+        throughV19.validate();
+        assertEquals(0, throughV19.migrate().migrationsExecuted);
 
         assertEquals(periodsBefore, id(jdbc, "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(topicsBefore, id(jdbc, "SELECT COUNT(*) FROM topics"));
@@ -105,6 +108,208 @@ class PeriodDepartmentMigrationIT {
                 department, period);
         assertEquals(department, jdbc.queryForObject(
                 "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, period));
+    }
+
+    @Test
+    void approvedLegacyPeriodBackfillsAcrossV18V19V20WithoutLosingRows() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        migrateThroughV18(database);
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        long web = department(jdbc, faculty, "Lập Trình Web");
+        long chair = account(jdbc, "t012.chair", faculty, web);
+        long secretary = account(jdbc, "t012.secretary", faculty, web);
+        long student = student(jdbc, faculty, "leader");
+        long secondStudent = student(jdbc, faculty, "member2");
+        long thirdStudent = student(jdbc, faculty, "member3");
+        long legacy = period(jdbc, faculty, "Đồ án môn học");
+        assertEquals(1L, legacy);
+        topic(jdbc, legacy, chair, web, chair);
+        long topicId = id(jdbc, "SELECT id FROM topics WHERE period_id = ?", legacy);
+        jdbc.update("INSERT INTO student_groups(period_id, leader_student_id) VALUES (?, ?)",
+                legacy, student);
+        long groupId = id(jdbc, "SELECT id FROM student_groups WHERE period_id = ?", legacy);
+        jdbc.update("""
+                INSERT INTO group_memberships(group_id, period_id, student_id, slot)
+                VALUES (?, ?, ?, 2)
+                """, groupId, legacy, secondStudent);
+        jdbc.update("""
+                INSERT INTO group_memberships(group_id, period_id, student_id, slot)
+                VALUES (?, ?, ?, 3)
+                """, groupId, legacy, thirdStudent);
+        jdbc.update("""
+                INSERT INTO registrations(period_id, group_id, topic_id, status)
+                VALUES (?, ?, ?, 'ACCEPTED')
+                """, legacy, groupId, topicId);
+        long registrationId = id(jdbc, "SELECT id FROM registrations WHERE period_id = ?", legacy);
+        jdbc.update("""
+                INSERT INTO councils(period_id, name, chair_id, secretary_id)
+                VALUES (?, 'Hội đồng T012', ?, ?)
+                """, legacy, chair, secretary);
+        long councilId = id(jdbc, "SELECT id FROM councils WHERE period_id = ?", legacy);
+        jdbc.update("""
+                INSERT INTO council_topics(council_id, registration_id, period_id)
+                VALUES (?, ?, ?)
+                """, councilId, registrationId, legacy);
+        jdbc.update("INSERT INTO score_components(period_id, name) VALUES (?, 'Điểm T012')", legacy);
+        long componentId = id(jdbc, "SELECT id FROM score_components WHERE period_id = ?", legacy);
+        jdbc.update("""
+                INSERT INTO evaluations(registration_id, student_id, period_id,
+                    evaluator_id, component_id, council_id, score)
+                VALUES (?, ?, ?, ?, ?, ?, 8.00)
+                """, registrationId, student, legacy, secretary, componentId, councilId);
+        jdbc.update("""
+                INSERT INTO final_results(registration_id, student_id, council_id,
+                    consolidated_by, consolidated_at, evaluation_summary, final_score,
+                    review_completed_at, grading_completed_at)
+                VALUES (?, ?, ?, ?, '2026-02-01 00:00:00', 'T012 fixture', 8.00,
+                        '2026-02-01 00:00:00', '2026-02-01 00:00:00')
+                """, registrationId, student, councilId, chair);
+        long[] before = businessRowCounts(jdbc);
+
+        Flyway throughV20 = flywayThrough(database, "20");
+        assertEquals(2, throughV20.migrate().migrationsExecuted);
+        throughV20.validate();
+        assertEquals(0, throughV20.migrate().migrationsExecuted);
+
+        assertEquals(web, id(jdbc,
+                "SELECT department_id FROM registration_periods WHERE id = ?", legacy));
+        assertArrayEquals(before, businessRowCounts(jdbc));
+    }
+
+    @Test
+    void unapprovedAdditionalLegacyPeriodStopsBackfillWithoutChangingRows() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        migrateThroughV18(database);
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        department(jdbc, faculty, "Lập Trình Web");
+        long approved = period(jdbc, faculty, "Đồ án môn học");
+        long unapproved = period(jdbc, faculty, "Đợt chưa duyệt");
+        long[] before = businessRowCounts(jdbc);
+
+        assertThrows(FlywayException.class, () -> flywayThrough(database, "20").migrate());
+
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, approved));
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, unapproved));
+        assertArrayEquals(before, businessRowCounts(jdbc));
+    }
+
+    @Test
+    void conflictingTopicDepartmentStopsBackfillWithoutChangingRows() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        migrateThroughV18(database);
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        department(jdbc, faculty, "Lập Trình Web");
+        long python = department(jdbc, faculty, "Lập Trình Python");
+        long author = account(jdbc, "t012.python", faculty, python);
+        long legacy = period(jdbc, faculty, "Đồ án môn học");
+        topic(jdbc, legacy, author, python, author);
+        long[] before = businessRowCounts(jdbc);
+
+        assertThrows(FlywayException.class, () -> flywayThrough(database, "20").migrate());
+
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, legacy));
+        assertArrayEquals(before, businessRowCounts(jdbc));
+    }
+
+    @Test
+    void changedLegacyIdentityStopsBackfillWithoutChangingRows() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        migrateThroughV18(database);
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        department(jdbc, faculty, "Lập Trình Web");
+        long changed = period(jdbc, faculty, "Đợt khác");
+
+        assertThrows(FlywayException.class, () -> flywayThrough(database, "20").migrate());
+
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, changed));
+    }
+
+    @Test
+    void conflictingSupervisorDepartmentStopsBackfillWithoutChangingRows() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        migrateThroughV18(database);
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        long faculty = canonicalFaculty(jdbc);
+        long web = department(jdbc, faculty, "Lập Trình Web");
+        long python = department(jdbc, faculty, "Lập Trình Python");
+        long author = account(jdbc, "t012.web", faculty, web);
+        long supervisor = account(jdbc, "t012.python.supervisor", faculty, python);
+        long legacy = period(jdbc, faculty, "Đồ án môn học");
+        topic(jdbc, legacy, author, web, supervisor);
+
+        assertThrows(FlywayException.class, () -> flywayThrough(database, "20").migrate());
+
+        assertNull(jdbc.queryForObject(
+                "SELECT department_id FROM registration_periods WHERE id = ?", Long.class, legacy));
+    }
+
+    @Test
+    void freshDatabaseWithoutHistoricalPeriodMigratesThroughV20() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        resetAndMigrateThrough(database, "20");
+        Flyway throughV20 = flywayThrough(database, "20");
+        throughV20.validate();
+        assertEquals(0, throughV20.migrate().migrationsExecuted);
+        assertEquals(0L, id(new JdbcTemplate(database.dataSource()),
+                "SELECT COUNT(*) FROM registration_periods"));
+    }
+
+    private static void migrateThroughV18(MySqlTestSupport database) {
+        resetAndMigrateThrough(database, "18");
+    }
+
+    private static void resetAndMigrateThrough(MySqlTestSupport database, String version) {
+        Flyway throughVersion = Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion(version))
+                .cleanDisabled(false).load();
+        throughVersion.clean();
+        throughVersion.migrate();
+    }
+
+    private static Flyway flywayThrough(MySqlTestSupport database, String version) {
+        return Flyway.configure().dataSource(database.dataSource())
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion(version)).load();
+    }
+
+    private static long canonicalFaculty(JdbcTemplate jdbc) {
+        return id(jdbc, "SELECT id FROM faculties WHERE name = 'Khoa Công nghệ Thông tin'");
+    }
+
+    private static long department(JdbcTemplate jdbc, long faculty, String name) {
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)", faculty, name);
+        return id(jdbc, "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
+                faculty, name);
+    }
+
+    private static long student(JdbcTemplate jdbc, long faculty, String suffix) {
+        String username = "t012.student." + suffix;
+        jdbc.update("""
+                INSERT INTO user_accounts(full_name, username, password_hash, faculty_id)
+                VALUES ('Sinh viên T012', ?, 'NOT_A_LOGIN_HASH', ?)
+                """, username, faculty);
+        return id(jdbc, "SELECT id FROM user_accounts WHERE username = ?", username);
+    }
+
+    private static long[] businessRowCounts(JdbcTemplate jdbc) {
+        String[] tables = {"registration_periods", "topics", "topic_supervisors",
+                "student_groups", "group_memberships", "registrations", "registration_members",
+                "councils", "council_topics", "council_members",
+                "score_components", "evaluations", "final_results"};
+        long[] counts = new long[tables.length];
+        for (int index = 0; index < tables.length; index++) {
+            counts[index] = id(jdbc, "SELECT COUNT(*) FROM " + tables[index]);
+        }
+        return counts;
     }
 
     private static Inventory inventory(JdbcTemplate jdbc, long periodId) {
