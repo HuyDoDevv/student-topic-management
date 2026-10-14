@@ -89,14 +89,14 @@ class PeriodContractTest {
                 Long.class, deanScope.facultyId(), "Công nghệ phần mềm");
         fixtures.createIdentity(
                 "dean", "Trưởng khoa", UNUSED_HASH, true,
-                deanScope, Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+                deanScope, Set.of(RoleCode.DEAN));
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
     }
 
     @Test
     void deanCreatesAValidPeriodAndReadsPersistedValues() throws Exception {
         mvc.perform(validCreateRequest("COURSE")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrlPattern("/periods/*"));
@@ -111,7 +111,7 @@ class PeriodContractTest {
         assertEquals(STUDENT_END, saved.studentEnd());
 
         mvc.perform(get("/periods/{id}", saved.id())
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt HK1")));
     }
@@ -119,7 +119,7 @@ class PeriodContractTest {
     @Test
     void createRejectsMissingOrOtherFacultyDepartment() throws Exception {
         mvc.perform(createRequest("COURSE", null)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -131,7 +131,7 @@ class PeriodContractTest {
                 "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
                 Long.class, otherScope.facultyId(), "Bộ môn Điện");
         mvc.perform(createRequest("COURSE", otherDepartmentId)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -174,7 +174,7 @@ class PeriodContractTest {
                 VALUES (?, ?, ?, ?, 2)
                 """, groupId, ownPeriod, invitee.accountId(), student.accountId());
 
-        DashboardView deanView = dashboardFor("dean", "LECTURER", "DEAN");
+        DashboardView deanView = dashboardFor("dean", "DEAN");
         assertEquals(2, deanView.metrics().getFirst().value());
         assertEquals(1, deanView.metrics().getLast().value());
         DashboardView lecturerView = dashboardFor("lecturer-dashboard", "LECTURER");
@@ -216,7 +216,7 @@ class PeriodContractTest {
     @Test
     void formUsesCalendarDatesAndRejectsPastOrTimeValues() throws Exception {
         mvc.perform(get("/periods/new")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"departmentId\"")))
                 .andExpect(content().string(containsString("Công nghệ phần mềm")))
@@ -226,14 +226,14 @@ class PeriodContractTest {
 
         mvc.perform(baseCreateRequest(
                         "COURSE", "2026-09-09", "2026-09-11", "2026-09-12", "2026-09-13")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
         mvc.perform(baseCreateRequest(
                         "COURSE", "2026-09-10T08:00", "2026-09-11", "2026-09-12", "2026-09-13")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -243,20 +243,20 @@ class PeriodContractTest {
     void conditionalDatesAndScheduleValidationRejectTheWholeCreate() throws Exception {
         mvc.perform(baseCreateRequest("KLTN")
                         .param("reviewerScoreDeadline", "2026-09-20")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
         mvc.perform(baseCreateRequest("COURSE", "2026-09-11")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
         mvc.perform(validCreateRequest("COURSE")
                         .param("reviewerScoreDeadline", "2026-09-20")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -265,7 +265,7 @@ class PeriodContractTest {
     @Test
     void createRequiresCsrfAndPersistedDeanRole() throws Exception {
         mvc.perform(validCreateRequest("COURSE")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isForbidden());
         assertEquals(0L, periodCount());
 
@@ -287,20 +287,20 @@ class PeriodContractTest {
         long otherPeriod = insertPeriod(otherScope.facultyId(), "Đợt khoa Điện", 0L);
 
         mvc.perform(get("/periods")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt khoa CNTT")))
                 .andExpect(content().string(not(containsString("Đợt khoa Điện"))));
 
         mvc.perform(validUpdateRequest(otherPeriod, 0L)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/periods/{id}", otherPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/periods/{id}/edit", otherPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isNotFound());
         assertEquals("Đợt khoa Điện", periodName(otherPeriod));
         assertEquals("Đợt khoa CNTT", periodName(ownPeriod));
@@ -321,7 +321,7 @@ class PeriodContractTest {
                 networkDepartmentId, networkPeriod);
 
         var list = mvc.perform(get("/periods")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Bộ môn")))
                 .andExpect(content().string(containsString("Công nghệ phần mềm")))
@@ -337,11 +337,11 @@ class PeriodContractTest {
                 .filter(row -> row.id() == networkPeriod).findFirst().orElseThrow().departmentName());
 
         mvc.perform(get("/periods/{id}", softwarePeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Công nghệ phần mềm")));
         mvc.perform(get("/periods/{id}", networkPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Mạng máy tính")));
     }
@@ -351,11 +351,11 @@ class PeriodContractTest {
         long legacyPeriod = insertPeriod(deanScope.facultyId(), "Đợt cũ", 0L);
 
         mvc.perform(get("/periods")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Chưa xác định Bộ môn")));
         mvc.perform(get("/periods/{id}", legacyPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Chưa xác định Bộ môn")));
     }
@@ -365,7 +365,7 @@ class PeriodContractTest {
         long periodId = insertPeriod(deanScope.facultyId(), "Tên cũ", 3L);
 
         mvc.perform(validUpdateRequest(periodId, 3L)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrlPattern("/periods/*"));
@@ -375,7 +375,7 @@ class PeriodContractTest {
 
         mvc.perform(validUpdateRequest(periodId, 3L)
                         .param("name", "Ghi đè bằng version cũ")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isConflict());
         assertEquals("Tên đã sửa", periodName(periodId));
@@ -395,7 +395,7 @@ class PeriodContractTest {
 
         mvc.perform(validUpdateRequest(periodId, 0L)
                         .param("departmentId", Long.toString(otherDepartmentId))
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isSeeOther());
 
@@ -419,7 +419,7 @@ class PeriodContractTest {
 
         mvc.perform(validUpdateRequest(periodId, 0L)
                         .param("departmentId", Long.toString(otherDepartmentId))
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
 

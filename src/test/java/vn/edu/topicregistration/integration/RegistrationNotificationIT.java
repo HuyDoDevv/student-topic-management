@@ -149,7 +149,7 @@ class RegistrationNotificationIT {
         long authorId = requiredLong(
                 "SELECT author_id FROM topics WHERE id = ?", approvedTopicId);
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         assertThrows(IllegalStateException.class,
                 () -> rollbackProbe.approveThenFail(approvedTopicId, 0L));
         assertEquals("PENDING_APPROVAL", requiredString(
@@ -185,7 +185,7 @@ class RegistrationNotificationIT {
 
     @Test
     void acceptingRegistrationNotifiesSelectedAndAutoRejectedSnapshots() {
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         long selectedId = firstPendingRegistrationId();
         long otherId = requiredLong("""
                 SELECT registration.id
@@ -213,7 +213,7 @@ class RegistrationNotificationIT {
 
     @Test
     void manualRegistrationRejectionNotifiesEverySnapshotStudent() {
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         long registrationId = firstPendingRegistrationId();
 
         registrationDecisions.reject(registrationId, 0L, "Nội dung đăng ký chưa phù hợp");

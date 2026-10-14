@@ -120,6 +120,38 @@ class CouncilServiceTest {
     }
 
     @Test
+    void rejectsForgedDeanCouncilMemberEvenIfLegacyLecturerRoleIsPresent() {
+        Dependencies dependencies = dependencies();
+        validCreation(dependencies);
+        UserAccountEntity dean = dependencies.accounts().findDetailedById(13L).orElseThrow();
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().create(new CreateCouncilCommand(
+                        7L, "Hội đồng", 11L, 12L, List.of(13L))));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_MEMBERS, rejected.code());
+        verify(dependencies.councils(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void councilWorkspaceOmitsDeanReturnedByLegacyCandidateQuery() {
+        Dependencies dependencies = dependencies();
+        RegistrationPeriodEntity period = mockPeriod("KLTN");
+        when(dependencies.periods().findById(7L)).thenReturn(Optional.of(period));
+        UserAccountEntity lecturer = mockLecturer(11L, period.getFaculty());
+        UserAccountEntity dean = mockLecturer(12L, period.getFaculty());
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dependencies.accounts().findEnabledByFacultyAndRole(2L, RoleCode.LECTURER))
+                .thenReturn(List.of(lecturer, dean));
+
+        var workspace = dependencies.service().creationWorkspace(7L);
+
+        assertEquals(List.of(11L), workspace.lecturers().stream()
+                .map(option -> option.id()).toList());
+    }
+
+    @Test
     void rejectsDeanOutsideFacultyBeforeCouncilPersistence() {
         Dependencies dependencies = dependencies();
         RegistrationPeriodEntity period = mockPeriod("TLCN");
@@ -352,7 +384,7 @@ class CouncilServiceTest {
         FacultyEntity faculty = period.getFaculty();
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(3L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 2L));
+                new ActorIdentity(3L, Set.of(RoleCode.DEAN), 2L));
         for (long id = 11; id <= 13; id++) {
             UserAccountEntity lecturer = mockLecturer(id, faculty);
             when(dependencies.accounts().findDetailedById(id)).thenReturn(Optional.of(lecturer));
@@ -395,7 +427,7 @@ class CouncilServiceTest {
                 .thenReturn(Optional.of(7L));
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
-                new ActorIdentity(3L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 2L));
+                new ActorIdentity(3L, Set.of(RoleCode.DEAN), 2L));
         when(dependencies.councils().findByIdForUpdate(41L)).thenReturn(Optional.of(council));
         when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of());

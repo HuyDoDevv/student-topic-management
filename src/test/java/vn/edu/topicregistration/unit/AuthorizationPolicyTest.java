@@ -47,11 +47,15 @@ class AuthorizationPolicyTest {
     }
 
     @Test
-    void lecturerDeanCombinationIsValidAndBothScopesComeFromTheDatabase() {
+    void lecturerDeanCombinationIsRejectedAndPureDeanKeepsFacultyScope() {
         stubAccount(7L, true, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 21L);
 
-        assertEquals(7L, policy.requireLecturerOfFaculty(21L).accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireLecturerOfFaculty(21L));
+        assertThrows(AccessDeniedException.class, () -> policy.requireDeanOfFaculty(21L));
+
+        stubAccount(7L, true, Set.of(RoleCode.DEAN), 21L);
         assertEquals(7L, policy.requireDeanOfFaculty(21L).accountId());
+        assertThrows(AccessDeniedException.class, () -> policy.requireLecturerOfFaculty(21L));
         assertThrows(AccessDeniedException.class, () -> policy.requireLecturerOfFaculty(22L));
         assertThrows(AccessDeniedException.class, () -> policy.requireDeanOfFaculty(22L));
     }

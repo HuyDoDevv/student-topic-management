@@ -119,6 +119,9 @@ public class AuthorizationPolicy {
         if (roles.contains(RoleCode.STUDENT) && roles.size() > 1) {
             return false;
         }
+        if (roles.contains(RoleCode.DEAN) && roles.contains(RoleCode.LECTURER)) {
+            return false;
+        }
         return !roles.contains(RoleCode.ADMIN) || roles.size() == 1;
     }
 

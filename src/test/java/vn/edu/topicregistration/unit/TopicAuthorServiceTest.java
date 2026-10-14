@@ -129,6 +129,26 @@ class TopicAuthorServiceTest {
     }
 
     @Test
+    void rejectsForgedDeanCoSupervisorEvenIfLegacyLecturerRoleIsPresent() {
+        Scenario scenario = openScenario();
+        DepartmentEntity department = department(31L, scenario.faculty());
+        when(scenario.author().getDepartment()).thenReturn(department);
+        UserAccountEntity dean = mock(UserAccountEntity.class);
+        when(dean.getId()).thenReturn(8L);
+        when(dean.getFaculty()).thenReturn(scenario.faculty());
+        when(dean.getDepartment()).thenReturn(department);
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dean.isEnabled()).thenReturn(true);
+        when(scenario.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> scenario.service().createDraft(1L, commandWithCoSupervisor(8L)));
+
+        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, rejected.code());
+        verify(scenario.topics(), never()).saveAndFlush(any());
+    }
+
+    @Test
     void coSupervisorInSameDepartmentIsStoredInSecondSlot() {
         Scenario scenario = openScenario();
         DepartmentEntity department = department(31L, scenario.faculty());
@@ -166,6 +186,7 @@ class TopicAuthorServiceTest {
         UserAccountEntity colleague = mock(UserAccountEntity.class);
         when(colleague.getId()).thenReturn(8L);
         when(colleague.getUsername()).thenReturn("colleague");
+        when(colleague.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
         when(scenario.accounts().findEnabledByFacultyAndDepartmentAndRole(
                 21L, 31L, RoleCode.LECTURER))
                 .thenReturn(List.of(scenario.author(), colleague));
@@ -175,6 +196,22 @@ class TopicAuthorServiceTest {
         assertEquals(List.of(8L), context.coSupervisors().stream()
                 .map(option -> option.id()).toList());
         verify(scenario.accounts(), never()).findEnabledByFacultyAndRole(21L, RoleCode.LECTURER);
+    }
+
+    @Test
+    void formContextOmitsDeanReturnedByLegacyCandidateQuery() {
+        Scenario scenario = openScenario();
+        DepartmentEntity department = department(31L, scenario.faculty());
+        when(scenario.author().getDepartment()).thenReturn(department);
+        when(scenario.periods().findByIdAndFacultyIdAndDepartmentId(1L, 21L, 31L))
+                .thenReturn(Optional.of(scenario.period()));
+        when(scenario.period().getStudentEnd()).thenReturn(NOW.plusSeconds(1200));
+        UserAccountEntity dean = mock(UserAccountEntity.class);
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(scenario.accounts().findEnabledByFacultyAndDepartmentAndRole(
+                21L, 31L, RoleCode.LECTURER)).thenReturn(List.of(scenario.author(), dean));
+
+        assertEquals(List.of(), scenario.service().formContext(1L).coSupervisors());
     }
 
     @Test

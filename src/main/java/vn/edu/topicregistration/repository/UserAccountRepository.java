@@ -48,6 +48,9 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             + "where account.enabled = true "
             + "and account.faculty.id = :facultyId "
             + "and assignment.role.code = :role "
+            + "and not exists (select dean.id from UserRoleEntity dean "
+            + "where dean.user.id = account.id "
+            + "and dean.role.code = vn.edu.topicregistration.entity.RoleCode.DEAN) "
             + "order by account.fullName, account.username")
     List<UserAccountEntity> findEnabledByFacultyAndRole(
             @Param("facultyId") long facultyId,
@@ -60,6 +63,9 @@ public interface UserAccountRepository extends JpaRepository<UserAccountEntity, 
             + "and account.faculty.id = :facultyId "
             + "and account.department.id = :departmentId "
             + "and assignment.role.code = :role "
+            + "and not exists (select dean.id from UserRoleEntity dean "
+            + "where dean.user.id = account.id "
+            + "and dean.role.code = vn.edu.topicregistration.entity.RoleCode.DEAN) "
             + "order by account.fullName, account.username")
     List<UserAccountEntity> findEnabledByFacultyAndDepartmentAndRole(
             @Param("facultyId") long facultyId,

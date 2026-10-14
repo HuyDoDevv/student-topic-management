@@ -39,7 +39,7 @@ class NotificationFlowE2ETest extends BrowserTestSupport {
                 Set.of(RoleCode.ADMIN));
         fixtures.createIdentity(
                 DEAN_USERNAME, "Trưởng khoa E2E", passwordHash, true, it,
-                Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+                Set.of(RoleCode.DEAN));
         fixtures.createIdentity(
                 IT_STUDENT_USERNAME, "Sinh viên CNTT E2E", passwordHash, true, it,
                 Set.of(RoleCode.STUDENT));

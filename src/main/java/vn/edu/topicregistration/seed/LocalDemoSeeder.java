@@ -102,7 +102,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 "ADMIN");
         long deanId = account(
                 "dean.demo", "Trưởng khoa Demo", facultyId, passwordHash,
-                "DEAN", "LECTURER");
+                "DEAN");
         long lecturer1Id = account(
                 "lecturer1.demo", "Giảng viên Demo 1", facultyId, passwordHash,
                 "LECTURER");

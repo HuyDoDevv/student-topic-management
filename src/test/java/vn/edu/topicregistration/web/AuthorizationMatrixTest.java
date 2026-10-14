@@ -96,7 +96,7 @@ class AuthorizationMatrixTest {
         otherScope = fixtures.createOrganization("Khoa Xây dựng auth");
         dean = identity(
                 "auth-dean", "Trưởng khoa auth", ownScope,
-                Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+                Set.of(RoleCode.DEAN));
         lecturer = identity(
                 "auth-lecturer", "Giảng viên auth", ownScope,
                 Set.of(RoleCode.LECTURER));
@@ -116,7 +116,7 @@ class AuthorizationMatrixTest {
                 "auth-admin", "Quản trị auth", null, Set.of(RoleCode.ADMIN));
         identity(
                 "auth-other-dean", "Trưởng khoa khác", otherScope,
-                Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+                Set.of(RoleCode.DEAN));
 
         periodId = period(ownScope.facultyId(), "Đợt khoa CNTT auth");
         otherPeriodId = period(otherScope.facultyId(), "Đợt khoa Xây dựng auth");
@@ -194,18 +194,22 @@ class AuthorizationMatrixTest {
 
     @Test
     void rolesCannotCrossAdminDeanLecturerAndStudentBoundaries() throws Exception {
-        assertForbiddenGet(dean, new String[] {"LECTURER", "DEAN"},
-                "/topics", "/groups", "/group-invitations", "/admin/accounts/students");
+        assertForbiddenGet(dean, new String[] {"DEAN"},
+                "/topics", "/lecturer/scoring", "/groups", "/group-invitations",
+                "/admin/accounts/students");
         assertForbiddenGet(lecturer, new String[] {"LECTURER"},
                 "/periods", "/groups", "/group-invitations", "/admin/accounts/students");
         assertForbiddenGet(leader, new String[] {"STUDENT"},
                 "/periods", "/topics", "/faculty/boards", "/faculty/results",
                 "/lecturer/scoring", "/faculty/direct-grading", "/admin/accounts/students");
 
-        mvc.perform(get("/periods").with(actor(dean, "LECTURER", "DEAN")))
+        mvc.perform(get("/periods").with(actor(dean, "DEAN")))
                 .andExpect(status().isOk());
         mvc.perform(get("/topics").with(actor(lecturer, "LECTURER")))
                 .andExpect(status().isOk());
+        mvc.perform(post("/periods/{id}/topics", periodId)
+                        .with(actor(dean, "DEAN")).with(csrf()))
+                .andExpect(status().isForbidden());
         mvc.perform(get("/groups/{id}", groupId).with(actor(leader, "STUDENT")))
                 .andExpect(status().isOk());
 
@@ -225,7 +229,7 @@ class AuthorizationMatrixTest {
     @Test
     void persistedScopeAndRelationshipsAreRecheckedAfterTheyChange() throws Exception {
         mvc.perform(get("/periods/{id}", otherPeriodId)
-                        .with(actor(dean, "LECTURER", "DEAN")))
+                        .with(actor(dean, "DEAN")))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/topics/{id}", topicId)
                         .with(actor(lecturer, "LECTURER")))

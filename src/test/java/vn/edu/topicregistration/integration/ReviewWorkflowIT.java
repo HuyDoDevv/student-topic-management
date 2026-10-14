@@ -160,7 +160,7 @@ class ReviewWorkflowIT {
         assertEquals(CouncilStatus.COMPLETED, completed.status());
         assertEquals(6, completed.resultCount());
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         ResultService.BoardResultView published = results.publish(
                 fixture.activeCouncilId(), completed.version());
         assertEquals(CouncilStatus.PUBLISHED, published.status());

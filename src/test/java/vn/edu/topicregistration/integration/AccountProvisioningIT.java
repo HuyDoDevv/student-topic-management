@@ -40,7 +40,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 import vn.edu.topicregistration.entity.StudentProfileEntity;
+import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.repository.StudentProfileRepository;
+import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.service.AdminAccountService;
 import vn.edu.topicregistration.service.AdminAccountService.CreateStudentCommand;
 import vn.edu.topicregistration.service.AdminAccountService.CreateLecturerCommand;
@@ -60,6 +62,9 @@ class AccountProvisioningIT {
 
     @Autowired
     PeriodService periods;
+
+    @Autowired
+    UserAccountRepository userAccounts;
 
     @Autowired
     JdbcTemplate jdbc;
@@ -233,6 +238,9 @@ class AccountProvisioningIT {
         accounts.createDean(new CreateDeanCommand(
                 "dean.old", "Trưởng khoa cũ", "temporary-password", departmentId));
         long oldDeanId = accountId("dean.old");
+        assertEquals(List.of("DEAN"), jdbc.queryForList("""
+                SELECT role_code FROM user_roles WHERE user_id = ? ORDER BY role_code
+                """, String.class, oldDeanId));
         jdbc.update("""
                 INSERT INTO registration_periods
                     (faculty_id, department_id, name, topic_type,
@@ -294,6 +302,43 @@ class AccountProvisioningIT {
                 () -> accounts.unlockAccount(firstId),
                 () -> accounts.unlockAccount(secondId));
         assertEquals(1L, activeDeanCount());
+    }
+
+    @Test
+    void concurrentDeanCreateAndUnlockLeaveOnlyOneEnabledDean() throws Exception {
+        long departmentId = addDepartment();
+        accounts.createDean(new CreateDeanCommand(
+                "dean.locked", "Trưởng khoa cũ", "temporary-password", departmentId));
+        long lockedId = accountId("dean.locked");
+        accounts.lockAccount(lockedId);
+
+        assertOneConcurrentSuccess(
+                () -> accounts.unlockAccount(lockedId),
+                () -> accounts.createDean(new CreateDeanCommand(
+                        "dean.created", "Trưởng khoa mới", "temporary-password", departmentId)));
+        assertEquals(1L, activeDeanCount());
+    }
+
+    @Test
+    void lecturerCandidateQueriesExcludeDeanEvenWithLegacyMixedRoles() {
+        long departmentId = addDepartment();
+        accounts.createDean(new CreateDeanCommand(
+                "dean.candidate", "Trưởng khoa", "temporary-password", departmentId));
+        long deanId = accountId("dean.candidate");
+        accounts.createLecturer(new CreateLecturerCommand(
+                "lecturer.candidate", "Giảng viên", "temporary-password", departmentId));
+        long lecturerId = accountId("lecturer.candidate");
+        long facultyId = jdbc.queryForObject(
+                "SELECT faculty_id FROM user_accounts WHERE id = ?", Long.class, deanId);
+
+        assertEquals(List.of(lecturerId), userAccounts.findEnabledByFacultyAndRole(
+                facultyId, RoleCode.LECTURER).stream().map(account -> account.getId()).toList());
+        jdbc.update("INSERT INTO user_roles(user_id, role_code) VALUES (?, 'LECTURER')", deanId);
+        assertEquals(List.of(lecturerId), userAccounts.findEnabledByFacultyAndRole(
+                facultyId, RoleCode.LECTURER).stream().map(account -> account.getId()).toList());
+        assertEquals(List.of(lecturerId), userAccounts.findEnabledByFacultyAndDepartmentAndRole(
+                facultyId, departmentId, RoleCode.LECTURER).stream()
+                .map(account -> account.getId()).toList());
     }
 
     private void assertOneConcurrentSuccess(Callable<?> first, Callable<?> second) throws Exception {

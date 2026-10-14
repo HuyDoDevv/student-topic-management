@@ -100,7 +100,7 @@ class PeriodScheduleIT {
                 Long.class, facultyId);
         fixtures.createIdentity(
                 "dean-schedule", "Trưởng khoa", "unusable-concurrency-hash", true,
-                scope, Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+                scope, Set.of(RoleCode.DEAN));
         periodId = insertPeriod();
     }
 

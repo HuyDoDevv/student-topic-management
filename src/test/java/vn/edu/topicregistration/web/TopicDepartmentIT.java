@@ -91,9 +91,9 @@ class TopicDepartmentIT {
         otherDepartmentId = department(faculty.facultyId(), "Hệ thống thông tin");
         lecturer = identity("topic-dept-author", faculty, Set.of(RoleCode.LECTURER));
         otherLecturer = identity("topic-dept-other", faculty, Set.of(RoleCode.LECTURER));
-        dean = identity("topic-dept-dean", faculty, Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        dean = identity("topic-dept-dean", faculty, Set.of(RoleCode.DEAN));
         outsideDean = identity("topic-dept-outside-dean", otherFaculty,
-                Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+                Set.of(RoleCode.DEAN));
         assignDepartment(lecturer, departmentId);
         assignDepartment(otherLecturer, otherDepartmentId);
         assignDepartment(dean, departmentId);
@@ -118,7 +118,7 @@ class TopicDepartmentIT {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt hệ thống")))
                 .andExpect(content().string(not(containsString("Đợt phần mềm"))));
-        mvc.perform(get("/periods").with(actor(dean, "DEAN", "LECTURER")))
+        mvc.perform(get("/periods").with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt phần mềm")))
                 .andExpect(content().string(containsString("Đợt hệ thống")));
@@ -257,26 +257,26 @@ class TopicDepartmentIT {
         long second = pendingTopic(otherLecturer, otherDepartmentId, "Đề tài hệ thống");
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .with(actor(dean, "DEAN", "LECTURER")))
+                        .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đề tài phần mềm")))
                 .andExpect(content().string(containsString("Đề tài hệ thống")));
         mvc.perform(post("/topics/{id}/approve", first)
-                        .with(actor(dean, "DEAN", "LECTURER")).with(csrf())
+                        .with(actor(dean, "DEAN")).with(csrf())
                         .param("version", "0"))
                 .andExpect(status().isSeeOther());
         mvc.perform(post("/topics/{id}/approve", second)
-                        .with(actor(dean, "DEAN", "LECTURER")).with(csrf())
+                        .with(actor(dean, "DEAN")).with(csrf())
                         .param("version", "0"))
                 .andExpect(status().isSeeOther());
         assertEquals(2L, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM topics WHERE status = 'APPROVED'", Long.class));
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .with(actor(outsideDean, "DEAN", "LECTURER")))
+                        .with(actor(outsideDean, "DEAN")))
                 .andExpect(status().isNotFound());
         mvc.perform(post("/topics/{id}/approve", first)
-                        .with(actor(outsideDean, "DEAN", "LECTURER")).with(csrf())
+                        .with(actor(outsideDean, "DEAN")).with(csrf())
                         .param("version", "1"))
                 .andExpect(status().isForbidden());
     }
@@ -289,14 +289,14 @@ class TopicDepartmentIT {
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
                         .param("departmentId", Long.toString(departmentId))
-                        .with(actor(dean, "DEAN", "LECTURER")))
+                        .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đề tài phần mềm T009")))
                 .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
                 .andExpect(content().string(containsString("<span>2</span> chờ duyệt")));
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
                         .param("departmentId", Long.toString(outsideDepartment))
-                        .with(actor(dean, "DEAN", "LECTURER")))
+                        .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("Đề tài phần mềm T009"))))
                 .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))

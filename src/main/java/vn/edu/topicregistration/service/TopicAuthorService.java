@@ -213,6 +213,8 @@ public class TopicAuthorService {
                         actor.facultyId(), department.getId(), RoleCode.LECTURER);
         List<LecturerOption> coSupervisors = eligibleLecturers
                 .stream()
+                .filter(account -> account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN))
                 .filter(account -> !Objects.equals(account.getId(), actor.accountId()))
                 .map(account -> new LecturerOption(
                         account.getId(), displayName(account), account.getUsername()))
@@ -372,7 +374,8 @@ public class TopicAuthorService {
                 facultyId == null ? Long.MIN_VALUE : facultyId,
                 departmentId,
                 lecturer.isEnabled(),
-                lecturer.getRoleCodes().contains(RoleCode.LECTURER));
+                lecturer.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !lecturer.getRoleCodes().contains(RoleCode.DEAN));
     }
 
     private TopicAccess access(ActorIdentity actor, TopicEntity topic) {

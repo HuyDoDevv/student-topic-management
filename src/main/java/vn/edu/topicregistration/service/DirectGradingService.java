@@ -124,7 +124,8 @@ public class DirectGradingService {
                 reportPresent,
                 alreadyAssigned,
                 grader.isEnabled(),
-                grader.getRoleCodes().contains(RoleCode.LECTURER),
+                grader.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !grader.getRoleCodes().contains(RoleCode.DEAN),
                 sameFaculty,
                 supervisor));
 
@@ -209,6 +210,8 @@ public class DirectGradingService {
                         registration.getPeriod().getFaculty().getId(),
                         RoleCode.LECTURER)
                 .stream()
+                .filter(account -> account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN))
                 .filter(account -> !supervisorIds.contains(account.getId()))
                 .map(account -> new LecturerOption(
                         account.getId(), displayName(account), account.getUsername()))

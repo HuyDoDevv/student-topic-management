@@ -258,6 +258,8 @@ public class CouncilService {
         List<LecturerOption> lecturerOptions = accounts
                 .findEnabledByFacultyAndRole(facultyId, RoleCode.LECTURER)
                 .stream()
+                .filter(account -> account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN))
                 .map(CouncilService::toLecturerOption)
                 .toList();
         return new CreationWorkspace(
@@ -418,7 +420,8 @@ public class CouncilService {
                 account.getId(),
                 facultyId,
                 account.isEnabled(),
-                account.getRoleCodes().contains(RoleCode.LECTURER));
+                account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN));
     }
 
     private List<Long> requestedMemberIds(CreateCouncilCommand command) {

@@ -114,9 +114,9 @@ class ReviewWorkflowConcurrencyIT {
 
         List<Outcome> publications = race(
                 call("dean.demo", () -> results.publish(fixture.activeCouncilId(), 1L),
-                        RoleCode.DEAN, RoleCode.LECTURER),
+                        RoleCode.DEAN),
                 call("dean.demo", () -> results.publish(fixture.activeCouncilId(), 1L),
-                        RoleCode.DEAN, RoleCode.LECTURER));
+                        RoleCode.DEAN));
 
         assertOneSuccessAndOneStaleFailure(publications);
         assertEquals("PUBLISHED", councilStatus());

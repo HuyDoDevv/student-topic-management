@@ -508,7 +508,7 @@ public class AdminAccountService {
         ADMIN("Quản trị viên", false, Set.of(RoleCode.ADMIN)),
         STUDENT("Sinh viên", true, Set.of(RoleCode.STUDENT)),
         LECTURER("Giảng viên", true, Set.of(RoleCode.LECTURER)),
-        DEAN("Trưởng khoa", true, Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        DEAN("Trưởng khoa", true, Set.of(RoleCode.DEAN));
 
         private final String label;
         private final boolean creatable;

@@ -43,7 +43,7 @@ class DashboardServiceTest {
     void deanLecturerUsesDeanOnlyAndFacultyScope() {
         Instant now = Instant.parse("2026-09-14T03:00:00Z");
         when(policy.currentActor()).thenReturn(new ActorIdentity(
-                7L, Set.of(RoleCode.DEAN, RoleCode.LECTURER), 21L));
+                7L, Set.of(RoleCode.DEAN), 21L));
         when(time.now()).thenReturn(now);
         when(query.countFacultyTopics(21L, "PENDING_APPROVAL", now)).thenReturn(2L);
         when(query.countFacultyPendingRegistrations(21L, now)).thenReturn(1L);

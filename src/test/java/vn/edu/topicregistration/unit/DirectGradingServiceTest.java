@@ -152,6 +152,48 @@ class DirectGradingServiceTest {
     }
 
     @Test
+    void rejectsForgedDeanGraderEvenIfLegacyLecturerRoleIsPresent() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, "COURSE", List.of());
+        when(fixture.grader().getRoleCodes())
+                .thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dependencies.reports().findCurrentByRegistrationIdForUpdate(51L))
+                .thenReturn(Optional.of(mock(ProjectReportEntity.class)));
+        when(dependencies.councilTopics().findByRegistrationId(51L))
+                .thenReturn(Optional.empty());
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().assign(new AssignCommand(51L, 11L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, rejected.code());
+        verify(dependencies.councils(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void graderWorkspaceOmitsDeanReturnedByLegacyCandidateQuery() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, "COURSE", List.of());
+        UserAccountEntity dean = mock(UserAccountEntity.class);
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dependencies.authorization().requireRole(RoleCode.DEAN)).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+        when(dependencies.periods().findAllByFacultyIdOrderByLecturerStartDesc(2L))
+                .thenReturn(List.of(fixture.period()));
+        when(dependencies.registrations().findAllByPeriodIdOrderBySubmittedAtDescIdDesc(7L))
+                .thenReturn(List.of(fixture.registration()));
+        when(dependencies.reports().findByRegistrationIdAndReplacedAtIsNull(51L))
+                .thenReturn(Optional.of(mock(ProjectReportEntity.class)));
+        when(dependencies.councilTopics().findByRegistrationId(51L)).thenReturn(Optional.empty());
+        when(dependencies.accounts().findEnabledByFacultyAndRole(2L, RoleCode.LECTURER))
+                .thenReturn(List.of(fixture.grader(), dean));
+
+        var workspace = dependencies.service().workspaceForCurrentDean();
+
+        assertEquals(List.of(11L), workspace.availableRegistrations().getFirst()
+                .eligibleGraders().stream().map(option -> option.id()).toList());
+    }
+
+    @Test
     void rejectsTopicFromAnotherPeriodInSameFacultyWithoutCreatingAssignment() {
         Dependencies dependencies = dependencies();
         Fixture fixture = fixture(dependencies, "COURSE", List.of());

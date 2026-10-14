@@ -118,7 +118,7 @@ class ReviewResultNotificationIT {
                         'notification-test.pdf', 'application/pdf', 128, 0)
                 """, registrationId, submittedBy, Timestamp.from(NOW.minusSeconds(30)));
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         var assignment = directGrading.assign(new AssignCommand(registrationId, graderId));
 
         assertEquals(1, count("""
@@ -161,7 +161,7 @@ class ReviewResultNotificationIT {
         long memberId = requiredLong(
                 "SELECT id FROM user_accounts WHERE username = 'lecturer5.demo'");
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         var council = councils.create(new CreateCouncilCommand(
                 periodId,
                 "[TEST] Hội đồng nhận thông báo",
@@ -196,7 +196,7 @@ class ReviewResultNotificationIT {
         var completed = results.complete(fixture.activeCouncilId(), 0L);
         assertEquals(6, completed.resultCount());
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         assertThrows(IllegalStateException.class,
                 () -> rollbackProbe.publishThenFail(
                         fixture.activeCouncilId(), completed.version()));
