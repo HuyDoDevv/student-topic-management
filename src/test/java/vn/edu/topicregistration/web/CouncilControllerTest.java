@@ -125,6 +125,32 @@ class CouncilControllerTest {
     }
 
     @Test
+    void detailPublishesNextVietnamMinuteAsScheduleHint() throws Exception {
+        when(councils.detailForCurrentDean(41L)).thenReturn(detail());
+
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("minScheduleAt", "2026-09-14T15:01"));
+    }
+
+    @Test
+    void expiredScheduleReturnsToDetailWithScheduledAtFieldError() throws Exception {
+        when(councils.detailForCurrentDean(41L)).thenReturn(detail());
+        when(councils.saveAssignment(org.mockito.ArgumentMatchers.eq(41L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new CouncilService.InvalidScheduleException());
+
+        mvc.perform(post("/faculty/boards/41/assignments")
+                        .param("registrationId", "51")
+                        .param("scheduledAt", "2026-09-14T15:00")
+                        .param("location", "Phòng A1")
+                        .param("version", "4"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("councils/detail"))
+                .andExpect(model().attributeHasFieldErrors("assignmentForm", "scheduledAt"));
+    }
+
+    @Test
     void memberUpdateUsesVersionAndWhitelistedIds() throws Exception {
         when(councils.updateMembers(org.mockito.ArgumentMatchers.eq(41L),
                 org.mockito.ArgumentMatchers.any())).thenReturn(summary());

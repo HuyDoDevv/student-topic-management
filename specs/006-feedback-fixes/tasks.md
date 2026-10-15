@@ -153,7 +153,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: thao tác hợp lệ giữ cardinality/role; invalid/stale rollback; không
     đổi tập người chấm sau khi đã có score.
 
-- [ ] **T014 Chặn lịch bảo vệ trong quá khứ** `[FB-15]`
+- [x] **T014 Chặn lịch bảo vệ trong quá khứ** `[FB-15]`
   - File: `CouncilRules.java`, `CouncilService.java`, `CouncilAssignmentForm.java`,
     `CouncilController.java`, `templates/councils/detail.html`,
     `CouncilRulesTest.java`, `CouncilControllerTest.java`.

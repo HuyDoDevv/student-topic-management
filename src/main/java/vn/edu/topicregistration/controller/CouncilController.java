@@ -2,6 +2,7 @@ package vn.edu.topicregistration.controller;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 
@@ -38,6 +39,8 @@ import vn.edu.topicregistration.util.ProjectTime;
 public class CouncilController {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));
+    private static final DateTimeFormatter SCHEDULE_INPUT = DateTimeFormatter.ofPattern(
+            "yyyy-MM-dd'T'HH:mm");
 
     private final CouncilService councils;
     private final ProjectTime projectTime;
@@ -158,6 +161,12 @@ public class CouncilController {
         try {
             councils.saveAssignment(id, form.toCommand(projectTime));
             return WebRedirects.seeOther("/faculty/boards/" + id);
+        } catch (CouncilService.InvalidScheduleException exception) {
+            bindingResult.rejectValue("scheduledAt", "assignment.schedule.past",
+                    "Lịch bảo vệ phải sau thời điểm hiện tại.");
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            CouncilDetailView detail = councils.detailForCurrentDean(id);
+            return renderDetail(model, detail, form, memberForm(detail));
         } catch (ApplicationException exception) {
             if (exception.code() != ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT
                     && exception.code() != ApplicationErrorCode.INVALID_COUNCIL_STATE) {
@@ -231,6 +240,8 @@ public class CouncilController {
                 .map(this::display)
                 .toList());
         model.addAttribute("availableRegistrations", detail.availableRegistrations());
+        model.addAttribute("minScheduleAt", projectTime.toBusinessTime(projectTime.now())
+                .truncatedTo(ChronoUnit.MINUTES).plusMinutes(1).format(SCHEDULE_INPUT));
         model.addAttribute("canEditAssignments",
                 detail.canPublish()
                         && (detail.council().status() == CouncilStatus.DRAFT

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +20,15 @@ import vn.edu.topicregistration.service.CouncilRules.TransitionContext;
 
 class CouncilRulesTest {
     private static final long FACULTY_ID = 4L;
+
+    @Test
+    void scheduleMustBeStrictlyLaterThanServerInstant() {
+        Instant now = Instant.parse("2026-09-14T08:00:00Z");
+        assertEquals(false, CouncilRules.isFutureSchedule(now.minusNanos(1), now));
+        assertEquals(false, CouncilRules.isFutureSchedule(now, now));
+        assertEquals(true, CouncilRules.isFutureSchedule(now.plusNanos(1), now));
+        assertEquals(false, CouncilRules.isFutureSchedule(null, now));
+    }
 
     @Test
     void acceptsThreeToFiveDistinctLecturersForKltnOnly() {

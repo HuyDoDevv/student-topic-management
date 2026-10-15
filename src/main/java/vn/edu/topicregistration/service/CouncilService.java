@@ -189,6 +189,9 @@ public class CouncilService {
                 || location.length() > 500) {
             throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
         }
+        if (!CouncilRules.isFutureSchedule(command.scheduledAt(), clock.instant())) {
+            throw new InvalidScheduleException();
+        }
         CouncilTopicEntity assignment = existing.orElseGet(
                 () -> new CouncilTopicEntity(council, registration));
         assignment.schedule(command.scheduledAt(), location);
@@ -727,6 +730,9 @@ public class CouncilService {
             Instant scheduledAt,
             String location,
             long expectedVersion) {
+    }
+
+    public static final class InvalidScheduleException extends RuntimeException {
     }
 
     public record UpdateMembersCommand(

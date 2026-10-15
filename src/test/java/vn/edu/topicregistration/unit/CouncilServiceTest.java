@@ -195,6 +195,55 @@ class CouncilServiceTest {
     }
 
     @Test
+    void rejectsPastOrEqualScheduleWithoutPersistingAssignment() {
+        Dependencies dependencies = dependencies();
+        validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
+
+        assertThrows(CouncilService.InvalidScheduleException.class,
+                () -> dependencies.service().saveAssignment(41L,
+                        new AssignmentCommand(51L, NOW.minusSeconds(1), "Phòng A1", 4L)));
+        assertThrows(CouncilService.InvalidScheduleException.class,
+                () -> dependencies.service().saveAssignment(41L,
+                        new AssignmentCommand(51L, NOW, "Phòng A1", 4L)));
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void acceptsFutureScheduleWhenUpdatingExistingAssignment() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.ASSIGNED, 4L);
+        CouncilTopicEntity existing = mock(CouncilTopicEntity.class);
+        when(existing.getCouncil()).thenReturn(fixture.council());
+        when(existing.getRegistration()).thenReturn(fixture.registration());
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(existing));
+
+        dependencies.service().saveAssignment(41L,
+                new AssignmentCommand(51L, NOW.plusSeconds(1), "Phòng B2", 4L));
+
+        verify(existing).schedule(NOW.plusSeconds(1), "Phòng B2");
+        verify(dependencies.councilTopics()).saveAndFlush(existing);
+    }
+
+    @Test
+    void rejectsPastScheduleWhenUpdatingExistingAssignment() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.ASSIGNED, 4L);
+        CouncilTopicEntity existing = mock(CouncilTopicEntity.class);
+        when(existing.getCouncil()).thenReturn(fixture.council());
+        when(existing.getRegistration()).thenReturn(fixture.registration());
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(existing));
+
+        assertThrows(CouncilService.InvalidScheduleException.class,
+                () -> dependencies.service().saveAssignment(41L,
+                        new AssignmentCommand(51L, NOW.minusSeconds(1), "Phòng B2", 4L)));
+
+        verify(existing, never()).schedule(any(), any());
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
     void refusesMemberChangesAfterAnyEvaluationEvenInDraft() {
         Dependencies dependencies = dependencies();
         validAssignment(dependencies, CouncilStatus.DRAFT, 4L);

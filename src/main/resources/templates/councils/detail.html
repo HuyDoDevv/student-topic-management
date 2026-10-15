@@ -128,7 +128,9 @@
         </div>
         <div class="col-md-6 col-lg-3">
           <label class="form-label" for="scheduledAt">Thời gian</label>
-          <input class="form-control" id="scheduledAt" type="datetime-local" th:field="*{scheduledAt}" required>
+          <input class="form-control" id="scheduledAt" type="datetime-local" th:field="*{scheduledAt}"
+                 th:attr="min=${minScheduleAt}" required aria-describedby="scheduledAt-help">
+          <div class="form-hint" id="scheduledAt-help">Chọn thời điểm tương lai theo giờ Việt Nam.</div>
           <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('scheduledAt')}" th:errors="*{scheduledAt}"></div>
         </div>
         <div class="col-md-6 col-lg-4">

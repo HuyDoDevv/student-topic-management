@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.service;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -91,6 +92,10 @@ public final class CouncilRules {
 
     public static boolean isSupportedTopicType(String topicType) {
         return SUPPORTED_TYPES.contains(topicType);
+    }
+
+    public static boolean isFutureSchedule(Instant scheduledAt, Instant serverNow) {
+        return scheduledAt != null && scheduledAt.isAfter(Objects.requireNonNull(serverNow));
     }
 
     private static boolean validCardinality(int memberCount) {

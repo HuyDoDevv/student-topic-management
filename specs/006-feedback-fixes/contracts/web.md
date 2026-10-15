@@ -148,11 +148,19 @@ Thêm/xóa/đổi vai trò thành viên khi council `DRAFT`/`ASSIGNED` và chưa
 Payload có council version; service kiểm tra 3–5 member, chair/secretary, conflict
 cho toàn bộ assignment. Sau evaluation hoặc `ACTIVE`, request bị từ chối.
 
-### `POST /faculty/boards/{id}/schedule`
+### `POST /faculty/boards/{id}/assignments` — lưu lịch bảo vệ
 
-Thời gian bảo vệ phải lớn hơn `clock.instant()` tại service. Create/update cùng
-rule và optimistic lock. Invalid/past time render lại `templates/councils/detail`
-hoặc form tương ứng cùng field error; không chuyển trang lỗi 422 chung.
+Payload gồm registration, thời gian, địa điểm và council version. Tạo mới hoặc
+cập nhật lịch đều yêu cầu thời gian bảo vệ lớn hơn `clock.instant()` tại service
+và giữ optimistic lock. Invalid/past time render lại `templates/councils/detail`
+cùng lỗi tại trường thời gian; không chuyển sang trang lỗi 422 chung. Thuộc tính
+`min` theo giờ Việt Nam trên form chỉ hỗ trợ giao diện, không thay thế kiểm tra
+backend.
+
+### `POST /faculty/boards/{id}/schedule` — chuyển trạng thái
+
+Route hiện hữu này chỉ chuyển hội đồng từ `ASSIGNED` sang `SCHEDULED`; không
+nhận hay lưu thời gian bảo vệ.
 
 ### `GET /faculty/boards/{id}`
 
