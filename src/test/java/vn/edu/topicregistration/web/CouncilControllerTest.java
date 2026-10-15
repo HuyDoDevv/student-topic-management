@@ -2,6 +2,7 @@ package vn.edu.topicregistration.web;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -121,6 +122,41 @@ class CouncilControllerTest {
                         && command.expectedVersion() == 4L
                         && command.scheduledAt().equals(
                                 Instant.parse("2026-09-20T02:00:00Z"))));
+    }
+
+    @Test
+    void memberUpdateUsesVersionAndWhitelistedIds() throws Exception {
+        when(councils.updateMembers(org.mockito.ArgumentMatchers.eq(41L),
+                org.mockito.ArgumentMatchers.any())).thenReturn(summary());
+
+        mvc.perform(post("/faculty/boards/41/members")
+                        .param("chairId", "11")
+                        .param("secretaryId", "12")
+                        .param("memberIds", "13", "14")
+                        .param("version", "4")
+                        .param("status", "ACTIVE")
+                        .param("councilId", "99"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/faculty/boards/41"));
+
+        verify(councils).updateMembers(org.mockito.ArgumentMatchers.eq(41L),
+                argThat(command -> command.chairId() == 11L
+                        && command.secretaryId() == 12L
+                        && command.memberIds().equals(List.of(13L, 14L))
+                        && command.expectedVersion() == 4L));
+    }
+
+    @Test
+    void memberUpdateRejectsMissingVersionWithoutCallingService() throws Exception {
+        when(councils.detailForCurrentDean(41L)).thenReturn(detail());
+        mvc.perform(post("/faculty/boards/41/members")
+                        .param("chairId", "11")
+                        .param("secretaryId", "12")
+                        .param("memberIds", "13"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("councils/detail"));
+        org.mockito.Mockito.verify(councils, never()).updateMembers(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test

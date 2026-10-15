@@ -110,6 +110,14 @@ public class CouncilEntity {
         this.status = target;
     }
 
+    public void changeOfficers(UserAccountEntity chair, UserAccountEntity secretary) {
+        this.chair = Objects.requireNonNull(chair, "chair");
+        this.secretary = Objects.requireNonNull(secretary, "secretary");
+        if (Objects.equals(chair.getId(), secretary.getId())) {
+            throw new IllegalArgumentException("Council officers must be distinct");
+        }
+    }
+
     public Long getId() {
         return id;
     }

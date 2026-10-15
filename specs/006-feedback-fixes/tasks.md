@@ -143,7 +143,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: final là mean reviewer + mọi member theo SV, `HALF_UP` hai chữ số;
     thiếu một submission không tổng hợp/công bố; ví dụ bốn điểm 7 → 7.00.
 
-- [ ] **T013 Cho sửa thành viên và phân công hội đồng đúng giai đoạn** `[FB-12, FB-13, FB-14]`
+- [x] **T013 Cho sửa thành viên và phân công hội đồng đúng giai đoạn** `[FB-12, FB-13, FB-14]`
   - File: `CouncilForm.java`, `CouncilAssignmentForm.java`, `CouncilService.java`,
     `CouncilController.java`, `templates/councils/form.html`,
     `templates/councils/detail.html` và test council.

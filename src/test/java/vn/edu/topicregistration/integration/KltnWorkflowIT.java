@@ -33,6 +33,9 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.service.CouncilService;
+import vn.edu.topicregistration.service.CouncilService.CreateCouncilCommand;
+import vn.edu.topicregistration.service.CouncilService.UpdateMembersCommand;
 import vn.edu.topicregistration.repository.ReportFileRepository;
 import vn.edu.topicregistration.seed.DemoSeedProperties;
 import vn.edu.topicregistration.seed.LocalDemoSeeder;
@@ -60,6 +63,7 @@ class KltnWorkflowIT {
     @Autowired ReportFileRepository reportFiles;
     @Autowired ReviewerAssignmentService reviewers;
     @Autowired ResultService results;
+    @Autowired CouncilService councils;
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -114,6 +118,45 @@ class KltnWorkflowIT {
                 + "reviewer_assignments ra ON ra.id = re.assignment_id "
                 + "WHERE ra.registration_id IN (?, ?) AND re.score = 7.00",
                 registrations.getFirst(), registrations.getLast()));
+    }
+
+    @Test
+    void fullFiveMemberCouncilCanReplaceChairAndChangeRolesWithoutLosingMembership() {
+        authenticate("dean.demo", "DEAN");
+        long periodId = id("SELECT id FROM registration_periods WHERE name = ?",
+                "[DEMO] Khóa luận tốt nghiệp - Đang chấm");
+        long first = lecturer("lecturer1.demo");
+        long second = lecturer("lecturer2.demo");
+        long third = lecturer("lecturer3.demo");
+        long fourth = lecturer("lecturer4.demo");
+        long fifth = lecturer("lecturer5.demo");
+        jdbc.update("INSERT INTO user_accounts(full_name, enabled, username, password_hash, "
+                + "faculty_id, department_id) SELECT 'Giảng viên Demo 6', TRUE, "
+                + "'lecturer6.test', password_hash, faculty_id, department_id "
+                + "FROM user_accounts WHERE id = ?", fifth);
+        long sixth = lecturer("lecturer6.test");
+        jdbc.update("INSERT INTO user_roles(user_id, role_code) VALUES (?, 'LECTURER')", sixth);
+
+        var created = councils.create(new CreateCouncilCommand(periodId,
+                "[TEST] Hội đồng sửa thành viên", first, second,
+                List.of(third, fourth, fifth)));
+        var changed = councils.updateMembers(created.id(), new UpdateMembersCommand(
+                sixth, fourth, List.of(second, third, fifth), created.version()));
+
+        assertEquals(5L, id("SELECT COUNT(*) FROM council_members WHERE council_id = ?",
+                created.id()));
+        assertEquals(0L, id("SELECT COUNT(*) FROM council_members "
+                + "WHERE council_id = ? AND lecturer_id = ?", created.id(), first));
+        assertEquals(sixth, id("SELECT chair_id FROM councils WHERE id = ?", created.id()));
+        assertEquals(fourth, id("SELECT secretary_id FROM councils WHERE id = ?", created.id()));
+        assertEquals("Chủ tịch", councils.detailForCurrentDean(created.id()).members().stream()
+                .filter(member -> member.id().equals(sixth)).findFirst().orElseThrow().role());
+        assertThrows(org.springframework.dao.OptimisticLockingFailureException.class,
+                () -> councils.updateMembers(created.id(), new UpdateMembersCommand(
+                        sixth, fourth, List.of(second, third, fifth), created.version())));
+        assertEquals(5L, id("SELECT COUNT(*) FROM council_members WHERE council_id = ?",
+                created.id()));
+        assertEquals(true, changed.version() > created.version());
     }
 
     @Test
@@ -243,6 +286,10 @@ class KltnWorkflowIT {
 
     private long id(String sql, Object... arguments) {
         return jdbc.queryForObject(sql, Long.class, arguments);
+    }
+
+    private long lecturer(String username) {
+        return id("SELECT id FROM user_accounts WHERE username = ?", username);
     }
 
     private static void authenticate(String username, String role) {

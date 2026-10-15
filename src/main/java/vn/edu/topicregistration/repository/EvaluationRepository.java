@@ -49,4 +49,6 @@ public interface EvaluationRepository extends JpaRepository<EvaluationEntity, Lo
             long councilId, long registrationId, long evaluatorId);
 
     long countByCouncilIdAndStatus(long councilId, EvaluationStatus status);
+
+    boolean existsByCouncilId(long councilId);
 }
