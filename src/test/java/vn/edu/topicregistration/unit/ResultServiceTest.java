@@ -69,7 +69,7 @@ class ResultServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-21T02:00:00Z");
 
     @Test
-    void chairCompletesWholeCouncilWithPeriodFirstLocksAndCalculatedMean() {
+    void deanCompletesWholeCouncilWithPeriodFirstLocksAndCalculatedMean() {
         Dependencies dependencies = dependencies();
         Fixture fixture = fixture(dependencies, CouncilStatus.ACTIVE, 4L);
         when(dependencies.results().saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -86,7 +86,7 @@ class ResultServiceTest {
                 dependencies.results());
         order.verify(dependencies.periods()).findByIdForUpdate(7L);
         order.verify(dependencies.councils()).findByIdForUpdate(41L);
-        order.verify(dependencies.authorization()).requireRole(RoleCode.LECTURER);
+        order.verify(dependencies.authorization()).requireDeanOfFaculty(2L);
         order.verify(dependencies.assignments()).findAllByCouncilIdForUpdate(41L);
         order.verify(dependencies.members()).findAllByCouncilIdForUpdate(41L);
         order.verify(dependencies.evaluations()).findAllByCouncilIdForUpdate(41L);
@@ -99,7 +99,7 @@ class ResultServiceTest {
         saved.getValue().forEach(created::add);
         assertEquals(1, created.size());
         assertEquals(new BigDecimal("8.50"), created.getFirst().getFinalScore());
-        assertEquals(fixture.chair(), created.getFirst().getConsolidatedBy());
+        assertEquals(31L, created.getFirst().getConsolidatedBy().getId());
         assertEquals(FinalResultStatus.READY, created.getFirst().getStatus());
         verify(fixture.council()).transitionTo(CouncilStatus.COMPLETED);
         assertEquals(CouncilStatus.COMPLETED, completed.status());
@@ -214,11 +214,11 @@ class ResultServiceTest {
     }
 
     @Test
-    void nonChairCannotCompleteAndDoesNotCreateResults() {
+    void nonDeanCannotCompleteAndDoesNotCreateResults() {
         Dependencies dependencies = dependencies();
         fixture(dependencies, CouncilStatus.ACTIVE, 4L);
-        when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
-                new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 2L));
+        when(dependencies.authorization().requireDeanOfFaculty(2L))
+                .thenThrow(new AccessDeniedException("not dean"));
 
         assertThrows(AccessDeniedException.class,
                 () -> dependencies.service().complete(41L, 4L));
@@ -287,6 +287,46 @@ class ResultServiceTest {
         verify(dependencies.councils()).flush();
         assertEquals(CouncilStatus.PUBLISHED, published.status());
         assertEquals(1, published.resultCount());
+    }
+
+    @Test
+    void coursePublicationRejectsMissingSubmittedSource() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
+        when(fixture.council().getMode()).thenReturn(CouncilMode.DIRECT);
+        when(fixture.period().getTopicType()).thenReturn("COURSE");
+        CouncilMemberEntity onlyMember = mock(CouncilMemberEntity.class);
+        when(onlyMember.getLecturer()).thenReturn(fixture.chair());
+        when(dependencies.members().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(onlyMember));
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of());
+        FinalResultEntity ready = result(fixture, FinalResultStatus.READY);
+        when(dependencies.results().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(ready));
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().publish(41L, 6L));
+
+        assertEquals(ApplicationErrorCode.RESULT_NOT_READY, rejected.code());
+        verify(ready, never()).publish(any(), any());
+    }
+
+    @Test
+    void kltnPublicationRejectsStoredMeanDifferentFromSources() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
+        completeReviewer(dependencies, fixture);
+        FinalResultEntity ready = result(fixture, FinalResultStatus.READY);
+        when(ready.getFinalScore()).thenReturn(new BigDecimal("9.00"));
+        when(dependencies.results().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(ready));
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().publish(41L, 6L));
+
+        assertEquals(ApplicationErrorCode.RESULT_NOT_READY, rejected.code());
+        verify(ready, never()).publish(any(), any());
     }
 
     @Test
@@ -379,6 +419,44 @@ class ResultServiceTest {
         assertEquals(3, detail.result().lecturers().size());
         assertEquals(3, detail.evaluations().size());
         verify(dependencies.authorization()).requireDeanOfFaculty(2L);
+    }
+
+    @Test
+    void facultyEvidenceIncludesKltnReviewerButMasksDraftMemberScore() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
+        FinalResultEntity ready = result(fixture, FinalResultStatus.READY);
+        when(dependencies.results().findDetailedByRegistrationIdAndStudentId(51L, 101L))
+                .thenReturn(Optional.of(ready));
+        when(dependencies.evaluations()
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        41L, 51L, 101L)).thenReturn(fixture.evaluations());
+        when(fixture.evaluations().getFirst().getStatus()).thenReturn(EvaluationStatus.DRAFT);
+        ReviewerAssignmentEntity reviewer = mock(ReviewerAssignmentEntity.class);
+        when(reviewer.getId()).thenReturn(71L);
+        when(reviewer.getStatus()).thenReturn(ReviewerAssignmentEntity.Status.SUBMITTED);
+        UserAccountEntity reviewerAccount = account(14L, "Phản biện");
+        when(reviewer.getReviewer()).thenReturn(reviewerAccount);
+        when(dependencies.reviewerAssignments().findActiveByRegistrationId(
+                51L, List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.of(reviewer));
+        when(dependencies.reviewerReports().existsByAssignmentId(71L)).thenReturn(true);
+        ReviewerEvaluationEntity reviewerScore = mock(ReviewerEvaluationEntity.class);
+        when(reviewerScore.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(reviewerScore.getSubmittedAt()).thenReturn(NOW.minusSeconds(60));
+        when(reviewerScore.getScore()).thenReturn(new BigDecimal("8.50"));
+        when(dependencies.reviewerEvaluations().findByAssignmentIdAndStudentId(71L, 101L))
+                .thenReturn(Optional.of(reviewerScore));
+
+        var detail = dependencies.service().detailForCurrentDean(51L, 101L);
+
+        assertEquals("GVPB", detail.evidence().sources().getFirst().role());
+        assertEquals(new BigDecimal("8.50"), detail.evidence().sources().getFirst().score());
+        assertEquals("DRAFT", detail.evidence().sources().get(1).status());
+        assertEquals(null, detail.evidence().sources().get(1).score());
+        assertEquals(null, detail.evaluations().getFirst().score());
+        assertEquals(3, detail.evidence().submittedSourceCount());
     }
 
     private static FinalResultEntity result(Fixture fixture, FinalResultStatus status) {
@@ -480,6 +558,11 @@ class ResultServiceTest {
         when(dependencies.periods().findByIdForUpdate(7L)).thenReturn(Optional.of(period));
         when(dependencies.authorization().requireRole(RoleCode.LECTURER)).thenReturn(
                 new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
+        when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+        UserAccountEntity dean = account(31L, "Trưởng khoa");
+        when(dependencies.accounts().findDetailedById(31L))
+                .thenReturn(Optional.of(dean));
         when(dependencies.councils().findByIdForUpdate(41L)).thenReturn(Optional.of(council));
         when(dependencies.assignments().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(assignment));

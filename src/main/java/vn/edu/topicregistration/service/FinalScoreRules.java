@@ -63,7 +63,9 @@ public final class FinalScoreRules {
         }
         if (context.studentCount() < 1
                 || context.studentCount() != context.resultCount()
-                || !context.exactReadyResults()) {
+                || !context.exactReadyResults()
+                || !context.exactSubmittedSources()
+                || !context.scoresMatchSources()) {
             throw failure(FinalScoreFailure.RESULT_NOT_READY);
         }
     }
@@ -113,7 +115,14 @@ public final class FinalScoreRules {
             CouncilStatus status,
             int studentCount,
             int resultCount,
-            boolean exactReadyResults) {
+            boolean exactReadyResults,
+            boolean exactSubmittedSources,
+            boolean scoresMatchSources) {
+        public PublicationContext(
+                CouncilStatus status, int studentCount, int resultCount,
+                boolean exactReadyResults) {
+            this(status, studentCount, resultCount, exactReadyResults, true, true);
+        }
     }
 
     public enum FinalScoreFailure {

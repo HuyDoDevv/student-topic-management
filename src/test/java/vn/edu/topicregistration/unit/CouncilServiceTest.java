@@ -477,7 +477,7 @@ class CouncilServiceTest {
         var detail = dependencies.service().detailForCurrentDean(41L);
 
         assertEquals(41L, detail.council().id());
-        assertEquals(true, detail.canComplete());
+        assertEquals(false, detail.canComplete());
         verify(dependencies.members()).existsByCouncilIdAndLecturerId(41L, 11L);
     }
 
@@ -513,6 +513,18 @@ class CouncilServiceTest {
 
         assertEquals(41L, detail.council().id());
         assertEquals(true, detail.canPublish());
+    }
+
+    @Test
+    void onlyDeanReceivesActiveCouncilCompletionCapability() {
+        Dependencies dependencies = dependencies();
+        detailCouncil(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.authorization().currentActor()).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+
+        var detail = dependencies.service().detailForCurrentDean(41L);
+
+        assertEquals(true, detail.canComplete());
     }
 
     @Test

@@ -135,6 +135,23 @@ class CouncilControllerTest {
     }
 
     @Test
+    void completionActionAppearsOnlyWhenServiceGrantsDeanCapability() throws Exception {
+        CouncilSummaryView active = new CouncilSummaryView(
+                41L, 7L, "Đợt KLTN", 4L, "Công nghệ phần mềm",
+                "Hội đồng KLTN", CouncilStatus.ACTIVE, 4L);
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                active, List.of(), List.of(), List.of(), List.of(),
+                false, false, null, null, false));
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(model().attribute("nextAction", org.hamcrest.Matchers.nullValue()));
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                active, List.of(), List.of(), List.of(), List.of(),
+                true, true, null, null, false));
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(model().attributeExists("nextAction"));
+    }
+
+    @Test
     void detailExposesProgressWithoutAnyScoreValue() throws Exception {
         var progress = new CouncilService.CouncilTopicProgressView(51L,
                 "Đề tài thử nghiệm", List.of(new CouncilService.CouncilMemberProgressView(

@@ -37,7 +37,7 @@ class FinalScoreRulesTest {
     }
 
     @Test
-    void onlyCurrentChairCanCompleteAnActiveCouncil() {
+    void onlyAuthorizedDeanCanCompleteAnActiveCouncil() {
         FinalScoreRuleException exception = assertThrows(
                 FinalScoreRuleException.class,
                 () -> FinalScoreRules.validateCompletion(new CompletionContext(
@@ -91,5 +91,17 @@ class FinalScoreRulesTest {
                 () -> FinalScoreRules.validatePublication(new PublicationContext(
                         CouncilStatus.COMPLETED, 6, 5, false)));
         assertEquals(FinalScoreFailure.RESULT_NOT_READY, partial.failure());
+    }
+
+    @Test
+    void publicationRejectsMissingSourcesOrMismatchedMean() {
+        FinalScoreRuleException missing = assertThrows(FinalScoreRuleException.class,
+                () -> FinalScoreRules.validatePublication(new PublicationContext(
+                        CouncilStatus.COMPLETED, 2, 2, true, false, true)));
+        assertEquals(FinalScoreFailure.RESULT_NOT_READY, missing.failure());
+        FinalScoreRuleException mismatch = assertThrows(FinalScoreRuleException.class,
+                () -> FinalScoreRules.validatePublication(new PublicationContext(
+                        CouncilStatus.COMPLETED, 2, 2, true, true, false)));
+        assertEquals(FinalScoreFailure.RESULT_NOT_READY, mismatch.failure());
     }
 }

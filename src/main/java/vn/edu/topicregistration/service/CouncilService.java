@@ -457,7 +457,7 @@ public class CouncilService {
                 assignmentViews,
                 available,
                 progress,
-                currentChair,
+                scopedDean,
                 manageable,
                 council.getChair().getId(),
                 council.getSecretary().getId(),

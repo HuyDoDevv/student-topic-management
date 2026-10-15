@@ -35,6 +35,8 @@ import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
+import vn.edu.topicregistration.service.ResultService.ResultEvidenceView;
+import vn.edu.topicregistration.service.ResultService.SourceEvidenceView;
 import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
 import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
@@ -266,6 +268,29 @@ class ResultControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("results/student-detail"))
                 .andExpect(model().attributeExists("result", "evaluations"));
+    }
+
+    @Test
+    void facultyDetailFormatsSourceEvidenceWithoutDraftScore() throws Exception {
+        ResultEvidenceView evidence = new ResultEvidenceView(
+                "(Điểm GVPB + điểm người chấm thứ hai) / 2", 2, 1,
+                null, false, List.of(
+                        new SourceEvidenceView(14L, "Giảng viên PB", "GVPB",
+                                "SUBMITTED", new BigDecimal("8.50"), "Đạt", NOW),
+                        new SourceEvidenceView(11L, "Giảng viên chấm", "Người chấm thứ hai",
+                                "DRAFT", null, null, null)));
+        when(results.detailForCurrentDean(51L, 31L)).thenReturn(
+                new FacultyResultDetailView(summary(), "Chưa đủ nguồn", "Trưởng khoa",
+                        null, List.of(), null, evidence));
+
+        var response = mvc.perform(get("/faculty/results/51/31"))
+                .andExpect(status().isOk()).andReturn();
+
+        var page = (ResultController.EvidencePageView) response
+                .getModelAndView().getModel().get("evidence");
+        assertEquals("8.5", page.sources().getFirst().score());
+        assertEquals("21/09/2026 09:00", page.sources().getFirst().submittedAt());
+        assertEquals(null, page.sources().get(1).score());
     }
 
     private static FacultyResultDetailView detail() {

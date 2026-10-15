@@ -183,16 +183,18 @@ Trước publication, chỉ actor được phép thấy chi tiết căn cứ g�
 trò, trạng thái nộp, điểm submitted, công thức, số đầu điểm, average, consolidated
 actor/time và published actor/time. Không trả điểm draft của người khác.
 
-### `POST /faculty/results/{registrationId}/consolidate` (target contract)
+### `POST /faculty/boards/{id}/complete`
 
-Chỉ DEAN đúng Khoa; tạo/update `READY` cho từng student khi đủ toàn bộ nguồn theo
-loại đợt. Dùng version và transaction; không thay row `PUBLISHED`.
+Chỉ DEAN đúng Khoa; tổng hợp toàn bộ hội đồng trong một transaction, tạo `READY`
+cho từng student khi đủ toàn bộ nguồn theo loại đợt. Dùng version; không thay row
+`PUBLISHED`. Không hỗ trợ tổng hợp một đăng ký riêng lẻ trong hội đồng.
 
-### `POST /faculty/results/{registrationId}/publish` (target contract)
+### `POST /faculty/boards/{id}/publish`
 
-Chỉ DEAN, chỉ `READY` và đủ mọi student trong registration. Ghi publisher/time;
-student sau đó xem qua `/student/results/{registrationId}`. Thiếu bất kỳ đầu
-điểm hoặc student result nào làm toàn request bị từ chối.
+Chỉ DEAN đúng Khoa, chỉ khi mọi result của toàn hội đồng `READY` và đủ mọi
+student/nguồn điểm. Ghi publisher/time; student sau đó xem qua
+`/student/results/{registrationId}`. Thiếu bất kỳ đầu điểm hoặc student result
+nào làm toàn request bị từ chối.
 
 ## HTTP and validation expectations
 

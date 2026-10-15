@@ -173,7 +173,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: chair chỉ hội đồng mình, DEAN chỉ Khoa; không lộ điểm draft cho
     người không có quyền; URL khác council/Khoa bị chặn.
 
-- [ ] **T016 Làm rõ căn cứ tổng hợp và công bố điểm** `[FB-16]`
+- [x] **T016 Làm rõ căn cứ tổng hợp và công bố điểm** `[FB-16]`
   - File: `FinalScoreRules.java`, `ResultService.java`, `ResultController.java`,
     `templates/results/faculty-detail.html`, `templates/results/student-detail.html`
     và test result/publication.

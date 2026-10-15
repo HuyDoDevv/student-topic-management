@@ -29,6 +29,7 @@ import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
+import vn.edu.topicregistration.service.ResultService.ResultEvidenceView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
@@ -119,6 +120,7 @@ public class ResultController {
                 ? null : format(detail.reviewer().submittedAt()));
         model.addAttribute("reviewerFeedback", detail.reviewer() == null
                 ? null : detail.reviewer().feedback());
+        model.addAttribute("evidence", display(detail.evidence()));
         return "results/faculty-detail";
     }
 
@@ -140,6 +142,7 @@ public class ResultController {
         model.addAttribute("evaluations", detail.evaluations().stream()
                 .map(this::display)
                 .toList());
+        model.addAttribute("evidence", display(detail.evidence()));
         return "results/student-detail";
     }
 
@@ -215,6 +218,19 @@ public class ResultController {
                 format(evaluation.submittedAt()));
     }
 
+    private EvidencePageView display(ResultEvidenceView evidence) {
+        if (evidence == null) {
+            return null;
+        }
+        return new EvidencePageView(evidence.formula(), evidence.expectedSourceCount(),
+                evidence.submittedSourceCount(), score(evidence.mean()),
+                evidence.matchesFinalScore(), evidence.sources().stream()
+                        .map(source -> new SourcePageView(source.actorName(), source.role(),
+                                source.status(), score(source.score()), source.feedback(),
+                                format(source.submittedAt())))
+                        .toList());
+    }
+
     private StudentResultPageView display(StudentResultSummaryView result) {
         return new StudentResultPageView(
                 result.registrationId(),
@@ -288,6 +304,16 @@ public class ResultController {
             EvaluationStatus status,
             String statusLabel,
             String submittedAt) {
+    }
+
+    public record EvidencePageView(
+            String formula, int expectedSourceCount, int submittedSourceCount,
+            String mean, boolean matchesFinalScore, List<SourcePageView> sources) {
+    }
+
+    public record SourcePageView(
+            String actorName, String role, String status, String score,
+            String feedback, String submittedAt) {
     }
 
     public record StudentResultPageView(

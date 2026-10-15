@@ -161,7 +161,7 @@ public class ResultService {
         }
         applyRules(() -> FinalScoreRules.validateCompletion(new CompletionContext(
                 council.getStatus(),
-                direct || Objects.equals(council.getChair().getId(), board.actor().accountId()),
+                board.actor().roles().contains(RoleCode.DEAN),
                 lockedAssignments.size(),
                 lockedMembers.size(),
                 snapshotStudents.size(),
@@ -175,11 +175,9 @@ public class ResultService {
                 ? reviewerScores(lockedAssignments, snapshotStudents,
                         kltn ? lockedMembers : List.of(), true)
                 : Map.of();
-        UserAccountEntity consolidator = direct
-                ? accounts.findDetailedById(board.actor().accountId())
-                        .orElseThrow(() -> new ApplicationException(
-                                ApplicationErrorCode.RESOURCE_NOT_FOUND))
-                : council.getChair();
+        UserAccountEntity consolidator = accounts.findDetailedById(board.actor().accountId())
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
 
         Instant completedAt = clock.instant();
         Map<StudentKey, List<EvaluationEntity>> byStudent = evaluationsByStudent(
@@ -238,52 +236,35 @@ public class ResultService {
         List<FinalResultEntity> lockedResults = results
                 .findAllByCouncilIdForUpdate(councilId);
 
-        boolean exactReadyResults = exactReadyResults(
-                council, snapshotStudents, lockedResults);
-        applyRules(() -> FinalScoreRules.validatePublication(new PublicationContext(
-                council.getStatus(),
-                snapshotStudents.size(),
-                lockedResults.size(),
-                exactReadyResults)));
+        boolean exactReady = exactReadyResults(council, snapshotStudents, lockedResults);
         boolean tlcn = council.getMode() == CouncilMode.DIRECT
                 && "TLCN".equals(board.period().getTopicType());
         boolean kltn = council.getMode() == CouncilMode.COUNCIL
                 && "KLTN".equals(board.period().getTopicType());
-        if (tlcn || kltn) {
-            if (tlcn && lockedAssignments.size() != 1) {
-                throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
-            }
-            if (kltn && !validCouncilConfiguration(
-                    board.period(), council, lockedMembers, lockedAssignments)) {
-                throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
-            }
-            if (!exactSubmittedMatrix(board.period(), council, lockedAssignments,
-                    lockedMembers, snapshotStudents, lockedEvaluations)) {
-                throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
-            }
-            Map<StudentKey, ReviewerEvaluationEntity> reviewerScores = reviewerScores(
-                    lockedAssignments, snapshotStudents,
-                    kltn ? lockedMembers : List.of(), true);
-            Map<StudentKey, List<EvaluationEntity>> graderScores = evaluationsByStudent(
-                    lockedEvaluations);
-            for (FinalResultEntity result : lockedResults) {
-                StudentKey key = new StudentKey(result.getRegistrationId(), result.getStudentId());
-                List<EvaluationEntity> studentGraderScores = graderScores.getOrDefault(
-                        key, List.of());
-                if (studentGraderScores.size() != lockedMembers.size()
-                        || studentGraderScores.stream().anyMatch(score ->
-                                score.getStatus() != EvaluationStatus.SUBMITTED)) {
-                    throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
+        boolean exactSources = exactSubmittedMatrix(board.period(), council,
+                lockedAssignments, lockedMembers, snapshotStudents, lockedEvaluations)
+                && (!tlcn || lockedAssignments.size() == 1)
+                && (!kltn || validCouncilConfiguration(
+                        board.period(), council, lockedMembers, lockedAssignments));
+        Map<StudentKey, ReviewerEvaluationEntity> reviewerSource = Map.of();
+        if (exactSources && (tlcn || kltn)) {
+            try {
+                reviewerSource = reviewerScores(lockedAssignments, snapshotStudents,
+                        kltn ? lockedMembers : List.of(), true);
+            } catch (ApplicationException exception) {
+                if (exception.code() != ApplicationErrorCode.EVALUATIONS_INCOMPLETE) {
+                    throw exception;
                 }
-                List<BigDecimal> sources = new ArrayList<>();
-                sources.add(reviewerScores.get(key).getScore());
-                studentGraderScores.stream().map(EvaluationEntity::getScore)
-                        .forEach(sources::add);
-                if (result.getFinalScore().compareTo(FinalScoreRules.mean(sources)) != 0) {
-                    throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
-                }
+                exactSources = false;
             }
         }
+        boolean scoresMatch = exactReady && exactSources && scoresMatchSources(
+                lockedResults, lockedEvaluations, lockedMembers.size(),
+                reviewerSource, tlcn || kltn);
+        boolean sourcesComplete = exactSources;
+        applyRules(() -> FinalScoreRules.validatePublication(new PublicationContext(
+                council.getStatus(), snapshotStudents.size(), lockedResults.size(),
+                exactReady, sourcesComplete, scoresMatch)));
 
         UserAccountEntity dean = accounts.findDetailedById(board.actor().accountId())
                 .orElseThrow(() -> new ApplicationException(
@@ -450,28 +431,17 @@ public class ResultService {
                 .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
                         result.getCouncil().getId(), registrationId, studentId)
                 .stream()
-                .map(ResultService::toEvaluationView)
+                .map(ResultService::toSubmittedSafeEvaluationView)
                 .toList();
-        ReviewerResultView reviewerView = null;
-        if ("TLCN".equals(result.getRegistration().getPeriod().getTopicType())
-                && result.getCouncil().getMode() == CouncilMode.DIRECT) {
-            List<RegistrationMemberEntity> singleSnapshot = registrationMembers
-                    .findAllByRegistrationId(registrationId);
-            Map<StudentKey, ReviewerEvaluationEntity> sources = reviewerScores(
-                    assignments.findAllByCouncilIdOrderByRegistrationId(
-                            result.getCouncil().getId()), singleSnapshot, false);
-            ReviewerAssignmentEntity reviewerAssignment = reviewerAssignments
-                    .findActiveByRegistrationId(registrationId,
-                            List.of(ReviewerAssignmentEntity.Status.SUBMITTED))
-                    .orElseThrow(() -> new ApplicationException(
-                            ApplicationErrorCode.EVALUATIONS_INCOMPLETE));
-            ReviewerEvaluationEntity score = sources.get(new StudentKey(
-                    registrationId, studentId));
-            reviewerView = new ReviewerResultView(
-                    reviewerAssignment.getReviewer().getId(),
-                    displayName(reviewerAssignment.getReviewer()),
-                    score.getScore(), score.getFeedback(), score.getSubmittedAt());
-        }
+        ResultEvidenceView evidence = evidenceFor(result, registrationId, studentId);
+        SourceEvidenceView reviewerSource = evidence.sources().stream()
+                .filter(source -> "GVPB".equals(source.role()))
+                .findFirst().orElse(null);
+        ReviewerResultView reviewerView = reviewerSource == null
+                || reviewerSource.score() == null ? null
+                : new ReviewerResultView(reviewerSource.actorId(), reviewerSource.actorName(),
+                        reviewerSource.score(), reviewerSource.feedback(),
+                        reviewerSource.submittedAt());
         return new FacultyResultDetailView(
                 toSummary(result, lecturersFor(result.getCouncil())),
                 result.getEvaluationSummary(),
@@ -479,7 +449,7 @@ public class ResultService {
                 result.getPublishedBy() == null
                         ? null : displayName(result.getPublishedBy()),
                 evaluationViews,
-                reviewerView);
+                reviewerView, evidence);
     }
 
     @Transactional(readOnly = true)
@@ -506,12 +476,13 @@ public class ResultService {
                         result.getCouncil().getId(), registrationId, student.accountId())
                 .stream()
                 .filter(evaluation -> evaluation.getStatus() == EvaluationStatus.SUBMITTED)
-                .map(ResultService::toEvaluationView)
+                .map(ResultService::toSubmittedSafeEvaluationView)
                 .toList();
         return new StudentResultDetailView(
                 toStudentSummary(result),
                 result.getEvaluationSummary(),
-                evaluationViews);
+                evaluationViews,
+                evidenceFor(result, registrationId, student.accountId()));
     }
 
     private LockedBoard lockBoard(
@@ -539,10 +510,7 @@ public class ResultService {
                 && council.getStatus() != CouncilStatus.PUBLISHED) {
             throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
         }
-        ActorIdentity actor = operation == Operation.PUBLISH
-                || council.getMode() == CouncilMode.DIRECT
-                ? authorization.requireDeanOfFaculty(requiredFacultyId(period))
-                : currentLecturer();
+        ActorIdentity actor = authorization.requireDeanOfFaculty(requiredFacultyId(period));
         if (council.getVersion() != expectedVersion) {
             throw new OptimisticLockingFailureException("Council version is stale");
         }
@@ -704,6 +672,39 @@ public class ResultService {
             }
         }
         return !expectedKeys.isEmpty() && resultKeys.equals(expectedKeys);
+    }
+
+    private static boolean scoresMatchSources(
+            List<FinalResultEntity> finalResults,
+            List<EvaluationEntity> evaluations,
+            int graderCount,
+            Map<StudentKey, ReviewerEvaluationEntity> reviewerScores,
+            boolean hasReviewer) {
+        Map<StudentKey, List<EvaluationEntity>> byStudent = evaluationsByStudent(evaluations);
+        for (FinalResultEntity result : finalResults) {
+            StudentKey key = new StudentKey(result.getRegistrationId(), result.getStudentId());
+            List<EvaluationEntity> graderRows = byStudent.getOrDefault(key, List.of());
+            if (graderRows.size() != graderCount || result.getFinalScore() == null) {
+                return false;
+            }
+            List<BigDecimal> sources = new ArrayList<>();
+            if (hasReviewer) {
+                ReviewerEvaluationEntity reviewer = reviewerScores.get(key);
+                if (reviewer == null) {
+                    return false;
+                }
+                sources.add(reviewer.getScore());
+            }
+            graderRows.stream().map(EvaluationEntity::getScore).forEach(sources::add);
+            try {
+                if (result.getFinalScore().compareTo(FinalScoreRules.mean(sources)) != 0) {
+                    return false;
+                }
+            } catch (FinalScoreRuleException exception) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static int submittedCount(List<EvaluationEntity> evaluations) {
@@ -880,14 +881,96 @@ public class ResultService {
                 result.getVersion());
     }
 
-    private static EvaluationResultView toEvaluationView(EvaluationEntity evaluation) {
+    private ResultEvidenceView evidenceFor(
+            FinalResultEntity result, long registrationId, long studentId) {
+        CouncilEntity council = result.getCouncil();
+        String topicType = result.getRegistration().getPeriod().getTopicType();
+        boolean direct = council.getMode() == CouncilMode.DIRECT;
+        boolean needsReviewer = "TLCN".equals(topicType) || "KLTN".equals(topicType);
+        List<SourceEvidenceView> sources = new ArrayList<>();
+        if (needsReviewer) {
+            ReviewerAssignmentEntity assignment = reviewerAssignments
+                    .findActiveByRegistrationId(registrationId, List.of(
+                            ReviewerAssignmentEntity.Status.ASSIGNED,
+                            ReviewerAssignmentEntity.Status.SUBMITTED))
+                    .orElse(null);
+            ReviewerEvaluationEntity reviewerScore = assignment == null ? null
+                    : reviewerEvaluations.findByAssignmentIdAndStudentId(
+                            assignment.getId(), studentId).orElse(null);
+            boolean submitted = assignment != null
+                    && assignment.getStatus() == ReviewerAssignmentEntity.Status.SUBMITTED
+                    && reviewerReports.existsByAssignmentId(assignment.getId())
+                    && reviewerScore != null
+                    && reviewerScore.getStatus() == EvaluationStatus.SUBMITTED
+                    && reviewerScore.getSubmittedAt() != null;
+            sources.add(new SourceEvidenceView(
+                    assignment == null ? null : assignment.getReviewer().getId(),
+                    assignment == null ? "Chưa phân công GVPB"
+                            : displayName(assignment.getReviewer()),
+                    "GVPB", submitted ? "SUBMITTED"
+                            : reviewerScore == null ? "NOT_STARTED" : "DRAFT",
+                    submitted ? reviewerScore.getScore() : null,
+                    submitted ? reviewerScore.getFeedback() : null,
+                    submitted ? reviewerScore.getSubmittedAt() : null));
+        }
+        List<EvaluationEntity> rows = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndStudentIdOrderByEvaluatorId(
+                        council.getId(), registrationId, studentId);
+        Map<Long, EvaluationEntity> byEvaluator = new LinkedHashMap<>();
+        for (EvaluationEntity row : rows) {
+            byEvaluator.putIfAbsent(row.getEvaluator().getId(), row);
+        }
+        List<UserAccountEntity> graders = direct ? List.of(council.getChair())
+                : members.findAllByCouncilIdOrderBySlot(council.getId()).stream()
+                        .map(CouncilMemberEntity::getLecturer).toList();
+        for (UserAccountEntity grader : graders) {
+            EvaluationEntity row = byEvaluator.get(grader.getId());
+            boolean submitted = row != null && row.getStatus() == EvaluationStatus.SUBMITTED
+                    && row.getSubmittedAt() != null;
+            String role = direct ? "TLCN".equals(topicType)
+                    ? "Người chấm thứ hai" : "Người chấm trực tiếp"
+                    : Objects.equals(grader.getId(), council.getChair().getId())
+                            ? "Chủ tịch" : Objects.equals(grader.getId(), council.getSecretary().getId())
+                                    ? "Thư ký" : "Thành viên";
+            sources.add(new SourceEvidenceView(grader.getId(), displayName(grader), role,
+                    submitted ? "SUBMITTED" : row == null ? "NOT_STARTED" : "DRAFT",
+                    submitted ? row.getScore() : null,
+                    submitted ? row.getFeedback() : null,
+                    submitted ? row.getSubmittedAt() : null));
+        }
+        int submittedCount = (int) sources.stream()
+                .filter(source -> source.score() != null).count();
+        BigDecimal mean = null;
+        if (!sources.isEmpty() && submittedCount == sources.size()) {
+            try {
+                mean = FinalScoreRules.mean(sources.stream()
+                        .map(SourceEvidenceView::score).toList());
+            } catch (FinalScoreRuleException ignored) {
+                // Historical published results retain their stored score even if source data differs.
+            }
+        }
+        String formula = switch (topicType) {
+            case "TLCN" -> "(Điểm GVPB + điểm người chấm thứ hai) / 2";
+            case "KLTN" -> "(Điểm GVPB + tổng điểm thành viên hội đồng) / "
+                    + sources.size();
+            default -> "Điểm người chấm trực tiếp";
+        };
+        return new ResultEvidenceView(formula, sources.size(), submittedCount, mean,
+                mean != null && result.getFinalScore() != null
+                        && mean.compareTo(result.getFinalScore()) == 0, sources);
+    }
+
+    private static EvaluationResultView toSubmittedSafeEvaluationView(
+            EvaluationEntity evaluation) {
+        boolean submitted = evaluation.getStatus() == EvaluationStatus.SUBMITTED
+                && evaluation.getSubmittedAt() != null;
         return new EvaluationResultView(
                 evaluation.getEvaluator().getId(),
                 displayName(evaluation.getEvaluator()),
-                evaluation.getScore(),
-                evaluation.getFeedback(),
+                submitted ? evaluation.getScore() : null,
+                submitted ? evaluation.getFeedback() : null,
                 evaluation.getStatus(),
-                evaluation.getSubmittedAt());
+                submitted ? evaluation.getSubmittedAt() : null);
     }
 
     private static StudentResultSummaryView toStudentSummary(FinalResultEntity result) {
@@ -1015,15 +1098,38 @@ public class ResultService {
             String consolidatedBy,
             String publishedBy,
             List<EvaluationResultView> evaluations,
-            ReviewerResultView reviewer) {
+            ReviewerResultView reviewer,
+            ResultEvidenceView evidence) {
         public FacultyResultDetailView {
             evaluations = List.copyOf(evaluations);
         }
         public FacultyResultDetailView(
                 FacultyResultSummaryView result, String evaluationSummary,
                 String consolidatedBy, String publishedBy,
+                List<EvaluationResultView> evaluations, ReviewerResultView reviewer) {
+            this(result, evaluationSummary, consolidatedBy, publishedBy,
+                    evaluations, reviewer, null);
+        }
+        public FacultyResultDetailView(
+                FacultyResultSummaryView result, String evaluationSummary,
+                String consolidatedBy, String publishedBy,
                 List<EvaluationResultView> evaluations) {
-            this(result, evaluationSummary, consolidatedBy, publishedBy, evaluations, null);
+            this(result, evaluationSummary, consolidatedBy, publishedBy,
+                    evaluations, null, null);
+        }
+    }
+
+    public record SourceEvidenceView(
+            Long actorId, String actorName, String role, String status,
+            BigDecimal score, String feedback, Instant submittedAt) {
+    }
+
+    public record ResultEvidenceView(
+            String formula, int expectedSourceCount, int submittedSourceCount,
+            BigDecimal mean, boolean matchesFinalScore,
+            List<SourceEvidenceView> sources) {
+        public ResultEvidenceView {
+            sources = List.copyOf(sources);
         }
     }
 
@@ -1047,9 +1153,16 @@ public class ResultService {
     public record StudentResultDetailView(
             StudentResultSummaryView result,
             String evaluationSummary,
-            List<EvaluationResultView> evaluations) {
+            List<EvaluationResultView> evaluations,
+            ResultEvidenceView evidence) {
         public StudentResultDetailView {
             evaluations = List.copyOf(evaluations);
+        }
+        public StudentResultDetailView(
+                StudentResultSummaryView result,
+                String evaluationSummary,
+                List<EvaluationResultView> evaluations) {
+            this(result, evaluationSummary, evaluations, null);
         }
     }
 }
