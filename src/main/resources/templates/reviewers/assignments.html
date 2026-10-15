@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Phân công phản biện', ~{::section})}">
+<body><section>
+  <div class="page-header">
+    <div><div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
+      <h1 class="page-title">Phân công phản biện</h1>
+      <p class="text-secondary mt-2 mb-0">Chọn giảng viên cùng khoa, không tham gia hướng dẫn hoặc chấm đề tài.</p>
+    </div>
+  </div>
+  <div th:object="${reviewerAssignmentForm}">
+    <div class="alert alert-danger" role="alert" th:if="${#fields.hasErrors()}">
+      <div th:each="error : ${#fields.allErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2 class="card-title">Đăng ký TLCN/KLTN đã duyệt</h2></div>
+    <div class="table-responsive" th:if="${!workspace.registrations().isEmpty()}">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead><tr><th>Đề tài</th><th>Đợt</th><th>GVPB hiện tại</th><th>Phân công</th></tr></thead>
+        <tbody><tr th:each="registration : ${workspace.registrations()}">
+          <td data-label="Đề tài" th:text="${registration.topicTitle()}">Đề tài</td>
+          <td data-label="Đợt" th:text="${registration.periodName() + ' · ' + registration.topicType()}">Đợt</td>
+          <td data-label="GVPB hiện tại">
+            <span th:if="${registration.assignment() == null}">Chưa phân công</span>
+            <span th:if="${registration.assignment() != null}"
+                  th:text="${registration.assignment().reviewerName() + ' · ' + registration.assignment().status()}">GVPB</span>
+          </td>
+          <td data-label="Phân công">
+            <form class="d-flex flex-wrap gap-2" method="post"
+                  th:if="${registration.assignment() == null || registration.assignment().status().name() == 'ASSIGNED'}"
+                  th:action="${registration.assignment() == null} ? @{/faculty/reviewers} : @{/faculty/reviewers/{id}/replace(id=${registration.assignment().id()})}"
+                  data-prevent-double-submit>
+              <input type="hidden" name="registrationId" th:value="${registration.id()}">
+              <input type="hidden" name="version"
+                     th:value="${registration.assignment() == null ? registration.version() : registration.assignment().version()}">
+              <select class="form-select form-select-sm" name="reviewerId" required aria-label="Chọn giảng viên phản biện">
+                <option value="">Chọn giảng viên</option>
+                <option th:each="candidate : ${registration.candidates()}"
+                        th:value="${candidate.id()}" th:text="${candidate.name()}">Giảng viên</option>
+              </select>
+              <button class="btn btn-sm btn-primary" type="submit"
+                      th:text="${registration.assignment() == null ? 'Phân công' : 'Thay GVPB'}">Phân công</button>
+            </form>
+            <span class="text-secondary" th:if="${registration.assignment() != null && registration.assignment().status().name() == 'SUBMITTED'}">Đã nộp, không thể thay</span>
+          </td>
+        </tr></tbody>
+      </table>
+    </div>
+    <div class="card-body text-secondary" th:if="${workspace.registrations().isEmpty()}">Chưa có đăng ký TLCN/KLTN đã duyệt.</div>
+  </div>
+</section></body></html>

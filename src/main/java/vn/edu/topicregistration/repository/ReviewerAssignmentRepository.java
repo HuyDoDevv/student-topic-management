@@ -30,6 +30,19 @@ public interface ReviewerAssignmentRepository extends JpaRepository<ReviewerAssi
             @Param("registrationId") long registrationId,
             @Param("statuses") List<ReviewerAssignmentEntity.Status> statuses);
 
+    @EntityGraph(attributePaths = {"registration", "registration.period", "registration.topic", "reviewer"})
+    @Query("select assignment from ReviewerAssignmentEntity assignment where assignment.id = :id")
+    Optional<ReviewerAssignmentEntity> findDetailedById(@Param("id") long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"registration", "registration.period", "reviewer"})
+    @Query("select assignment from ReviewerAssignmentEntity assignment where assignment.id = :id")
+    Optional<ReviewerAssignmentEntity> findByIdForUpdate(@Param("id") long id);
+
+    @EntityGraph(attributePaths = {"registration", "registration.period", "registration.topic", "reviewer"})
+    List<ReviewerAssignmentEntity> findAllByReviewerIdAndStatusInOrderByAssignedAtDescIdDesc(
+            long reviewerId, List<ReviewerAssignmentEntity.Status> statuses);
+
     @EntityGraph(attributePaths = {"registration", "reviewer", "assignedBy"})
     List<ReviewerAssignmentEntity> findAllByRegistrationIdOrderByIdDesc(long registrationId);
 }

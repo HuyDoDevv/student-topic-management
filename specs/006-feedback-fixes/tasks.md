@@ -111,7 +111,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: FK/unique/check bảo vệ registration accepted, một reviewer và một
     evaluation/student; legacy rows đọc an toàn, không mất dữ liệu.
 
-- [ ] **T010 Phân công và nộp phản biện** `[FB-14, FB-18]`
+- [x] **T010 Phân công và nộp phản biện** `[FB-14, FB-18]`
   - Tạo/sửa `ReviewerAssignmentService.java`, `ReviewerController.java`,
     `ReviewerAssignmentForm.java`, `ReviewerSubmissionForm.java`,
     `templates/reviewers/assignments.html`, `templates/reviewers/submission.html`,

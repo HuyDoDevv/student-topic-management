@@ -10,4 +10,6 @@ import vn.edu.topicregistration.entity.ReviewerReportEntity;
 public interface ReviewerReportRepository extends JpaRepository<ReviewerReportEntity, Long> {
     @EntityGraph(attributePaths = {"assignment", "submittedBy"})
     Optional<ReviewerReportEntity> findByAssignmentId(long assignmentId);
+
+    boolean existsByAssignmentId(long assignmentId);
 }

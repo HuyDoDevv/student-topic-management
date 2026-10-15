@@ -20,7 +20,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "reviewer_assignments")
 public class ReviewerAssignmentEntity {
-    public enum Status { LEGACY_UNVERIFIED, ASSIGNED, SUBMITTED }
+    public enum Status { LEGACY_UNVERIFIED, ASSIGNED, SUBMITTED, REPLACED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,6 +51,13 @@ public class ReviewerAssignmentEntity {
     @Column(name = "submitted_at", columnDefinition = "TIMESTAMP(6)")
     private Instant submittedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "replaced_by")
+    private UserAccountEntity replacedBy;
+
+    @Column(name = "replaced_at", columnDefinition = "TIMESTAMP(6)")
+    private Instant replacedAt;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -80,6 +87,15 @@ public class ReviewerAssignmentEntity {
         this.status = Status.SUBMITTED;
     }
 
+    public void markReplaced(UserAccountEntity replacedBy, Instant replacedAt) {
+        if (status != Status.ASSIGNED) {
+            throw new IllegalStateException("Only an unsubmitted assignment can be replaced");
+        }
+        this.replacedBy = Objects.requireNonNull(replacedBy, "replacedBy");
+        this.replacedAt = Objects.requireNonNull(replacedAt, "replacedAt");
+        this.status = Status.REPLACED;
+    }
+
     public Long getId() { return id; }
     public RegistrationEntity getRegistration() { return registration; }
     public UserAccountEntity getReviewer() { return reviewer; }
@@ -88,5 +104,7 @@ public class ReviewerAssignmentEntity {
     public UserAccountEntity getAssignedBy() { return assignedBy; }
     public Instant getAssignedAt() { return assignedAt; }
     public Instant getSubmittedAt() { return submittedAt; }
+    public UserAccountEntity getReplacedBy() { return replacedBy; }
+    public Instant getReplacedAt() { return replacedAt; }
     public long getVersion() { return version; }
 }

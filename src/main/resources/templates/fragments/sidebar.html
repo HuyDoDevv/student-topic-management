@@ -38,6 +38,12 @@
         <li class="nav-item" th:if="${canManageBoards}" th:classappend="${activeNav == 'boards'} ? ' active'">
           <a class="nav-link" th:href="@{/faculty/boards}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 13h16M6 17h12M8 21h8"/></svg></span><span class="nav-link-title">Hội đồng</span></a>
         </li>
+        <li class="nav-item" th:if="${canManageBoards}" th:classappend="${activeNav == 'reviewers'} ? ' active'">
+          <a class="nav-link" th:href="@{/faculty/reviewers}"><span class="nav-symbol" aria-hidden="true">↳</span><span class="nav-link-title">Phân công phản biện</span></a>
+        </li>
+        <li class="nav-item" th:if="${canScoreBoards}" th:classappend="${activeNav == 'reviewers'} ? ' active'">
+          <a class="nav-link" th:href="@{/lecturer/reviewers}"><span class="nav-symbol" aria-hidden="true">↳</span><span class="nav-link-title">Phản biện của tôi</span></a>
+        </li>
         <li class="nav-item" th:if="${canManageBoards}" th:classappend="${activeNav == 'direct-grading'} ? ' active'">
           <a class="nav-link" th:href="@{/faculty/direct-grading}"><span class="nav-symbol" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h3M15 15l2 2 3-4"/></svg></span><span class="nav-link-title">Phân công chấm</span></a>
         </li>

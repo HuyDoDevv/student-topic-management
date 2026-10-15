@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Phản biện', ~{::section})}">
+<body><section>
+  <div class="page-header">
+    <div><div class="page-pretitle">GIẢNG VIÊN PHẢN BIỆN</div>
+      <h1 class="page-title">Phản biện đề tài</h1>
+      <p class="text-secondary mt-2 mb-0">Nộp một file PDF và điểm, nhận xét cho từng sinh viên trước hạn.</p>
+    </div>
+    <a class="btn btn-outline-secondary" th:if="${workspace != null}" th:href="@{/lecturer/reviewers}">Danh sách phân công</a>
+  </div>
+  <div class="card" th:if="${workspace == null}">
+    <div class="card-header"><h2 class="card-title">Phân công của tôi</h2></div>
+    <div class="list-group list-group-flush" th:if="${!tasks.isEmpty()}">
+      <a class="list-group-item list-group-item-action" th:each="task : ${tasks}"
+         th:href="@{/lecturer/reviewers/{id}(id=${task.id()})}">
+        <span class="fw-semibold" th:text="${task.topicTitle()}">Đề tài</span>
+        <span class="text-secondary ms-2" th:text="${task.periodName() + ' · Hạn ' + task.deadline() + ' · ' + task.status()}">Đợt</span>
+      </a>
+    </div>
+    <div class="card-body text-secondary" th:if="${tasks.isEmpty()}">Bạn chưa được phân công phản biện.</div>
+  </div>
+  <div th:if="${workspace != null}">
+    <div class="alert alert-info" th:text="${workspace.topicTitle() + ' · ' + workspace.periodName() + ' · Hạn ' + workspace.deadline()}">Đề tài</div>
+    <div class="alert alert-success" th:if="${workspace.status().name() == 'SUBMITTED'}">Đã nộp phản biện. Không thể sửa hoặc nộp lại.</div>
+    <div class="alert alert-warning" th:if="${workspace.status().name() == 'ASSIGNED' && !workspace.canSubmit()}">Đã hết hạn nộp phản biện.</div>
+    <form class="card" method="post" enctype="multipart/form-data" th:if="${workspace.canSubmit()}"
+          th:action="@{/lecturer/reviewers/{id}/submit(id=${workspace.assignmentId()})}"
+          th:object="${reviewerSubmissionForm}" data-prevent-double-submit>
+      <input type="hidden" th:field="*{version}" th:value="${workspace.version()}">
+      <div class="card-body">
+        <div class="alert alert-danger" role="alert" th:if="${#fields.hasErrors()}">
+          <div th:each="error : ${#fields.allErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</div>
+        </div>
+        <label class="form-label" for="reviewPdf">Báo cáo phản biện PDF (tối đa 20 MB)</label>
+        <input class="form-control mb-4" id="reviewPdf" type="file" th:field="*{file}" accept="application/pdf,.pdf" required>
+        <div class="row g-3" th:each="student, index : ${workspace.students()}">
+          <div class="col-12"><h3 class="h4 mb-0" th:text="${student.name()}">Sinh viên</h3></div>
+          <input type="hidden" th:field="*{scores[__${index.index}__].studentId}" th:value="${student.id()}">
+          <div class="col-md-3">
+            <label class="form-label">Điểm (0–10)</label>
+            <input class="form-control" type="number" th:field="*{scores[__${index.index}__].score}" min="0" max="10" step="0.25" required>
+          </div>
+          <div class="col-md-9">
+            <label class="form-label">Nhận xét</label>
+            <textarea class="form-control" th:field="*{scores[__${index.index}__].feedback}" rows="2" required></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-end"><button class="btn btn-primary" type="submit" data-confirm="Nộp phản biện và điểm của tất cả sinh viên? Không thể sửa sau khi nộp.">Nộp phản biện</button></div>
+    </form>
+  </div>
+</section></body></html>

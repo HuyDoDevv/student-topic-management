@@ -17,6 +17,8 @@ public interface ReviewerEvaluationRepository extends JpaRepository<ReviewerEval
     Optional<ReviewerEvaluationEntity> findByAssignmentIdAndStudentId(
             long assignmentId, long studentId);
 
+    boolean existsByAssignmentId(long assignmentId);
+
     @EntityGraph(attributePaths = {"assignment", "student"})
     List<ReviewerEvaluationEntity> findAllByAssignmentIdOrderByStudentId(long assignmentId);
 
