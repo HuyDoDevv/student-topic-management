@@ -33,6 +33,8 @@ import vn.edu.topicregistration.service.ResultService.ResultEvidenceView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
+import vn.edu.topicregistration.service.ResultService.FacultyResultListView;
+import vn.edu.topicregistration.service.ResultService.ResultListFilter;
 import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
 import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
@@ -59,41 +61,51 @@ public class ResultController {
 
     @GetMapping("/faculty/results")
     public String list(
+            @RequestParam(required = false) Long period,
             @RequestParam(required = false) Long periodId,
             @RequestParam(required = false) Long registrationId,
+            @RequestParam(required = false) String topicType,
+            @RequestParam(required = false) String topicOrGroup,
+            @RequestParam(required = false) Long grader,
             @RequestParam(required = false) Long lecturerId,
             @RequestParam(required = false) FinalResultStatus status,
+            @RequestParam(defaultValue = "recent") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model) {
+        if (period != null && periodId != null && !period.equals(periodId)
+                || grader != null && lecturerId != null && !grader.equals(lecturerId)) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        Long selectedPeriod = period != null ? period : periodId;
+        Long selectedGrader = grader != null ? grader : lecturerId;
+        FacultyResultListView listing = results.listPageForCurrentDean(new ResultListFilter(
+                selectedPeriod, registrationId, topicType, topicOrGroup,
+                selectedGrader, status, sort, page, size));
         common(model);
-        var allResults = results.listForCurrentDean().stream()
-                .map(this::display)
-                .toList();
-        model.addAttribute("periodOptions", allResults.stream()
-                .map(result -> new FacultyResultPeriodOption(
-                        result.periodId(), result.periodName()))
-                .distinct()
+        model.addAttribute("periodOptions", listing.periods().stream()
+                .map(option -> new FacultyResultPeriodOption(option.id(), option.name()))
                 .toList());
-        model.addAttribute("lecturerOptions", allResults.stream()
-                .flatMap(result -> result.lecturers().stream())
-                .map(lecturer -> new FacultyResultLecturerOption(
-                        lecturer.id(), lecturer.name()))
-                .distinct()
+        model.addAttribute("lecturerOptions", listing.graders().stream()
+                .map(option -> new FacultyResultLecturerOption(option.id(), option.name()))
                 .toList());
-        model.addAttribute("selectedPeriodId", periodId);
+        model.addAttribute("selectedPeriodId", selectedPeriod);
         model.addAttribute("selectedRegistrationId", registrationId);
-        model.addAttribute("selectedLecturerId", lecturerId);
+        model.addAttribute("selectedTopicType", topicType);
+        model.addAttribute("selectedTopicOrGroup", topicOrGroup);
+        model.addAttribute("selectedLecturerId", selectedGrader);
         model.addAttribute("selectedStatus", status);
-        var filteredResults = allResults.stream()
-                .filter(result -> periodId == null || periodId.equals(result.periodId()))
-                .filter(result -> registrationId == null
-                        || registrationId.equals(result.registrationId()))
-                .filter(result -> lecturerId == null || result.lecturers().stream()
-                        .anyMatch(lecturer -> lecturerId.equals(lecturer.id())))
-                .filter(result -> status == null || status == result.status())
-                .toList();
-        model.addAttribute("results", filteredResults);
-        model.addAttribute("selectedGroupId", registrationId == null || filteredResults.isEmpty()
-                ? null : filteredResults.getFirst().groupId());
+        model.addAttribute("selectedSort", sort);
+        model.addAttribute("selectedSize", size);
+        model.addAttribute("page", listing.page());
+        model.addAttribute("totalPages", listing.totalPages());
+        model.addAttribute("totalGroups", listing.totalGroups());
+        model.addAttribute("hasPrevious", listing.page() > 0);
+        model.addAttribute("hasNext", listing.page() + 1 < listing.totalPages());
+        model.addAttribute("groups", listing.groups().stream()
+                .map(group -> new FacultyResultGroupPageView(group.registrationId(),
+                        group.students().stream().map(this::display).toList()))
+                .toList());
         return "results/faculty-list";
     }
 
@@ -284,6 +296,17 @@ public class ResultController {
             long version) {
         public FacultyResultPageView {
             lecturers = List.copyOf(lecturers);
+        }
+    }
+
+    public record FacultyResultGroupPageView(
+            Long registrationId, List<FacultyResultPageView> students) {
+        public FacultyResultGroupPageView {
+            students = List.copyOf(students);
+        }
+
+        public FacultyResultPageView first() {
+            return students.getFirst();
         }
     }
 

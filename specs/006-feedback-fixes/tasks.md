@@ -182,7 +182,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: completeness theo đúng loại đợt, HALF_UP, actor/time lưu đúng;
     không update `PUBLISHED`; thiếu một nguồn hoặc một SV làm publish bị từ chối.
 
-- [ ] **T017 Làm lại danh sách kết quả khi có nhiều đề tài** `[FB-06]`
+- [x] **T017 Làm lại danh sách kết quả khi có nhiều đề tài** `[FB-06]`
   - File: `FinalResultRepository.java`, `ResultService.java`, `ResultController.java`,
     `templates/results/faculty-list.html`, `ResultControllerTest.java`,
     `ResultServiceTest.java`.

@@ -176,6 +176,15 @@ nhận hay lưu thời gian bảo vệ.
 Query params allow-list: `period`, `topicType`, `topicOrGroup`, `grader`, `status`,
 `sort`, `page`, `size`. Backend áp scope Khoa, pagination ổn định và group view
 theo topic/registration; param không hợp lệ không được dùng làm query tùy ý.
+`page` bắt đầu từ 0; `size` chỉ nhận 10/20/50 nhóm, mặc định 10. Một trang không
+chia sinh viên cùng đăng ký sang trang khác. `sort` chỉ nhận `recent`, `oldest`,
+`period`, `topic` và luôn có registration ID làm khóa phụ. `topicOrGroup` tìm
+tên đề tài hoặc mã nhóm (`N001`/`1`); `grader` bao gồm người chấm trực tiếp,
+thành viên hội đồng và GVPB đã nộp. `periodId`, `lecturerId`, `registrationId`
+được giữ làm alias/link lọc cũ (`registrationId` lọc đúng một đăng ký); hai
+alias và tham số mới mâu thuẫn bị từ chối. Bộ lọc chọn nhóm phù hợp rồi hiển thị
+đủ kết quả sinh viên trong mỗi nhóm.
+Không nhận `facultyId` từ client làm nguồn quyết định phạm vi.
 
 ### `GET /faculty/results/{registrationId}/{studentId}`
 

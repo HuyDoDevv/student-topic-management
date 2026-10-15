@@ -3,6 +3,8 @@ package vn.edu.topicregistration.unit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,6 +21,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -63,6 +67,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.ResultService;
+import vn.edu.topicregistration.service.ResultService.ResultListFilter;
 import vn.edu.topicregistration.util.ProjectTime;
 
 class ResultServiceTest {
@@ -419,6 +424,51 @@ class ResultServiceTest {
         assertEquals(3, detail.result().lecturers().size());
         assertEquals(3, detail.evaluations().size());
         verify(dependencies.authorization()).requireDeanOfFaculty(2L);
+    }
+
+    @Test
+    void resultPageKeepsWholeRegistrationAndUsesScopedRepositoryFilters() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, CouncilStatus.COMPLETED, 6L);
+        when(dependencies.authorization().requireRole(RoleCode.DEAN)).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+        FinalResultEntity row = result(fixture, FinalResultStatus.READY);
+        when(dependencies.results().findRegistrationIdsForFaculty(
+                eq(2L), eq(7L), eq(null), eq("KLTN"), eq("N021"), eq(21L),
+                eq(14L), eq("READY"), eq("topic"), eq(PageRequest.of(0, 10))))
+                .thenReturn(new PageImpl<>(List.of(51L), PageRequest.of(0, 10), 1));
+        when(dependencies.results().findPageRowsForFaculty(2L, List.of(51L)))
+                .thenReturn(List.of(row, row));
+
+        var page = dependencies.service().listPageForCurrentDean(new ResultListFilter(
+                7L, null, "KLTN", "N021", 14L, FinalResultStatus.READY,
+                "topic", 0, 10));
+
+        assertEquals(1, page.totalGroups());
+        assertEquals(1, page.groups().size());
+        assertEquals(2, page.groups().getFirst().students().size());
+        assertEquals(51L, page.groups().getFirst().registrationId());
+        verify(dependencies.results()).findPageRowsForFaculty(2L, List.of(51L));
+    }
+
+    @Test
+    void resultPageRejectsUnlistedSortAndOversizedPageBeforeQuery() {
+        Dependencies dependencies = dependencies();
+        when(dependencies.authorization().requireRole(RoleCode.DEAN)).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+        for (ResultListFilter filter : List.of(
+                new ResultListFilter(null, null, null, null, null, null,
+                        "status desc; drop table", 0, 10),
+                new ResultListFilter(null, null, null, null, null, null,
+                        "recent", 0, 500),
+                new ResultListFilter(null, null, null, null, null, null,
+                        "recent", -1, 10))) {
+            ApplicationException rejected = assertThrows(ApplicationException.class,
+                    () -> dependencies.service().listPageForCurrentDean(filter));
+            assertEquals(ApplicationErrorCode.VALIDATION_FAILED, rejected.code());
+        }
+        verify(dependencies.results(), never()).findRegistrationIdsForFaculty(
+                anyLong(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test

@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -318,6 +320,67 @@ public class ResultService {
                                 result.getCouncil().getId(),
                                 ignored -> lecturersFor(result.getCouncil()))))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public FacultyResultListView listPageForCurrentDean(ResultListFilter filter) {
+        ActorIdentity dean = currentDean();
+        if (filter == null || filter.page() < 0 || filter.page() > 100_000
+                || !List.of(10, 20, 50).contains(filter.size())
+                || filter.periodId() != null && filter.periodId() < 1
+                || filter.registrationId() != null && filter.registrationId() < 1
+                || filter.graderId() != null && filter.graderId() < 1
+                || filter.topicType() != null && !List.of("COURSE", "NCKH", "TLCN", "KLTN")
+                        .contains(filter.topicType())
+                || !List.of("recent", "oldest", "period", "topic").contains(filter.sort())) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        String search = filter.topicOrGroup() == null ? null : filter.topicOrGroup().strip();
+        if (search != null && search.length() > 100) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        if (search != null && search.isEmpty()) {
+            search = null;
+        }
+        Long groupId = null;
+        if (search != null) {
+            String digits = search.matches("(?i)N[0-9]+") ? search.substring(1) : search;
+            if (digits.matches("[0-9]+")) {
+                try {
+                    groupId = Long.valueOf(digits);
+                } catch (NumberFormatException ignored) {
+                    // The title search remains valid even when a numeric group code overflows.
+                }
+            }
+        }
+        Page<Long> page = results.findRegistrationIdsForFaculty(
+                dean.facultyId(), filter.periodId(), filter.registrationId(),
+                filter.topicType(), search, groupId, filter.graderId(),
+                filter.status() == null ? null : filter.status().name(),
+                filter.sort(), PageRequest.of(filter.page(), filter.size()));
+        Map<Long, List<FacultyResultSummaryView>> grouped = new LinkedHashMap<>();
+        Map<Long, List<FacultyResultLecturerView>> lecturersByCouncil = new LinkedHashMap<>();
+        if (!page.isEmpty()) {
+            for (FinalResultEntity row : results.findPageRowsForFaculty(
+                    dean.facultyId(), page.getContent())) {
+                grouped.computeIfAbsent(row.getRegistrationId(), ignored -> new ArrayList<>())
+                        .add(toSummary(row, lecturersByCouncil.computeIfAbsent(
+                                row.getCouncil().getId(),
+                                ignored -> lecturersFor(row.getCouncil()))));
+            }
+        }
+        List<FacultyResultGroupView> groups = page.getContent().stream()
+                .filter(grouped::containsKey)
+                .map(id -> new FacultyResultGroupView(id, grouped.get(id)))
+                .toList();
+        return new FacultyResultListView(groups, page.getTotalElements(),
+                page.getTotalPages(), filter.page(), filter.size(),
+                results.findPeriodOptionsForFaculty(dean.facultyId()).stream()
+                        .map(option -> new FacultyResultFilterOption(option.getId(), option.getName()))
+                        .toList(),
+                results.findGraderOptionsForFaculty(dean.facultyId()).stream()
+                        .map(option -> new FacultyResultFilterOption(option.getId(), option.getName()))
+                        .toList());
     }
 
     @Transactional(readOnly = true)
@@ -1077,6 +1140,32 @@ public class ResultService {
             this(registrationId, studentId, studentName, groupId, periodId, periodName,
                     topicTitle, councilId, councilName, CouncilMode.COUNCIL, "KLTN",
                     lecturers, status, finalScore, consolidatedAt, publishedAt, version);
+        }
+    }
+
+    public record ResultListFilter(
+            Long periodId, Long registrationId, String topicType, String topicOrGroup,
+            Long graderId, FinalResultStatus status, String sort, int page, int size) {
+    }
+
+    public record FacultyResultFilterOption(Long id, String name) {
+    }
+
+    public record FacultyResultGroupView(
+            Long registrationId, List<FacultyResultSummaryView> students) {
+        public FacultyResultGroupView {
+            students = List.copyOf(students);
+        }
+    }
+
+    public record FacultyResultListView(
+            List<FacultyResultGroupView> groups, long totalGroups, int totalPages,
+            int page, int size, List<FacultyResultFilterOption> periods,
+            List<FacultyResultFilterOption> graders) {
+        public FacultyResultListView {
+            groups = List.copyOf(groups);
+            periods = List.copyOf(periods);
+            graders = List.copyOf(graders);
         }
     }
 
