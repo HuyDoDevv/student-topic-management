@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,8 @@ public class RegistrationService {
     private final RegistrationMemberRepository registrationMembers;
     private final AuthorizationPolicy authorization;
     private final Clock clock;
+    private final ReportService reportService;
+    private final ObjectProvider<ResultService> resultService;
 
     public RegistrationService(
             RegistrationPeriodRepository periods,
@@ -65,7 +68,9 @@ public class RegistrationService {
             RegistrationRepository registrations,
             RegistrationMemberRepository registrationMembers,
             AuthorizationPolicy authorization,
-            Clock clock) {
+            Clock clock,
+            ReportService reportService,
+            ObjectProvider<ResultService> resultService) {
         this.periods = periods;
         this.groups = groups;
         this.invitations = invitations;
@@ -74,6 +79,8 @@ public class RegistrationService {
         this.registrationMembers = registrationMembers;
         this.authorization = authorization;
         this.clock = clock;
+        this.reportService = reportService;
+        this.resultService = resultService;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -218,6 +225,81 @@ public class RegistrationService {
     }
 
     @Transactional(readOnly = true)
+    public RegistrationProgressView progressForVisible(long registrationId) {
+        RegistrationDetailView registration = getVisible(registrationId);
+        if (registration.status() != RegistrationStatus.ACCEPTED) {
+            return projectProgress(registration, false, null);
+        }
+        boolean reportSubmitted = reportService
+                .hasCurrentReportForVisibleRegistration(registrationId);
+        ResultService.RegistrationProgress result = resultService.getObject()
+                .progressForVisibleRegistration(registrationId);
+        return projectProgress(registration, reportSubmitted, result);
+    }
+
+    static RegistrationProgressView projectProgress(
+            RegistrationDetailView registration,
+            boolean reportSubmitted,
+            ResultService.RegistrationProgress result) {
+        RegistrationStatus status = registration.status();
+        boolean terminalWithoutResult = status == RegistrationStatus.REJECTED
+                || status == RegistrationStatus.WITHDRAWN;
+        boolean needsReviewer = "TLCN".equals(registration.topicType())
+                || "KLTN".equals(registration.topicType());
+        int current = status == RegistrationStatus.PENDING ? 1 : 2;
+        if (status == RegistrationStatus.ACCEPTED) {
+            current = result != null && result.published() ? 9
+                    : result != null && result.ready() ? 8
+                    : !reportSubmitted ? 3
+                    : result != null && (result.reviewerSubmitted()
+                            || !needsReviewer && result.gradingStarted()) ? 7
+                    : result != null && result.reviewerAssigned() ? 6 : 5;
+        }
+        String decisionLabel = status == RegistrationStatus.PENDING
+                ? "Chấp nhận hoặc từ chối"
+                : status == RegistrationStatus.REJECTED ? "Bị từ chối"
+                : status == RegistrationStatus.WITHDRAWN ? "Đã rút đăng ký"
+                : "Đã chấp nhận";
+        List<String> labels = List.of(
+                "Chờ xét đăng ký", decisionLabel, "Chờ nộp báo cáo",
+                "Đã nộp báo cáo", "Chờ phân công phản biện/chấm",
+                "Phản biện đang thực hiện", "Đang chấm điểm",
+                "Đã đủ điểm, chờ công bố", "Đã công bố kết quả");
+        List<ProgressStep> steps = new java.util.ArrayList<>(labels.size());
+        for (int index = 1; index <= labels.size(); index++) {
+            ProgressState state = terminalWithoutResult && index > 2
+                    || !needsReviewer && index == 6
+                    ? ProgressState.NOT_APPLICABLE
+                    : index < current ? ProgressState.COMPLETED
+                    : index == current ? ProgressState.CURRENT : ProgressState.UPCOMING;
+            String href = null;
+            String action = null;
+            if (state == ProgressState.CURRENT && index == 3) {
+                href = "/reports/" + registration.id();
+                action = "Xem trang báo cáo";
+            } else if (state == ProgressState.CURRENT && index == 9
+                    && !registration.deanViewer()) {
+                href = "/student/results/" + registration.id();
+                action = "Xem kết quả";
+            }
+            steps.add(new ProgressStep(index, labels.get(index - 1), state, href, action));
+        }
+        return new RegistrationProgressView(List.copyOf(steps),
+                status == RegistrationStatus.ACCEPTED && current == 9
+                        || terminalWithoutResult);
+    }
+
+    public enum ProgressState { COMPLETED, CURRENT, UPCOMING, NOT_APPLICABLE }
+
+    public record ProgressStep(
+            int number, String label, ProgressState state, String actionHref,
+            String actionLabel) {
+    }
+
+    public record RegistrationProgressView(List<ProgressStep> steps, boolean terminal) {
+    }
+
+    @Transactional(readOnly = true)
     public RegistrationDetailView getForDecision(long registrationId) {
         RegistrationEntity registration = detailedRegistration(registrationId);
         ActorIdentity dean = authorization.requireDeanOfFaculty(
@@ -334,6 +416,7 @@ public class RegistrationService {
                 group.getId(),
                 topic.getId(),
                 topic.getTitle(),
+                period.getTopicType(),
                 displayName(topic.getAuthor()),
                 topic.getPeriod().getFaculty().getName(),
                 topic.getSupervisors().stream()
@@ -477,6 +560,7 @@ public class RegistrationService {
             long groupId,
             long topicId,
             String topicTitle,
+            String topicType,
             String topicAuthor,
             String topicFaculty,
             List<String> supervisors,

@@ -49,18 +49,16 @@
             <dt>Gửi lúc</dt><dd th:text="${registration.submittedAt}">11/09/2026 10:30</dd>
           </dl>
 
-          <div class="registration-timeline mt-4">
-            <div class="timeline-note">
-              <span class="timeline-dot"></span>
-              <div><strong>Đã gửi đăng ký</strong><p class="text-secondary mb-0" th:text="${registration.submittedAt}">11/09/2026 10:30</p></div>
-            </div>
-            <div class="timeline-note" th:if="${registration.decidedAt != null}">
-              <span class="timeline-dot" th:classappend="${registration.status.name() == 'ACCEPTED'} ? ' is-success' : ' is-danger'"></span>
-              <div><strong th:text="${registration.statusLabel}">Đã xử lý</strong><p class="text-secondary mb-0" th:text="${registration.decidedAt}">11/09/2026 11:00</p></div>
-            </div>
-            <div class="timeline-note" th:if="${registration.withdrawnAt != null}">
-              <span class="timeline-dot is-muted"></span>
-              <div><strong>Đã rút đăng ký</strong><p class="text-secondary mb-0" th:text="${registration.withdrawnAt}">11/09/2026 11:00</p></div>
+          <div class="registration-timeline mt-4" aria-label="Tiến trình đăng ký và chấm điểm">
+            <div class="timeline-note" th:each="step : ${progress.steps}">
+              <span class="timeline-dot" th:classappend="${step.state.name() == 'COMPLETED' or (step.number == 9 and step.state.name() == 'CURRENT')} ? ' is-success' : ' is-muted'"></span>
+              <div>
+                <strong th:text="${step.number + '. ' + step.label}">1. Chờ xét đăng ký</strong>
+                <span class="badge ms-2" th:classappend="${step.state.name() == 'CURRENT'} ? ' bg-blue-lt' : ' bg-secondary-lt'"
+                      th:text="${step.state.name() == 'COMPLETED' ? 'Đã xong' : step.state.name() == 'CURRENT' ? 'Hiện tại' : step.state.name() == 'NOT_APPLICABLE' ? 'Không áp dụng' : 'Chưa đến'}">Hiện tại</span>
+                <a class="d-block mt-1" th:if="${step.actionHref != null}"
+                   th:href="${step.actionHref}" th:text="${step.actionLabel}">Xem bước tiếp theo</a>
+              </div>
             </div>
           </div>
         </div>

@@ -70,7 +70,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: topic published/có registration/hết hạn bị chặn; DEAN không sửa
     nội dung thay lecturer; stale version không ghi đè.
 
-- [ ] **T006 Hiển thị đầy đủ tiến trình cho sinh viên** `[FB-08]`
+- [x] **T006 Hiển thị đầy đủ tiến trình cho sinh viên** `[FB-08]`
   - File: `RegistrationService.java`, `ReportService.java`, `ResultService.java`,
     `RegistrationController.java`, `templates/registrations/detail.html`,
     `templates/groups/detail.html` và test registration/result.

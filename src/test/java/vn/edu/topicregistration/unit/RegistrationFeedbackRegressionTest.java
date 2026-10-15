@@ -76,7 +76,9 @@ class RegistrationFeedbackRegressionTest {
                 registrations,
                 snapshots,
                 authorization,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                mock(vn.edu.topicregistration.service.ReportService.class),
+                mock(org.springframework.beans.factory.ObjectProvider.class));
 
         FacultyEntity faculty = mock(FacultyEntity.class);
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);

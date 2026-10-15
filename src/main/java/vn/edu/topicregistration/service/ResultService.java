@@ -340,6 +340,52 @@ public class ResultService {
     }
 
     @Transactional(readOnly = true)
+    RegistrationProgress progressForVisibleRegistration(long registrationId) {
+        List<RegistrationMemberEntity> students = registrationMembers
+                .findAllByRegistrationId(registrationId);
+        CouncilTopicEntity gradingAssignment = assignments.findByRegistrationId(registrationId)
+                .orElse(null);
+        ReviewerAssignmentEntity reviewer = reviewerAssignments
+                .findActiveByRegistrationId(registrationId,
+                        List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                                ReviewerAssignmentEntity.Status.SUBMITTED))
+                .orElse(null);
+        boolean reviewerSubmitted = reviewer != null
+                && reviewer.getStatus() == ReviewerAssignmentEntity.Status.SUBMITTED
+                && reviewerReports.existsByAssignmentId(reviewer.getId())
+                && !students.isEmpty()
+                && reviewerEvaluations.findAllByAssignmentIdOrderByStudentId(reviewer.getId())
+                        .stream()
+                        .filter(score -> score.getStatus() == EvaluationStatus.SUBMITTED)
+                        .map(score -> score.getStudent().getId())
+                        .collect(java.util.stream.Collectors.toSet())
+                        .equals(students.stream()
+                                .map(student -> student.getStudent().getId())
+                                .collect(java.util.stream.Collectors.toSet()));
+        boolean ready = !students.isEmpty();
+        boolean published = !students.isEmpty();
+        for (RegistrationMemberEntity student : students) {
+            FinalResultEntity result = results.findDetailedByRegistrationIdAndStudentId(
+                    registrationId, student.getStudent().getId()).orElse(null);
+            ready &= result != null && result.getStatus() == FinalResultStatus.READY;
+            published &= result != null && result.getStatus() == FinalResultStatus.PUBLISHED;
+        }
+        boolean gradingStarted = gradingAssignment != null
+                && gradingAssignment.getCouncil().getStatus().ordinal()
+                        >= CouncilStatus.ACTIVE.ordinal();
+        return new RegistrationProgress(reviewer != null, reviewerSubmitted,
+                gradingStarted, ready, published);
+    }
+
+    record RegistrationProgress(
+            boolean reviewerAssigned,
+            boolean reviewerSubmitted,
+            boolean gradingStarted,
+            boolean ready,
+            boolean published) {
+    }
+
+    @Transactional(readOnly = true)
     public List<DirectPreviewRow> previewDirectForCurrentDean(long councilId) {
         CouncilEntity council = councils.findDetailedById(councilId)
                 .orElseThrow(() -> new ApplicationException(
