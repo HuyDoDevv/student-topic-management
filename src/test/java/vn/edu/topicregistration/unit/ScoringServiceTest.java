@@ -53,6 +53,7 @@ import vn.edu.topicregistration.repository.ScoreComponentRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.ScoringService;
+import vn.edu.topicregistration.service.DirectGradingService;
 import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
 
 class ScoringServiceTest {
@@ -441,6 +442,7 @@ class ScoringServiceTest {
                     registrationMembers,
                     components,
                     evaluations,
+                    mock(DirectGradingService.class),
                     authorization,
                     Clock.fixed(NOW, ZoneOffset.UTC));
         }

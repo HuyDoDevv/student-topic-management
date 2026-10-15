@@ -21,9 +21,9 @@ class CouncilRulesTest {
     private static final long FACULTY_ID = 4L;
 
     @Test
-    void acceptsThreeToFiveDistinctLecturersWithSeparateOfficersForThesisPeriods() {
+    void acceptsThreeToFiveDistinctLecturersForKltnOnly() {
         assertDoesNotThrow(() -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, validMembers(3)));
+                "KLTN", FACULTY_ID, 11L, 12L, validMembers(3)));
         assertDoesNotThrow(() -> CouncilRules.validateCreation(
                 "KLTN", FACULTY_ID, 11L, 12L, validMembers(5)));
     }
@@ -31,35 +31,37 @@ class CouncilRulesTest {
     @Test
     void rejectsInvalidCardinalityDuplicateOfficerRoleFacultyAndPeriodType() {
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, validMembers(2)));
+                "KLTN", FACULTY_ID, 11L, 12L, validMembers(2)));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, validMembers(6)));
+                "KLTN", FACULTY_ID, 11L, 12L, validMembers(6)));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 11L, validMembers(3)));
+                "KLTN", FACULTY_ID, 11L, 11L, validMembers(3)));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, List.of(
+                "KLTN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L), candidate(12L))));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, List.of(
+                "KLTN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L),
                         new MemberCandidate(13L, FACULTY_ID, false, true))));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, List.of(
+                "KLTN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L),
                         new MemberCandidate(13L, FACULTY_ID, true, false))));
         assertFailure(Failure.INVALID_MEMBERS, () -> CouncilRules.validateCreation(
-                "TLCN", FACULTY_ID, 11L, 12L, List.of(
+                "KLTN", FACULTY_ID, 11L, 12L, List.of(
                         candidate(11L), candidate(12L),
                         new MemberCandidate(13L, 99L, true, true))));
         assertFailure(Failure.INVALID_STATE, () -> CouncilRules.validateCreation(
                 "COURSE", FACULTY_ID, 11L, 12L, validMembers(3)));
+        assertFailure(Failure.INVALID_STATE, () -> CouncilRules.validateCreation(
+                "TLCN", FACULTY_ID, 11L, 12L, validMembers(3)));
     }
 
     @Test
     void acceptsOnlyAnAcceptedSameScopeNonSupervisedAssignmentBeforeScheduling() {
         AssignmentContext valid = new AssignmentContext(
                 CouncilStatus.DRAFT,
-                "TLCN",
+                "KLTN",
                 RegistrationStatus.ACCEPTED,
                 true,
                 true,
@@ -73,6 +75,7 @@ class CouncilRulesTest {
         assertAssignmentFailure(valid.withAssignedElsewhere(true));
         assertAssignmentFailure(valid.withSupervisorConflict(true));
         assertAssignmentFailure(valid.withTopicType("NCKH"));
+        assertAssignmentFailure(valid.withTopicType("TLCN"));
         assertFailure(Failure.INVALID_STATE, () -> CouncilRules.validateAssignment(
                 valid.withCouncilStatus(CouncilStatus.SCHEDULED)));
     }

@@ -9,7 +9,7 @@ import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 
 public final class CouncilRules {
-    private static final Set<String> SUPPORTED_TYPES = Set.of("TLCN", "KLTN");
+    private static final Set<String> SUPPORTED_TYPES = Set.of("KLTN");
 
     private CouncilRules() {
     }

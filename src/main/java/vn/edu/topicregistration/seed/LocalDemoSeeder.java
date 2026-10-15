@@ -96,6 +96,7 @@ public class LocalDemoSeeder implements ApplicationRunner {
 
         String passwordHash = passwordEncoder.encode(password);
         long facultyId = faculty(FACULTY_NAME);
+        requiredDemoDepartment(facultyId);
 
         account(
                 "admin.demo", "Quản trị viên Demo", null, passwordHash,
@@ -390,10 +391,88 @@ public class LocalDemoSeeder implements ApplicationRunner {
                     new BigDecimal("8.75"));
         }
 
+        seedTlcnAwaitingSecondGrader(
+                facultyId, deanId, supervisorId, memberId, students, today);
+
         log.info(
                 "Review demo fixtures are ready: ACTIVE board {}, PUBLISHED board {}, "
                         + "lecturer4.demo and lecturer5.demo.",
                 activeCouncil.id(), publishedCouncil.id());
+    }
+
+    private void seedTlcnAwaitingSecondGrader(
+            long facultyId,
+            long deanId,
+            long supervisorId,
+            long reviewerId,
+            long[] students,
+            LocalDate today) {
+        PeriodWindow period = period(
+                facultyId, "[DEMO] Tiểu luận chuyên ngành - Chờ chấm lần hai", "TLCN",
+                today.minusDays(45), today.minusDays(35),
+                today.minusDays(30), today.minusDays(20),
+                today.plusDays(7), null);
+        long topicId = topic(period.id(), supervisorId,
+                "[DEMO] Đối soát điểm tiểu luận chuyên ngành", "PUBLISHED");
+        supervisor(topicId, supervisorId, 1);
+        CreatedRow group = group(period.id(), students[3]);
+        if (group.created()) {
+            membership(group.id(), period.id(), students[4], 2);
+            membership(group.id(), period.id(), students[5], 3);
+        }
+        long registrationId = registration(
+                period, group.id(), topicId, "ACCEPTED", deanId,
+                period.studentStart().plus(1, ChronoUnit.DAYS), null, null, null);
+        if (!exists("SELECT COUNT(*) FROM project_reports "
+                + "WHERE registration_id = ? AND replaced_at IS NULL", registrationId)) {
+            report(registrationId, students[3], today.minusDays(2),
+                    "bao-cao-tieu-luan-chuyen-nganh.pdf");
+        }
+        if (exists("SELECT COUNT(*) FROM reviewer_assignments WHERE registration_id = ?",
+                registrationId)) {
+            return;
+        }
+        Instant submittedAt = projectTime.now().minus(1, ChronoUnit.DAYS);
+        long assignmentId = insert(
+                "INSERT INTO reviewer_assignments("
+                        + "registration_id, registration_status, lecturer_id, deadline_date, "
+                        + "status, assigned_by, assigned_at, submitted_at, version) "
+                        + "VALUES (?, 'ACCEPTED', ?, ?, 'SUBMITTED', ?, ?, ?, 0)",
+                registrationId, reviewerId, today.plusDays(7), deanId,
+                Timestamp.from(submittedAt.minus(2, ChronoUnit.DAYS)),
+                Timestamp.from(submittedAt));
+        StoredReportFile stored;
+        try {
+            stored = reportFiles.store(
+                    new ByteArrayInputStream(DEMO_REPORT_PDF), DEMO_REPORT_PDF.length);
+        } catch (IOException | RuntimeException exception) {
+            throw new IllegalStateException("Could not store the TLCN reviewer PDF", exception);
+        }
+        deleteReportOnRollback(stored.storageKey());
+        try {
+            jdbc.update(
+                    "INSERT INTO reviewer_reports(assignment_id, file_name, storage_key, "
+                            + "content_type, size_bytes, submitted_by, submitted_at) "
+                            + "VALUES (?, ?, ?, 'application/pdf', ?, ?, ?)",
+                    assignmentId, "phan-bien-tieu-luan-chuyen-nganh.pdf",
+                    stored.storageKey(), stored.sizeBytes(), reviewerId,
+                    Timestamp.from(submittedAt));
+        } catch (RuntimeException exception) {
+            reportFiles.delete(stored.storageKey());
+            throw exception;
+        }
+        List<Long> studentIds = jdbc.queryForList(
+                "SELECT student_id FROM registration_members "
+                        + "WHERE registration_id = ? ORDER BY slot",
+                Long.class, registrationId);
+        for (Long studentId : studentIds) {
+            jdbc.update(
+                    "INSERT INTO reviewer_evaluations(assignment_id, registration_id, "
+                            + "student_id, score, feedback, status, submitted_at, version) "
+                            + "VALUES (?, ?, ?, 8.25, ?, 'SUBMITTED', ?, 0)",
+                    assignmentId, registrationId, studentId,
+                    "Báo cáo phản biện đạt yêu cầu.", Timestamp.from(submittedAt));
+        }
     }
 
     private long faculty(String name) {
@@ -470,11 +549,12 @@ public class LocalDemoSeeder implements ApplicationRunner {
                 ? existing
                 : insert(
                         "INSERT INTO registration_periods("
-                                + "faculty_id, name, topic_type, lecturer_start, lecturer_end, "
+                                + "faculty_id, department_id, name, topic_type, lecturer_start, lecturer_end, "
                                 + "student_start, student_end, reviewer_score_deadline, "
                                 + "council_report_date, version) "
-                                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
                         facultyId,
+                        requiredDemoDepartment(facultyId),
                         name,
                         topicType,
                         Timestamp.from(projectTime.toStartOfDay(lecturerStart)),
@@ -484,6 +564,15 @@ public class LocalDemoSeeder implements ApplicationRunner {
                         reviewerScoreDeadline,
                         councilReportDate);
         return requiredPeriodWindow(id);
+    }
+
+    private long requiredDemoDepartment(long facultyId) {
+        Long existing = optionalId(
+                "SELECT id FROM departments WHERE faculty_id = ? "
+                        + "AND name = 'Công nghệ phần mềm' ORDER BY id LIMIT 1", facultyId);
+        return existing != null ? existing : insert(
+                "INSERT INTO departments(name, faculty_id) VALUES (?, ?)",
+                "Công nghệ phần mềm", facultyId);
     }
 
     private PeriodWindow requiredPeriodWindow(long periodId) {

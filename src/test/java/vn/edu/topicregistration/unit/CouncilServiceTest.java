@@ -396,11 +396,12 @@ class CouncilServiceTest {
             Dependencies dependencies,
             CouncilStatus status,
             long version) {
-        RegistrationPeriodEntity period = mockPeriod("TLCN");
+        RegistrationPeriodEntity period = mockPeriod("KLTN");
         FacultyEntity faculty = period.getFaculty();
         CouncilEntity council = mock(CouncilEntity.class);
         when(council.getId()).thenReturn(41L);
         when(council.getPeriod()).thenReturn(period);
+        when(council.getMode()).thenReturn(CouncilMode.COUNCIL);
         when(council.getStatus()).thenReturn(status);
         when(council.getVersion()).thenReturn(version);
 

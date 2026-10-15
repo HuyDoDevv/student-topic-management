@@ -3,6 +3,8 @@ package vn.edu.topicregistration.service;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -12,6 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,8 @@ import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
+import vn.edu.topicregistration.entity.ReviewerEvaluationEntity;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
@@ -45,6 +50,9 @@ import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
+import vn.edu.topicregistration.repository.ReviewerEvaluationRepository;
+import vn.edu.topicregistration.repository.ReviewerReportRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.FinalScoreRules.CompletionContext;
@@ -52,10 +60,13 @@ import vn.edu.topicregistration.service.FinalScoreRules.FinalScoreRuleException;
 import vn.edu.topicregistration.service.FinalScoreRules.PublicationContext;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 import vn.edu.topicregistration.util.ScoreFormat;
+import vn.edu.topicregistration.util.ProjectTime;
 
 @Service
 @Profile("!test")
 public class ResultService {
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
+            "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));
     private final RegistrationPeriodRepository periods;
     private final CouncilRepository councils;
     private final CouncilTopicRepository assignments;
@@ -64,9 +75,47 @@ public class ResultService {
     private final EvaluationRepository evaluations;
     private final FinalResultRepository results;
     private final UserAccountRepository accounts;
+    private final ReviewerAssignmentRepository reviewerAssignments;
+    private final ReviewerEvaluationRepository reviewerEvaluations;
+    private final ReviewerReportRepository reviewerReports;
     private final AuthorizationPolicy authorization;
     private final NotificationService notifications;
     private final Clock clock;
+    private final ProjectTime time;
+
+    @Autowired
+    public ResultService(
+            RegistrationPeriodRepository periods,
+            CouncilRepository councils,
+            CouncilTopicRepository assignments,
+            CouncilMemberRepository members,
+            RegistrationMemberRepository registrationMembers,
+            EvaluationRepository evaluations,
+            FinalResultRepository results,
+            UserAccountRepository accounts,
+            ReviewerAssignmentRepository reviewerAssignments,
+            ReviewerEvaluationRepository reviewerEvaluations,
+            ReviewerReportRepository reviewerReports,
+            AuthorizationPolicy authorization,
+            NotificationService notifications,
+            Clock clock,
+            ProjectTime time) {
+        this.periods = periods;
+        this.councils = councils;
+        this.assignments = assignments;
+        this.members = members;
+        this.registrationMembers = registrationMembers;
+        this.evaluations = evaluations;
+        this.results = results;
+        this.accounts = accounts;
+        this.reviewerAssignments = reviewerAssignments;
+        this.reviewerEvaluations = reviewerEvaluations;
+        this.reviewerReports = reviewerReports;
+        this.authorization = authorization;
+        this.notifications = notifications;
+        this.clock = clock;
+        this.time = time;
+    }
 
     public ResultService(
             RegistrationPeriodRepository periods,
@@ -80,17 +129,9 @@ public class ResultService {
             AuthorizationPolicy authorization,
             NotificationService notifications,
             Clock clock) {
-        this.periods = periods;
-        this.councils = councils;
-        this.assignments = assignments;
-        this.members = members;
-        this.registrationMembers = registrationMembers;
-        this.evaluations = evaluations;
-        this.results = results;
-        this.accounts = accounts;
-        this.authorization = authorization;
-        this.notifications = notifications;
-        this.clock = clock;
+        this(periods, councils, assignments, members, registrationMembers, evaluations,
+                results, accounts, null, null, null, authorization, notifications,
+                clock, new ProjectTime(clock));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -110,9 +151,11 @@ public class ResultService {
         boolean exactMatrix = exactSubmittedMatrix(
                 board.period(), council, lockedAssignments, lockedMembers,
                 snapshotStudents, lockedEvaluations);
+        boolean direct = council.getMode() == CouncilMode.DIRECT;
+        boolean tlcn = direct && "TLCN".equals(board.period().getTopicType());
         applyRules(() -> FinalScoreRules.validateCompletion(new CompletionContext(
                 council.getStatus(),
-                Objects.equals(council.getChair().getId(), board.actor().accountId()),
+                direct || Objects.equals(council.getChair().getId(), board.actor().accountId()),
                 lockedAssignments.size(),
                 lockedMembers.size(),
                 snapshotStudents.size(),
@@ -122,6 +165,14 @@ public class ResultService {
         if (!existingResults.isEmpty()) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
+        Map<StudentKey, ReviewerEvaluationEntity> reviewerScores = tlcn
+                ? reviewerScores(lockedAssignments, snapshotStudents, true)
+                : Map.of();
+        UserAccountEntity consolidator = direct
+                ? accounts.findDetailedById(board.actor().accountId())
+                        .orElseThrow(() -> new ApplicationException(
+                                ApplicationErrorCode.RESOURCE_NOT_FOUND))
+                : council.getChair();
 
         Instant completedAt = clock.instant();
         Map<StudentKey, List<EvaluationEntity>> byStudent = evaluationsByStudent(
@@ -137,16 +188,20 @@ public class ResultService {
                                 registration.getId(), snapshot.getStudent().getId());
                         List<EvaluationEntity> studentEvaluations = byStudent
                                 .getOrDefault(key, List.of());
-                        BigDecimal finalScore = FinalScoreRules.mean(studentEvaluations.stream()
-                                .map(EvaluationEntity::getScore)
-                                .toList());
+                        List<BigDecimal> sources = new ArrayList<>();
+                        if (tlcn) {
+                            sources.add(reviewerScores.get(key).getScore());
+                        }
+                        studentEvaluations.stream().map(EvaluationEntity::getScore)
+                                .forEach(sources::add);
+                        BigDecimal finalScore = FinalScoreRules.mean(sources);
                         created.add(new FinalResultEntity(
                                 registration,
                                 snapshot.getStudent(),
                                 council,
-                                council.getChair(),
+                                consolidator,
                                 completedAt,
-                                summary(studentEvaluations.size(), finalScore),
+                                summary(sources.size(), finalScore),
                                 finalScore));
                     });
         }
@@ -168,9 +223,11 @@ public class ResultService {
         CouncilEntity council = board.council();
         List<CouncilTopicEntity> lockedAssignments = assignments
                 .findAllByCouncilIdForUpdate(councilId);
-        members.findAllByCouncilIdForUpdate(councilId);
+        List<CouncilMemberEntity> lockedMembers = members
+                .findAllByCouncilIdForUpdate(councilId);
         List<RegistrationMemberEntity> snapshotStudents = snapshotStudents(lockedAssignments);
-        evaluations.findAllByCouncilIdForUpdate(councilId);
+        List<EvaluationEntity> lockedEvaluations = evaluations
+                .findAllByCouncilIdForUpdate(councilId);
         List<FinalResultEntity> lockedResults = results
                 .findAllByCouncilIdForUpdate(councilId);
 
@@ -181,6 +238,29 @@ public class ResultService {
                 snapshotStudents.size(),
                 lockedResults.size(),
                 exactReadyResults)));
+        if (council.getMode() == CouncilMode.DIRECT
+                && "TLCN".equals(board.period().getTopicType())) {
+            if (!exactSubmittedMatrix(board.period(), council, lockedAssignments,
+                    lockedMembers, snapshotStudents, lockedEvaluations)) {
+                throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
+            }
+            Map<StudentKey, ReviewerEvaluationEntity> reviewerScores = reviewerScores(
+                    lockedAssignments, snapshotStudents, true);
+            Map<StudentKey, List<EvaluationEntity>> graderScores = evaluationsByStudent(
+                    lockedEvaluations);
+            for (FinalResultEntity result : lockedResults) {
+                StudentKey key = new StudentKey(result.getRegistrationId(), result.getStudentId());
+                List<EvaluationEntity> studentGraderScores = graderScores.getOrDefault(
+                        key, List.of());
+                if (studentGraderScores.size() != 1
+                        || studentGraderScores.getFirst().getStatus() != EvaluationStatus.SUBMITTED
+                        || result.getFinalScore().compareTo(FinalScoreRules.mean(List.of(
+                                reviewerScores.get(key).getScore(),
+                                studentGraderScores.getFirst().getScore()))) != 0) {
+                    throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
+                }
+            }
+        }
 
         UserAccountEntity dean = accounts.findDetailedById(board.actor().accountId())
                 .orElseThrow(() -> new ApplicationException(
@@ -237,6 +317,58 @@ public class ResultService {
     }
 
     @Transactional(readOnly = true)
+    public List<DirectPreviewRow> previewDirectForCurrentDean(long councilId) {
+        CouncilEntity council = councils.findDetailedById(councilId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        authorization.requireDeanOfFaculty(requiredFacultyId(council.getPeriod()));
+        if (council.getMode() != CouncilMode.DIRECT
+                || !"TLCN".equals(council.getPeriod().getTopicType())) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
+        List<CouncilTopicEntity> councilAssignments = assignments
+                .findAllByCouncilIdOrderByRegistrationId(councilId);
+        List<RegistrationMemberEntity> snapshots = snapshotStudents(councilAssignments);
+        Map<StudentKey, ReviewerEvaluationEntity> reviewer;
+        try {
+            reviewer = reviewerScores(councilAssignments, snapshots, false);
+        } catch (ApplicationException exception) {
+            if (exception.code() != ApplicationErrorCode.EVALUATIONS_INCOMPLETE) {
+                throw exception;
+            }
+            return List.of();
+        }
+        long registrationId = councilAssignments.getFirst().getRegistration().getId();
+        ReviewerAssignmentEntity reviewerAssignment = reviewerAssignments
+                .findActiveByRegistrationId(registrationId,
+                        List.of(ReviewerAssignmentEntity.Status.SUBMITTED))
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.EVALUATIONS_INCOMPLETE));
+        Map<StudentKey, List<EvaluationEntity>> grader = evaluationsByStudent(
+                evaluations.findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, council.getChair().getId()));
+        List<DirectPreviewRow> rows = new ArrayList<>();
+        for (RegistrationMemberEntity snapshot : snapshots) {
+            StudentKey key = new StudentKey(registrationId, snapshot.getStudent().getId());
+            ReviewerEvaluationEntity reviewerScore = reviewer.get(key);
+            List<EvaluationEntity> submitted = grader.getOrDefault(key, List.of()).stream()
+                    .filter(score -> score.getStatus() == EvaluationStatus.SUBMITTED)
+                    .toList();
+            EvaluationEntity graderScore = submitted.size() == 1 ? submitted.getFirst() : null;
+            rows.add(new DirectPreviewRow(
+                    displayName(snapshot.getStudent()),
+                    displayName(reviewerAssignment.getReviewer()),
+                    reviewerScore.getScore(), formatDateTime(reviewerScore.getSubmittedAt()),
+                    displayName(council.getChair()),
+                    graderScore == null ? null : graderScore.getScore(),
+                    graderScore == null ? null : formatDateTime(graderScore.getSubmittedAt()),
+                    graderScore == null ? null : FinalScoreRules.mean(List.of(
+                            reviewerScore.getScore(), graderScore.getScore()))));
+        }
+        return rows;
+    }
+
+    @Transactional(readOnly = true)
     public FacultyResultDetailView detailForCurrentDean(
             long registrationId, long studentId) {
         FinalResultEntity result = results
@@ -251,13 +383,34 @@ public class ResultService {
                 .stream()
                 .map(ResultService::toEvaluationView)
                 .toList();
+        ReviewerResultView reviewerView = null;
+        if ("TLCN".equals(result.getRegistration().getPeriod().getTopicType())
+                && result.getCouncil().getMode() == CouncilMode.DIRECT) {
+            List<RegistrationMemberEntity> singleSnapshot = registrationMembers
+                    .findAllByRegistrationId(registrationId);
+            Map<StudentKey, ReviewerEvaluationEntity> sources = reviewerScores(
+                    assignments.findAllByCouncilIdOrderByRegistrationId(
+                            result.getCouncil().getId()), singleSnapshot, false);
+            ReviewerAssignmentEntity reviewerAssignment = reviewerAssignments
+                    .findActiveByRegistrationId(registrationId,
+                            List.of(ReviewerAssignmentEntity.Status.SUBMITTED))
+                    .orElseThrow(() -> new ApplicationException(
+                            ApplicationErrorCode.EVALUATIONS_INCOMPLETE));
+            ReviewerEvaluationEntity score = sources.get(new StudentKey(
+                    registrationId, studentId));
+            reviewerView = new ReviewerResultView(
+                    reviewerAssignment.getReviewer().getId(),
+                    displayName(reviewerAssignment.getReviewer()),
+                    score.getScore(), score.getFeedback(), score.getSubmittedAt());
+        }
         return new FacultyResultDetailView(
                 toSummary(result, lecturersFor(result.getCouncil())),
                 result.getEvaluationSummary(),
                 displayName(result.getConsolidatedBy()),
                 result.getPublishedBy() == null
                         ? null : displayName(result.getPublishedBy()),
-                evaluationViews);
+                evaluationViews,
+                reviewerView);
     }
 
     @Transactional(readOnly = true)
@@ -305,10 +458,6 @@ public class ResultService {
         RegistrationPeriodEntity period = periods.findByIdForUpdate(periodId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        ActorIdentity actor = switch (operation) {
-            case COMPLETE -> currentLecturer();
-            case PUBLISH -> authorization.requireDeanOfFaculty(requiredFacultyId(period));
-        };
         CouncilEntity council = councils.findByIdForUpdate(councilId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
@@ -316,6 +465,15 @@ public class ResultService {
                 || requiredFacultyId(council.getPeriod()) != requiredFacultyId(period)) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
+        if (council.getMode() != CouncilMode.DIRECT
+                && !"KLTN".equals(period.getTopicType())
+                && council.getStatus() != CouncilStatus.PUBLISHED) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
+        }
+        ActorIdentity actor = operation == Operation.PUBLISH
+                || council.getMode() == CouncilMode.DIRECT
+                ? authorization.requireDeanOfFaculty(requiredFacultyId(period))
+                : currentLecturer();
         if (council.getVersion() != expectedVersion) {
             throw new OptimisticLockingFailureException("Council version is stale");
         }
@@ -478,8 +636,61 @@ public class ResultService {
         return snapshots;
     }
 
+    private Map<StudentKey, ReviewerEvaluationEntity> reviewerScores(
+            List<CouncilTopicEntity> councilAssignments,
+            List<RegistrationMemberEntity> snapshots,
+            boolean lock) {
+        if (councilAssignments.size() != 1) {
+            throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+        }
+        long registrationId = councilAssignments.getFirst().getRegistration().getId();
+        ReviewerAssignmentEntity reviewer = (lock
+                ? reviewerAssignments.findActiveByRegistrationIdForUpdate(
+                        registrationId, List.of(ReviewerAssignmentEntity.Status.SUBMITTED))
+                : reviewerAssignments.findActiveByRegistrationId(
+                        registrationId, List.of(ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.EVALUATIONS_INCOMPLETE));
+        if (reviewer.getSubmittedAt() == null || reviewer.getDeadlineDate() == null
+                || reviewer.getSubmittedAt().isAfter(time.toEndOfDay(reviewer.getDeadlineDate()))
+                || reviewerReports.findByAssignmentId(reviewer.getId())
+                        .filter(report -> !report.getSubmittedAt().isAfter(
+                                time.toEndOfDay(reviewer.getDeadlineDate())))
+                        .isEmpty()) {
+            throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+        }
+        Set<StudentKey> expected = new HashSet<>();
+        for (RegistrationMemberEntity snapshot : snapshots) {
+            expected.add(new StudentKey(
+                    snapshot.getRegistration().getId(), snapshot.getStudent().getId()));
+        }
+        List<ReviewerEvaluationEntity> source = lock
+                ? reviewerEvaluations.findAllByAssignmentIdForUpdate(reviewer.getId())
+                : reviewerEvaluations.findAllByAssignmentIdOrderByStudentId(reviewer.getId());
+        Map<StudentKey, ReviewerEvaluationEntity> found = new LinkedHashMap<>();
+        for (ReviewerEvaluationEntity score : source) {
+            StudentKey key = new StudentKey(
+                    score.getRegistration().getId(), score.getStudent().getId());
+            if (!expected.contains(key)
+                    || score.getStatus() != EvaluationStatus.SUBMITTED
+                    || score.getSubmittedAt() == null
+                    || score.getSubmittedAt().isAfter(time.toEndOfDay(reviewer.getDeadlineDate()))
+                    || found.putIfAbsent(key, score) != null) {
+                throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+            }
+        }
+        if (expected.isEmpty() || !found.keySet().equals(expected)) {
+            throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+        }
+        return found;
+    }
+
     private static String summary(int evaluationCount, BigDecimal mean) {
         return evaluationCount + " điểm đã nộp; trung bình " + ScoreFormat.display(mean);
+    }
+
+    private String formatDateTime(Instant instant) {
+        return instant == null ? null : DATE_TIME.format(time.toBusinessTime(instant));
     }
 
     private List<FacultyResultLecturerView> lecturersFor(CouncilEntity council) {
@@ -514,6 +725,8 @@ public class ResultService {
                 result.getRegistration().getTopic().getTitle(),
                 result.getCouncil().getId(),
                 result.getCouncil().getName(),
+                result.getCouncil().getMode(),
+                result.getRegistration().getPeriod().getTopicType(),
                 lecturers,
                 result.getStatus(),
                 result.getFinalScore(),
@@ -595,6 +808,17 @@ public class ResultService {
             long version) {
     }
 
+    public record DirectPreviewRow(
+            String studentName,
+            String reviewerName,
+            BigDecimal reviewerScore,
+            String reviewerSubmittedAt,
+            String graderName,
+            BigDecimal graderScore,
+            String graderSubmittedAt,
+            BigDecimal finalScore) {
+    }
+
     public record FacultyResultSummaryView(
             Long registrationId,
             Long studentId,
@@ -605,6 +829,8 @@ public class ResultService {
             String topicTitle,
             Long councilId,
             String councilName,
+            CouncilMode mode,
+            String topicType,
             List<FacultyResultLecturerView> lecturers,
             FinalResultStatus status,
             BigDecimal finalScore,
@@ -613,6 +839,16 @@ public class ResultService {
             long version) {
         public FacultyResultSummaryView {
             lecturers = List.copyOf(lecturers);
+        }
+        public FacultyResultSummaryView(
+                Long registrationId, Long studentId, String studentName, Long groupId,
+                Long periodId, String periodName, String topicTitle, Long councilId,
+                String councilName, List<FacultyResultLecturerView> lecturers,
+                FinalResultStatus status, BigDecimal finalScore, Instant consolidatedAt,
+                Instant publishedAt, long version) {
+            this(registrationId, studentId, studentName, groupId, periodId, periodName,
+                    topicTitle, councilId, councilName, CouncilMode.COUNCIL, "KLTN",
+                    lecturers, status, finalScore, consolidatedAt, publishedAt, version);
         }
     }
 
@@ -633,10 +869,25 @@ public class ResultService {
             String evaluationSummary,
             String consolidatedBy,
             String publishedBy,
-            List<EvaluationResultView> evaluations) {
+            List<EvaluationResultView> evaluations,
+            ReviewerResultView reviewer) {
         public FacultyResultDetailView {
             evaluations = List.copyOf(evaluations);
         }
+        public FacultyResultDetailView(
+                FacultyResultSummaryView result, String evaluationSummary,
+                String consolidatedBy, String publishedBy,
+                List<EvaluationResultView> evaluations) {
+            this(result, evaluationSummary, consolidatedBy, publishedBy, evaluations, null);
+        }
+    }
+
+    public record ReviewerResultView(
+            Long reviewerId,
+            String reviewerName,
+            BigDecimal score,
+            String feedback,
+            Instant submittedAt) {
     }
 
     public record StudentResultSummaryView(

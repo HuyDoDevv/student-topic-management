@@ -125,7 +125,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
 
 ## Phase 5 — TLCN and KLTN workflows
 
-- [ ] **T011 Hoàn thiện quy trình TLCN** `[FB-11, FB-18]`
+- [x] **T011 Hoàn thiện quy trình TLCN** `[FB-11, FB-18]`
   - File: `DirectGradingRules.java`, `DirectGradingService.java`,
     `ScoringService.java`, `ResultService.java`, `DirectGradingController.java`,
     `templates/direct-grading/list.html` và test direct grading/scoring/result.

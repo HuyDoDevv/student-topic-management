@@ -6,7 +6,7 @@ import java.util.Set;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 
 public final class DirectGradingRules {
-    private static final Set<String> SUPPORTED_TYPES = Set.of("COURSE", "NCKH");
+    private static final Set<String> SUPPORTED_TYPES = Set.of("COURSE", "NCKH", "TLCN");
 
     private DirectGradingRules() {
     }

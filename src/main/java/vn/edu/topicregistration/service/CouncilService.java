@@ -136,6 +136,7 @@ public class CouncilService {
         Objects.requireNonNull(command, "command");
         LockedCouncil locked = lockedCouncil(councilId, command.expectedVersion());
         CouncilEntity council = locked.council();
+        requireCurrentCouncilWorkflow(locked);
 
         List<CouncilTopicEntity> currentAssignments = councilTopics
                 .findAllByCouncilIdForUpdate(councilId);
@@ -189,6 +190,7 @@ public class CouncilService {
             CouncilStatus target) {
         LockedCouncil locked = lockedCouncil(councilId, expectedVersion);
         CouncilEntity council = locked.council();
+        requireCurrentCouncilWorkflow(locked);
         List<CouncilTopicEntity> assignments = councilTopics
                 .findAllByCouncilIdForUpdate(councilId);
         List<CouncilMemberEntity> currentMembers = members
@@ -306,7 +308,9 @@ public class CouncilService {
                 .stream()
                 .map(CouncilService::toAssignmentView)
                 .toList();
-        List<RegistrationOption> available = scopedDean
+        boolean manageable = scopedDean
+                && CouncilRules.isSupportedTopicType(council.getPeriod().getTopicType());
+        List<RegistrationOption> available = manageable
                 ? availableRegistrations(council) : List.of();
         return new CouncilDetailView(
                 toSummary(council),
@@ -314,7 +318,7 @@ public class CouncilService {
                 assignmentViews,
                 available,
                 currentChair,
-                scopedDean);
+                manageable);
     }
 
     private LockedCouncil lockedCouncil(long councilId, long expectedVersion) {
@@ -333,6 +337,13 @@ public class CouncilService {
             throw new OptimisticLockingFailureException("Council version is stale");
         }
         return new LockedCouncil(period, council);
+    }
+
+    private static void requireCurrentCouncilWorkflow(LockedCouncil locked) {
+        if (locked.council().getMode() != CouncilMode.COUNCIL
+                || !CouncilRules.isSupportedTopicType(locked.period().getTopicType())) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
+        }
     }
 
     private RegistrationPeriodEntity lockedPeriod(long periodId) {

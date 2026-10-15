@@ -39,7 +39,7 @@ public class DirectGradingController {
 
     @InitBinder("directGradingAssignmentForm")
     void whitelistAssignmentFields(WebDataBinder binder) {
-        binder.setAllowedFields("registrationId", "graderId");
+        binder.setAllowedFields("registrationId", "graderId", "version");
     }
 
     @InitBinder("resultActionForm")
@@ -73,13 +73,13 @@ public class DirectGradingController {
                 throw exception;
             }
             bindingResult.reject("directGrading.invalid",
-                    "Chỉ phân công đề tài Môn học/NCKH đã có báo cáo; người chấm phải là giảng viên khác mọi GVHD và cùng khoa.");
+                    "Chưa đủ điều kiện phân công: Môn học/NCKH cần báo cáo cuối; TLCN cần GVPB nộp PDF và đủ điểm đúng hạn. Người chấm phải cùng khoa, khác GVPB, DEAN và mọi GVHD.");
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return render(model, form, directGrading.workspaceForCurrentDean());
         }
     }
 
-    @PostMapping("/lecturer/direct-grading/{id}/complete")
+    @PostMapping("/faculty/direct-grading/{id}/complete")
     public Object complete(
             @PathVariable long id,
             @Valid @ModelAttribute("resultActionForm") ResultActionForm form,
@@ -87,7 +87,7 @@ public class DirectGradingController {
             HttpServletResponse response) {
         requireValidAction(bindingResult, response);
         results.complete(id, form.getVersion());
-        return WebRedirects.seeOther("/lecturer/scoring");
+        return WebRedirects.seeOther("/faculty/direct-grading");
     }
 
     @PostMapping("/faculty/direct-grading/{id}/publish")
@@ -110,7 +110,7 @@ public class DirectGradingController {
         }
     }
 
-    private static String render(
+    private String render(
             Model model,
             DirectGradingAssignmentForm form,
             DirectGradingWorkspace workspace) {
@@ -119,9 +119,15 @@ public class DirectGradingController {
             model.addAttribute("directGradingAssignmentForm", form);
         }
         model.addAttribute("availableRegistrations", workspace.availableRegistrations());
+        model.addAttribute("blockedRegistrations", workspace.blockedRegistrations());
         model.addAttribute("assignments", workspace.assignments().stream()
                 .map(DirectGradingController::display)
                 .toList());
+        model.addAttribute("tlcnPreviews", workspace.assignments().stream()
+                .filter(assignment -> "TLCN".equals(assignment.topicType()))
+                .collect(java.util.stream.Collectors.toMap(
+                        DirectAssignmentView::id,
+                        assignment -> results.previewDirectForCurrentDean(assignment.id()))));
         return "direct-grading/list";
     }
 

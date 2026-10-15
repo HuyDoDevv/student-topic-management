@@ -75,27 +75,29 @@ class DirectGradingControllerTest {
     }
 
     @Test
-    void assignmentWhitelistsRegistrationAndGraderOnly() throws Exception {
+    void assignmentWhitelistsRegistrationGraderAndVersionOnly() throws Exception {
         when(directGrading.assign(org.mockito.ArgumentMatchers.any())).thenReturn(null);
 
         mvc.perform(post("/faculty/direct-grading")
                         .param("registrationId", "51")
                         .param("graderId", "11")
+                        .param("version", "0")
                         .param("status", "PUBLISHED")
                         .param("actorId", "999"))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/faculty/direct-grading"));
 
         verify(directGrading).assign(argThat(command ->
-                command.registrationId() == 51L && command.graderId() == 11L));
+                command.registrationId() == 51L && command.graderId() == 11L
+                        && command.version() == 0L));
     }
 
     @Test
-    void directGraderCompletesAndDeanPublishesThroughExistingResultService() throws Exception {
-        mvc.perform(post("/lecturer/direct-grading/41/complete")
+    void deanCompletesAndPublishesThroughResultService() throws Exception {
+        mvc.perform(post("/faculty/direct-grading/41/complete")
                         .param("version", "4"))
                 .andExpect(status().isSeeOther())
-                .andExpect(redirectedUrl("/lecturer/scoring"));
+                .andExpect(redirectedUrl("/faculty/direct-grading"));
         verify(results).complete(41L, 4L);
 
         mvc.perform(post("/faculty/direct-grading/41/publish")

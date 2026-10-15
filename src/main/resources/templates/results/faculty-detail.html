@@ -5,14 +5,14 @@
 <section>
   <div class="page-header page-header-actions">
     <div>
-      <div class="page-pretitle" th:text="${result.councilName + ' · Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">Hội đồng · N001</div>
+      <div class="page-pretitle" th:text="${(result.mode.name() == 'DIRECT' ? 'Chấm trực tiếp' : result.councilName) + ' · Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">Nhóm N001</div>
       <h1 class="page-title" th:text="${result.topicTitle}">Đề tài</h1>
       <p class="text-secondary mt-2 mb-0" th:text="${'Sinh viên: ' + result.studentName}">Sinh viên: A</p>
       <span class="badge mt-2" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span>
     </div>
     <div class="btn-list">
       <a class="btn btn-outline-secondary" th:href="@{/faculty/results}">Quay lại</a>
-      <a class="btn btn-outline-primary" th:href="@{/faculty/boards/{id}(id=${result.councilId})}">Xem hội đồng</a>
+      <a class="btn btn-outline-primary" th:if="${result.mode.name() == 'COUNCIL'}" th:href="@{/faculty/boards/{id}(id=${result.councilId})}">Xem hội đồng</a>
     </div>
   </div>
 
@@ -37,13 +37,19 @@
 
     <div class="col-lg-8">
       <article class="card h-100">
-        <div class="card-header"><h2 class="card-title">Điểm thành viên hội đồng</h2></div>
+        <div class="card-header"><h2 class="card-title" th:text="${result.mode.name() == 'DIRECT' ? 'Nguồn điểm đã nộp' : 'Điểm thành viên hội đồng'}">Nguồn điểm</h2></div>
         <div class="table-responsive">
           <table class="table table-vcenter card-table responsive-table">
             <thead><tr><th>Giảng viên</th><th>Điểm</th><th>Nhận xét</th><th>Đã nộp lúc</th></tr></thead>
             <tbody>
+            <tr th:if="${reviewerName != null}">
+              <td data-label="Giảng viên"><strong th:text="${reviewerName}">GVPB</strong><div class="small text-secondary">Giáo viên phản biện</div></td>
+              <td data-label="Điểm"><span class="badge bg-blue-lt fs-5" th:text="${reviewerScore}">8.25</span></td>
+              <td data-label="Nhận xét" th:text="${reviewerFeedback != null ? reviewerFeedback : 'Không có nhận xét'}">Nhận xét</td>
+              <td data-label="Đã nộp lúc" th:text="${reviewerSubmittedAt}">21/09/2026 08:30</td>
+            </tr>
             <tr th:each="evaluation : ${evaluations}">
-              <td data-label="Giảng viên" class="fw-semibold" th:text="${evaluation.evaluatorName}">Giảng viên A</td>
+              <td data-label="Giảng viên"><strong th:text="${evaluation.evaluatorName}">Giảng viên A</strong><div class="small text-secondary" th:if="${result.topicType == 'TLCN' and result.mode.name() == 'DIRECT'}">Người chấm lần hai</div></td>
               <td data-label="Điểm"><span class="badge bg-blue-lt fs-5" th:text="${evaluation.score}">8.50</span></td>
               <td data-label="Nhận xét" th:text="${evaluation.feedback != null ? evaluation.feedback : 'Không có nhận xét'}">Đạt</td>
               <td data-label="Đã nộp lúc" th:text="${evaluation.submittedAt}">21/09/2026 08:30</td>

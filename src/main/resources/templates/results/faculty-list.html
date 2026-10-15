@@ -6,7 +6,7 @@
   <div class="page-header page-header-actions">
     <div>
       <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
-      <h1 class="page-title">Kết quả hội đồng</h1>
+      <h1 class="page-title">Kết quả chấm điểm</h1>
       <p class="text-secondary mt-2 mb-0">Điểm đã tổng hợp và trạng thái công bố trong phạm vi khoa.</p>
     </div>
   </div>
@@ -61,7 +61,7 @@
     <div class="table-responsive" th:if="${!results.isEmpty()}">
       <table class="table table-vcenter card-table responsive-table">
         <thead>
-        <tr><th>Sinh viên / nhóm</th><th>Đợt đăng ký</th><th>Đề tài</th><th>Hội đồng</th><th>Điểm cuối</th><th>Trạng thái</th><th>Thời điểm</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        <tr><th>Sinh viên / nhóm</th><th>Đợt đăng ký</th><th>Đề tài</th><th>Hình thức chấm</th><th>Điểm cuối</th><th>Trạng thái</th><th>Thời điểm</th><th><span class="visually-hidden">Thao tác</span></th></tr>
         </thead>
         <tbody>
         <tr th:each="result : ${results}">
@@ -71,7 +71,7 @@
           </td>
           <td data-label="Đợt đăng ký" th:text="${result.periodName}">Đợt KLTN 2026</td>
           <td data-label="Đề tài" th:text="${result.topicTitle}">Đề tài</td>
-          <td data-label="Hội đồng" th:text="${result.councilName}">Hội đồng KLTN</td>
+          <td data-label="Hình thức chấm" th:text="${result.mode.name() == 'DIRECT' ? (result.topicType == 'TLCN' ? 'Phản biện + chấm lần hai' : 'Chấm trực tiếp') : result.councilName}">Chấm điểm</td>
           <td data-label="Điểm cuối"><span class="fs-3 fw-bold" th:text="${result.finalScore}">8.50</span></td>
           <td data-label="Trạng thái"><span class="badge" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span></td>
           <td data-label="Thời điểm">

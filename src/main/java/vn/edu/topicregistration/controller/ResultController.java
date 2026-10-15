@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import vn.edu.topicregistration.dto.ResultActionForm;
 import vn.edu.topicregistration.entity.EvaluationStatus;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.FinalResultStatus;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
@@ -110,6 +111,14 @@ public class ResultController {
         model.addAttribute("evaluations", detail.evaluations().stream()
                 .map(this::display)
                 .toList());
+        model.addAttribute("reviewerName", detail.reviewer() == null
+                ? null : detail.reviewer().reviewerName());
+        model.addAttribute("reviewerScore", detail.reviewer() == null
+                ? null : score(detail.reviewer().score()));
+        model.addAttribute("reviewerSubmittedAt", detail.reviewer() == null
+                ? null : format(detail.reviewer().submittedAt()));
+        model.addAttribute("reviewerFeedback", detail.reviewer() == null
+                ? null : detail.reviewer().feedback());
         return "results/faculty-detail";
     }
 
@@ -176,6 +185,8 @@ public class ResultController {
                 result.topicTitle(),
                 result.councilId(),
                 result.councilName(),
+                result.mode(),
+                result.topicType(),
                 result.lecturers().stream()
                         .map(this::display)
                         .toList(),
@@ -245,6 +256,8 @@ public class ResultController {
             String topicTitle,
             Long councilId,
             String councilName,
+            CouncilMode mode,
+            String topicType,
             List<FacultyResultLecturerPageView> lecturers,
             FinalResultStatus status,
             String statusLabel,

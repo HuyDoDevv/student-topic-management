@@ -33,6 +33,12 @@ import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.RegistrationMemberEntity;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
+import vn.edu.topicregistration.entity.ReviewerEvaluationEntity;
+import vn.edu.topicregistration.entity.ReviewerReportEntity;
+import vn.edu.topicregistration.entity.EvaluationStatus;
+import java.time.LocalDate;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.entity.TopicEntity;
@@ -45,12 +51,17 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
+import vn.edu.topicregistration.repository.ReviewerEvaluationRepository;
+import vn.edu.topicregistration.repository.ReviewerReportRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.DirectGradingService;
 import vn.edu.topicregistration.service.DirectGradingService.AssignCommand;
 import vn.edu.topicregistration.service.NotificationService;
+import vn.edu.topicregistration.util.ProjectTime;
 
 class DirectGradingServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-30T02:00:00Z");
@@ -245,6 +256,89 @@ class DirectGradingServiceTest {
         verify(dependencies.councils(), never()).saveAndFlush(any());
     }
 
+    @Test
+    void tlcnWaitsForCompleteReviewerSubmission() {
+        Dependencies dependencies = dependencies();
+        fixture(dependencies, "TLCN", List.of());
+        when(dependencies.councilTopics().findByRegistrationId(51L))
+                .thenReturn(Optional.empty());
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().assign(new AssignCommand(51L, 11L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councils(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void tlcnAssignsDifferentSecondGraderAfterReviewerSubmittedAllScores() throws Exception {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, "TLCN", List.of());
+        completeReviewer(dependencies, fixture, 12L);
+        when(dependencies.councilTopics().findByRegistrationId(51L))
+                .thenReturn(Optional.empty());
+        when(dependencies.councils().saveAndFlush(any())).thenAnswer(invocation -> {
+            CouncilEntity council = invocation.getArgument(0);
+            setId(council, 41L);
+            return council;
+        });
+        when(dependencies.councilTopics().saveAndFlush(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = dependencies.service().assign(new AssignCommand(51L, 11L));
+
+        assertEquals(CouncilStatus.ACTIVE, result.status());
+        verify(dependencies.councils()).saveAndFlush(any());
+    }
+
+    @Test
+    void tlcnRejectsReviewerAsSecondGrader() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = fixture(dependencies, "TLCN", List.of());
+        completeReviewer(dependencies, fixture, 11L);
+        when(dependencies.councilTopics().findByRegistrationId(51L))
+                .thenReturn(Optional.empty());
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().assign(new AssignCommand(51L, 11L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councils(), never()).saveAndFlush(any());
+    }
+
+    private static void completeReviewer(
+            Dependencies dependencies, Fixture fixture, long reviewerId) {
+        ReviewerAssignmentEntity assignment = mock(ReviewerAssignmentEntity.class);
+        UserAccountEntity reviewer = mock(UserAccountEntity.class);
+        when(reviewer.getId()).thenReturn(reviewerId);
+        when(assignment.getId()).thenReturn(71L);
+        when(assignment.getReviewer()).thenReturn(reviewer);
+        when(assignment.getStatus()).thenReturn(ReviewerAssignmentEntity.Status.SUBMITTED);
+        when(assignment.getDeadlineDate()).thenReturn(LocalDate.of(2026, 9, 30));
+        when(assignment.getSubmittedAt()).thenReturn(NOW.minusSeconds(3600));
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.of(assignment));
+        ReviewerReportEntity report = mock(ReviewerReportEntity.class);
+        when(report.getSubmittedAt()).thenReturn(NOW.minusSeconds(3600));
+        when(dependencies.reviewerReports().findByAssignmentId(71L))
+                .thenReturn(Optional.of(report));
+        RegistrationMemberEntity member = mock(RegistrationMemberEntity.class);
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(101L);
+        when(member.getStudent()).thenReturn(student);
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(List.of(member));
+        ReviewerEvaluationEntity evaluation = mock(ReviewerEvaluationEntity.class);
+        when(evaluation.getRegistration()).thenReturn(fixture.registration());
+        when(evaluation.getStudent()).thenReturn(student);
+        when(evaluation.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(evaluation.getSubmittedAt()).thenReturn(NOW.minusSeconds(3600));
+        when(dependencies.reviewerEvaluations().findAllByAssignmentIdForUpdate(71L))
+                .thenReturn(List.of(evaluation));
+    }
+
     private static Fixture fixture(
             Dependencies dependencies,
             String topicType,
@@ -296,6 +390,10 @@ class DirectGradingServiceTest {
         CouncilRepository councils = mock(CouncilRepository.class);
         CouncilTopicRepository councilTopics = mock(CouncilTopicRepository.class);
         ProjectReportRepository reports = mock(ProjectReportRepository.class);
+        RegistrationMemberRepository registrationMembers = mock(RegistrationMemberRepository.class);
+        ReviewerAssignmentRepository reviewerAssignments = mock(ReviewerAssignmentRepository.class);
+        ReviewerEvaluationRepository reviewerEvaluations = mock(ReviewerEvaluationRepository.class);
+        ReviewerReportRepository reviewerReports = mock(ReviewerReportRepository.class);
         AuthorizationPolicy authorization = mock(AuthorizationPolicy.class);
         EntityManager entityManager = mock(EntityManager.class);
         DirectGradingService service = new DirectGradingService(
@@ -305,13 +403,19 @@ class DirectGradingServiceTest {
                 councils,
                 councilTopics,
                 reports,
+                registrationMembers,
+                reviewerAssignments,
+                reviewerEvaluations,
+                reviewerReports,
                 authorization,
                 mock(NotificationService.class),
                 entityManager,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                new ProjectTime(Clock.fixed(NOW, ZoneOffset.UTC)));
         return new Dependencies(
                 periods, registrations, accounts, councils, councilTopics,
-                reports, authorization, service);
+                reports, registrationMembers, reviewerAssignments,
+                reviewerEvaluations, reviewerReports, authorization, service);
     }
 
     private static void setId(Object entity, long id) throws Exception {
@@ -334,6 +438,10 @@ class DirectGradingServiceTest {
             CouncilRepository councils,
             CouncilTopicRepository councilTopics,
             ProjectReportRepository reports,
+            RegistrationMemberRepository registrationMembers,
+            ReviewerAssignmentRepository reviewerAssignments,
+            ReviewerEvaluationRepository reviewerEvaluations,
+            ReviewerReportRepository reviewerReports,
             AuthorizationPolicy authorization,
             DirectGradingService service) {
     }

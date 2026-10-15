@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -55,6 +56,7 @@ public class ScoringService {
     private final RegistrationMemberRepository registrationMembers;
     private final ScoreComponentRepository components;
     private final EvaluationRepository evaluations;
+    private final DirectGradingService directGrading;
     private final AuthorizationPolicy authorization;
     private final Clock clock;
 
@@ -66,6 +68,7 @@ public class ScoringService {
             RegistrationMemberRepository registrationMembers,
             ScoreComponentRepository components,
             EvaluationRepository evaluations,
+            @Lazy DirectGradingService directGrading,
             AuthorizationPolicy authorization,
             Clock clock) {
         this.periods = periods;
@@ -75,6 +78,7 @@ public class ScoringService {
         this.registrationMembers = registrationMembers;
         this.components = components;
         this.evaluations = evaluations;
+        this.directGrading = directGrading;
         this.authorization = authorization;
         this.clock = clock;
     }
@@ -218,6 +222,10 @@ public class ScoringService {
                 .findFirst()
                 .orElse(null);
         RegistrationEntity registration = assignment.getRegistration();
+        if (council.getMode() == CouncilMode.DIRECT
+                && "TLCN".equals(period.getTopicType())) {
+            directGrading.requireSubmittedReviewerForScoring(registration);
+        }
         RegistrationMemberEntity snapshotStudent = registrationMembers
                 .findAllByRegistrationId(registrationId)
                 .stream()

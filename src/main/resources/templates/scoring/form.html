@@ -14,14 +14,10 @@
       <a class="btn btn-outline-secondary" th:if="${assignment.currentChair and !assignment.directGrading}"
          th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
       <a class="btn btn-outline-primary" th:href="@{/reports/{id}(id=${assignment.registrationId})}">Xem báo cáo</a>
-      <form th:if="${assignment.directGrading and allSubmitted}" method="post"
-            th:action="@{/lecturer/direct-grading/{id}/complete(id=${assignment.councilId})}"
-            data-prevent-double-submit>
-        <input type="hidden" name="version" th:value="${assignment.councilVersion}">
-        <button class="btn btn-success" type="submit"
-                data-confirm="Hoàn tất lượt chấm này? Điểm và báo cáo sẽ bị khóa để chờ Trưởng khoa công bố.">Hoàn tất chấm</button>
-      </form>
     </div>
+  </div>
+  <div class="alert alert-info" th:if="${assignment.directGrading and allSubmitted}">
+    Bạn đã nộp đủ điểm. Trưởng khoa sẽ đối soát, tổng hợp và công bố kết quả.
   </div>
 
   <div class="card">
