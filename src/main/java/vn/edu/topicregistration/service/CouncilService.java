@@ -27,6 +27,7 @@ import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
@@ -38,6 +39,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -57,6 +59,7 @@ public class CouncilService {
     private final CouncilTopicRepository councilTopics;
     private final RegistrationRepository registrations;
     private final ProjectReportRepository reports;
+    private final ReviewerAssignmentRepository reviewerAssignments;
     private final AuthorizationPolicy authorization;
     private final NotificationService notifications;
     private final EntityManager entityManager;
@@ -70,6 +73,7 @@ public class CouncilService {
             CouncilTopicRepository councilTopics,
             RegistrationRepository registrations,
             ProjectReportRepository reports,
+            ReviewerAssignmentRepository reviewerAssignments,
             AuthorizationPolicy authorization,
             NotificationService notifications,
             EntityManager entityManager,
@@ -81,6 +85,7 @@ public class CouncilService {
         this.councilTopics = councilTopics;
         this.registrations = registrations;
         this.reports = reports;
+        this.reviewerAssignments = reviewerAssignments;
         this.authorization = authorization;
         this.notifications = notifications;
         this.entityManager = entityManager;
@@ -156,6 +161,7 @@ public class CouncilService {
                         assignment.getCouncil().getId(), councilId))
                 .orElse(false);
         boolean supervisorConflict = hasSupervisorConflict(currentMembers, registration);
+        boolean reviewerConflict = invalidReviewer(registration, currentMembers);
 
         applyRules(() -> CouncilRules.validateAssignment(new AssignmentContext(
                 council.getStatus(),
@@ -168,7 +174,8 @@ public class CouncilService {
                         registration.getTopic().getPeriod().getFaculty().getId(),
                         council.getPeriod().getFaculty().getId()),
                 assignedElsewhere,
-                supervisorConflict)));
+                supervisorConflict,
+                reviewerConflict)));
 
         String location = command.location() == null ? null : command.location().strip();
         if (command.scheduledAt() == null || location == null || location.isEmpty()
@@ -203,6 +210,9 @@ public class CouncilService {
                 && assignments.stream().anyMatch(
                         assignment -> hasSupervisorConflict(
                                 currentMembers, assignment.getRegistration()));
+        boolean reviewerConflict = target == CouncilStatus.ACTIVE
+                && assignments.stream().anyMatch(assignment -> invalidReviewer(
+                        assignment.getRegistration(), currentMembers));
         boolean allReportsPresent = target != CouncilStatus.ACTIVE
                 || assignments.stream().allMatch(assignment -> reports
                         .findCurrentByRegistrationIdForUpdate(
@@ -217,6 +227,7 @@ public class CouncilService {
                 allScheduled,
                 configurationValid,
                 supervisorConflict,
+                reviewerConflict,
                 allReportsPresent)));
 
         council.transitionTo(target);
@@ -306,7 +317,7 @@ public class CouncilService {
         List<CouncilAssignmentView> assignmentViews = councilTopics
                 .findAllByCouncilIdOrderByRegistrationId(councilId)
                 .stream()
-                .map(CouncilService::toAssignmentView)
+                .map(this::toAssignmentView)
                 .toList();
         boolean manageable = scopedDean
                 && CouncilRules.isSupportedTopicType(council.getPeriod().getTopicType());
@@ -401,6 +412,34 @@ public class CouncilService {
                 .map(TopicSupervisorEntity::getLecturer)
                 .map(UserAccountEntity::getId)
                 .anyMatch(memberIds::contains);
+    }
+
+    private boolean invalidReviewer(
+            RegistrationEntity registration,
+            List<CouncilMemberEntity> currentMembers) {
+        ReviewerAssignmentEntity assignment = reviewerAssignments
+                .findActiveByRegistrationIdForUpdate(registration.getId(), List.of(
+                        ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED))
+                .orElse(null);
+        if (assignment == null || assignment.getReviewer() == null) {
+            return true;
+        }
+        UserAccountEntity reviewer = assignment.getReviewer();
+        Long reviewerId = reviewer.getId();
+        return !Objects.equals(assignment.getRegistration().getId(), registration.getId())
+                || reviewerId == null
+                || !reviewer.isEnabled()
+                || !reviewer.getRoleCodes().contains(RoleCode.LECTURER)
+                || reviewer.getRoleCodes().contains(RoleCode.DEAN)
+                || reviewer.getFaculty() == null
+                || !Objects.equals(reviewer.getFaculty().getId(),
+                        registration.getPeriod().getFaculty().getId())
+                || registration.getTopic().getSupervisors().stream()
+                        .anyMatch(supervisor -> Objects.equals(
+                                supervisor.getLecturer().getId(), reviewerId))
+                || currentMembers.stream().anyMatch(member -> Objects.equals(
+                        member.getLecturer().getId(), reviewerId));
     }
 
     private static void validateCurrentMembers(
@@ -511,13 +550,22 @@ public class CouncilService {
                 lecturer.getId(), displayName(lecturer), lecturer.getUsername());
     }
 
-    private static CouncilAssignmentView toAssignmentView(CouncilTopicEntity assignment) {
+    private CouncilAssignmentView toAssignmentView(CouncilTopicEntity assignment) {
+        ReviewerAssignmentEntity reviewer = reviewerAssignments
+                .findActiveByRegistrationId(assignment.getRegistration().getId(), List.of(
+                        ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED))
+                .orElse(null);
         return new CouncilAssignmentView(
                 assignment.getRegistration().getId(),
                 assignment.getRegistration().getGroup().getId(),
                 assignment.getRegistration().getTopic().getTitle(),
                 assignment.getScheduledAt(),
-                assignment.getLocation());
+                assignment.getLocation(),
+                reviewer == null ? null : displayName(reviewer.getReviewer()),
+                reviewer == null ? "Chưa phân công"
+                        : reviewer.getStatus() == ReviewerAssignmentEntity.Status.SUBMITTED
+                                ? "Đã nộp" : "Chưa nộp");
     }
 
     private static String displayName(UserAccountEntity account) {
@@ -606,7 +654,15 @@ public class CouncilService {
             Long groupId,
             String topicTitle,
             Instant scheduledAt,
-            String location) {
+            String location,
+            String reviewerName,
+            String reviewerStatus) {
+        public CouncilAssignmentView(
+                Long registrationId, Long groupId, String topicTitle,
+                Instant scheduledAt, String location) {
+            this(registrationId, groupId, topicTitle, scheduledAt, location,
+                    null, "Chưa phân công");
+        }
     }
 
     public record RegistrationOption(Long id, Long groupId, String topicTitle) {

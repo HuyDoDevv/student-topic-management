@@ -42,10 +42,11 @@
         <div class="card-header"><h2 class="card-title">Đăng ký được phân công</h2></div>
         <div class="table-responsive" th:if="${!assignments.isEmpty()}">
           <table class="table table-vcenter card-table responsive-table">
-            <thead><tr><th>Nhóm / đề tài</th><th>Lịch</th><th>Địa điểm</th></tr></thead>
+            <thead><tr><th>Nhóm / đề tài</th><th>GVPB</th><th>Lịch</th><th>Địa điểm</th></tr></thead>
             <tbody>
             <tr th:each="assignment : ${assignments}">
               <td data-label="Nhóm / đề tài"><a th:href="@{/registrations/{id}(id=${assignment.registrationId})}" th:text="${'N' + #numbers.formatInteger(assignment.groupId, 3)}">N001</a><div class="small text-secondary" th:text="${assignment.topicTitle}">Đề tài</div></td>
+              <td data-label="GVPB"><span th:text="${assignment.reviewerName != null ? assignment.reviewerName : 'Chưa phân công'}">Giảng viên</span><div class="small text-secondary" th:text="${assignment.reviewerStatus}">Chưa nộp</div></td>
               <td data-label="Lịch" th:text="${assignment.scheduledAt}">20/09/2026 09:00</td>
               <td data-label="Địa điểm" th:text="${assignment.location}">Phòng A1-01</td>
             </tr>
@@ -89,10 +90,10 @@
   </form>
 
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'SCHEDULED'}">
-    Khi kích hoạt, hệ thống kiểm tra lại vai trò, khoa, xung đột giảng viên hướng dẫn và báo cáo hiện hành của mọi nhóm.
+    Khi kích hoạt, hệ thống kiểm tra lại GVPB, thành viên, Khoa, xung đột GVHD và báo cáo hiện hành của mọi nhóm.
   </div>
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'ACTIVE'}">
-    Chỉ Chủ tịch hiện tại được tổng hợp khi mọi thành viên đã nộp điểm cho tất cả nhóm. Sau khi tổng hợp, điểm và báo cáo đều bị khóa.
+    Chỉ Chủ tịch hiện tại được tổng hợp khi GVPB có PDF và điểm hợp lệ, đồng thời mọi thành viên đã nộp điểm cho tất cả sinh viên. Điểm cuối là trung bình của điểm GVPB và điểm từng thành viên.
   </div>
   <div class="alert alert-warning mt-3" role="status" th:if="${board.status.name() == 'COMPLETED'}">
     Kết quả đang chờ Trưởng khoa công bố đồng thời cho toàn bộ nhóm của hội đồng.

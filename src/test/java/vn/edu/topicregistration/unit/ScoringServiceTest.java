@@ -25,6 +25,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
@@ -36,6 +37,7 @@ import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
 import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.entity.TopicEntity;
@@ -49,6 +51,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.ScoreComponentRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -58,6 +61,27 @@ import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
 
 class ScoringServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-20T02:00:00Z");
+
+    @Test
+    void kltnMemberCannotSubmitWhenReviewerOverlapsCouncil() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        when(fixture.period().getTopicType()).thenReturn("KLTN");
+        when(fixture.council().getMode()).thenReturn(CouncilMode.COUNCIL);
+        ReviewerAssignmentEntity reviewer = mock(ReviewerAssignmentEntity.class);
+        when(reviewer.getReviewer()).thenReturn(fixture.evaluator());
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.of(reviewer));
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().submit(41L, 51L, 101L,
+                        new ScoreCommand(new BigDecimal("8.00"), "Đạt", null)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+    }
 
     @Test
     void createsDraftUnderPeriodCouncilAndChildLocks() {
@@ -421,6 +445,7 @@ class ScoringServiceTest {
                 mock(RegistrationMemberRepository.class),
                 mock(ScoreComponentRepository.class),
                 mock(EvaluationRepository.class),
+                mock(ReviewerAssignmentRepository.class),
                 mock(AuthorizationPolicy.class));
     }
 
@@ -432,6 +457,7 @@ class ScoringServiceTest {
             RegistrationMemberRepository registrationMembers,
             ScoreComponentRepository components,
             EvaluationRepository evaluations,
+            ReviewerAssignmentRepository reviewerAssignments,
             AuthorizationPolicy authorization) {
         ScoringService service() {
             return new ScoringService(
@@ -442,6 +468,7 @@ class ScoringServiceTest {
                     registrationMembers,
                     components,
                     evaluations,
+                    reviewerAssignments,
                     mock(DirectGradingService.class),
                     authorization,
                     Clock.fixed(NOW, ZoneOffset.UTC));

@@ -153,6 +153,12 @@ public class ResultService {
                 snapshotStudents, lockedEvaluations);
         boolean direct = council.getMode() == CouncilMode.DIRECT;
         boolean tlcn = direct && "TLCN".equals(board.period().getTopicType());
+        boolean kltn = council.getMode() == CouncilMode.COUNCIL
+                && "KLTN".equals(board.period().getTopicType());
+        if (kltn && !validCouncilConfiguration(
+                board.period(), council, lockedMembers, lockedAssignments)) {
+            throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+        }
         applyRules(() -> FinalScoreRules.validateCompletion(new CompletionContext(
                 council.getStatus(),
                 direct || Objects.equals(council.getChair().getId(), board.actor().accountId()),
@@ -165,8 +171,9 @@ public class ResultService {
         if (!existingResults.isEmpty()) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
-        Map<StudentKey, ReviewerEvaluationEntity> reviewerScores = tlcn
-                ? reviewerScores(lockedAssignments, snapshotStudents, true)
+        Map<StudentKey, ReviewerEvaluationEntity> reviewerScores = tlcn || kltn
+                ? reviewerScores(lockedAssignments, snapshotStudents,
+                        kltn ? lockedMembers : List.of(), true)
                 : Map.of();
         UserAccountEntity consolidator = direct
                 ? accounts.findDetailedById(board.actor().accountId())
@@ -189,7 +196,7 @@ public class ResultService {
                         List<EvaluationEntity> studentEvaluations = byStudent
                                 .getOrDefault(key, List.of());
                         List<BigDecimal> sources = new ArrayList<>();
-                        if (tlcn) {
+                        if (tlcn || kltn) {
                             sources.add(reviewerScores.get(key).getScore());
                         }
                         studentEvaluations.stream().map(EvaluationEntity::getScore)
@@ -238,25 +245,41 @@ public class ResultService {
                 snapshotStudents.size(),
                 lockedResults.size(),
                 exactReadyResults)));
-        if (council.getMode() == CouncilMode.DIRECT
-                && "TLCN".equals(board.period().getTopicType())) {
+        boolean tlcn = council.getMode() == CouncilMode.DIRECT
+                && "TLCN".equals(board.period().getTopicType());
+        boolean kltn = council.getMode() == CouncilMode.COUNCIL
+                && "KLTN".equals(board.period().getTopicType());
+        if (tlcn || kltn) {
+            if (tlcn && lockedAssignments.size() != 1) {
+                throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
+            }
+            if (kltn && !validCouncilConfiguration(
+                    board.period(), council, lockedMembers, lockedAssignments)) {
+                throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
+            }
             if (!exactSubmittedMatrix(board.period(), council, lockedAssignments,
                     lockedMembers, snapshotStudents, lockedEvaluations)) {
                 throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
             }
             Map<StudentKey, ReviewerEvaluationEntity> reviewerScores = reviewerScores(
-                    lockedAssignments, snapshotStudents, true);
+                    lockedAssignments, snapshotStudents,
+                    kltn ? lockedMembers : List.of(), true);
             Map<StudentKey, List<EvaluationEntity>> graderScores = evaluationsByStudent(
                     lockedEvaluations);
             for (FinalResultEntity result : lockedResults) {
                 StudentKey key = new StudentKey(result.getRegistrationId(), result.getStudentId());
                 List<EvaluationEntity> studentGraderScores = graderScores.getOrDefault(
                         key, List.of());
-                if (studentGraderScores.size() != 1
-                        || studentGraderScores.getFirst().getStatus() != EvaluationStatus.SUBMITTED
-                        || result.getFinalScore().compareTo(FinalScoreRules.mean(List.of(
-                                reviewerScores.get(key).getScore(),
-                                studentGraderScores.getFirst().getScore()))) != 0) {
+                if (studentGraderScores.size() != lockedMembers.size()
+                        || studentGraderScores.stream().anyMatch(score ->
+                                score.getStatus() != EvaluationStatus.SUBMITTED)) {
+                    throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
+                }
+                List<BigDecimal> sources = new ArrayList<>();
+                sources.add(reviewerScores.get(key).getScore());
+                studentGraderScores.stream().map(EvaluationEntity::getScore)
+                        .forEach(sources::add);
+                if (result.getFinalScore().compareTo(FinalScoreRules.mean(sources)) != 0) {
                     throw new ApplicationException(ApplicationErrorCode.RESULT_NOT_READY);
                 }
             }
@@ -577,6 +600,37 @@ public class ResultService {
         return keys.size() == (long) studentKeys.size() * memberIds.size();
     }
 
+    private static boolean validCouncilConfiguration(
+            RegistrationPeriodEntity period,
+            CouncilEntity council,
+            List<CouncilMemberEntity> councilMembers,
+            List<CouncilTopicEntity> councilAssignments) {
+        try {
+            CouncilRules.validateCreation(
+                    period.getTopicType(), requiredFacultyId(period),
+                    council.getChair().getId(), council.getSecretary().getId(),
+                    councilMembers.stream().map(member -> {
+                        UserAccountEntity lecturer = member.getLecturer();
+                        return new CouncilRules.MemberCandidate(
+                                lecturer.getId(),
+                                lecturer.getFaculty() == null
+                                        ? null : lecturer.getFaculty().getId(),
+                                lecturer.isEnabled(),
+                                lecturer.getRoleCodes().contains(RoleCode.LECTURER)
+                                        && !lecturer.getRoleCodes().contains(RoleCode.DEAN));
+                    }).toList());
+        } catch (CouncilRules.CouncilRuleException exception) {
+            return false;
+        }
+        Set<Long> memberIds = councilMembers.stream()
+                .map(member -> member.getLecturer().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        return councilAssignments.stream().noneMatch(assignment ->
+                assignment.getRegistration().getTopic().getSupervisors().stream()
+                        .anyMatch(supervisor -> memberIds.contains(
+                                supervisor.getLecturer().getId())));
+    }
+
     private static boolean exactReadyResults(
             CouncilEntity council,
             List<RegistrationMemberEntity> snapshotStudents,
@@ -643,20 +697,15 @@ public class ResultService {
         if (councilAssignments.size() != 1) {
             throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
         }
-        long registrationId = councilAssignments.getFirst().getRegistration().getId();
-        ReviewerAssignmentEntity reviewer = (lock
-                ? reviewerAssignments.findActiveByRegistrationIdForUpdate(
-                        registrationId, List.of(ReviewerAssignmentEntity.Status.SUBMITTED))
-                : reviewerAssignments.findActiveByRegistrationId(
-                        registrationId, List.of(ReviewerAssignmentEntity.Status.SUBMITTED)))
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.EVALUATIONS_INCOMPLETE));
-        if (reviewer.getSubmittedAt() == null || reviewer.getDeadlineDate() == null
-                || reviewer.getSubmittedAt().isAfter(time.toEndOfDay(reviewer.getDeadlineDate()))
-                || reviewerReports.findByAssignmentId(reviewer.getId())
-                        .filter(report -> !report.getSubmittedAt().isAfter(
-                                time.toEndOfDay(reviewer.getDeadlineDate())))
-                        .isEmpty()) {
+        return reviewerScores(councilAssignments, snapshots, List.of(), lock);
+    }
+
+    private Map<StudentKey, ReviewerEvaluationEntity> reviewerScores(
+            List<CouncilTopicEntity> councilAssignments,
+            List<RegistrationMemberEntity> snapshots,
+            List<CouncilMemberEntity> councilMembers,
+            boolean lock) {
+        if (councilAssignments.isEmpty()) {
             throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
         }
         Set<StudentKey> expected = new HashSet<>();
@@ -664,25 +713,75 @@ public class ResultService {
             expected.add(new StudentKey(
                     snapshot.getRegistration().getId(), snapshot.getStudent().getId()));
         }
-        List<ReviewerEvaluationEntity> source = lock
-                ? reviewerEvaluations.findAllByAssignmentIdForUpdate(reviewer.getId())
-                : reviewerEvaluations.findAllByAssignmentIdOrderByStudentId(reviewer.getId());
         Map<StudentKey, ReviewerEvaluationEntity> found = new LinkedHashMap<>();
-        for (ReviewerEvaluationEntity score : source) {
-            StudentKey key = new StudentKey(
-                    score.getRegistration().getId(), score.getStudent().getId());
-            if (!expected.contains(key)
-                    || score.getStatus() != EvaluationStatus.SUBMITTED
-                    || score.getSubmittedAt() == null
-                    || score.getSubmittedAt().isAfter(time.toEndOfDay(reviewer.getDeadlineDate()))
-                    || found.putIfAbsent(key, score) != null) {
+        Set<Long> registrationIds = new HashSet<>();
+        for (CouncilTopicEntity councilAssignment : councilAssignments) {
+            RegistrationEntity registration = councilAssignment.getRegistration();
+            long registrationId = registration.getId();
+            if (!registrationIds.add(registrationId)) {
                 throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
             }
+            ReviewerAssignmentEntity reviewer = (lock
+                    ? reviewerAssignments.findActiveByRegistrationIdForUpdate(
+                            registrationId, List.of(ReviewerAssignmentEntity.Status.SUBMITTED))
+                    : reviewerAssignments.findActiveByRegistrationId(
+                            registrationId, List.of(ReviewerAssignmentEntity.Status.SUBMITTED)))
+                    .orElseThrow(() -> new ApplicationException(
+                            ApplicationErrorCode.EVALUATIONS_INCOMPLETE));
+            if (reviewer.getSubmittedAt() == null || reviewer.getDeadlineDate() == null
+                    || reviewer.getSubmittedAt().isAfter(time.toEndOfDay(reviewer.getDeadlineDate()))
+                    || reviewerReports.findByAssignmentId(reviewer.getId())
+                            .filter(report -> report.getSubmittedAt() != null
+                                    && !report.getSubmittedAt().isAfter(
+                                            time.toEndOfDay(reviewer.getDeadlineDate())))
+                            .isEmpty()
+                    || (!councilMembers.isEmpty()
+                            && invalidCouncilReviewer(registration, reviewer, councilMembers))) {
+                throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+            }
+            List<ReviewerEvaluationEntity> source = lock
+                    ? reviewerEvaluations.findAllByAssignmentIdForUpdate(reviewer.getId())
+                    : reviewerEvaluations.findAllByAssignmentIdOrderByStudentId(reviewer.getId());
+            for (ReviewerEvaluationEntity score : source) {
+                StudentKey key = new StudentKey(
+                        score.getRegistration().getId(), score.getStudent().getId());
+                if (key.registrationId() != registrationId
+                        || !expected.contains(key)
+                        || score.getStatus() != EvaluationStatus.SUBMITTED
+                        || score.getSubmittedAt() == null
+                        || score.getSubmittedAt().isAfter(time.toEndOfDay(reviewer.getDeadlineDate()))
+                        || found.putIfAbsent(key, score) != null) {
+                    throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
+                }
+            }
         }
-        if (expected.isEmpty() || !found.keySet().equals(expected)) {
+        if (expected.isEmpty() || !found.keySet().equals(expected)
+                || snapshots.stream().anyMatch(snapshot ->
+                        !registrationIds.contains(snapshot.getRegistration().getId()))) {
             throw new ApplicationException(ApplicationErrorCode.EVALUATIONS_INCOMPLETE);
         }
         return found;
+    }
+
+    private static boolean invalidCouncilReviewer(
+            RegistrationEntity registration,
+            ReviewerAssignmentEntity reviewerAssignment,
+            List<CouncilMemberEntity> councilMembers) {
+        UserAccountEntity reviewer = reviewerAssignment.getReviewer();
+        if (reviewer == null || reviewer.getId() == null || !reviewer.isEnabled()
+                || !reviewer.getRoleCodes().contains(RoleCode.LECTURER)
+                || reviewer.getRoleCodes().contains(RoleCode.DEAN)
+                || reviewer.getFaculty() == null
+                || !Objects.equals(reviewer.getFaculty().getId(),
+                        registration.getPeriod().getFaculty().getId())) {
+            return true;
+        }
+        long reviewerId = reviewer.getId();
+        return councilMembers.stream().anyMatch(member -> Objects.equals(
+                member.getLecturer().getId(), reviewerId))
+                || registration.getTopic().getSupervisors().stream().anyMatch(
+                        supervisor -> Objects.equals(
+                                supervisor.getLecturer().getId(), reviewerId));
     }
 
     private static String summary(int evaluationCount, BigDecimal mean) {

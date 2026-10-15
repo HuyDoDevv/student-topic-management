@@ -27,6 +27,7 @@ import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
@@ -39,6 +40,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.ScoreComponentRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -56,6 +58,7 @@ public class ScoringService {
     private final RegistrationMemberRepository registrationMembers;
     private final ScoreComponentRepository components;
     private final EvaluationRepository evaluations;
+    private final ReviewerAssignmentRepository reviewerAssignments;
     private final DirectGradingService directGrading;
     private final AuthorizationPolicy authorization;
     private final Clock clock;
@@ -68,6 +71,7 @@ public class ScoringService {
             RegistrationMemberRepository registrationMembers,
             ScoreComponentRepository components,
             EvaluationRepository evaluations,
+            ReviewerAssignmentRepository reviewerAssignments,
             @Lazy DirectGradingService directGrading,
             AuthorizationPolicy authorization,
             Clock clock) {
@@ -78,6 +82,7 @@ public class ScoringService {
         this.registrationMembers = registrationMembers;
         this.components = components;
         this.evaluations = evaluations;
+        this.reviewerAssignments = reviewerAssignments;
         this.directGrading = directGrading;
         this.authorization = authorization;
         this.clock = clock;
@@ -225,6 +230,32 @@ public class ScoringService {
         if (council.getMode() == CouncilMode.DIRECT
                 && "TLCN".equals(period.getTopicType())) {
             directGrading.requireSubmittedReviewerForScoring(registration);
+        }
+        if (council.getMode() == CouncilMode.COUNCIL
+                && "KLTN".equals(period.getTopicType())) {
+            ReviewerAssignmentEntity reviewer = reviewerAssignments
+                    .findActiveByRegistrationIdForUpdate(registrationId, List.of(
+                            ReviewerAssignmentEntity.Status.ASSIGNED,
+                            ReviewerAssignmentEntity.Status.SUBMITTED))
+                    .orElseThrow(() -> new ApplicationException(
+                            ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT));
+            UserAccountEntity reviewerAccount = reviewer.getReviewer();
+            Long reviewerId = reviewerAccount == null ? null : reviewerAccount.getId();
+            if (reviewerId == null
+                    || !reviewerAccount.isEnabled()
+                    || !reviewerAccount.getRoleCodes().contains(RoleCode.LECTURER)
+                    || reviewerAccount.getRoleCodes().contains(RoleCode.DEAN)
+                    || reviewerAccount.getFaculty() == null
+                    || !Objects.equals(reviewerAccount.getFaculty().getId(),
+                            period.getFaculty().getId())
+                    || registration.getTopic().getSupervisors().stream().anyMatch(
+                            supervisor -> Objects.equals(
+                                    supervisor.getLecturer().getId(), reviewerId))
+                    || lockedMembers.stream().anyMatch(candidate -> Objects.equals(
+                            candidate.getLecturer().getId(), reviewerId))) {
+                throw new ApplicationException(
+                        ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
+            }
         }
         RegistrationMemberEntity snapshotStudent = registrationMembers
                 .findAllByRegistrationId(registrationId)

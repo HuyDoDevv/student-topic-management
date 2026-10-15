@@ -36,6 +36,7 @@ import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.TopicEntity;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
@@ -47,6 +48,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -207,6 +209,42 @@ class CouncilServiceTest {
     }
 
     @Test
+    void assignmentRejectsReviewerWhoIsAlsoCouncilMember() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
+        ReviewerAssignmentEntity reviewerAssignment = dependencies.reviewerAssignments()
+                .findActiveByRegistrationIdForUpdate(51L, List.of(
+                        ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)).orElseThrow();
+        UserAccountEntity member = fixture.members().getLast().getLecturer();
+        when(reviewerAssignment.getReviewer()).thenReturn(member);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().saveAssignment(41L, new AssignmentCommand(
+                        51L, REVIEW_AT, "Phòng A1-01", 4L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void assignmentRejectsRegistrationWithoutActiveReviewer() {
+        Dependencies dependencies = dependencies();
+        validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.empty());
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().saveAssignment(41L, new AssignmentCommand(
+                        51L, REVIEW_AT, "Phòng A1-01", 4L)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.councilTopics(), never()).saveAndFlush(any());
+    }
+
+    @Test
     void assignmentRejectsTopicFromAnotherPeriodInSameFaculty() {
         Dependencies dependencies = dependencies();
         AssignmentFixture fixture = validAssignment(dependencies, CouncilStatus.DRAFT, 4L);
@@ -288,6 +326,33 @@ class CouncilServiceTest {
 
         verify(fixture.council()).transitionTo(CouncilStatus.ACTIVE);
         verify(dependencies.councils()).flush();
+    }
+
+    @Test
+    void activationRechecksReviewerAgainstEveryCouncilMember() {
+        Dependencies dependencies = dependencies();
+        AssignmentFixture fixture = validAssignment(
+                dependencies, CouncilStatus.SCHEDULED, 4L);
+        CouncilTopicEntity assignment = mock(CouncilTopicEntity.class);
+        when(assignment.getRegistration()).thenReturn(fixture.registration());
+        when(assignment.getScheduledAt()).thenReturn(REVIEW_AT);
+        when(assignment.getLocation()).thenReturn("Phòng A1-01");
+        when(dependencies.councilTopics().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(assignment));
+        when(dependencies.reports().findCurrentByRegistrationIdForUpdate(51L))
+                .thenReturn(Optional.of(mock(ProjectReportEntity.class)));
+        ReviewerAssignmentEntity reviewerAssignment = dependencies.reviewerAssignments()
+                .findActiveByRegistrationIdForUpdate(51L, List.of(
+                        ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)).orElseThrow();
+        UserAccountEntity member = fixture.members().getFirst().getLecturer();
+        when(reviewerAssignment.getReviewer()).thenReturn(member);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().transition(41L, 4L, CouncilStatus.ACTIVE));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, exception.code());
+        verify(fixture.council(), never()).transitionTo(any());
     }
 
     @Test
@@ -439,6 +504,14 @@ class CouncilServiceTest {
                 .thenReturn(Optional.empty());
         when(dependencies.councilTopics().saveAndFlush(any())).thenAnswer(
                 invocation -> invocation.getArgument(0));
+        ReviewerAssignmentEntity reviewerAssignment = mock(ReviewerAssignmentEntity.class);
+        UserAccountEntity reviewer = mockLecturer(14L, faculty);
+        when(reviewerAssignment.getReviewer()).thenReturn(reviewer);
+        when(reviewerAssignment.getRegistration()).thenReturn(registration);
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.of(reviewerAssignment));
         return new AssignmentFixture(council, registration, topic, members);
     }
 
@@ -490,6 +563,7 @@ class CouncilServiceTest {
                 mock(CouncilTopicRepository.class),
                 mock(RegistrationRepository.class),
                 mock(ProjectReportRepository.class),
+                mock(ReviewerAssignmentRepository.class),
                 mock(AuthorizationPolicy.class),
                 mock(EntityManager.class));
     }
@@ -502,6 +576,7 @@ class CouncilServiceTest {
             CouncilTopicRepository councilTopics,
             RegistrationRepository registrations,
             ProjectReportRepository reports,
+            ReviewerAssignmentRepository reviewerAssignments,
             AuthorizationPolicy authorization,
             EntityManager entityManager) {
         CouncilService service() {
@@ -513,6 +588,7 @@ class CouncilServiceTest {
                     councilTopics,
                     registrations,
                     reports,
+                    reviewerAssignments,
                     authorization,
                     mock(NotificationService.class),
                     entityManager,

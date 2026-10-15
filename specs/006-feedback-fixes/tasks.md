@@ -134,7 +134,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: final từng SV bằng hai nguồn/2; thiếu một nguồn không READY/PUBLISHED;
     direct POST trước reviewer submission bị chặn.
 
-- [ ] **T012 Hoàn thiện quy trình KLTN** `[FB-14, FB-18]`
+- [x] **T012 Hoàn thiện quy trình KLTN** `[FB-14, FB-18]`
   - File: `CouncilRules.java`, `CouncilService.java`, `ScoringService.java`,
     `FinalScoreRules.java`, `ResultService.java`, `templates/councils/form.html`,
     `templates/councils/detail.html` và test council/scoring/result.

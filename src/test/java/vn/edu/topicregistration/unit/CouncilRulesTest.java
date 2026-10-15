@@ -74,6 +74,7 @@ class CouncilRulesTest {
         assertAssignmentFailure(valid.withSameFaculty(false));
         assertAssignmentFailure(valid.withAssignedElsewhere(true));
         assertAssignmentFailure(valid.withSupervisorConflict(true));
+        assertAssignmentFailure(valid.withReviewerConflict(true));
         assertAssignmentFailure(valid.withTopicType("NCKH"));
         assertAssignmentFailure(valid.withTopicType("TLCN"));
         assertFailure(Failure.INVALID_STATE, () -> CouncilRules.validateAssignment(
@@ -110,6 +111,9 @@ class CouncilRulesTest {
         assertStateFailure(new TransitionContext(
                 CouncilStatus.SCHEDULED, CouncilStatus.ACTIVE,
                 3, 1, true, true, true, true));
+        assertStateFailure(new TransitionContext(
+                CouncilStatus.SCHEDULED, CouncilStatus.ACTIVE,
+                3, 1, true, true, false, true, true));
         assertStateFailure(new TransitionContext(
                 CouncilStatus.SCHEDULED, CouncilStatus.ACTIVE,
                 3, 1, true, true, false, false));

@@ -14,7 +14,7 @@
 
   <form class="card" method="post" th:action="@{/faculty/boards}" th:object="${councilForm}" data-prevent-double-submit>
     <input type="hidden" th:field="*{periodId}">
-    <div class="card-header"><h2 class="card-title">Thông tin hội đồng</h2></div>
+    <div class="card-header"><h2 class="card-title">Thông tin hội đồng KLTN</h2></div>
     <div class="card-body">
       <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</div>
       <div class="mb-3">
@@ -45,7 +45,7 @@
         <select class="form-select" id="memberIds" th:field="*{memberIds}" multiple size="5" required aria-describedby="member-help">
           <option th:each="lecturer : ${lecturers}" th:value="${lecturer.id}" th:text="${lecturer.fullName + ' (' + lecturer.username + ')'}">Giảng viên</option>
         </select>
-        <div class="form-hint" id="member-help">Chọn 1–3 người; không chọn lại Chủ tịch hoặc Thư ký. Tổng số thành viên phải từ 3 đến 5.</div>
+        <div class="form-hint" id="member-help">Chọn 1–3 người; không chọn lại Chủ tịch hoặc Thư ký. Tổng số thành viên phải từ 3 đến 5. GVPB và GVHD của từng đề tài không được tham gia hội đồng chấm đề tài đó; hệ thống kiểm tra lại khi gán đề tài.</div>
         <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('memberIds')}" th:errors="*{memberIds}"></div>
       </div>
     </div>

@@ -164,6 +164,9 @@ class ResultServiceTest {
         Dependencies dependencies = dependencies();
         Fixture fixture = fixture(dependencies, CouncilStatus.ACTIVE, 4L);
         setupTlcnDirect(dependencies, fixture);
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.empty());
 
         ApplicationException exception = assertThrows(ApplicationException.class,
                 () -> dependencies.service().complete(41L, 4L));
@@ -267,6 +270,9 @@ class ResultServiceTest {
         when(result.getStudent()).thenReturn(fixture.student());
         when(result.getCouncil()).thenReturn(fixture.council());
         when(result.getStatus()).thenReturn(FinalResultStatus.READY);
+        when(result.getRegistrationId()).thenReturn(51L);
+        when(result.getStudentId()).thenReturn(101L);
+        when(result.getFinalScore()).thenReturn(new BigDecimal("8.50"));
         when(dependencies.results().findAllByCouncilIdForUpdate(41L)).thenReturn(List.of(result));
         when(dependencies.authorization().requireDeanOfFaculty(2L)).thenReturn(
                 new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
@@ -417,6 +423,7 @@ class ResultServiceTest {
         when(group.getId()).thenReturn(21L);
         TopicEntity topic = mock(TopicEntity.class);
         when(topic.getTitle()).thenReturn("Đề tài thử nghiệm");
+        when(topic.getSupervisors()).thenReturn(List.of());
         RegistrationEntity registration = mock(RegistrationEntity.class);
         when(registration.getId()).thenReturn(51L);
         when(registration.getPeriod()).thenReturn(period);
@@ -435,6 +442,12 @@ class ResultServiceTest {
                 chair,
                 account(12L, "Thư ký"),
                 account(13L, "Thành viên"));
+        when(council.getSecretary()).thenReturn(lecturers.get(1));
+        for (UserAccountEntity lecturer : lecturers) {
+            when(lecturer.isEnabled()).thenReturn(true);
+            when(lecturer.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+            when(lecturer.getFaculty()).thenReturn(faculty);
+        }
         List<CouncilMemberEntity> members = lecturers.stream().map(lecturer -> {
             CouncilMemberEntity member = mock(CouncilMemberEntity.class);
             when(member.getLecturer()).thenReturn(lecturer);
@@ -477,6 +490,30 @@ class ResultServiceTest {
         when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(evaluations);
         when(dependencies.results().findAllByCouncilIdForUpdate(41L)).thenReturn(List.of());
+        ReviewerAssignmentEntity reviewerAssignment = mock(ReviewerAssignmentEntity.class);
+        when(reviewerAssignment.getId()).thenReturn(71L);
+        when(reviewerAssignment.getDeadlineDate()).thenReturn(LocalDate.of(2026, 9, 21));
+        when(reviewerAssignment.getSubmittedAt()).thenReturn(NOW.minusSeconds(60));
+        UserAccountEntity reviewerAccount = account(14L, "Phản biện");
+        when(reviewerAccount.isEnabled()).thenReturn(true);
+        when(reviewerAccount.getRoleCodes()).thenReturn(Set.of(RoleCode.LECTURER));
+        when(reviewerAccount.getFaculty()).thenReturn(faculty);
+        when(reviewerAssignment.getReviewer()).thenReturn(reviewerAccount);
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.of(reviewerAssignment));
+        ReviewerReportEntity reviewerReport = mock(ReviewerReportEntity.class);
+        when(reviewerReport.getSubmittedAt()).thenReturn(NOW.minusSeconds(60));
+        when(dependencies.reviewerReports().findByAssignmentId(71L))
+                .thenReturn(Optional.of(reviewerReport));
+        ReviewerEvaluationEntity reviewerScore = mock(ReviewerEvaluationEntity.class);
+        when(reviewerScore.getRegistration()).thenReturn(registration);
+        when(reviewerScore.getStudent()).thenReturn(student);
+        when(reviewerScore.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(reviewerScore.getSubmittedAt()).thenReturn(NOW.minusSeconds(60));
+        when(reviewerScore.getScore()).thenReturn(new BigDecimal("8.50"));
+        when(dependencies.reviewerEvaluations().findAllByAssignmentIdForUpdate(71L))
+                .thenReturn(List.of(reviewerScore));
         return new Fixture(period, council, chair, student, registration, evaluations);
     }
 
