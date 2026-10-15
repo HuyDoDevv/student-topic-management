@@ -56,6 +56,32 @@ public final class TopicRules {
         return normalized;
     }
 
+    public static TopicStatus returnToDraft(
+            TopicAccess access,
+            Instant now,
+            Instant lecturerStart,
+            Instant lecturerEnd,
+            boolean hasRegistration) {
+        Objects.requireNonNull(access, "access");
+        Objects.requireNonNull(now, "now");
+        Objects.requireNonNull(lecturerStart, "lecturerStart");
+        Objects.requireNonNull(lecturerEnd, "lecturerEnd");
+        if (access.actorId() != access.authorId()
+                || access.actorFacultyId() != access.topicFacultyId()) {
+            throw failure(Failure.ACCESS_DENIED);
+        }
+        if (access.status() != TopicStatus.APPROVED) {
+            throw failure(Failure.INVALID_STATE);
+        }
+        if (now.isBefore(lecturerStart) || now.isAfter(lecturerEnd)) {
+            throw failure(Failure.WINDOW_CLOSED);
+        }
+        if (hasRegistration) {
+            throw failure(Failure.REGISTRATION_EXISTS);
+        }
+        return TopicStatus.DRAFT;
+    }
+
     private static void requireDraftAuthor(TopicAccess access) {
         Objects.requireNonNull(access, "access");
         if (access.status() != TopicStatus.DRAFT) {
@@ -125,6 +151,7 @@ public final class TopicRules {
         ACCESS_DENIED,
         DEPARTMENT_MISMATCH,
         INVALID_STATE,
+        REGISTRATION_EXISTS,
         VALIDATION_FAILED,
         WINDOW_CLOSED
     }

@@ -7,6 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -17,7 +22,10 @@ import java.util.Set;
 
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.test.web.servlet.MockMvc;
 
+import vn.edu.topicregistration.controller.TopicAuthorController;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -27,15 +35,87 @@ import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationRepository;
 import vn.edu.topicregistration.repository.TopicRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.TopicAuthorService;
 import vn.edu.topicregistration.service.TopicAuthorService.TopicDraftCommand;
+import vn.edu.topicregistration.service.TopicAuthorService.TopicView;
+import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 
 class TopicAuthorServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-16T03:00:00Z");
+
+    @Test
+    void returnRouteRedirectsToEditWithResubmissionNotice() throws Exception {
+        TopicAuthorService service = mock(TopicAuthorService.class);
+        when(service.returnToDraft(5L, 2L)).thenReturn(new TopicView(
+                5L, 1L, 21L, "Khoa", "Bộ môn", 7L, "Tác giả", "Tên", "Mô tả",
+                "Mục tiêu", "Yêu cầu", "Kết quả", TopicStatus.DRAFT, 3L, List.of()));
+        MockMvc mvc = standaloneSetup(new TopicAuthorController(service)).build();
+
+        mvc.perform(post("/topics/5/return-to-draft").param("version", "2"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/topics/5/edit"))
+                .andExpect(flash().attribute("returnToDraftNotice",
+                        "Đề tài đã trở về bản nháp. Sau khi sửa, bạn cần gửi duyệt lại."));
+        verify(service).returnToDraft(5L, 2L);
+    }
+
+    @Test
+    void authorCanReturnApprovedTopicToDraftForResubmission() {
+        Scenario scenario = openScenario();
+        TopicEntity topic = approvedTopic(scenario);
+
+        var result = scenario.service().returnToDraft(5L, 0L);
+
+        assertEquals("DRAFT", topic.getStatus());
+        assertEquals(vn.edu.topicregistration.service.TopicRules.TopicStatus.DRAFT,
+                result.status());
+        verify(scenario.registrations()).existsByPeriodIdAndTopicId(1L, 5L);
+        verify(scenario.topics()).flush();
+    }
+
+    @Test
+    void existingRegistrationBlocksReturnWithoutChangingApprovedTopic() {
+        Scenario scenario = openScenario();
+        TopicEntity topic = approvedTopic(scenario);
+        when(scenario.registrations().existsByPeriodIdAndTopicId(1L, 5L)).thenReturn(true);
+
+        ApplicationException failure = assertThrows(ApplicationException.class,
+                () -> scenario.service().returnToDraft(5L, 0L));
+
+        assertEquals(ApplicationErrorCode.TOPIC_REGISTRATION_EXISTS, failure.code());
+        assertEquals("APPROVED", topic.getStatus());
+        verify(scenario.topics(), never()).flush();
+    }
+
+    @Test
+    void staleVersionBlocksReturnBeforeRegistrationLookup() {
+        Scenario scenario = openScenario();
+        TopicEntity topic = approvedTopic(scenario);
+
+        assertThrows(OptimisticLockingFailureException.class,
+                () -> scenario.service().returnToDraft(5L, 1L));
+
+        assertEquals("APPROVED", topic.getStatus());
+        verify(scenario.registrations(), never()).existsByPeriodIdAndTopicId(1L, 5L);
+        verify(scenario.topics(), never()).flush();
+    }
+
+    private static TopicEntity approvedTopic(Scenario scenario) {
+        TopicEntity topic = new TopicEntity(scenario.period(), scenario.author(),
+                scenario.period().getDepartment());
+        topic.updateDraft("Tên", "Mô tả", "Mục tiêu", "Yêu cầu", "Kết quả");
+        topic.changeStatus("APPROVED");
+        when(scenario.topics().findPeriodIdByTopicId(5L)).thenReturn(Optional.of(1L));
+        when(scenario.topics().findByIdForUpdate(5L)).thenReturn(Optional.of(topic));
+        when(scenario.authorization().requireTopicAuthor(7L, 21L))
+                .thenReturn(new ActorIdentity(7L, Set.of(RoleCode.LECTURER), 21L));
+        return topic;
+    }
 
     @Test
     void createDraftUsesAuthorsDepartmentRatherThanRequestData() {
@@ -324,10 +404,11 @@ class TopicAuthorServiceTest {
     private static Scenario openScenario() {
         RegistrationPeriodRepository periods = mock(RegistrationPeriodRepository.class);
         TopicRepository topics = mock(TopicRepository.class);
+        RegistrationRepository registrations = mock(RegistrationRepository.class);
         UserAccountRepository accounts = mock(UserAccountRepository.class);
         AuthorizationPolicy authorization = mock(AuthorizationPolicy.class);
         EntityManager entityManager = mock(EntityManager.class);
-        TopicAuthorService service = new TopicAuthorService(periods, topics, accounts,
+        TopicAuthorService service = new TopicAuthorService(periods, topics, registrations, accounts,
                 authorization, entityManager, Clock.fixed(NOW, ZoneOffset.UTC));
         FacultyEntity faculty = mock(FacultyEntity.class);
         UserAccountEntity author = mock(UserAccountEntity.class);
@@ -350,12 +431,12 @@ class TopicAuthorServiceTest {
                 7L, Set.of(RoleCode.LECTURER), 21L));
         when(entityManager.find(UserAccountEntity.class, 7L)).thenReturn(author);
         when(accounts.findByIdForUpdate(7L)).thenReturn(Optional.of(author));
-        return new Scenario(service, periods, topics, accounts, authorization, entityManager,
+        return new Scenario(service, periods, topics, registrations, accounts, authorization, entityManager,
                 faculty, author, period);
     }
 
     private record Scenario(TopicAuthorService service, RegistrationPeriodRepository periods,
-            TopicRepository topics, UserAccountRepository accounts,
+            TopicRepository topics, RegistrationRepository registrations, UserAccountRepository accounts,
             AuthorizationPolicy authorization, EntityManager entityManager, FacultyEntity faculty,
             UserAccountEntity author, RegistrationPeriodEntity period) {
     }
@@ -364,12 +445,14 @@ class TopicAuthorServiceTest {
     void createDraftIsRejectedAfterLecturerWindowAndDoesNotPersist() {
         RegistrationPeriodRepository periods = mock(RegistrationPeriodRepository.class);
         TopicRepository topics = mock(TopicRepository.class);
+        RegistrationRepository registrations = mock(RegistrationRepository.class);
         UserAccountRepository accounts = mock(UserAccountRepository.class);
         AuthorizationPolicy authorization = mock(AuthorizationPolicy.class);
         EntityManager entityManager = mock(EntityManager.class);
         TopicAuthorService service = new TopicAuthorService(
                 periods,
                 topics,
+                registrations,
                 accounts,
                 authorization,
                 entityManager,
@@ -406,12 +489,14 @@ class TopicAuthorServiceTest {
     void createFormContextIsRejectedOutsideLecturerWindow() {
         RegistrationPeriodRepository periods = mock(RegistrationPeriodRepository.class);
         TopicRepository topics = mock(TopicRepository.class);
+        RegistrationRepository registrations = mock(RegistrationRepository.class);
         UserAccountRepository accounts = mock(UserAccountRepository.class);
         AuthorizationPolicy authorization = mock(AuthorizationPolicy.class);
         EntityManager entityManager = mock(EntityManager.class);
         TopicAuthorService service = new TopicAuthorService(
                 periods,
                 topics,
+                registrations,
                 accounts,
                 authorization,
                 entityManager,

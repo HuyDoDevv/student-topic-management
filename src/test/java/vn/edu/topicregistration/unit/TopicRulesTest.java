@@ -168,6 +168,37 @@ class TopicRulesTest {
         assertEquals("Tên", submit(draftAfterRejection, ownDraft(), END).title());
     }
 
+    @Test
+    void approvedTopicReturnsToDraftOnlyForAuthorWithinWindowWithoutRegistration() {
+        TopicAccess approved = new TopicAccess(AUTHOR_ID, AUTHOR_ID,
+                FACULTY_ID, FACULTY_ID, DEPARTMENT_ID, TopicStatus.APPROVED);
+        assertEquals(TopicStatus.DRAFT,
+                TopicRules.returnToDraft(approved, START, START, END, false));
+        assertEquals(TopicStatus.DRAFT,
+                TopicRules.returnToDraft(approved, END, START, END, false));
+        assertFailure(Failure.WINDOW_CLOSED,
+                () -> TopicRules.returnToDraft(approved, START.minusNanos(1), START, END, false));
+        assertFailure(Failure.WINDOW_CLOSED,
+                () -> TopicRules.returnToDraft(approved, END.plusNanos(1), START, END, false));
+        assertFailure(Failure.REGISTRATION_EXISTS,
+                () -> TopicRules.returnToDraft(approved, MIDDLE, START, END, true));
+    }
+
+    @Test
+    void returnToDraftRejectsOtherActorAndAllOtherStates() {
+        TopicAccess outsider = new TopicAccess(AUTHOR_ID + 1, AUTHOR_ID,
+                FACULTY_ID, FACULTY_ID, DEPARTMENT_ID, TopicStatus.APPROVED);
+        assertFailure(Failure.ACCESS_DENIED,
+                () -> TopicRules.returnToDraft(outsider, MIDDLE, START, END, false));
+        for (TopicStatus status : List.of(
+                TopicStatus.DRAFT, TopicStatus.PENDING_APPROVAL, TopicStatus.PUBLISHED)) {
+            TopicAccess access = new TopicAccess(AUTHOR_ID, AUTHOR_ID,
+                    FACULTY_ID, FACULTY_ID, DEPARTMENT_ID, status);
+            assertFailure(Failure.INVALID_STATE,
+                    () -> TopicRules.returnToDraft(access, MIDDLE, START, END, false));
+        }
+    }
+
     private static TopicDraft submit(TopicDraft draft, TopicAccess access, Instant now) {
         return TopicRules.validateForSubmit(draft, access, now, START, END);
     }
