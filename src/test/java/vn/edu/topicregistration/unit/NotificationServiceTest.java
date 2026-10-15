@@ -29,8 +29,21 @@ import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.entity.UserNotificationEntity;
+import vn.edu.topicregistration.entity.AnnouncementEntity;
+import vn.edu.topicregistration.entity.FinalResultEntity;
+import vn.edu.topicregistration.entity.FinalResultStatus;
+import vn.edu.topicregistration.entity.GroupInvitationEntity;
+import vn.edu.topicregistration.entity.GroupInvitationStatus;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.entity.StudentGroupEntity;
+import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.AnnouncementRepository;
+import vn.edu.topicregistration.repository.FinalResultRepository;
+import vn.edu.topicregistration.repository.GroupInvitationRepository;
 import vn.edu.topicregistration.repository.NotificationEventRepository;
+import vn.edu.topicregistration.repository.StudentGroupRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserNotificationRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
@@ -39,6 +52,9 @@ import vn.edu.topicregistration.service.NotificationEventKey;
 import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 import vn.edu.topicregistration.service.NotificationTargetResolver;
+import vn.edu.topicregistration.service.RegistrationService;
+import vn.edu.topicregistration.service.ScoringService;
+import vn.edu.topicregistration.service.TopicAuthorService;
 
 class NotificationServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-24T02:00:00Z");
@@ -188,22 +204,167 @@ class NotificationServiceTest {
     }
 
     @Test
-    void resolvesOnlyClosedInternalTargets() {
-        NotificationTargetResolver resolver = new NotificationTargetResolver();
+    void resolvesOnlyVisibleTargetsForTheirRecipients() {
+        ResolverDependencies dependencies = resolverDependencies();
+        ActorIdentity student = new ActorIdentity(9L, Set.of(RoleCode.STUDENT), 2L);
+        ActorIdentity lecturer = new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L);
 
-        assertEquals("/announcements/4", resolver.resolve(NotificationTargetType.ANNOUNCEMENT, 4L));
-        assertEquals("/group-invitations", resolver.resolve(NotificationTargetType.GROUP_INVITATION, 4L));
-        assertEquals("/groups/4", resolver.resolve(NotificationTargetType.GROUP, 4L));
-        assertEquals("/topics/4", resolver.resolve(NotificationTargetType.TOPIC, 4L));
-        assertEquals("/registrations/4", resolver.resolve(NotificationTargetType.REGISTRATION, 4L));
-        assertEquals("/lecturer/direct-grading", resolver.resolve(NotificationTargetType.DIRECT_GRADING, 4L));
-        assertEquals("/lecturer/scoring", resolver.resolve(NotificationTargetType.COUNCIL, 4L));
-        assertEquals("/student/results/4", resolver.resolve(NotificationTargetType.RESULT, 4L));
-        assertEquals("/notifications", resolver.resolve(NotificationTargetType.NONE, null));
-        assertThrows(IllegalArgumentException.class,
-                () -> resolver.resolve(NotificationTargetType.NONE, 4L));
-        assertThrows(IllegalArgumentException.class,
-                () -> resolver.resolve(NotificationTargetType.TOPIC, null));
+        AnnouncementEntity announcement = mock(AnnouncementEntity.class);
+        when(announcement.getId()).thenReturn(4L);
+        when(announcement.isPublished()).thenReturn(true);
+        when(dependencies.announcements().findById(4L)).thenReturn(Optional.of(announcement));
+        NotificationEventEntity announcementEvent = event(NotificationTargetType.ANNOUNCEMENT, 4L);
+        when(announcementEvent.getAnnouncement()).thenReturn(announcement);
+        assertEquals("/announcements/4", dependencies.resolver().resolve(announcementEvent, student));
+
+        GroupInvitationEntity invitation = mock(GroupInvitationEntity.class);
+        RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
+        FacultyEntity faculty = mock(FacultyEntity.class);
+        StudentGroupEntity group = mock(StudentGroupEntity.class);
+        UserAccountEntity invitee = account(9L);
+        when(invitation.getStudent()).thenReturn(invitee);
+        when(invitation.getPeriod()).thenReturn(period);
+        when(invitation.getGroup()).thenReturn(group);
+        when(invitation.getStatus()).thenReturn(GroupInvitationStatus.PENDING);
+        when(period.getFaculty()).thenReturn(faculty);
+        when(faculty.getId()).thenReturn(2L);
+        when(period.getStudentStart()).thenReturn(NOW.minusSeconds(60));
+        when(period.getStudentEnd()).thenReturn(NOW.plusSeconds(60));
+        when(group.isActive()).thenReturn(true);
+        when(dependencies.invitations().findById(4L)).thenReturn(Optional.of(invitation));
+        assertEquals("/group-invitations", dependencies.resolver().resolve(
+                event(NotificationTargetType.GROUP_INVITATION, 4L), student));
+        ActorIdentity otherFacultyStudent = new ActorIdentity(
+                9L, Set.of(RoleCode.STUDENT), 3L);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.GROUP_INVITATION, 4L), otherFacultyStudent));
+
+        when(group.getPeriod()).thenReturn(period);
+        when(dependencies.groups().findByIdVisibleToStudent(4L, 9L))
+                .thenReturn(Optional.of(group));
+        assertEquals("/groups/4", dependencies.resolver().resolve(
+                event(NotificationTargetType.GROUP, 4L), student));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.GROUP, 4L), otherFacultyStudent));
+
+        TopicAuthorService.TopicView topic = mock(TopicAuthorService.TopicView.class);
+        when(topic.periodId()).thenReturn(7L);
+        when(dependencies.topics().getOwn(4L)).thenReturn(topic);
+        assertEquals("/topics/4", dependencies.resolver().resolve(
+                event(NotificationTargetType.TOPIC, 4L), lecturer));
+
+        assertEquals("/registrations/4", dependencies.resolver().resolve(
+                event(NotificationTargetType.REGISTRATION, 4L), student));
+        verify(dependencies.registrations()).getVisible(4L);
+
+        ScoringService.ScoringAssignmentView direct = new ScoringService.ScoringAssignmentView(
+                4L, "Chấm trực tiếp", 8L, 3L, "Đề tài", NOW, "Trực tiếp", true, 0L, true);
+        when(dependencies.scoring().listForCurrentLecturer()).thenReturn(List.of(direct));
+        assertEquals("/lecturer/scoring/4/8", dependencies.resolver().resolve(
+                event(NotificationTargetType.DIRECT_GRADING, 4L), lecturer));
+        verify(dependencies.scoring()).workspace(4L, 8L);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.COUNCIL, 4L), lecturer));
+
+        ScoringService.ScoringAssignmentView council = new ScoringService.ScoringAssignmentView(
+                5L, "Hội đồng", 9L, 3L, "Đề tài", NOW, "Phòng 1", true, 0L, false);
+        when(dependencies.scoring().listForCurrentLecturer()).thenReturn(List.of(council));
+        assertEquals("/lecturer/scoring", dependencies.resolver().resolve(
+                event(NotificationTargetType.COUNCIL, 5L), lecturer));
+
+        when(dependencies.results().findVisibleToStudent(4L, 9L, FinalResultStatus.PUBLISHED))
+                .thenReturn(Optional.of(mock(FinalResultEntity.class)));
+        assertEquals("/student/results/4", dependencies.resolver().resolve(
+                event(NotificationTargetType.RESULT, 4L), student));
+        assertEquals("/notifications", dependencies.resolver().resolve(
+                event(NotificationTargetType.NONE, null), student));
+
+        when(announcement.isPublished()).thenReturn(false);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                dependencies.resolver().resolve(announcementEvent, student));
+        when(invitation.getStatus()).thenReturn(GroupInvitationStatus.REJECTED);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.GROUP_INVITATION, 4L), student));
+    }
+
+    @Test
+    void unavailableTargetsFallBackWithoutGrantingAccess() {
+        ResolverDependencies dependencies = resolverDependencies();
+        ActorIdentity student = new ActorIdentity(9L, Set.of(RoleCode.STUDENT), 2L);
+        ActorIdentity lecturer = new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L);
+        when(dependencies.topics().getOwn(77L))
+                .thenThrow(new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.TOPIC, 77L), lecturer));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.DIRECT_GRADING, 4L), lecturer));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.RESULT, 4L), student));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.NONE, 4L), student));
+
+        when(dependencies.registrations().getVisible(4L))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("Outside faculty"));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> dependencies.resolver().resolve(
+                        event(NotificationTargetType.REGISTRATION, 4L), student));
+    }
+
+    @Test
+    void openMarksOnlyOwnedNotificationReadAfterResolvingFallback() {
+        Dependencies dependencies = dependencies();
+        ActorIdentity actor = new ActorIdentity(9L, Set.of(RoleCode.STUDENT), 2L);
+        when(dependencies.authorization().currentActor()).thenReturn(actor);
+        NotificationEventEntity event = event(NotificationTargetType.TOPIC, 77L);
+        UserNotificationEntity own = mock(UserNotificationEntity.class);
+        when(own.getEvent()).thenReturn(event);
+        when(dependencies.notifications().findByIdAndRecipientId(15L, 9L))
+                .thenReturn(Optional.of(own));
+        when(dependencies.resolver().resolve(event, actor))
+                .thenReturn(NotificationTargetResolver.UNAVAILABLE);
+
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                dependencies.service().openForCurrentActor(15L));
+        verify(dependencies.notifications()).markRead(15L, 9L, NOW);
+
+        ApplicationException missing = assertThrows(ApplicationException.class,
+                () -> dependencies.service().openForCurrentActor(16L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, missing.code());
+        verify(dependencies.notifications(), never()).markRead(16L, 9L, NOW);
+    }
+
+    private static NotificationEventEntity event(NotificationTargetType type, Long targetId) {
+        NotificationEventEntity event = mock(NotificationEventEntity.class);
+        when(event.getTargetType()).thenReturn(type);
+        when(event.getTargetId()).thenReturn(targetId);
+        return event;
+    }
+
+    private static ResolverDependencies resolverDependencies() {
+        AnnouncementRepository announcements = mock(AnnouncementRepository.class);
+        GroupInvitationRepository invitations = mock(GroupInvitationRepository.class);
+        StudentGroupRepository groups = mock(StudentGroupRepository.class);
+        TopicAuthorService topics = mock(TopicAuthorService.class);
+        RegistrationService registrations = mock(RegistrationService.class);
+        ScoringService scoring = mock(ScoringService.class);
+        FinalResultRepository results = mock(FinalResultRepository.class);
+        NotificationTargetResolver resolver = new NotificationTargetResolver(
+                announcements, invitations, groups, topics, registrations, scoring,
+                results, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new ResolverDependencies(
+                resolver, announcements, invitations, groups, topics, registrations,
+                scoring, results);
+    }
+
+    private record ResolverDependencies(
+            NotificationTargetResolver resolver,
+            AnnouncementRepository announcements,
+            GroupInvitationRepository invitations,
+            StudentGroupRepository groups,
+            TopicAuthorService topics,
+            RegistrationService registrations,
+            ScoringService scoring,
+            FinalResultRepository results) {
     }
 
     private static String key(NotificationEventType type) {
@@ -236,15 +397,16 @@ class NotificationServiceTest {
         UserAccountRepository accounts = mock(UserAccountRepository.class);
         AnnouncementRepository announcements = mock(AnnouncementRepository.class);
         AuthorizationPolicy authorization = mock(AuthorizationPolicy.class);
+        NotificationTargetResolver resolver = mock(NotificationTargetResolver.class);
         NotificationService service = new NotificationService(
                 events,
                 notifications,
                 accounts,
                 announcements,
                 authorization,
-                new NotificationTargetResolver(),
+                resolver,
                 Clock.fixed(NOW, ZoneOffset.UTC));
-        return new Dependencies(service, events, notifications, accounts, authorization);
+        return new Dependencies(service, events, notifications, accounts, authorization, resolver);
     }
 
     private record Dependencies(
@@ -252,6 +414,7 @@ class NotificationServiceTest {
             NotificationEventRepository events,
             UserNotificationRepository notifications,
             UserAccountRepository accounts,
-            AuthorizationPolicy authorization) {
+            AuthorizationPolicy authorization,
+            NotificationTargetResolver resolver) {
     }
 }

@@ -4,9 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.Timestamp;
 import java.util.Set;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.microsoft.playwright.Locator;
@@ -26,9 +30,12 @@ class NotificationFlowE2ETest extends BrowserTestSupport {
     private static final String FACULTY_TITLE = "Thông báo riêng Khoa Công nghệ thông tin";
 
     private String password;
+    private DataSource fixtureDataSource;
+    private long itStudentId;
 
     @Override
     protected void prepareDatabase(FixtureSupport fixtures) {
+        fixtureDataSource = fixtures.dataSource();
         password = requiredEnvironment("E2E_ACCOUNT_PASSWORD");
         String passwordHash = new BCryptPasswordEncoder().encode(password);
         FixtureSupport.OrganizationScope it = fixtures.createOrganization(
@@ -40,9 +47,9 @@ class NotificationFlowE2ETest extends BrowserTestSupport {
         fixtures.createIdentity(
                 DEAN_USERNAME, "Trưởng khoa E2E", passwordHash, true, it,
                 Set.of(RoleCode.DEAN));
-        fixtures.createIdentity(
+        itStudentId = fixtures.createIdentity(
                 IT_STUDENT_USERNAME, "Sinh viên CNTT E2E", passwordHash, true, it,
-                Set.of(RoleCode.STUDENT));
+                Set.of(RoleCode.STUDENT)).accountId();
         fixtures.createIdentity(
                 CIVIL_STUDENT_USERNAME, "Sinh viên Xây dựng E2E", passwordHash, true, civil,
                 Set.of(RoleCode.STUDENT));
@@ -109,6 +116,36 @@ class NotificationFlowE2ETest extends BrowserTestSupport {
         assertEquals(0, itInbox.getByText(SCHOOL_TITLE,
                 new Locator.GetByTextOptions().setExact(true)).count());
         assertNoHorizontalOverflow();
+
+        createUnavailableNotification();
+        page().navigate(url("/notifications"));
+        page().locator(".notification-open-form:has-text('Nhiệm vụ không còn khả dụng') button")
+                .click();
+        page().waitForURL(url("/notifications?target=unavailable"));
+        assertTrue(page().getByText(
+                "Nội dung của thông báo chưa sẵn sàng hoặc không còn khả dụng.",
+                new Page.GetByTextOptions().setExact(false)).isVisible());
+        assertNoHorizontalOverflow();
+    }
+
+    private void createUnavailableNotification() {
+        JdbcTemplate jdbc = new JdbcTemplate(fixtureDataSource);
+        String eventKey = "TOPIC:987654:APPROVED";
+        jdbc.update("""
+                INSERT INTO notification_events(
+                    event_key, category, event_type, title, body,
+                    target_type, target_id, created_at)
+                VALUES (?, 'ACADEMIC_EVENT', 'TOPIC_PROPOSAL_APPROVED', ?, ?,
+                    'TOPIC', 987654, ?)
+                """, eventKey, "Nhiệm vụ không còn khả dụng",
+                "Đề tài này không còn mở được.", Timestamp.from(FIXED_NOW));
+        Long eventId = jdbc.queryForObject(
+                "SELECT id FROM notification_events WHERE event_key = ?",
+                Long.class, eventKey);
+        jdbc.update("""
+                INSERT INTO user_notifications(event_id, recipient_id, delivered_at)
+                VALUES (?, ?, ?)
+                """, eventId, itStudentId, Timestamp.from(FIXED_NOW));
     }
 
     private String createAndPublish(String title, String body) {

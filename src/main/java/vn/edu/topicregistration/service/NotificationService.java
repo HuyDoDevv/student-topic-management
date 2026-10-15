@@ -31,6 +31,7 @@ import vn.edu.topicregistration.repository.NotificationEventRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserNotificationRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 
 @Service
 @Profile("!test")
@@ -164,11 +165,13 @@ public class NotificationService {
 
     @Transactional
     public String openForCurrentActor(long notificationId) {
-        long recipientId = currentAccountId();
+        ActorIdentity actor = authorization.currentActor();
+        Long recipientId = actor.accountId();
+        if (recipientId == null || recipientId <= 0) {
+            throw new IllegalStateException("Authenticated notification account is missing");
+        }
         UserNotificationEntity notification = requireOwned(notificationId, recipientId);
-        String target = targetResolver.resolve(
-                notification.getEvent().getTargetType(),
-                notification.getEvent().getTargetId());
+        String target = targetResolver.resolve(notification.getEvent(), actor);
         notifications.markRead(notificationId, recipientId, clock.instant());
         return target;
     }

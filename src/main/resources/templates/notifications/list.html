@@ -19,6 +19,9 @@
 
   <div class="alert alert-success" role="status" th:if="${successMessage != null}"
        th:text="${successMessage}">Đã cập nhật trạng thái thông báo.</div>
+  <div class="alert alert-warning" role="status" th:if="${param.target != null and param.target[0] == 'unavailable'}">
+    Nội dung của thông báo chưa sẵn sàng hoặc không còn khả dụng. Bạn vẫn có thể xem thông báo trong hộp thư.
+  </div>
 
   <div class="card mb-3">
     <div class="card-body">

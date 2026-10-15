@@ -36,6 +36,8 @@ import vn.edu.topicregistration.service.CouncilService;
 import vn.edu.topicregistration.service.CouncilService.CreateCouncilCommand;
 import vn.edu.topicregistration.service.DirectGradingService;
 import vn.edu.topicregistration.service.DirectGradingService.AssignCommand;
+import vn.edu.topicregistration.service.NotificationService;
+import vn.edu.topicregistration.service.NotificationTargetResolver;
 import vn.edu.topicregistration.service.ResultService;
 
 /** T008: assignment and result publication notifications use trusted workflow snapshots. */
@@ -61,6 +63,9 @@ class ReviewResultNotificationIT {
 
     @Autowired
     ResultService results;
+
+    @Autowired
+    NotificationService notifications;
 
     @Autowired
     RollbackProbe rollbackProbe;
@@ -139,7 +144,22 @@ class ReviewResultNotificationIT {
                 WHERE event.event_type = 'DIRECT_GRADER_ASSIGNED'
                   AND delivery.recipient_id = ?
                 """, otherLecturerId));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM council_members
+                WHERE council_id = ? AND lecturer_id = ? AND slot = 1
+                """, assignment.id(), graderId));
 
+        authenticate("lecturer4.demo", RoleCode.LECTURER);
+        long notificationId = requiredLong("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_type = 'DIRECT_GRADER_ASSIGNED'
+                  AND event.target_id = ? AND delivery.recipient_id = ?
+                """, assignment.id(), graderId);
+        assertEquals("/lecturer/scoring/" + assignment.id() + "/" + registrationId,
+                notifications.openForCurrentActor(notificationId));
+
+        authenticate("dean.demo", RoleCode.DEAN);
         assertThrows(RuntimeException.class,
                 () -> directGrading.assign(new AssignCommand(registrationId, otherLecturerId)));
         assertEquals(1, count("""
@@ -188,6 +208,24 @@ class ReviewResultNotificationIT {
         assertEquals(3, count("""
                 SELECT COUNT(*) FROM council_members WHERE council_id = ?
                 """, council.id()));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM council_members
+                WHERE council_id = ? AND lecturer_id = ? AND slot = 1
+                """, council.id(), chairId));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM council_members
+                WHERE council_id = ? AND lecturer_id = ? AND slot = 2
+                """, council.id(), secretaryId));
+
+        authenticate("lecturer1.demo", RoleCode.LECTURER);
+        long chairNotificationId = requiredLong("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_type = 'COUNCIL_MEMBER_ASSIGNED'
+                  AND event.target_id = ? AND delivery.recipient_id = ?
+                """, council.id(), chairId);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                notifications.openForCurrentActor(chairNotificationId));
     }
 
     @Test
