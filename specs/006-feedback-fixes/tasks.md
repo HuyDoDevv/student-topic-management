@@ -99,7 +99,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
 
 ## Phase 4 — Reviewer persistence and workflow
 
-- [ ] **T009 Mở rộng schema cho phản biện** `[FB-18]`
+- [x] **T009 Mở rộng schema cho phản biện** `[FB-18]`
   - Tạo migration `src/main/resources/db/migration/V23__support_reviewer_assessments.sql`.
   - Tạo `ReviewerAssignmentEntity.java`, `ReviewerEvaluationEntity.java`,
     `ReviewerReportEntity.java`, ba repository tương ứng.
