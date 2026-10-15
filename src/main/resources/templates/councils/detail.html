@@ -61,6 +61,26 @@
     </div>
   </div>
 
+  <article class="card mt-3" th:if="${!progress.isEmpty()}">
+    <div class="card-header"><h2 class="card-title">Tiến độ chấm theo đề tài</h2></div>
+    <div class="card-body border-top" th:each="topic : ${progress}">
+      <h3 class="h4 mb-2" th:text="${topic.topicTitle}">Đề tài</h3>
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead><tr><th>Người chấm</th><th>Trạng thái</th><th>Đã nộp / Tổng SV</th><th>Nộp đủ lúc</th></tr></thead>
+          <tbody>
+            <tr th:each="member : ${topic.members}">
+              <td><span th:text="${member.memberName}">Giảng viên</span><div class="small text-secondary" th:text="${member.role}">Vai trò</div></td>
+              <td th:text="${member.status == 'SUBMITTED' ? 'Đã nộp đủ' : (member.status == 'DRAFT' ? 'Đang chấm' : 'Chưa bắt đầu')}">Chưa bắt đầu</td>
+              <td th:text="${member.submittedCount + '/' + member.totalCount}">0/3</td>
+              <td th:text="${member.submittedAt != null ? member.submittedAt : '—'}">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+
   <div th:object="${memberForm}" th:if="${!canEditMembers && #fields.hasGlobalErrors()}"
        class="alert alert-danger mt-3" role="alert">
     <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Không thể sửa thành viên.</div>

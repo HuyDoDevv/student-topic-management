@@ -21,6 +21,11 @@
             <dt>Nhóm</dt><dd th:text="${'N' + #numbers.formatInteger(assignment.groupId, 3)}">N001</dd>
             <dt>Lịch</dt><dd th:text="${assignment.scheduledAt}">20/09/2026 09:00</dd>
             <dt>Địa điểm</dt><dd th:text="${assignment.location}">Phòng A1-01</dd>
+            <dt>Tiến độ của bạn</dt>
+            <dd><span th:text="${assignment.progressStatus == 'SUBMITTED' ? 'Đã nộp đủ' : (assignment.progressStatus == 'DRAFT' ? 'Đang chấm' : 'Chưa bắt đầu')}">Chưa bắt đầu</span>
+              <span class="text-secondary" th:text="${' · ' + assignment.submittedCount + '/' + assignment.totalCount + ' SV'}"> · 0/3 SV</span></dd>
+            <dt th:if="${assignment.fullySubmittedAt != null}">Nộp đủ lúc</dt>
+            <dd th:if="${assignment.fullySubmittedAt != null}" th:text="${assignment.fullySubmittedAt}">20/09/2026 09:00</dd>
           </dl>
         </div>
         <div class="card-footer d-flex flex-wrap justify-content-end gap-2">

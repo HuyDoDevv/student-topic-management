@@ -364,20 +364,42 @@ public class ScoringService {
                         periodId);
     }
 
-    private static ScoringAssignmentView toAssignmentView(
+    private ScoringAssignmentView toAssignmentView(
             CouncilTopicEntity assignment,
             long actorId) {
+        long councilId = assignment.getCouncil().getId();
+        long registrationId = assignment.getRegistration().getId();
+        var studentIds = registrationMembers.findAllByRegistrationId(registrationId)
+                .stream().map(member -> member.getStudent().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        List<EvaluationEntity> rows = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, actorId).stream()
+                .filter(row -> studentIds.contains(row.getStudent().getId()))
+                .toList();
+        List<EvaluationEntity> submitted = rows.stream()
+                .filter(row -> row.getStatus() == EvaluationStatus.SUBMITTED)
+                .toList();
+        int submittedCount = (int) submitted.stream()
+                .map(row -> row.getStudent().getId()).distinct().count();
+        String progressStatus = !studentIds.isEmpty() && submittedCount == studentIds.size()
+                ? "SUBMITTED" : rows.isEmpty() ? "NOT_STARTED" : "DRAFT";
+        Instant fullySubmittedAt = "SUBMITTED".equals(progressStatus)
+                ? submitted.stream().map(EvaluationEntity::getSubmittedAt)
+                        .filter(Objects::nonNull).max(Instant::compareTo).orElse(null)
+                : null;
         return new ScoringAssignmentView(
-                assignment.getCouncil().getId(),
+                councilId,
                 assignment.getCouncil().getName(),
-                assignment.getRegistration().getId(),
+                registrationId,
                 assignment.getRegistration().getGroup().getId(),
                 assignment.getRegistration().getTopic().getTitle(),
                 assignment.getScheduledAt(),
                 assignment.getLocation(),
                 Objects.equals(assignment.getCouncil().getChair().getId(), actorId),
                 assignment.getCouncil().getVersion(),
-                assignment.getCouncil().getMode() == CouncilMode.DIRECT);
+                assignment.getCouncil().getMode() == CouncilMode.DIRECT,
+                progressStatus, submittedCount, studentIds.size(), fullySubmittedAt);
     }
 
     private static EvaluationView toView(EvaluationEntity evaluation) {
@@ -438,7 +460,19 @@ public class ScoringService {
             String location,
             boolean currentChair,
             long councilVersion,
-            boolean directGrading) {
+            boolean directGrading,
+            String progressStatus,
+            int submittedCount,
+            int totalCount,
+            Instant fullySubmittedAt) {
+        public ScoringAssignmentView(
+                Long councilId, String councilName, Long registrationId, Long groupId,
+                String topicTitle, Instant scheduledAt, String location,
+                boolean currentChair, long councilVersion, boolean directGrading) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, currentChair, councilVersion, directGrading,
+                    "NOT_STARTED", 0, 0, null);
+        }
         public ScoringAssignmentView(
                 Long councilId,
                 String councilName,

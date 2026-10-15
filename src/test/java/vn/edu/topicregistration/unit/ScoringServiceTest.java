@@ -254,6 +254,51 @@ class ScoringServiceTest {
     }
 
     @Test
+    void ownAssignmentCountsOnlySubmittedSnapshotStudents() {
+        Dependencies dependencies = dependencies();
+        readFixture(dependencies, CouncilStatus.ACTIVE);
+        UserAccountEntity secondStudent = mock(UserAccountEntity.class);
+        when(secondStudent.getId()).thenReturn(102L);
+        UserAccountEntity thirdStudent = mock(UserAccountEntity.class);
+        when(thirdStudent.getId()).thenReturn(103L);
+        RegistrationMemberEntity secondSnapshot = mock(RegistrationMemberEntity.class);
+        when(secondSnapshot.getStudent()).thenReturn(secondStudent);
+        RegistrationMemberEntity thirdSnapshot = mock(RegistrationMemberEntity.class);
+        when(thirdSnapshot.getStudent()).thenReturn(thirdStudent);
+        var firstSnapshot = dependencies.registrationMembers()
+                .findAllByRegistrationId(51L).getFirst();
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(List.of(firstSnapshot, secondSnapshot, thirdSnapshot));
+        EvaluationEntity submitted = mock(EvaluationEntity.class);
+        UserAccountEntity firstStudent = firstSnapshot.getStudent();
+        when(submitted.getStudent()).thenReturn(firstStudent);
+        when(submitted.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(submitted.getSubmittedAt()).thenReturn(NOW);
+        EvaluationEntity draft = mock(EvaluationEntity.class);
+        when(draft.getStudent()).thenReturn(secondStudent);
+        when(draft.getStatus()).thenReturn(EvaluationStatus.DRAFT);
+        EvaluationEntity thirdSubmitted = mock(EvaluationEntity.class);
+        when(thirdSubmitted.getStudent()).thenReturn(thirdStudent);
+        when(thirdSubmitted.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(thirdSubmitted.getSubmittedAt()).thenReturn(NOW);
+        when(dependencies.evaluations()
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        41L, 51L, 11L)).thenReturn(List.of(submitted, draft, thirdSubmitted));
+
+        var partial = dependencies.service().listForCurrentLecturer().getFirst();
+        assertEquals("DRAFT", partial.progressStatus());
+        assertEquals(2, partial.submittedCount());
+        assertEquals(3, partial.totalCount());
+        assertEquals(null, partial.fullySubmittedAt());
+
+        when(draft.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(draft.getSubmittedAt()).thenReturn(NOW.plusSeconds(60));
+        var complete = dependencies.service().listForCurrentLecturer().getFirst();
+        assertEquals("SUBMITTED", complete.progressStatus());
+        assertEquals(NOW.plusSeconds(60), complete.fullySubmittedAt());
+    }
+
+    @Test
     void transferredLecturerCannotListOpenOrWriteFormerAssignment() {
         Dependencies dependencies = dependencies();
         readFixture(dependencies, CouncilStatus.ACTIVE);

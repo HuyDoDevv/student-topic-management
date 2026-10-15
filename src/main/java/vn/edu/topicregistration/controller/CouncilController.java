@@ -239,6 +239,16 @@ public class CouncilController {
         model.addAttribute("assignments", detail.assignments().stream()
                 .map(this::display)
                 .toList());
+        model.addAttribute("progress", detail.progress().stream()
+                .map(topic -> new TopicProgressPageView(topic.registrationId(),
+                        topic.topicTitle(),
+                        topic.members().stream()
+                                .map(member -> new MemberProgressPageView(
+                                        member.memberName(), member.role(), member.status(),
+                                        member.submittedCount(), member.totalCount(),
+                                        format(member.submittedAt())))
+                                .toList()))
+                .toList());
         model.addAttribute("availableRegistrations", detail.availableRegistrations());
         model.addAttribute("minScheduleAt", projectTime.toBusinessTime(projectTime.now())
                 .truncatedTo(ChronoUnit.MINUTES).plusMinutes(1).format(SCHEDULE_INPUT));
@@ -253,6 +263,16 @@ public class CouncilController {
                 : List.of());
         model.addAttribute("nextAction", nextAction(detail));
         return "councils/detail";
+    }
+
+    public record TopicProgressPageView(
+            Long registrationId, String topicTitle,
+            List<MemberProgressPageView> members) {
+    }
+
+    public record MemberProgressPageView(
+            String memberName, String role, String status,
+            int submittedCount, int totalCount, String submittedAt) {
     }
 
     private static CouncilAssignmentForm assignmentForm(CouncilDetailView detail) {

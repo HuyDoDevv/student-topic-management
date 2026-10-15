@@ -164,7 +164,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
 
 ## Phase 6 — Progress, result evidence and navigation
 
-- [ ] **T015 Hiển thị tiến độ chấm cho Chủ tịch và DEAN** `[FB-17]`
+- [x] **T015 Hiển thị tiến độ chấm cho Chủ tịch và DEAN** `[FB-17]`
   - File: `ScoringService.java`, `CouncilService.java`, `CouncilController.java`,
     `templates/councils/detail.html`, `templates/scoring/list.html` và test quyền/
     tiến độ.

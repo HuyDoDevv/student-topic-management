@@ -25,6 +25,8 @@ import vn.edu.topicregistration.entity.CouncilMemberEntity;
 import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.EvaluationEntity;
+import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.NotificationEventType;
 import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
@@ -42,6 +44,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
 import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
@@ -62,6 +65,7 @@ public class CouncilService {
     private final CouncilMemberRepository members;
     private final CouncilTopicRepository councilTopics;
     private final RegistrationRepository registrations;
+    private final RegistrationMemberRepository registrationMembers;
     private final ProjectReportRepository reports;
     private final ReviewerAssignmentRepository reviewerAssignments;
     private final EvaluationRepository evaluations;
@@ -77,6 +81,7 @@ public class CouncilService {
             CouncilMemberRepository members,
             CouncilTopicRepository councilTopics,
             RegistrationRepository registrations,
+            RegistrationMemberRepository registrationMembers,
             ProjectReportRepository reports,
             ReviewerAssignmentRepository reviewerAssignments,
             EvaluationRepository evaluations,
@@ -90,6 +95,7 @@ public class CouncilService {
         this.members = members;
         this.councilTopics = councilTopics;
         this.registrations = registrations;
+        this.registrationMembers = registrationMembers;
         this.reports = reports;
         this.reviewerAssignments = reviewerAssignments;
         this.evaluations = evaluations;
@@ -437,6 +443,10 @@ public class CouncilService {
                 .stream()
                 .map(this::toAssignmentView)
                 .toList();
+        List<CouncilTopicProgressView> progress = assignmentViews.stream()
+                .map(assignment -> topicProgress(councilId, assignment.registrationId(),
+                        assignment.topicTitle(), memberViews))
+                .toList();
         boolean manageable = scopedDean
                 && CouncilRules.isSupportedTopicType(council.getPeriod().getTopicType());
         List<RegistrationOption> available = manageable
@@ -446,6 +456,7 @@ public class CouncilService {
                 memberViews,
                 assignmentViews,
                 available,
+                progress,
                 currentChair,
                 manageable,
                 council.getChair().getId(),
@@ -691,6 +702,40 @@ public class CouncilService {
                                 ? "Đã nộp" : "Chưa nộp");
     }
 
+    private CouncilTopicProgressView topicProgress(
+            long councilId, long registrationId, String topicTitle,
+            List<CouncilMemberView> memberViews) {
+        Set<Long> studentIds = registrationMembers.findAllByRegistrationId(registrationId)
+                .stream().map(snapshot -> snapshot.getStudent().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        return new CouncilTopicProgressView(registrationId, topicTitle, memberViews.stream()
+                .map(member -> memberProgress(councilId, registrationId, member,
+                        studentIds)).toList());
+    }
+
+    private CouncilMemberProgressView memberProgress(
+            long councilId, long registrationId, CouncilMemberView member,
+            Set<Long> studentIds) {
+        List<EvaluationEntity> rows = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, member.id()).stream()
+                .filter(row -> studentIds.contains(row.getStudent().getId()))
+                .toList();
+        List<EvaluationEntity> submitted = rows.stream()
+                .filter(row -> row.getStatus() == EvaluationStatus.SUBMITTED)
+                .toList();
+        int submittedCount = (int) submitted.stream()
+                .map(row -> row.getStudent().getId()).distinct().count();
+        String status = !studentIds.isEmpty() && submittedCount == studentIds.size()
+                ? "SUBMITTED" : rows.isEmpty() ? "NOT_STARTED" : "DRAFT";
+        Instant submittedAt = "SUBMITTED".equals(status)
+                ? submitted.stream().map(EvaluationEntity::getSubmittedAt)
+                        .filter(Objects::nonNull).max(Instant::compareTo).orElse(null)
+                : null;
+        return new CouncilMemberProgressView(member.fullName(), member.role(),
+                status, submittedCount, studentIds.size(), submittedAt);
+    }
+
     private static String displayName(UserAccountEntity account) {
         return account.getFullName() == null || account.getFullName().isBlank()
                 ? account.getUsername()
@@ -810,6 +855,7 @@ public class CouncilService {
             List<CouncilMemberView> members,
             List<CouncilAssignmentView> assignments,
             List<RegistrationOption> availableRegistrations,
+            List<CouncilTopicProgressView> progress,
             boolean canComplete,
             boolean canPublish,
             Long chairId,
@@ -819,6 +865,7 @@ public class CouncilService {
             members = List.copyOf(members);
             assignments = List.copyOf(assignments);
             availableRegistrations = List.copyOf(availableRegistrations);
+            progress = List.copyOf(progress);
         }
 
         public CouncilDetailView(
@@ -826,9 +873,22 @@ public class CouncilService {
                 List<CouncilMemberView> members,
                 List<CouncilAssignmentView> assignments,
                 List<RegistrationOption> availableRegistrations) {
-            this(council, members, assignments, availableRegistrations,
+            this(council, members, assignments, availableRegistrations, List.of(),
                     false, false, null, null, false);
         }
+    }
+
+    public record CouncilTopicProgressView(
+            Long registrationId, String topicTitle,
+            List<CouncilMemberProgressView> members) {
+        public CouncilTopicProgressView {
+            members = List.copyOf(members);
+        }
+    }
+
+    public record CouncilMemberProgressView(
+            String memberName, String role, String status,
+            int submittedCount, int totalCount, Instant submittedAt) {
     }
 
     private record LockedCouncil(

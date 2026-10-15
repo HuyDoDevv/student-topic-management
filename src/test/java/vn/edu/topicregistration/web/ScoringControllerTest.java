@@ -64,6 +64,23 @@ class ScoringControllerTest {
     }
 
     @Test
+    void listFormatsOwnSubmissionProgressInVietnamTime() throws Exception {
+        var assignment = new ScoringAssignmentView(41L, "Hội đồng KLTN", 51L, 21L,
+                "Đề tài thử nghiệm", NOW, "Phòng A1-01", true, 4L, false,
+                "SUBMITTED", 2, 2, NOW);
+        when(scoring.listForCurrentLecturer()).thenReturn(List.of(assignment));
+
+        var result = mvc.perform(get("/lecturer/scoring"))
+                .andExpect(status().isOk()).andReturn();
+
+        @SuppressWarnings("unchecked")
+        var rows = (List<ScoringController.AssignmentPageView>) result
+                .getModelAndView().getModel().get("assignments");
+        assertEquals("SUBMITTED", rows.getFirst().progressStatus());
+        assertEquals("20/09/2026 09:00", rows.getFirst().fullySubmittedAt());
+    }
+
+    @Test
     void assignmentPageListsEveryRegistrationStudent() throws Exception {
         when(scoring.workspace(41L, 51L)).thenReturn(workspace());
 

@@ -31,12 +31,15 @@ import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
 import vn.edu.topicregistration.entity.EvaluationEntity;
+import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.entity.ProjectReportEntity;
 import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.TopicEntity;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
@@ -49,6 +52,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
 import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
@@ -511,6 +515,56 @@ class CouncilServiceTest {
         assertEquals(true, detail.canPublish());
     }
 
+    @Test
+    void deanSeesOnlySubmissionProgressWithoutDraftScores() {
+        Dependencies dependencies = dependencies();
+        CouncilEntity council = detailCouncil(dependencies, CouncilStatus.ACTIVE);
+        when(dependencies.authorization().currentActor()).thenReturn(
+                new ActorIdentity(31L, Set.of(RoleCode.DEAN), 2L));
+        CouncilMemberEntity member = mock(CouncilMemberEntity.class);
+        UserAccountEntity chair = council.getChair();
+        when(member.getLecturer()).thenReturn(chair);
+        CouncilMemberEntity secretaryMember = mock(CouncilMemberEntity.class);
+        UserAccountEntity secretary = council.getSecretary();
+        when(secretaryMember.getLecturer()).thenReturn(secretary);
+        when(dependencies.members().findAllByCouncilIdOrderBySlot(41L))
+                .thenReturn(List.of(member, secretaryMember));
+        RegistrationEntity registration = mock(RegistrationEntity.class);
+        when(registration.getId()).thenReturn(51L);
+        StudentGroupEntity group = mock(StudentGroupEntity.class);
+        when(group.getId()).thenReturn(21L);
+        when(registration.getGroup()).thenReturn(group);
+        TopicEntity registrationTopic = mock(TopicEntity.class);
+        when(registrationTopic.getTitle()).thenReturn("Đề tài thử nghiệm");
+        when(registration.getTopic()).thenReturn(registrationTopic);
+        CouncilTopicEntity topic = mock(CouncilTopicEntity.class);
+        when(topic.getRegistration()).thenReturn(registration);
+        when(dependencies.councilTopics().findAllByCouncilIdOrderByRegistrationId(41L))
+                .thenReturn(List.of(topic));
+        UserAccountEntity student = mock(UserAccountEntity.class);
+        when(student.getId()).thenReturn(101L);
+        RegistrationMemberEntity snapshot = mock(RegistrationMemberEntity.class);
+        when(snapshot.getStudent()).thenReturn(student);
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(List.of(snapshot));
+        EvaluationEntity draft = mock(EvaluationEntity.class);
+        when(draft.getStudent()).thenReturn(student);
+        when(draft.getStatus()).thenReturn(EvaluationStatus.DRAFT);
+        when(dependencies.evaluations()
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        41L, 51L, 11L)).thenReturn(List.of(draft));
+
+        var membersProgress = dependencies.service().detailForCurrentDean(41L)
+                .progress().getFirst().members();
+        var progress = membersProgress.getFirst();
+
+        assertEquals("DRAFT", progress.status());
+        assertEquals(0, progress.submittedCount());
+        assertEquals(1, progress.totalCount());
+        assertEquals(null, progress.submittedAt());
+        assertEquals("NOT_STARTED", membersProgress.get(1).status());
+    }
+
     private static CouncilEntity detailCouncil(
             Dependencies dependencies, CouncilStatus status) {
         RegistrationPeriodEntity period = mockPeriod("KLTN");
@@ -670,6 +724,7 @@ class CouncilServiceTest {
                 mock(CouncilMemberRepository.class),
                 mock(CouncilTopicRepository.class),
                 mock(RegistrationRepository.class),
+                mock(RegistrationMemberRepository.class),
                 mock(ProjectReportRepository.class),
                 mock(ReviewerAssignmentRepository.class),
                 mock(EvaluationRepository.class),
@@ -684,6 +739,7 @@ class CouncilServiceTest {
             CouncilMemberRepository members,
             CouncilTopicRepository councilTopics,
             RegistrationRepository registrations,
+            RegistrationMemberRepository registrationMembers,
             ProjectReportRepository reports,
             ReviewerAssignmentRepository reviewerAssignments,
             EvaluationRepository evaluations,
@@ -697,6 +753,7 @@ class CouncilServiceTest {
                     members,
                     councilTopics,
                     registrations,
+                    registrationMembers,
                     reports,
                     reviewerAssignments,
                     evaluations,

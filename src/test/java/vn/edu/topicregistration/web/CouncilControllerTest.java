@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.web;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -131,6 +132,26 @@ class CouncilControllerTest {
         mvc.perform(get("/faculty/boards/41"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("minScheduleAt", "2026-09-14T15:01"));
+    }
+
+    @Test
+    void detailExposesProgressWithoutAnyScoreValue() throws Exception {
+        var progress = new CouncilService.CouncilTopicProgressView(51L,
+                "Đề tài thử nghiệm", List.of(new CouncilService.CouncilMemberProgressView(
+                        "Giảng viên A", "Chủ tịch", "SUBMITTED", 2, 2, NOW)));
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                summary(), List.of(), List.of(), List.of(), List.of(progress),
+                false, true, null, null, false));
+
+        var result = mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk()).andReturn();
+
+        @SuppressWarnings("unchecked")
+        var rows = (List<CouncilController.TopicProgressPageView>) result
+                .getModelAndView().getModel().get("progress");
+        assertEquals("15:00", rows.getFirst().members().getFirst()
+                .submittedAt().substring(11));
+        assertEquals(2, rows.getFirst().members().getFirst().submittedCount());
     }
 
     @Test

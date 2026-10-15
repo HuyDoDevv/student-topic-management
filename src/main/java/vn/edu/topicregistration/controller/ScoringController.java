@@ -172,7 +172,11 @@ public class ScoringController {
                 assignment.location(),
                 assignment.currentChair(),
                 assignment.councilVersion(),
-                assignment.directGrading());
+                assignment.directGrading(),
+                assignment.progressStatus(),
+                assignment.submittedCount(),
+                assignment.totalCount(),
+                format(assignment.fullySubmittedAt()));
     }
 
     private String format(Instant value) {
@@ -200,6 +204,10 @@ public class ScoringController {
             String location,
             boolean currentChair,
             long councilVersion,
-            boolean directGrading) {
+            boolean directGrading,
+            String progressStatus,
+            int submittedCount,
+            int totalCount,
+            String fullySubmittedAt) {
     }
 }
