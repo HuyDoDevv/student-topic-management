@@ -1,5 +1,7 @@
 package vn.edu.topicregistration.web;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -7,6 +9,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,12 +23,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.spring6.view.ThymeleafViewResolver;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 import vn.edu.topicregistration.controller.ReviewerController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.service.ReviewerAssignmentService;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.AssignmentView;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.DeanWorkspace;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.RegistrationOption;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.ReviewerCandidate;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.ReviewerTask;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.StudentRow;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.SubmissionWorkspace;
 
@@ -47,6 +57,51 @@ class ReviewerControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("reviewers/assignments"))
                 .andExpect(model().attributeExists("workspace"));
+    }
+
+    @Test
+    void deanWorkspaceRendersSeparateLocalizedStatusColumnAndActions() throws Exception {
+        ReviewerCandidate candidate = new ReviewerCandidate(11L, "Giảng viên A");
+        when(reviewers.deanWorkspace()).thenReturn(new DeanWorkspace(List.of(
+                new RegistrationOption(51L, 0L, "TLCN 2026", "TLCN",
+                        "Đề tài chưa phân công", null, List.of(candidate)),
+                new RegistrationOption(52L, 0L, "TLCN 2026", "TLCN",
+                        "Đề tài đang phản biện",
+                        new AssignmentView(71L, "Giảng viên B",
+                                ReviewerAssignmentEntity.Status.ASSIGNED, 1L),
+                        List.of(candidate)),
+                new RegistrationOption(53L, 0L, "KLTN 2026", "KLTN",
+                        "Đề tài đã nộp",
+                        new AssignmentView(72L, "Giảng viên C",
+                                ReviewerAssignmentEntity.Status.SUBMITTED, 2L),
+                        List.of(candidate)),
+                new RegistrationOption(54L, 0L, "TLCN cũ", "TLCN",
+                        "Đề tài cần xác minh",
+                        new AssignmentView(73L, "Giảng viên D",
+                                ReviewerAssignmentEntity.Status.LEGACY_UNVERIFIED, 0L),
+                        List.of(candidate)),
+                new RegistrationOption(55L, 0L, "KLTN cũ", "KLTN",
+                        "Đề tài đã thay GVPB",
+                        new AssignmentView(74L, "Giảng viên E",
+                                ReviewerAssignmentEntity.Status.REPLACED, 3L),
+                        List.of(candidate)))));
+
+        renderedMvc().perform(get("/faculty/reviewers"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("5 đăng ký")))
+                .andExpect(content().string(containsString("<th>Trạng thái</th>")))
+                .andExpect(content().string(containsString("Chưa phân công")))
+                .andExpect(content().string(containsString("Chờ phản biện")))
+                .andExpect(content().string(containsString("Đã nộp phản biện")))
+                .andExpect(content().string(containsString("Cần xác minh")))
+                .andExpect(content().string(containsString("Đã thay thế")))
+                .andExpect(content().string(containsString("Giảng viên B")))
+                .andExpect(content().string(not(containsString("Giảng viên B · ASSIGNED"))))
+                .andExpect(content().string(not(containsString("Giảng viên C · SUBMITTED"))))
+                .andExpect(content().string(containsString("Phân công")))
+                .andExpect(content().string(containsString("Thay GVPB")))
+                .andExpect(content().string(containsString("Đã khóa sau khi nộp")))
+                .andExpect(content().string(containsString("Không thể thao tác")));
     }
 
     @Test
@@ -112,5 +167,56 @@ class ReviewerControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("reviewers/submission"))
                 .andExpect(model().attributeExists("reviewerSubmissionForm"));
+    }
+
+    @Test
+    void taskListRendersResponsiveTableWithReadableStatusesDatesAndActions() throws Exception {
+        when(reviewers.reviewerTasks()).thenReturn(List.of(
+                new ReviewerTask(71L, "Đề tài cần phản biện", "TLCN 2026",
+                        LocalDate.of(2026, 10, 16), ReviewerAssignmentEntity.Status.ASSIGNED),
+                new ReviewerTask(72L, "Đề tài đã hoàn tất", "KLTN 2026",
+                        LocalDate.of(2026, 10, 20), ReviewerAssignmentEntity.Status.SUBMITTED)));
+
+        renderedMvc().perform(get("/lecturer/reviewers"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2 phân công")))
+                .andExpect(content().string(containsString("<th>Đề tài</th>")))
+                .andExpect(content().string(containsString("<th>Đợt</th>")))
+                .andExpect(content().string(containsString("<th>Hạn nộp</th>")))
+                .andExpect(content().string(containsString("<th>Trạng thái</th>")))
+                .andExpect(content().string(containsString("Chưa nộp")))
+                .andExpect(content().string(containsString("Đã nộp")))
+                .andExpect(content().string(containsString("16/10/2026")))
+                .andExpect(content().string(containsString("href=\"/lecturer/reviewers/71\"")))
+                .andExpect(content().string(containsString("Mở phản biện")))
+                .andExpect(content().string(containsString("Xem chi tiết")));
+    }
+
+    @Test
+    void emptyTaskListExplainsWhenAssignmentsWillAppear() throws Exception {
+        when(reviewers.reviewerTasks()).thenReturn(List.of());
+
+        renderedMvc().perform(get("/lecturer/reviewers"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Chưa có phân công phản biện")))
+                .andExpect(content().string(containsString("Khi trưởng khoa phân công đề tài")));
+    }
+
+    private MockMvc renderedMvc() {
+        return standaloneSetup(new ReviewerController(reviewers))
+                .setViewResolvers(viewResolver()).build();
+    }
+
+    private static ThymeleafViewResolver viewResolver() {
+        ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        resolver.setCharacterEncoding("UTF-8");
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        ThymeleafViewResolver viewResolver = new ThymeleafViewResolver();
+        viewResolver.setTemplateEngine(engine);
+        viewResolver.setCharacterEncoding("UTF-8");
+        return viewResolver;
     }
 }

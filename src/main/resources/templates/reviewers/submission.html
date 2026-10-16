@@ -5,20 +5,52 @@
   <div class="page-header">
     <div><div class="page-pretitle">GIẢNG VIÊN PHẢN BIỆN</div>
       <h1 class="page-title">Phản biện đề tài</h1>
-      <p class="text-secondary mt-2 mb-0">Nộp một file PDF và điểm, nhận xét cho từng sinh viên trước hạn.</p>
+      <p class="text-secondary mt-2 mb-0" th:text="${workspace == null ? 'Theo dõi phân công, hạn nộp và mở đề tài để thực hiện phản biện.' : 'Nộp một file PDF và điểm, nhận xét cho từng sinh viên trước hạn.'}">Theo dõi phân công và hạn nộp.</p>
     </div>
     <a class="btn btn-outline-secondary" th:if="${workspace != null}" th:href="@{/lecturer/reviewers}">Danh sách phân công</a>
   </div>
-  <div class="card" th:if="${workspace == null}">
-    <div class="card-header"><h2 class="card-title">Phân công của tôi</h2></div>
-    <div class="list-group list-group-flush" th:if="${!tasks.isEmpty()}">
-      <a class="list-group-item list-group-item-action" th:each="task : ${tasks}"
-         th:href="@{/lecturer/reviewers/{id}(id=${task.id()})}">
-        <span class="fw-semibold" th:text="${task.topicTitle()}">Đề tài</span>
-        <span class="text-secondary ms-2" th:text="${task.periodName() + ' · Hạn ' + task.deadline() + ' · ' + task.status()}">Đợt</span>
-      </a>
+  <div class="card data-card" th:if="${workspace == null and !tasks.isEmpty()}">
+    <div class="card-header">
+      <h2 class="card-title">Phân công của tôi</h2>
+      <span class="badge bg-blue-lt ms-auto"
+            th:text="${#lists.size(tasks)} + ' phân công'">1 phân công</span>
     </div>
-    <div class="card-body text-secondary" th:if="${tasks.isEmpty()}">Bạn chưa được phân công phản biện.</div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead>
+        <tr>
+          <th>Đề tài</th>
+          <th>Đợt</th>
+          <th>Hạn nộp</th>
+          <th>Trạng thái</th>
+          <th><span class="visually-hidden">Thao tác</span></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="task : ${tasks}">
+          <td data-label="Đề tài" class="fw-semibold" th:text="${task.topicTitle()}">Tên đề tài</td>
+          <td data-label="Đợt" th:text="${task.periodName()}">Đợt đăng ký</td>
+          <td data-label="Hạn nộp">
+            <time th:datetime="${task.deadline()}"
+                  th:text="${#temporals.format(task.deadline(), 'dd/MM/yyyy')}">16/10/2026</time>
+          </td>
+          <td data-label="Trạng thái">
+            <span class="badge"
+                  th:classappend="${task.status().name() == 'SUBMITTED'} ? ' bg-green-lt' : ' bg-azure-lt'"
+                  th:text="${task.status().name() == 'SUBMITTED' ? 'Đã nộp' : 'Chưa nộp'}">Chưa nộp</span>
+          </td>
+          <td data-label="Thao tác" class="text-end">
+            <a class="btn btn-sm btn-ghost-primary"
+               th:href="@{/lecturer/reviewers/{id}(id=${task.id()})}"
+               th:text="${task.status().name() == 'SUBMITTED' ? 'Xem chi tiết' : 'Mở phản biện'}">Mở phản biện</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" th:if="${workspace == null and tasks.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có phân công phản biện', 'Khi trưởng khoa phân công đề tài, thông tin và hạn nộp sẽ xuất hiện tại đây.')}">
   </div>
   <div th:if="${workspace != null}">
     <div class="alert alert-info" th:text="${workspace.topicTitle() + ' · ' + workspace.periodName() + ' · Hạn ' + workspace.deadline()}">Đề tài</div>
