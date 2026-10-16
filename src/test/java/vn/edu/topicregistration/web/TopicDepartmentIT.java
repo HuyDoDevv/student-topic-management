@@ -28,6 +28,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
@@ -45,6 +47,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import vn.edu.topicregistration.config.TimeConfig;
@@ -306,23 +309,40 @@ class TopicDepartmentIT {
                 .andExpect(flash().attribute("returnToDraftNotice",
                         "Đề tài đã trở về bản nháp. Sau khi sửa, bạn cần gửi duyệt lại."));
         assertEquals("DRAFT", topicStatus(topicId));
-        mvc.perform(get("/topics/{id}/edit", topicId)
+        MvcResult editPage = mvc.perform(get("/topics/{id}/edit", topicId)
                         .with(actor(lecturer, "LECTURER"))
                         .flashAttr("returnToDraftNotice", "Sau khi sửa, bạn cần gửi duyệt lại."))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Sau khi sửa, bạn cần gửi duyệt lại.")));
+                .andExpect(content().string(containsString("Sau khi sửa, bạn cần gửi duyệt lại.")))
+                .andReturn();
+        long renderedVersion = renderedTopicVersion(editPage);
+        assertEquals(topicVersion(topicId), renderedVersion);
         mvc.perform(post("/topics/{id}/draft", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
-                        .param("version", Long.toString(topicVersion(topicId)))
+                        .param("version", Long.toString(renderedVersion))
                         .param("title", "Đề tài đã sửa")
                         .param("description", "Mô tả")
                         .param("objectives", "Mục tiêu")
                         .param("studentRequirements", "Yêu cầu")
                         .param("expectedResults", "Kết quả"))
                 .andExpect(status().isSeeOther());
+        long savedVersion = topicVersion(topicId);
+        assertEquals(renderedVersion + 1, savedVersion);
+        mvc.perform(post("/topics/{id}/draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(renderedVersion))
+                        .param("title", "Nội dung từ tab cũ")
+                        .param("description", "Mô tả cũ")
+                        .param("objectives", "Mục tiêu cũ")
+                        .param("studentRequirements", "Yêu cầu cũ")
+                        .param("expectedResults", "Kết quả cũ"))
+                .andExpect(status().isConflict());
+        assertEquals(savedVersion, topicVersion(topicId));
+        assertEquals("Đề tài đã sửa", jdbc.queryForObject(
+                "SELECT title FROM topics WHERE id = ?", String.class, topicId));
         mvc.perform(post("/topics/{id}/submit", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
-                        .param("version", Long.toString(topicVersion(topicId))))
+                        .param("version", Long.toString(savedVersion)))
                 .andExpect(status().isSeeOther());
         assertEquals("PENDING_APPROVAL", topicStatus(topicId));
         assertEquals("Đề tài đã sửa", jdbc.queryForObject(
@@ -364,9 +384,15 @@ class TopicDepartmentIT {
                             .with(actor(lecturer, "LECTURER")).with(csrf())
                             .param("version", Long.toString(topicVersion(topicId))))
                     .andExpect(status().isSeeOther());
+            MvcResult editPage = mvc.perform(get("/topics/{id}/edit", topicId)
+                            .with(actor(lecturer, "LECTURER")))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            long renderedVersion = renderedTopicVersion(editPage);
+            assertEquals(topicVersion(topicId), renderedVersion);
             var saveRequest = post("/topics/{id}/draft", topicId)
                     .with(actor(lecturer, "LECTURER")).with(csrf())
-                    .param("version", Long.toString(topicVersion(topicId)))
+                    .param("version", Long.toString(renderedVersion))
                     .param("title", "Đề tài sửa lần " + index)
                     .param("description", "Mô tả")
                     .param("objectives", "Mục tiêu")
@@ -871,6 +897,15 @@ class TopicDepartmentIT {
 
     private long topicVersion(long topicId) {
         return jdbc.queryForObject("SELECT version FROM topics WHERE id = ?", Long.class, topicId);
+    }
+
+    private static long renderedTopicVersion(MvcResult result) throws Exception {
+        String html = result.getResponse().getContentAsString();
+        Matcher matcher = Pattern.compile(
+                        "<input(?=[^>]*\\bname=\"version\")(?=[^>]*\\bvalue=\"(\\d+)\")[^>]*>")
+                .matcher(html);
+        assertTrue(matcher.find(), "Edit form must render the persisted topic version");
+        return Long.parseLong(matcher.group(1));
     }
 
     private String topicStatus(long topicId) {

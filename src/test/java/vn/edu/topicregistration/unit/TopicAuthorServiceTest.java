@@ -105,6 +105,22 @@ class TopicAuthorServiceTest {
         verify(scenario.topics(), never()).flush();
     }
 
+    @Test
+    void staleDraftVersionBlocksBeforeLoadingSubmittedSupervisors() {
+        Scenario scenario = openScenario();
+        TopicEntity topic = new TopicEntity(
+                scenario.period(), scenario.author(), scenario.period().getDepartment());
+        when(scenario.topics().findPeriodIdByTopicId(5L)).thenReturn(Optional.of(1L));
+        when(scenario.topics().findByIdForUpdate(5L)).thenReturn(Optional.of(topic));
+
+        assertThrows(OptimisticLockingFailureException.class,
+                () -> scenario.service().saveDraft(5L, 1L, completeCommand()));
+
+        verify(scenario.authorization(), never()).requireTopicAuthor(7L, 21L);
+        verify(scenario.accounts(), never()).findByIdForUpdate(7L);
+        verify(scenario.topics(), never()).flush();
+    }
+
     private static TopicEntity approvedTopic(Scenario scenario) {
         TopicEntity topic = new TopicEntity(scenario.period(), scenario.author(),
                 scenario.period().getDepartment());

@@ -65,7 +65,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: target hợp lệ mở đúng; nhiệm vụ hết hiệu lực về inbox có message,
     không 404; Khoa/owner khác vẫn bị chặn.
 
-- [ ] **T005 Cho sửa đề tài đã duyệt nhưng chưa công bố** `[FB-07]`
+- [x] **T005 Cho sửa đề tài đã duyệt nhưng chưa công bố** `[FB-07]`
   - File: `TopicRules.java`, `TopicReviewRules.java`, `TopicAuthorService.java`,
     `TopicReviewService.java`, `TopicAuthorController.java`,
     `TopicReviewController.java`, `templates/topics/detail.html`,
