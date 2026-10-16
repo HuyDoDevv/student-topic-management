@@ -29,6 +29,8 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import vn.edu.topicregistration.service.GroupService.GroupPeriodView;
+import vn.edu.topicregistration.service.GroupService.GroupPeriodGroupView;
+import vn.edu.topicregistration.service.GroupService.GroupRegistrationView;
 import vn.edu.topicregistration.service.GroupService.GroupView;
 import vn.edu.topicregistration.service.GroupService.GroupWorkspace;
 import vn.edu.topicregistration.service.GroupService.InvitationView;
@@ -265,13 +267,32 @@ public class GroupController {
     private GroupPeriodPageView display(GroupPeriodView period) {
         return new GroupPeriodPageView(
                 period.id(),
+                "P" + String.format("%03d", period.id()),
                 period.name(),
                 period.departmentName(),
                 DATE.format(projectTime.toBusinessDate(period.studentStart())),
                 DATE.format(projectTime.toBusinessDate(period.studentEnd())),
                 period.phase(),
-                period.hasGroup(),
+                display(period.group()),
                 period.hasPendingInvitation());
+    }
+
+    private static GroupPeriodGroupPageView display(GroupPeriodGroupView group) {
+        if (group == null) {
+            return null;
+        }
+        GroupRegistrationView registration = group.registration();
+        return new GroupPeriodGroupPageView(
+                group.id(),
+                "N" + String.format("%03d", group.id()),
+                switch (group.role()) {
+                    case LEADER -> "Trưởng nhóm";
+                    case MEMBER -> "Thành viên";
+                },
+                group.role().name(),
+                registration == null ? "Chưa có đề tài" : registration.topicTitle(),
+                registration == null ? "Chưa đăng ký đề tài" : registration.statusLabel(),
+                registration == null ? "bg-secondary-lt" : registration.statusClass());
     }
 
     private InvitationPageView display(InvitationView invitation) {
@@ -334,12 +355,13 @@ public class GroupController {
 
     public record GroupPeriodPageView(
             long id,
+            String code,
             String name,
             String departmentName,
             String studentStart,
             String studentEnd,
             StudentPeriodPhase phase,
-            boolean hasGroup,
+            GroupPeriodGroupPageView group,
             boolean hasPendingInvitation) {
         public String studentWindow() {
             return studentStart + " – " + studentEnd;
@@ -365,12 +387,16 @@ public class GroupController {
             return phase == StudentPeriodPhase.OPEN;
         }
 
+        public boolean hasGroup() {
+            return group != null;
+        }
+
         public boolean actionDisabled() {
-            return !hasGroup && !hasPendingInvitation && !studentOpen();
+            return !hasGroup() && !hasPendingInvitation && !studentOpen();
         }
 
         public String actionLabel() {
-            if (hasGroup) {
+            if (hasGroup()) {
                 return "Xem nhóm của tôi";
             }
             if (hasPendingInvitation) {
@@ -381,6 +407,19 @@ public class GroupController {
                 case OPEN -> "Tạo nhóm";
                 case ENDED -> "Đã kết thúc";
             };
+        }
+    }
+
+    public record GroupPeriodGroupPageView(
+            long id,
+            String code,
+            String roleLabel,
+            String role,
+            String topicTitle,
+            String registrationStatus,
+            String registrationStatusClass) {
+        public String roleClass() {
+            return "LEADER".equals(role) ? "bg-blue-lt" : "bg-azure-lt";
         }
     }
 

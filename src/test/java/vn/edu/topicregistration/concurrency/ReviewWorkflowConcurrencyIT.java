@@ -51,7 +51,8 @@ import vn.edu.topicregistration.service.ReportService;
 import vn.edu.topicregistration.service.ReportService.ReportUpload;
 import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ScoringService;
-import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
+import vn.edu.topicregistration.service.ScoringService.GroupScoreCommand;
+import vn.edu.topicregistration.service.ScoringService.ScoreRowCommand;
 
 /** T008: proves report, score, complete and publish races preserve the final invariants. */
 @SpringBootTest
@@ -92,6 +93,18 @@ class ReviewWorkflowConcurrencyIT {
         fixture = new ReviewFixtureSupport(
                 DATABASE.dataSource(), Clock.fixed(NOW, ZoneOffset.UTC), reportRoot)
                 .seed(FIXTURE_PASSWORD);
+        jdbc.update("DELETE FROM evaluations WHERE council_id = ? "
+                        + "AND (registration_id <> ? OR evaluator_id <> ?)",
+                fixture.activeCouncilId(), fixture.activeRegistrationOneId(),
+                fixture.secretaryId());
+        jdbc.update("DELETE FROM council_topics WHERE council_id = ? "
+                        + "AND registration_id <> ?",
+                fixture.activeCouncilId(), fixture.activeRegistrationOneId());
+        jdbc.update("UPDATE councils SET chair_id = ?, grading_mode = 'DIRECT' WHERE id = ?",
+                fixture.secretaryId(), fixture.activeCouncilId());
+        jdbc.update("DELETE FROM council_members WHERE council_id = ? "
+                        + "AND lecturer_id <> ?",
+                fixture.activeCouncilId(), fixture.secretaryId());
     }
 
     @AfterEach
@@ -102,25 +115,25 @@ class ReviewWorkflowConcurrencyIT {
     @Test
     void onlyOneConcurrentCompleteAndPublishWins() throws Exception {
         List<Outcome> completions = race(
-                call("lecturer1.demo", () -> results.complete(fixture.activeCouncilId(), 0L),
-                        RoleCode.LECTURER),
-                call("lecturer1.demo", () -> results.complete(fixture.activeCouncilId(), 0L),
-                        RoleCode.LECTURER));
+                call("dean.demo", () -> results.complete(fixture.activeCouncilId(), 0L),
+                        RoleCode.DEAN),
+                call("dean.demo", () -> results.complete(fixture.activeCouncilId(), 0L),
+                        RoleCode.DEAN));
 
         assertOneSuccessAndOneStaleFailure(completions);
         assertEquals("COMPLETED", councilStatus());
-        assertEquals(6, count("SELECT COUNT(*) FROM final_results WHERE council_id = ?",
+        assertEquals(3, count("SELECT COUNT(*) FROM final_results WHERE council_id = ?",
                 fixture.activeCouncilId()));
 
         List<Outcome> publications = race(
                 call("dean.demo", () -> results.publish(fixture.activeCouncilId(), 1L),
-                        RoleCode.DEAN, RoleCode.LECTURER),
+                        RoleCode.DEAN),
                 call("dean.demo", () -> results.publish(fixture.activeCouncilId(), 1L),
-                        RoleCode.DEAN, RoleCode.LECTURER));
+                        RoleCode.DEAN));
 
         assertOneSuccessAndOneStaleFailure(publications);
         assertEquals("PUBLISHED", councilStatus());
-        assertEquals(6, count("""
+        assertEquals(3, count("""
                 SELECT COUNT(*) FROM final_results
                 WHERE council_id = ? AND status = 'PUBLISHED'
                 """, fixture.activeCouncilId()));
@@ -130,31 +143,38 @@ class ReviewWorkflowConcurrencyIT {
     void scoreRacingCompleteIsEitherIncludedOrRejectedBeforeTheSnapshot() throws Exception {
         authenticate("lecturer4.demo", RoleCode.LECTURER);
         var studentScore = scoring.workspace(
-                fixture.activeCouncilId(), fixture.activeRegistrationOneId())
-                .students().getFirst();
-        long evaluationVersion = studentScore.evaluation().version();
+                fixture.activeCouncilId(), fixture.activeRegistrationOneId());
+        var firstStudent = studentScore.students().getFirst();
+        long evaluationVersion = firstStudent.evaluation().version();
         SecurityContextHolder.clearContext();
 
         List<Outcome> outcomes = race(
-                call("lecturer4.demo", () -> scoring.submit(
+                call("lecturer4.demo", () -> scoring.submitGroup(
                         fixture.activeCouncilId(),
                         fixture.activeRegistrationOneId(),
-                        studentScore.studentId(),
-                        new ScoreCommand(
-                                new BigDecimal("10.00"),
-                                "Concurrent update",
-                                evaluationVersion)), RoleCode.LECTURER),
-                call("lecturer1.demo", () -> results.complete(
-                        fixture.activeCouncilId(), 0L), RoleCode.LECTURER));
+                        new GroupScoreCommand(
+                                studentScore.assignment().councilVersion(),
+                                studentScore.students().stream().map(student ->
+                                        new ScoreRowCommand(
+                                                student.studentId(),
+                                                new BigDecimal("10.00"),
+                                                "Concurrent update",
+                                                student.evaluation().version())).toList())),
+                        RoleCode.LECTURER),
+                call("dean.demo", () -> results.complete(
+                        fixture.activeCouncilId(), 0L), RoleCode.DEAN));
 
         Outcome scoreOutcome = outcomes.getFirst();
         Outcome completeOutcome = outcomes.getLast();
         assertTrue(completeOutcome.success(),
                 () -> "Completion failed: " + completeOutcome.failure());
         if (!scoreOutcome.success()) {
-            ApplicationException rejected = assertInstanceOf(
-                    ApplicationException.class, scoreOutcome.failure());
-            assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, rejected.code());
+            if (scoreOutcome.failure() instanceof ApplicationException rejected) {
+                assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, rejected.code());
+            } else {
+                assertInstanceOf(
+                        OptimisticLockingFailureException.class, scoreOutcome.failure());
+            }
         }
         assertEquals("COMPLETED", councilStatus());
 
@@ -164,12 +184,12 @@ class ReviewWorkflowConcurrencyIT {
                   AND status = 'SUBMITTED'
                 """, BigDecimal.class,
                 fixture.activeCouncilId(), fixture.activeRegistrationOneId(),
-                studentScore.studentId());
+                firstStudent.studentId());
         BigDecimal storedScore = jdbc.queryForObject("""
                 SELECT final_score FROM final_results
                 WHERE registration_id = ? AND student_id = ?
                 """, BigDecimal.class, fixture.activeRegistrationOneId(),
-                studentScore.studentId());
+                firstStudent.studentId());
         assertTrue(expectedMean != null && storedScore != null);
         assertEquals(0, expectedMean.compareTo(storedScore),
                 "Final score must use one consistent submitted-evaluation snapshot");

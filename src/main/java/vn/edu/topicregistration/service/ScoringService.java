@@ -3,12 +3,16 @@ package vn.edu.topicregistration.service;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -26,6 +30,7 @@ import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
@@ -38,6 +43,7 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.ScoreComponentRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -55,6 +61,8 @@ public class ScoringService {
     private final RegistrationMemberRepository registrationMembers;
     private final ScoreComponentRepository components;
     private final EvaluationRepository evaluations;
+    private final ReviewerAssignmentRepository reviewerAssignments;
+    private final DirectGradingService directGrading;
     private final AuthorizationPolicy authorization;
     private final Clock clock;
 
@@ -66,6 +74,8 @@ public class ScoringService {
             RegistrationMemberRepository registrationMembers,
             ScoreComponentRepository components,
             EvaluationRepository evaluations,
+            ReviewerAssignmentRepository reviewerAssignments,
+            @Lazy DirectGradingService directGrading,
             AuthorizationPolicy authorization,
             Clock clock) {
         this.periods = periods;
@@ -75,26 +85,26 @@ public class ScoringService {
         this.registrationMembers = registrationMembers;
         this.components = components;
         this.evaluations = evaluations;
+        this.reviewerAssignments = reviewerAssignments;
+        this.directGrading = directGrading;
         this.authorization = authorization;
         this.clock = clock;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EvaluationView saveDraft(
+    public List<EvaluationView> saveGroupDraft(
             long councilId,
             long registrationId,
-            long studentId,
-            ScoreCommand command) {
-        return mutate(councilId, registrationId, studentId, command, false);
+            GroupScoreCommand command) {
+        return mutateGroup(councilId, registrationId, command, false);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EvaluationView submit(
+    public List<EvaluationView> submitGroup(
             long councilId,
             long registrationId,
-            long studentId,
-            ScoreCommand command) {
-        return mutate(councilId, registrationId, studentId, command, true);
+            GroupScoreCommand command) {
+        return mutateGroup(councilId, registrationId, command, true);
     }
 
     @Transactional(readOnly = true)
@@ -162,23 +172,10 @@ public class ScoringService {
                 toAssignmentView(assignment, lecturer.accountId()), students);
     }
 
-    @Transactional(readOnly = true)
-    public StudentScoreWorkspace studentWorkspace(
-            long councilId, long registrationId, long studentId) {
-        ScoreWorkspace workspace = workspace(councilId, registrationId);
-        StudentScoreView student = workspace.students().stream()
-                .filter(candidate -> candidate.studentId() == studentId)
-                .findFirst()
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        return new StudentScoreWorkspace(workspace.assignment(), student);
-    }
-
-    private EvaluationView mutate(
+    private List<EvaluationView> mutateGroup(
             long councilId,
             long registrationId,
-            long studentId,
-            ScoreCommand command,
+            GroupScoreCommand command,
             boolean submit) {
         Objects.requireNonNull(command, "command");
         long periodId = councils.findPeriodIdByCouncilId(councilId)
@@ -191,6 +188,10 @@ public class ScoringService {
         CouncilEntity council = councils.findByIdForUpdate(councilId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (command.expectedCouncilVersion() == null
+                || council.getVersion() != command.expectedCouncilVersion()) {
+            throw new OptimisticLockingFailureException("Council version is stale");
+        }
         if (!Objects.equals(council.getPeriod().getId(), period.getId())) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
@@ -218,66 +219,129 @@ public class ScoringService {
                 .findFirst()
                 .orElse(null);
         RegistrationEntity registration = assignment.getRegistration();
-        RegistrationMemberEntity snapshotStudent = registrationMembers
-                .findAllByRegistrationId(registrationId)
-                .stream()
-                .filter(candidate -> Objects.equals(
-                        candidate.getStudent().getId(), studentId))
-                .findFirst()
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (council.getMode() == CouncilMode.DIRECT
+                && "TLCN".equals(period.getTopicType())) {
+            directGrading.requireSubmittedReviewerForScoring(registration);
+        }
+        if (council.getMode() == CouncilMode.COUNCIL
+                && "KLTN".equals(period.getTopicType())) {
+            ReviewerAssignmentEntity reviewer = reviewerAssignments
+                    .findActiveByRegistrationIdForUpdate(registrationId, List.of(
+                            ReviewerAssignmentEntity.Status.ASSIGNED,
+                            ReviewerAssignmentEntity.Status.SUBMITTED))
+                    .orElseThrow(() -> new ApplicationException(
+                            ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT));
+            UserAccountEntity reviewerAccount = reviewer.getReviewer();
+            Long reviewerId = reviewerAccount == null ? null : reviewerAccount.getId();
+            if (reviewerId == null
+                    || !reviewerAccount.isEnabled()
+                    || !reviewerAccount.getRoleCodes().contains(RoleCode.LECTURER)
+                    || reviewerAccount.getRoleCodes().contains(RoleCode.DEAN)
+                    || reviewerAccount.getFaculty() == null
+                    || !Objects.equals(reviewerAccount.getFaculty().getId(),
+                            period.getFaculty().getId())
+                    || registration.getTopic().getSupervisors().stream().anyMatch(
+                            supervisor -> Objects.equals(
+                                    supervisor.getLecturer().getId(), reviewerId))
+                    || lockedMembers.stream().anyMatch(candidate -> Objects.equals(
+                            candidate.getLecturer().getId(), reviewerId))) {
+                throw new ApplicationException(
+                        ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
+            }
+        }
+        List<RegistrationMemberEntity> snapshotStudents = registrationMembers
+                .findAllByRegistrationId(registrationId);
+        if (snapshotStudents.isEmpty() || snapshotStudents.size() > 3) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        Map<Long, ScoreRowCommand> commandByStudent = exactRows(
+                snapshotStudents, command.rows());
         boolean assignedMember = member != null
                 && Objects.equals(member.getLecturer().getId(), actor.accountId());
         boolean supervisor = isSupervisor(registration, actor.accountId());
-        applyRules(new ScoreContext(
-                council.getStatus(),
-                registration.getStatus(),
-                assignedMember,
-                supervisor,
-                command.score()));
+        for (ScoreRowCommand row : command.rows()) {
+            applyRules(new ScoreContext(
+                    council.getStatus(),
+                    registration.getStatus(),
+                    assignedMember,
+                    supervisor,
+                    row.score()));
+        }
         List<EvaluationEntity> lockedEvaluations = evaluations
                 .findAllByCouncilIdForUpdate(councilId);
-        ScoreComponentEntity component = components
-                .findByPeriodIdAndName(periodId, ScoreComponentEntity.COUNCIL_SCORE_NAME)
-                .orElseGet(() -> components.saveAndFlush(new ScoreComponentEntity(period)));
-        Optional<EvaluationEntity> existing = lockedEvaluations.stream()
+        Optional<ScoreComponentEntity> existingComponent = components
+                .findByPeriodIdAndName(periodId, ScoreComponentEntity.COUNCIL_SCORE_NAME);
+        Map<Long, EvaluationEntity> existingByStudent = lockedEvaluations.stream()
                 .filter(evaluation -> Objects.equals(
                         evaluation.getRegistration().getId(), registrationId))
                 .filter(evaluation -> Objects.equals(
-                        evaluation.getStudent().getId(), studentId))
-                .filter(evaluation -> Objects.equals(
                         evaluation.getEvaluator().getId(), actor.accountId()))
-                .filter(evaluation -> Objects.equals(
-                        evaluation.getComponent().getId(), component.getId()))
-                .findFirst();
-        validateVersion(existing, command.expectedVersion());
+                .filter(evaluation -> existingComponent.isPresent()
+                        && Objects.equals(evaluation.getComponent().getId(),
+                                existingComponent.get().getId()))
+                .collect(Collectors.toMap(
+                        evaluation -> evaluation.getStudent().getId(),
+                        evaluation -> evaluation));
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            Long studentId = snapshot.getStudent().getId();
+            validateVersion(Optional.ofNullable(existingByStudent.get(studentId)),
+                    commandByStudent.get(studentId).expectedVersion());
+        }
 
         Instant now = clock.instant();
-        if (existing.isPresent()) {
-            EvaluationEntity evaluation = existing.get();
-            if (submit) {
-                evaluation.submit(command.score(), command.feedback(), now);
-            } else {
-                evaluation.saveDraft(command.score(), command.feedback(), now);
-            }
-            evaluations.flush();
-            return toView(evaluation);
-        }
-
+        ScoreComponentEntity component = existingComponent.orElseGet(
+                () -> components.saveAndFlush(new ScoreComponentEntity(period)));
         UserAccountEntity evaluator = Objects.requireNonNull(member, "member").getLecturer();
-        EvaluationEntity evaluation = new EvaluationEntity(
-                registration,
-                snapshotStudent.getStudent(),
-                evaluator,
-                component,
-                council,
-                command.score(),
-                command.feedback(),
-                now);
-        if (submit) {
-            evaluation.submit(command.score(), command.feedback(), now);
+        List<EvaluationEntity> changed = new java.util.ArrayList<>();
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            Long studentId = snapshot.getStudent().getId();
+            ScoreRowCommand row = commandByStudent.get(studentId);
+            EvaluationEntity evaluation = existingByStudent.get(studentId);
+            if (evaluation == null) {
+                evaluation = new EvaluationEntity(
+                        registration,
+                        snapshot.getStudent(),
+                        evaluator,
+                        component,
+                        council,
+                        row.score(),
+                        row.feedback(),
+                        now);
+                if (submit) {
+                    evaluation.submit(row.score(), row.feedback(), now);
+                }
+                evaluation = evaluations.save(evaluation);
+            } else if (submit) {
+                evaluation.submit(row.score(), row.feedback(), now);
+            } else {
+                evaluation.saveDraft(row.score(), row.feedback(), now);
+            }
+            changed.add(evaluation);
         }
-        return toView(evaluations.saveAndFlush(evaluation));
+        evaluations.flush();
+        return changed.stream().map(ScoringService::toView).toList();
+    }
+
+    private static Map<Long, ScoreRowCommand> exactRows(
+            List<RegistrationMemberEntity> snapshotStudents,
+            List<ScoreRowCommand> rows) {
+        if (rows == null || rows.size() != snapshotStudents.size()) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        Map<Long, ScoreRowCommand> rowByStudent = new LinkedHashMap<>();
+        for (ScoreRowCommand row : rows) {
+            if (row == null || row.studentId() == null
+                    || rowByStudent.putIfAbsent(row.studentId(), row) != null) {
+                throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+            }
+        }
+        Set<Long> snapshotIds = snapshotStudents.stream()
+                .map(snapshot -> snapshot.getStudent().getId())
+                .collect(Collectors.toSet());
+        if (!snapshotIds.equals(rowByStudent.keySet())) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        return rowByStudent;
     }
 
     private static void validateVersion(
@@ -325,20 +389,42 @@ public class ScoringService {
                         periodId);
     }
 
-    private static ScoringAssignmentView toAssignmentView(
+    private ScoringAssignmentView toAssignmentView(
             CouncilTopicEntity assignment,
             long actorId) {
+        long councilId = assignment.getCouncil().getId();
+        long registrationId = assignment.getRegistration().getId();
+        var studentIds = registrationMembers.findAllByRegistrationId(registrationId)
+                .stream().map(member -> member.getStudent().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        List<EvaluationEntity> rows = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, actorId).stream()
+                .filter(row -> studentIds.contains(row.getStudent().getId()))
+                .toList();
+        List<EvaluationEntity> submitted = rows.stream()
+                .filter(row -> row.getStatus() == EvaluationStatus.SUBMITTED)
+                .toList();
+        int submittedCount = (int) submitted.stream()
+                .map(row -> row.getStudent().getId()).distinct().count();
+        String progressStatus = !studentIds.isEmpty() && submittedCount == studentIds.size()
+                ? "SUBMITTED" : rows.isEmpty() ? "NOT_STARTED" : "DRAFT";
+        Instant fullySubmittedAt = "SUBMITTED".equals(progressStatus)
+                ? submitted.stream().map(EvaluationEntity::getSubmittedAt)
+                        .filter(Objects::nonNull).max(Instant::compareTo).orElse(null)
+                : null;
         return new ScoringAssignmentView(
-                assignment.getCouncil().getId(),
+                councilId,
                 assignment.getCouncil().getName(),
-                assignment.getRegistration().getId(),
+                registrationId,
                 assignment.getRegistration().getGroup().getId(),
                 assignment.getRegistration().getTopic().getTitle(),
                 assignment.getScheduledAt(),
                 assignment.getLocation(),
                 Objects.equals(assignment.getCouncil().getChair().getId(), actorId),
                 assignment.getCouncil().getVersion(),
-                assignment.getCouncil().getMode() == CouncilMode.DIRECT);
+                assignment.getCouncil().getMode() == CouncilMode.DIRECT,
+                progressStatus, submittedCount, studentIds.size(), fullySubmittedAt);
     }
 
     private static EvaluationView toView(EvaluationEntity evaluation) {
@@ -383,7 +469,16 @@ public class ScoringService {
         }
     }
 
-    public record ScoreCommand(
+    public record GroupScoreCommand(
+            Long expectedCouncilVersion,
+            List<ScoreRowCommand> rows) {
+        public GroupScoreCommand {
+            rows = rows == null ? null : List.copyOf(rows);
+        }
+    }
+
+    public record ScoreRowCommand(
+            Long studentId,
             BigDecimal score,
             String feedback,
             Long expectedVersion) {
@@ -399,7 +494,19 @@ public class ScoringService {
             String location,
             boolean currentChair,
             long councilVersion,
-            boolean directGrading) {
+            boolean directGrading,
+            String progressStatus,
+            int submittedCount,
+            int totalCount,
+            Instant fullySubmittedAt) {
+        public ScoringAssignmentView(
+                Long councilId, String councilName, Long registrationId, Long groupId,
+                String topicTitle, Instant scheduledAt, String location,
+                boolean currentChair, long councilVersion, boolean directGrading) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, currentChair, councilVersion, directGrading,
+                    "NOT_STARTED", 0, 0, null);
+        }
         public ScoringAssignmentView(
                 Long councilId,
                 String councilName,
@@ -453,8 +560,4 @@ public class ScoringService {
             EvaluationView evaluation) {
     }
 
-    public record StudentScoreWorkspace(
-            ScoringAssignmentView assignment,
-            StudentScoreView student) {
-    }
 }

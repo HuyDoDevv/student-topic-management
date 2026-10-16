@@ -47,7 +47,8 @@ public class NavigationModelAdvice {
                 roles.contains(RoleCode.LECTURER) && !roles.contains(RoleCode.DEAN));
         model.addAttribute("canManageGroups", roles.contains(RoleCode.STUDENT));
         model.addAttribute("canManageBoards", roles.contains(RoleCode.DEAN));
-        model.addAttribute("canScoreBoards", roles.contains(RoleCode.LECTURER));
+        model.addAttribute("canScoreBoards",
+                roles.contains(RoleCode.LECTURER) && !roles.contains(RoleCode.DEAN));
         model.addAttribute("canViewFacultyResults", roles.contains(RoleCode.DEAN));
         model.addAttribute("canViewStudentResults", roles.contains(RoleCode.STUDENT));
         model.addAttribute("canManageAccounts", roles.contains(RoleCode.ADMIN));
@@ -63,9 +64,6 @@ public class NavigationModelAdvice {
     }
 
     private static String roleLabel(Set<RoleCode> roles) {
-        if (roles.contains(RoleCode.DEAN) && roles.contains(RoleCode.LECTURER)) {
-            return "Trưởng khoa · Giảng viên";
-        }
         if (roles.contains(RoleCode.DEAN)) {
             return "Trưởng khoa";
         }

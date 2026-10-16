@@ -3,10 +3,13 @@ package vn.edu.topicregistration.service;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -22,11 +25,14 @@ import vn.edu.topicregistration.entity.CouncilMemberEntity;
 import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.EvaluationEntity;
+import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.NotificationEventType;
 import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
 import vn.edu.topicregistration.entity.UserAccountEntity;
@@ -35,9 +41,12 @@ import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.CouncilMemberRepository;
 import vn.edu.topicregistration.repository.CouncilRepository;
 import vn.edu.topicregistration.repository.CouncilTopicRepository;
+import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.ProjectReportRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
 import vn.edu.topicregistration.repository.RegistrationRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
@@ -56,7 +65,10 @@ public class CouncilService {
     private final CouncilMemberRepository members;
     private final CouncilTopicRepository councilTopics;
     private final RegistrationRepository registrations;
+    private final RegistrationMemberRepository registrationMembers;
     private final ProjectReportRepository reports;
+    private final ReviewerAssignmentRepository reviewerAssignments;
+    private final EvaluationRepository evaluations;
     private final AuthorizationPolicy authorization;
     private final NotificationService notifications;
     private final EntityManager entityManager;
@@ -69,7 +81,10 @@ public class CouncilService {
             CouncilMemberRepository members,
             CouncilTopicRepository councilTopics,
             RegistrationRepository registrations,
+            RegistrationMemberRepository registrationMembers,
             ProjectReportRepository reports,
+            ReviewerAssignmentRepository reviewerAssignments,
+            EvaluationRepository evaluations,
             AuthorizationPolicy authorization,
             NotificationService notifications,
             EntityManager entityManager,
@@ -80,7 +95,10 @@ public class CouncilService {
         this.members = members;
         this.councilTopics = councilTopics;
         this.registrations = registrations;
+        this.registrationMembers = registrationMembers;
         this.reports = reports;
+        this.reviewerAssignments = reviewerAssignments;
+        this.evaluations = evaluations;
         this.authorization = authorization;
         this.notifications = notifications;
         this.entityManager = entityManager;
@@ -136,6 +154,7 @@ public class CouncilService {
         Objects.requireNonNull(command, "command");
         LockedCouncil locked = lockedCouncil(councilId, command.expectedVersion());
         CouncilEntity council = locked.council();
+        requireCurrentCouncilWorkflow(locked);
 
         List<CouncilTopicEntity> currentAssignments = councilTopics
                 .findAllByCouncilIdForUpdate(councilId);
@@ -155,6 +174,7 @@ public class CouncilService {
                         assignment.getCouncil().getId(), councilId))
                 .orElse(false);
         boolean supervisorConflict = hasSupervisorConflict(currentMembers, registration);
+        boolean reviewerConflict = invalidReviewer(registration, currentMembers);
 
         applyRules(() -> CouncilRules.validateAssignment(new AssignmentContext(
                 council.getStatus(),
@@ -167,12 +187,16 @@ public class CouncilService {
                         registration.getTopic().getPeriod().getFaculty().getId(),
                         council.getPeriod().getFaculty().getId()),
                 assignedElsewhere,
-                supervisorConflict)));
+                supervisorConflict,
+                reviewerConflict)));
 
         String location = command.location() == null ? null : command.location().strip();
         if (command.scheduledAt() == null || location == null || location.isEmpty()
                 || location.length() > 500) {
             throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
+        }
+        if (!CouncilRules.isFutureSchedule(command.scheduledAt(), clock.instant())) {
+            throw new InvalidScheduleException();
         }
         CouncilTopicEntity assignment = existing.orElseGet(
                 () -> new CouncilTopicEntity(council, registration));
@@ -183,12 +207,118 @@ public class CouncilService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    public CouncilSummaryView updateMembers(long councilId, UpdateMembersCommand command) {
+        Objects.requireNonNull(command, "command");
+        LockedCouncil locked = lockedCouncil(councilId, command.expectedVersion());
+        requireCurrentCouncilWorkflow(locked);
+        CouncilEntity council = locked.council();
+        List<CouncilTopicEntity> assignments = councilTopics.findAllByCouncilIdForUpdate(councilId);
+        List<CouncilMemberEntity> current = members.findAllByCouncilIdForUpdate(councilId);
+        if ((council.getStatus() != CouncilStatus.DRAFT
+                && council.getStatus() != CouncilStatus.ASSIGNED)
+                || !evaluations.findAllByCouncilIdForUpdate(councilId).isEmpty()) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
+        }
+
+        List<Long> requestedIds = requestedMemberIds(new CreateCouncilCommand(
+                locked.period().getId(), council.getName(), command.chairId(),
+                command.secretaryId(), command.memberIds()));
+        List<UserAccountEntity> requested = requestedIds.stream().map(this::detailedAccount).toList();
+        applyRules(() -> CouncilRules.validateCreation(locked.period().getTopicType(),
+                requiredFacultyId(locked.period()), command.chairId(), command.secretaryId(),
+                requested.stream().map(CouncilService::candidate).toList()));
+        List<CouncilMemberEntity> proposed = new ArrayList<>();
+        for (int index = 0; index < requested.size(); index++) {
+            proposed.add(new CouncilMemberEntity(council, requested.get(index), index + 1));
+        }
+        for (CouncilTopicEntity assignment : assignments) {
+            RegistrationEntity registration = assignment.getRegistration();
+            if (hasSupervisorConflict(proposed, registration)
+                    || invalidReviewer(registration, proposed)) {
+                throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_MEMBERS);
+            }
+        }
+
+        Set<Long> desiredIds = Set.copyOf(requestedIds);
+        Map<Long, CouncilMemberEntity> retained = new LinkedHashMap<>();
+        for (CouncilMemberEntity member : current) {
+            retained.put(member.getLecturer().getId(), member);
+        }
+        Long chairId = council.getChair().getId();
+        Long secretaryId = council.getSecretary().getId();
+        for (CouncilMemberEntity member : current) {
+            Long id = member.getLecturer().getId();
+            if (!desiredIds.contains(id) && !id.equals(chairId) && !id.equals(secretaryId)) {
+                members.delete(member);
+                retained.remove(id);
+            }
+        }
+        members.flush();
+
+        for (UserAccountEntity lecturer : requested) {
+            if (retained.containsKey(lecturer.getId())) {
+                continue;
+            }
+            if (retained.size() == 5) {
+                Long outgoing = !desiredIds.contains(chairId) ? chairId : secretaryId;
+                if (desiredIds.contains(outgoing)) {
+                    throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_MEMBERS);
+                }
+                Long otherOfficerId = outgoing.equals(chairId) ? secretaryId : chairId;
+                CouncilMemberEntity temporary = retained.values().stream()
+                        .filter(member -> !member.getLecturer().getId().equals(outgoing)
+                                && !member.getLecturer().getId().equals(otherOfficerId))
+                        .findFirst()
+                        .orElseThrow(() -> new ApplicationException(
+                                ApplicationErrorCode.INVALID_COUNCIL_MEMBERS));
+                if (outgoing.equals(chairId)) {
+                    chairId = temporary.getLecturer().getId();
+                } else {
+                    secretaryId = temporary.getLecturer().getId();
+                }
+                council.changeOfficers(retained.get(chairId).getLecturer(),
+                        retained.get(secretaryId).getLecturer());
+                councils.flush();
+                members.delete(retained.remove(outgoing));
+                members.flush();
+            }
+            int slot = freeSlot(retained.values());
+            retained.put(lecturer.getId(), members.saveAndFlush(
+                    new CouncilMemberEntity(council, lecturer, slot)));
+        }
+
+        council.changeOfficers(findRequested(requested, command.chairId()),
+                findRequested(requested, command.secretaryId()));
+        councils.flush();
+        for (CouncilMemberEntity member : List.copyOf(retained.values())) {
+            if (!desiredIds.contains(member.getLecturer().getId())) {
+                members.delete(member);
+                retained.remove(member.getLecturer().getId());
+            }
+        }
+        members.flush();
+        forceVersionIncrement(council);
+        return toSummary(council);
+    }
+
+    private static int freeSlot(java.util.Collection<CouncilMemberEntity> members) {
+        for (int slot = 1; slot <= 5; slot++) {
+            int candidate = slot;
+            if (members.stream().noneMatch(member -> member.getSlot() == candidate)) {
+                return slot;
+            }
+        }
+        throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_MEMBERS);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CouncilSummaryView transition(
             long councilId,
             long expectedVersion,
             CouncilStatus target) {
         LockedCouncil locked = lockedCouncil(councilId, expectedVersion);
         CouncilEntity council = locked.council();
+        requireCurrentCouncilWorkflow(locked);
         List<CouncilTopicEntity> assignments = councilTopics
                 .findAllByCouncilIdForUpdate(councilId);
         List<CouncilMemberEntity> currentMembers = members
@@ -201,6 +331,9 @@ public class CouncilService {
                 && assignments.stream().anyMatch(
                         assignment -> hasSupervisorConflict(
                                 currentMembers, assignment.getRegistration()));
+        boolean reviewerConflict = target == CouncilStatus.ACTIVE
+                && assignments.stream().anyMatch(assignment -> invalidReviewer(
+                        assignment.getRegistration(), currentMembers));
         boolean allReportsPresent = target != CouncilStatus.ACTIVE
                 || assignments.stream().allMatch(assignment -> reports
                         .findCurrentByRegistrationIdForUpdate(
@@ -215,6 +348,7 @@ public class CouncilService {
                 allScheduled,
                 configurationValid,
                 supervisorConflict,
+                reviewerConflict,
                 allReportsPresent)));
 
         council.transitionTo(target);
@@ -258,6 +392,8 @@ public class CouncilService {
         List<LecturerOption> lecturerOptions = accounts
                 .findEnabledByFacultyAndRole(facultyId, RoleCode.LECTURER)
                 .stream()
+                .filter(account -> account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN))
                 .map(CouncilService::toLecturerOption)
                 .toList();
         return new CreationWorkspace(
@@ -296,23 +432,38 @@ public class CouncilService {
                         displayName(member.getLecturer()),
                         member.getLecturer().getUsername(),
                         member.getSlot(),
-                        member.getSlot() == 1 ? "Chủ tịch"
-                                : member.getSlot() == 2 ? "Thư ký" : "Thành viên"))
+                        Objects.equals(member.getLecturer().getId(), council.getChair().getId())
+                                ? "Chủ tịch"
+                                : Objects.equals(member.getLecturer().getId(),
+                                        council.getSecretary().getId())
+                                        ? "Thư ký" : "Thành viên"))
                 .toList();
         List<CouncilAssignmentView> assignmentViews = councilTopics
                 .findAllByCouncilIdOrderByRegistrationId(councilId)
                 .stream()
-                .map(CouncilService::toAssignmentView)
+                .map(this::toAssignmentView)
                 .toList();
-        List<RegistrationOption> available = scopedDean
+        List<CouncilTopicProgressView> progress = assignmentViews.stream()
+                .map(assignment -> topicProgress(councilId, assignment.registrationId(),
+                        assignment.topicTitle(), memberViews))
+                .toList();
+        boolean manageable = scopedDean
+                && CouncilRules.isSupportedTopicType(council.getPeriod().getTopicType());
+        List<RegistrationOption> available = manageable
                 ? availableRegistrations(council) : List.of();
         return new CouncilDetailView(
                 toSummary(council),
                 memberViews,
                 assignmentViews,
                 available,
-                currentChair,
-                scopedDean);
+                progress,
+                scopedDean,
+                manageable,
+                council.getChair().getId(),
+                council.getSecretary().getId(),
+                manageable && (council.getStatus() == CouncilStatus.DRAFT
+                        || council.getStatus() == CouncilStatus.ASSIGNED)
+                        && !evaluations.existsByCouncilId(councilId));
     }
 
     private LockedCouncil lockedCouncil(long councilId, long expectedVersion) {
@@ -331,6 +482,13 @@ public class CouncilService {
             throw new OptimisticLockingFailureException("Council version is stale");
         }
         return new LockedCouncil(period, council);
+    }
+
+    private static void requireCurrentCouncilWorkflow(LockedCouncil locked) {
+        if (locked.council().getMode() != CouncilMode.COUNCIL
+                || !CouncilRules.isSupportedTopicType(locked.period().getTopicType())) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
+        }
     }
 
     private RegistrationPeriodEntity lockedPeriod(long periodId) {
@@ -390,6 +548,34 @@ public class CouncilService {
                 .anyMatch(memberIds::contains);
     }
 
+    private boolean invalidReviewer(
+            RegistrationEntity registration,
+            List<CouncilMemberEntity> currentMembers) {
+        ReviewerAssignmentEntity assignment = reviewerAssignments
+                .findActiveByRegistrationIdForUpdate(registration.getId(), List.of(
+                        ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED))
+                .orElse(null);
+        if (assignment == null || assignment.getReviewer() == null) {
+            return true;
+        }
+        UserAccountEntity reviewer = assignment.getReviewer();
+        Long reviewerId = reviewer.getId();
+        return !Objects.equals(assignment.getRegistration().getId(), registration.getId())
+                || reviewerId == null
+                || !reviewer.isEnabled()
+                || !reviewer.getRoleCodes().contains(RoleCode.LECTURER)
+                || reviewer.getRoleCodes().contains(RoleCode.DEAN)
+                || reviewer.getFaculty() == null
+                || !Objects.equals(reviewer.getFaculty().getId(),
+                        registration.getPeriod().getFaculty().getId())
+                || registration.getTopic().getSupervisors().stream()
+                        .anyMatch(supervisor -> Objects.equals(
+                                supervisor.getLecturer().getId(), reviewerId))
+                || currentMembers.stream().anyMatch(member -> Objects.equals(
+                        member.getLecturer().getId(), reviewerId));
+    }
+
     private static void validateCurrentMembers(
             RegistrationPeriodEntity period,
             CouncilEntity council,
@@ -418,7 +604,8 @@ public class CouncilService {
                 account.getId(),
                 facultyId,
                 account.isEnabled(),
-                account.getRoleCodes().contains(RoleCode.LECTURER));
+                account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN));
     }
 
     private List<Long> requestedMemberIds(CreateCouncilCommand command) {
@@ -497,13 +684,56 @@ public class CouncilService {
                 lecturer.getId(), displayName(lecturer), lecturer.getUsername());
     }
 
-    private static CouncilAssignmentView toAssignmentView(CouncilTopicEntity assignment) {
+    private CouncilAssignmentView toAssignmentView(CouncilTopicEntity assignment) {
+        ReviewerAssignmentEntity reviewer = reviewerAssignments
+                .findActiveByRegistrationId(assignment.getRegistration().getId(), List.of(
+                        ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED))
+                .orElse(null);
         return new CouncilAssignmentView(
                 assignment.getRegistration().getId(),
                 assignment.getRegistration().getGroup().getId(),
                 assignment.getRegistration().getTopic().getTitle(),
                 assignment.getScheduledAt(),
-                assignment.getLocation());
+                assignment.getLocation(),
+                reviewer == null ? null : displayName(reviewer.getReviewer()),
+                reviewer == null ? "Chưa phân công"
+                        : reviewer.getStatus() == ReviewerAssignmentEntity.Status.SUBMITTED
+                                ? "Đã nộp" : "Chưa nộp");
+    }
+
+    private CouncilTopicProgressView topicProgress(
+            long councilId, long registrationId, String topicTitle,
+            List<CouncilMemberView> memberViews) {
+        Set<Long> studentIds = registrationMembers.findAllByRegistrationId(registrationId)
+                .stream().map(snapshot -> snapshot.getStudent().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        return new CouncilTopicProgressView(registrationId, topicTitle, memberViews.stream()
+                .map(member -> memberProgress(councilId, registrationId, member,
+                        studentIds)).toList());
+    }
+
+    private CouncilMemberProgressView memberProgress(
+            long councilId, long registrationId, CouncilMemberView member,
+            Set<Long> studentIds) {
+        List<EvaluationEntity> rows = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, member.id()).stream()
+                .filter(row -> studentIds.contains(row.getStudent().getId()))
+                .toList();
+        List<EvaluationEntity> submitted = rows.stream()
+                .filter(row -> row.getStatus() == EvaluationStatus.SUBMITTED)
+                .toList();
+        int submittedCount = (int) submitted.stream()
+                .map(row -> row.getStudent().getId()).distinct().count();
+        String status = !studentIds.isEmpty() && submittedCount == studentIds.size()
+                ? "SUBMITTED" : rows.isEmpty() ? "NOT_STARTED" : "DRAFT";
+        Instant submittedAt = "SUBMITTED".equals(status)
+                ? submitted.stream().map(EvaluationEntity::getSubmittedAt)
+                        .filter(Objects::nonNull).max(Instant::compareTo).orElse(null)
+                : null;
+        return new CouncilMemberProgressView(member.fullName(), member.role(),
+                status, submittedCount, studentIds.size(), submittedAt);
     }
 
     private static String displayName(UserAccountEntity account) {
@@ -545,6 +775,20 @@ public class CouncilService {
             Instant scheduledAt,
             String location,
             long expectedVersion) {
+    }
+
+    public static final class InvalidScheduleException extends RuntimeException {
+    }
+
+    public record UpdateMembersCommand(
+            long chairId,
+            long secretaryId,
+            List<Long> memberIds,
+            long expectedVersion) {
+        public UpdateMembersCommand {
+            memberIds = memberIds == null ? null
+                    : java.util.Collections.unmodifiableList(new ArrayList<>(memberIds));
+        }
     }
 
     public record CouncilSummaryView(
@@ -592,7 +836,15 @@ public class CouncilService {
             Long groupId,
             String topicTitle,
             Instant scheduledAt,
-            String location) {
+            String location,
+            String reviewerName,
+            String reviewerStatus) {
+        public CouncilAssignmentView(
+                Long registrationId, Long groupId, String topicTitle,
+                Instant scheduledAt, String location) {
+            this(registrationId, groupId, topicTitle, scheduledAt, location,
+                    null, "Chưa phân công");
+        }
     }
 
     public record RegistrationOption(Long id, Long groupId, String topicTitle) {
@@ -603,12 +855,17 @@ public class CouncilService {
             List<CouncilMemberView> members,
             List<CouncilAssignmentView> assignments,
             List<RegistrationOption> availableRegistrations,
+            List<CouncilTopicProgressView> progress,
             boolean canComplete,
-            boolean canPublish) {
+            boolean canPublish,
+            Long chairId,
+            Long secretaryId,
+            boolean canEditMembers) {
         public CouncilDetailView {
             members = List.copyOf(members);
             assignments = List.copyOf(assignments);
             availableRegistrations = List.copyOf(availableRegistrations);
+            progress = List.copyOf(progress);
         }
 
         public CouncilDetailView(
@@ -616,8 +873,22 @@ public class CouncilService {
                 List<CouncilMemberView> members,
                 List<CouncilAssignmentView> assignments,
                 List<RegistrationOption> availableRegistrations) {
-            this(council, members, assignments, availableRegistrations, false, false);
+            this(council, members, assignments, availableRegistrations, List.of(),
+                    false, false, null, null, false);
         }
+    }
+
+    public record CouncilTopicProgressView(
+            Long registrationId, String topicTitle,
+            List<CouncilMemberProgressView> members) {
+        public CouncilTopicProgressView {
+            members = List.copyOf(members);
+        }
+    }
+
+    public record CouncilMemberProgressView(
+            String memberName, String role, String status,
+            int submittedCount, int totalCount, Instant submittedAt) {
     }
 
     private record LockedCouncil(

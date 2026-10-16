@@ -23,7 +23,9 @@ import vn.edu.topicregistration.entity.EvaluationEntity;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FinalResultEntity;
 import vn.edu.topicregistration.entity.FinalResultStatus;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.entity.TopicEntity;
@@ -37,11 +39,15 @@ import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
+import vn.edu.topicregistration.repository.ReviewerEvaluationRepository;
+import vn.edu.topicregistration.repository.ReviewerReportRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.ResultService;
+import vn.edu.topicregistration.util.ProjectTime;
 
 class StudentResultServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-21T03:00:00Z");
@@ -71,6 +77,12 @@ class StudentResultServiceTest {
                 51L, 31L, FinalResultStatus.PUBLISHED)).thenReturn(Optional.of(result));
         EvaluationEntity evaluation = mock(EvaluationEntity.class);
         UserAccountEntity evaluator = account(11L, "Giảng viên A");
+        var council = result.getCouncil();
+        when(council.getMode()).thenReturn(CouncilMode.DIRECT);
+        when(council.getChair()).thenReturn(evaluator);
+        var registration = result.getRegistration();
+        var period = registration.getPeriod();
+        when(period.getTopicType()).thenReturn("COURSE");
         when(evaluation.getEvaluator()).thenReturn(evaluator);
         when(evaluation.getScore()).thenReturn(new BigDecimal("8.50"));
         when(evaluation.getFeedback()).thenReturn("Đạt");
@@ -85,6 +97,8 @@ class StudentResultServiceTest {
 
         assertEquals("Đạt", detail.evaluations().getFirst().feedback());
         assertEquals("3 điểm đã nộp; trung bình 8.50", detail.evaluationSummary());
+        assertEquals("Người chấm trực tiếp", detail.evidence().sources().getFirst().role());
+        assertEquals(new BigDecimal("8.50"), detail.evidence().mean());
     }
 
     @Test
@@ -126,6 +140,9 @@ class StudentResultServiceTest {
         when(topic.getTitle()).thenReturn("Đề tài thử nghiệm");
         RegistrationEntity registration = mock(RegistrationEntity.class);
         when(registration.getId()).thenReturn(51L);
+        RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
+        when(period.getTopicType()).thenReturn("KLTN");
+        when(registration.getPeriod()).thenReturn(period);
         when(registration.getGroup()).thenReturn(group);
         when(registration.getTopic()).thenReturn(topic);
         CouncilEntity council = mock(CouncilEntity.class);
@@ -176,8 +193,13 @@ class StudentResultServiceTest {
             return new ResultService(
                     periods, councils, assignments, members, registrationMembers,
                     evaluations, results,
-                    accounts, authorization, mock(NotificationService.class),
-                    Clock.fixed(NOW, ZoneOffset.UTC));
+                    accounts,
+                    mock(ReviewerAssignmentRepository.class),
+                    mock(ReviewerEvaluationRepository.class),
+                    mock(ReviewerReportRepository.class),
+                    authorization, mock(NotificationService.class),
+                    Clock.fixed(NOW, ZoneOffset.UTC),
+                    new ProjectTime(Clock.fixed(NOW, ZoneOffset.UTC)));
         }
     }
 }

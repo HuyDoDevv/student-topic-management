@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.service;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -9,7 +10,7 @@ import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 
 public final class CouncilRules {
-    private static final Set<String> SUPPORTED_TYPES = Set.of("TLCN", "KLTN");
+    private static final Set<String> SUPPORTED_TYPES = Set.of("KLTN");
 
     private CouncilRules() {
     }
@@ -58,7 +59,8 @@ public final class CouncilRules {
                 || !context.samePeriod()
                 || !context.sameFaculty()
                 || context.assignedElsewhere()
-                || context.supervisorConflict()) {
+                || context.supervisorConflict()
+                || context.reviewerConflict()) {
             throw failure(Failure.INVALID_ASSIGNMENT);
         }
     }
@@ -79,6 +81,7 @@ public final class CouncilRules {
                     && context.allAssignmentsScheduled()
                     && context.membersStillValid()
                     && !context.supervisorConflict()
+                    && !context.reviewerConflict()
                     && context.allReportsPresent();
             default -> false;
         };
@@ -89,6 +92,10 @@ public final class CouncilRules {
 
     public static boolean isSupportedTopicType(String topicType) {
         return SUPPORTED_TYPES.contains(topicType);
+    }
+
+    public static boolean isFutureSchedule(Instant scheduledAt, Instant serverNow) {
+        return scheduledAt != null && scheduledAt.isAfter(Objects.requireNonNull(serverNow));
     }
 
     private static boolean validCardinality(int memberCount) {
@@ -113,47 +120,62 @@ public final class CouncilRules {
             boolean samePeriod,
             boolean sameFaculty,
             boolean assignedElsewhere,
-            boolean supervisorConflict) {
+            boolean supervisorConflict,
+            boolean reviewerConflict) {
+        public AssignmentContext(
+                CouncilStatus councilStatus, String topicType,
+                RegistrationStatus registrationStatus, boolean samePeriod,
+                boolean sameFaculty, boolean assignedElsewhere,
+                boolean supervisorConflict) {
+            this(councilStatus, topicType, registrationStatus, samePeriod, sameFaculty,
+                    assignedElsewhere, supervisorConflict, false);
+        }
         public AssignmentContext withCouncilStatus(CouncilStatus value) {
             return new AssignmentContext(
                     value, topicType, registrationStatus, samePeriod, sameFaculty,
-                    assignedElsewhere, supervisorConflict);
+                    assignedElsewhere, supervisorConflict, reviewerConflict);
         }
 
         public AssignmentContext withTopicType(String value) {
             return new AssignmentContext(
                     councilStatus, value, registrationStatus, samePeriod, sameFaculty,
-                    assignedElsewhere, supervisorConflict);
+                    assignedElsewhere, supervisorConflict, reviewerConflict);
         }
 
         public AssignmentContext withRegistrationStatus(RegistrationStatus value) {
             return new AssignmentContext(
                     councilStatus, topicType, value, samePeriod, sameFaculty,
-                    assignedElsewhere, supervisorConflict);
+                    assignedElsewhere, supervisorConflict, reviewerConflict);
         }
 
         public AssignmentContext withSamePeriod(boolean value) {
             return new AssignmentContext(
                     councilStatus, topicType, registrationStatus, value, sameFaculty,
-                    assignedElsewhere, supervisorConflict);
+                    assignedElsewhere, supervisorConflict, reviewerConflict);
         }
 
         public AssignmentContext withSameFaculty(boolean value) {
             return new AssignmentContext(
                     councilStatus, topicType, registrationStatus, samePeriod, value,
-                    assignedElsewhere, supervisorConflict);
+                    assignedElsewhere, supervisorConflict, reviewerConflict);
         }
 
         public AssignmentContext withAssignedElsewhere(boolean value) {
             return new AssignmentContext(
                     councilStatus, topicType, registrationStatus, samePeriod, sameFaculty,
-                    value, supervisorConflict);
+                    value, supervisorConflict, reviewerConflict);
         }
 
         public AssignmentContext withSupervisorConflict(boolean value) {
             return new AssignmentContext(
                     councilStatus, topicType, registrationStatus, samePeriod, sameFaculty,
-                    assignedElsewhere, value);
+                    assignedElsewhere, value, reviewerConflict);
+        }
+
+        public AssignmentContext withReviewerConflict(boolean value) {
+            return new AssignmentContext(
+                    councilStatus, topicType, registrationStatus, samePeriod, sameFaculty,
+                    assignedElsewhere, supervisorConflict, value);
         }
     }
 
@@ -165,7 +187,16 @@ public final class CouncilRules {
             boolean allAssignmentsScheduled,
             boolean membersStillValid,
             boolean supervisorConflict,
+            boolean reviewerConflict,
             boolean allReportsPresent) {
+        public TransitionContext(
+                CouncilStatus current, CouncilStatus target, int memberCount,
+                int assignmentCount, boolean allAssignmentsScheduled,
+                boolean membersStillValid, boolean supervisorConflict,
+                boolean allReportsPresent) {
+            this(current, target, memberCount, assignmentCount, allAssignmentsScheduled,
+                    membersStillValid, supervisorConflict, false, allReportsPresent);
+        }
     }
 
     public enum Failure {

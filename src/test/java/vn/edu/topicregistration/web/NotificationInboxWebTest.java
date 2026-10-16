@@ -116,7 +116,18 @@ class NotificationInboxWebTest {
         mvc.perform(get("/notifications").principal(authentication(7L)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Bạn chưa có thông báo")))
-                .andExpect(content().string(containsString("Chưa có thông báo để hiển thị.")));
+                .andExpect(content().string(containsString("Chưa có thông báo để hiển thị.")))
+                .andExpect(content().string(not(containsString(
+                        "Nội dung của thông báo chưa sẵn sàng"))));
+    }
+
+    @Test
+    void explainsUnavailableNotificationTargetInInbox() throws Exception {
+        mvc.perform(get("/notifications?target=unavailable")
+                        .principal(authentication(7L)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "Nội dung của thông báo chưa sẵn sàng hoặc không còn khả dụng.")));
     }
 
     @Test

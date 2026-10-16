@@ -314,20 +314,25 @@ public class GroupService {
         ActorIdentity student = currentStudent();
         Instant now = clock.instant();
         return periods.findAllByFacultyIdOrderByLecturerStartDesc(student.facultyId()).stream()
-                .map(period -> new GroupPeriodView(
-                        period.getId(),
-                        period.getName(),
-                        periodDepartmentName(period),
-                        period.getStudentStart(),
-                        period.getStudentEnd(),
-                        StudentPeriodPhase.at(
-                                now, period.getStudentStart(), period.getStudentEnd()),
-                        groups.findByPeriodIdAndMemberStudentId(
-                                period.getId(), student.accountId()).isPresent(),
-                        invitations.existsByPeriodIdAndStudentIdAndStatus(
-                                period.getId(),
-                                student.accountId(),
-                                GroupInvitationStatus.PENDING)))
+                .map(period -> {
+                    Optional<StudentGroupEntity> group = groups
+                            .findByPeriodIdAndMemberStudentId(
+                                    period.getId(), student.accountId());
+                    return new GroupPeriodView(
+                            period.getId(),
+                            period.getName(),
+                            periodDepartmentName(period),
+                            period.getStudentStart(),
+                            period.getStudentEnd(),
+                            StudentPeriodPhase.at(
+                                    now, period.getStudentStart(), period.getStudentEnd()),
+                            group.map(item -> periodGroup(item, student.accountId()))
+                                    .orElse(null),
+                            invitations.existsByPeriodIdAndStudentIdAndStatus(
+                                    period.getId(),
+                                    student.accountId(),
+                                    GroupInvitationStatus.PENDING));
+                })
                 .toList();
     }
 
@@ -380,7 +385,7 @@ public class GroupService {
                 period.getStudentEnd(),
                 StudentPeriodPhase.at(
                         now, period.getStudentStart(), period.getStudentEnd()),
-                current.isPresent(),
+                current.map(group -> periodGroup(group, student.accountId())).orElse(null),
                 invitations.existsByPeriodIdAndStudentIdAndStatus(
                         periodId, student.accountId(), GroupInvitationStatus.PENDING));
         return new GroupWorkspace(periodView, currentView, candidates, outgoing);
@@ -558,6 +563,15 @@ public class GroupService {
                 accepted);
     }
 
+    private GroupPeriodGroupView periodGroup(StudentGroupEntity group, long studentId) {
+        StudentGroupRole role = Objects.equals(group.getLeader().getId(), studentId)
+                ? StudentGroupRole.LEADER
+                : StudentGroupRole.MEMBER;
+        ActiveRegistration registration = activeRegistrations.findForGroup(
+                group.getPeriod().getId(), group.getId()).orElse(null);
+        return new GroupPeriodGroupView(group.getId(), role, display(registration));
+    }
+
     private InvitationView toInvitationView(
             GroupInvitationEntity invitation,
             long viewerId) {
@@ -711,11 +725,29 @@ public class GroupService {
             Instant studentStart,
             Instant studentEnd,
             StudentPeriodPhase phase,
-            boolean hasGroup,
+            GroupPeriodGroupView group,
             boolean hasPendingInvitation) {
+        public boolean hasGroup() {
+            return group != null;
+        }
+
         public boolean studentOpen() {
             return phase == StudentPeriodPhase.OPEN;
         }
+    }
+
+    public record GroupPeriodGroupView(
+            long id,
+            StudentGroupRole role,
+            GroupRegistrationView registration) {
+        public GroupPeriodGroupView {
+            Objects.requireNonNull(role, "role");
+        }
+    }
+
+    public enum StudentGroupRole {
+        LEADER,
+        MEMBER
     }
 
     public enum StudentPeriodPhase {

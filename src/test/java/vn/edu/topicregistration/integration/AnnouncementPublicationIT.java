@@ -67,7 +67,7 @@ class AnnouncementPublicationIT {
                 "notification.admin", "Quản trị", "NOT_A_LOGIN_HASH", true, null, Set.of(RoleCode.ADMIN));
         dean = fixtures.createIdentity(
                 "notification.dean", "Trưởng khoa CNTT", "NOT_A_LOGIN_HASH", true, it,
-                Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+                Set.of(RoleCode.DEAN));
         facultyStudent = fixtures.createIdentity(
                 "notification.student.it", "Sinh viên CNTT", "NOT_A_LOGIN_HASH", true, it,
                 Set.of(RoleCode.STUDENT));

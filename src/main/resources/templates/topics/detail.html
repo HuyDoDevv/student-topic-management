@@ -13,17 +13,28 @@
               th:text="${topic.status}">Nháp</span>
       </div>
     </div>
-    <div class="btn-list" th:if="${topic.draft}">
-      <a class="btn btn-outline-primary" th:href="@{/topics/{id}/edit(id=${topic.id})}">Sửa bản nháp</a>
-      <form th:action="@{/topics/{id}/submit(id=${topic.id})}" method="post" data-prevent-double-submit>
+    <div class="btn-list" th:if="${topic.draft or (topic.approved and period.lecturerOpen)}">
+      <a class="btn btn-outline-primary" th:if="${topic.draft}"
+         th:href="@{/topics/{id}/edit(id=${topic.id})}">Sửa bản nháp</a>
+      <form th:if="${topic.draft}" th:action="@{/topics/{id}/submit(id=${topic.id})}" method="post" data-prevent-double-submit>
         <input type="hidden" name="version" th:value="${topic.version}">
         <button class="btn btn-primary" type="submit" th:disabled="${!period.lecturerOpen}">Gửi duyệt</button>
+      </form>
+      <form th:if="${topic.approved and period.lecturerOpen}"
+            th:action="@{/topics/{id}/return-to-draft(id=${topic.id})}" method="post" data-prevent-double-submit>
+        <input type="hidden" name="version" th:value="${topic.version}">
+        <button class="btn btn-outline-primary" type="submit">Trả về bản nháp để sửa</button>
       </form>
     </div>
   </div>
 
   <div class="alert alert-warning" th:if="${topic.draft and !period.lecturerOpen}">
     Hiện không nằm trong thời gian giảng viên đề xuất đề tài. Bạn vẫn có thể sửa bản nháp, nhưng chỉ gửi duyệt khi đợt mở.
+  </div>
+
+  <div class="alert alert-info" th:if="${topic.approved and period.lecturerOpen}">
+    Chỉ có thể trả đề tài về bản nháp khi chưa công bố và chưa có bất kỳ đăng ký nào.
+    Sau khi sửa, bạn cần gửi duyệt lại.
   </div>
 
   <div class="row row-cards">

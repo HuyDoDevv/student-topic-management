@@ -130,18 +130,20 @@ public class PeriodController {
 
     @GetMapping("/{id}/topics/review")
     String reviewTopics(@PathVariable long id,
-            @RequestParam(required = false) Long departmentId, Model model) {
+            @RequestParam(name = "departmentId", required = false) String departmentId,
+            Model model) {
+        if (departmentId != null) {
+            throw new ApplicationException(ApplicationErrorCode.BAD_REQUEST);
+        }
         common(model);
         PeriodView period = periodService.getForCurrentDean(id);
-        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id, departmentId);
+        ReviewWorkspace workspace = topicReviewService.reviewWorkspace(id);
         ReviewSummary summary = reviewSummary(workspace);
         model.addAttribute("period", display(period));
         model.addAttribute("reviewTopics", workspace.topics().stream()
                 .map(ReviewTopicPageView::from)
                 .toList());
         model.addAttribute("reviewSummary", summary);
-        model.addAttribute("departmentOptions", workspace.departmentOptions());
-        model.addAttribute("selectedDepartmentId", workspace.selectedDepartmentId());
         model.addAttribute("reviewNotice", reviewNotice(period, summary));
         return "topics/review";
     }

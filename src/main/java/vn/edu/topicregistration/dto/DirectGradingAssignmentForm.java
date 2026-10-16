@@ -13,8 +13,11 @@ public class DirectGradingAssignmentForm {
     @Positive(message = "Giảng viên chấm không hợp lệ.")
     private Long graderId;
 
+    @NotNull(message = "Vui lòng tải lại danh sách phân công.")
+    private Long version;
+
     public AssignCommand toCommand() {
-        return new AssignCommand(registrationId, graderId);
+        return new AssignCommand(registrationId, graderId, version);
     }
 
     public Long getRegistrationId() {
@@ -31,5 +34,13 @@ public class DirectGradingAssignmentForm {
 
     public void setGraderId(Long graderId) {
         this.graderId = graderId;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

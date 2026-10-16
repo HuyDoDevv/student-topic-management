@@ -34,6 +34,9 @@
             </div>
           </div>
         </div>
+        <div class="card-body border-top" th:if="${!canEditMembers}">
+          <span class="text-secondary">Không thể sửa thành viên sau khi hội đồng có điểm hoặc đã qua giai đoạn phân công.</span>
+        </div>
       </article>
     </div>
 
@@ -42,10 +45,11 @@
         <div class="card-header"><h2 class="card-title">Đăng ký được phân công</h2></div>
         <div class="table-responsive" th:if="${!assignments.isEmpty()}">
           <table class="table table-vcenter card-table responsive-table">
-            <thead><tr><th>Nhóm / đề tài</th><th>Lịch</th><th>Địa điểm</th></tr></thead>
+            <thead><tr><th>Nhóm / đề tài</th><th>GVPB</th><th>Lịch</th><th>Địa điểm</th></tr></thead>
             <tbody>
             <tr th:each="assignment : ${assignments}">
               <td data-label="Nhóm / đề tài"><a th:href="@{/registrations/{id}(id=${assignment.registrationId})}" th:text="${'N' + #numbers.formatInteger(assignment.groupId, 3)}">N001</a><div class="small text-secondary" th:text="${assignment.topicTitle}">Đề tài</div></td>
+          <td data-label="GVPB"><span th:text="${assignment.reviewerName != null ? assignment.reviewerName : 'Chưa phân công'}">Giảng viên</span><div class="small text-secondary" th:text="${assignment.reviewerStatus}">Chưa nộp</div></td>
               <td data-label="Lịch" th:text="${assignment.scheduledAt}">20/09/2026 09:00</td>
               <td data-label="Địa điểm" th:text="${assignment.location}">Phòng A1-01</td>
             </tr>
@@ -56,6 +60,75 @@
       </article>
     </div>
   </div>
+
+  <article class="card mt-3" th:if="${!progress.isEmpty()}">
+    <div class="card-header"><h2 class="card-title">Tiến độ chấm theo đề tài</h2></div>
+    <div class="card-body border-top" th:each="topic : ${progress}">
+      <h3 class="h4 mb-2" th:text="${topic.topicTitle}">Đề tài</h3>
+      <div class="table-responsive">
+        <table class="table table-vcenter">
+          <thead><tr><th>Người chấm</th><th>Trạng thái</th><th>Đã nộp / Tổng SV</th><th>Nộp đủ lúc</th></tr></thead>
+          <tbody>
+            <tr th:each="member : ${topic.members}">
+              <td><span th:text="${member.memberName}">Giảng viên</span><div class="small text-secondary" th:text="${member.role}">Vai trò</div></td>
+              <td th:text="${member.status == 'SUBMITTED' ? 'Đã nộp đủ' : (member.status == 'DRAFT' ? 'Đang chấm' : 'Chưa bắt đầu')}">Chưa bắt đầu</td>
+              <td th:text="${member.submittedCount + '/' + member.totalCount}">0/3</td>
+              <td th:text="${member.submittedAt != null ? member.submittedAt : '—'}">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+
+  <div th:object="${memberForm}" th:if="${!canEditMembers && #fields.hasGlobalErrors()}"
+       class="alert alert-danger mt-3" role="alert">
+    <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Không thể sửa thành viên.</div>
+  </div>
+
+  <form class="card mt-3" method="post" th:if="${canEditMembers}"
+        th:action="@{/faculty/boards/{id}/members(id=${board.id})}"
+        th:object="${memberForm}" data-prevent-double-submit>
+    <input type="hidden" th:field="*{version}">
+    <div class="card-header"><h2 class="card-title">Sửa thành viên hội đồng</h2></div>
+    <div class="card-body">
+      <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}"
+           th:each="error : ${#fields.globalErrors()}" th:text="${error}">Thành viên chưa hợp lệ.</div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="chairId">Chủ tịch</label>
+          <select class="form-select" id="chairId" th:field="*{chairId}" required>
+            <option value="">Chọn giảng viên</option>
+            <option th:each="lecturer : ${memberCandidates}" th:value="${lecturer.id}"
+                    th:text="${lecturer.fullName + ' (' + lecturer.username + ')'}">Giảng viên</option>
+          </select>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('chairId')}" th:errors="*{chairId}"></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="secretaryId">Thư ký</label>
+          <select class="form-select" id="secretaryId" th:field="*{secretaryId}" required>
+            <option value="">Chọn giảng viên</option>
+            <option th:each="lecturer : ${memberCandidates}" th:value="${lecturer.id}"
+                    th:text="${lecturer.fullName + ' (' + lecturer.username + ')'}">Giảng viên</option>
+          </select>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('secretaryId')}" th:errors="*{secretaryId}"></div>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="memberIds">Thành viên bổ sung (1–3 người)</label>
+          <select class="form-select" id="memberIds" th:field="*{memberIds}" multiple size="5" required>
+            <option th:each="lecturer : ${memberCandidates}" th:value="${lecturer.id}"
+                    th:text="${lecturer.fullName + ' (' + lecturer.username + ')'}">Giảng viên</option>
+          </select>
+          <div class="form-hint">Không chọn trùng Chủ tịch/Thư ký, GVPB hoặc người hướng dẫn của các đề tài đã gán.</div>
+          <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('memberIds')}" th:errors="*{memberIds}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-end"><button class="btn btn-primary" type="submit">Lưu thành viên</button></div>
+  </form>
+  <p class="mt-2" th:if="${canEditMembers}">
+    <a th:href="@{/faculty/reviewers}">Cần thay GVPB trước khi nộp báo cáo hoặc điểm? Mở trang phân công GVPB</a>
+  </p>
 
   <form class="card mt-3" method="post" th:if="${canEditAssignments}"
         th:action="@{/faculty/boards/{id}/assignments(id=${board.id})}"
@@ -75,7 +148,9 @@
         </div>
         <div class="col-md-6 col-lg-3">
           <label class="form-label" for="scheduledAt">Thời gian</label>
-          <input class="form-control" id="scheduledAt" type="datetime-local" th:field="*{scheduledAt}" required>
+          <input class="form-control" id="scheduledAt" type="datetime-local" th:field="*{scheduledAt}"
+                 th:attr="min=${minScheduleAt}" required aria-describedby="scheduledAt-help">
+          <div class="form-hint" id="scheduledAt-help">Chọn thời điểm tương lai theo giờ Việt Nam.</div>
           <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('scheduledAt')}" th:errors="*{scheduledAt}"></div>
         </div>
         <div class="col-md-6 col-lg-4">
@@ -89,10 +164,10 @@
   </form>
 
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'SCHEDULED'}">
-    Khi kích hoạt, hệ thống kiểm tra lại vai trò, khoa, xung đột giảng viên hướng dẫn và báo cáo hiện hành của mọi nhóm.
+    Khi kích hoạt, hệ thống kiểm tra lại GVPB, thành viên, Khoa, xung đột GVHD và báo cáo hiện hành của mọi nhóm.
   </div>
   <div class="alert alert-info mt-3" role="status" th:if="${board.status.name() == 'ACTIVE'}">
-    Chỉ Chủ tịch hiện tại được tổng hợp khi mọi thành viên đã nộp điểm cho tất cả nhóm. Sau khi tổng hợp, điểm và báo cáo đều bị khóa.
+    Chỉ Chủ tịch hiện tại được tổng hợp khi GVPB có PDF và điểm hợp lệ, đồng thời mọi thành viên đã nộp điểm cho tất cả sinh viên. Điểm cuối là trung bình của điểm GVPB và điểm từng thành viên.
   </div>
   <div class="alert alert-warning mt-3" role="status" th:if="${board.status.name() == 'COMPLETED'}">
     Kết quả đang chờ Trưởng khoa công bố đồng thời cho toàn bộ nhóm của hội đồng.

@@ -43,7 +43,7 @@ class DepartmentBackfillMigrationIT {
         long accountCount = count(jdbc, "SELECT COUNT(*) FROM user_accounts");
         long topicCount = count(jdbc, "SELECT COUNT(*) FROM topics");
 
-        Flyway flyway = latest();
+        Flyway flyway = throughV19();
         assertEquals(3, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
@@ -62,7 +62,7 @@ class DepartmentBackfillMigrationIT {
         assertEquals(otherDepartment, topicDepartment(jdbc, existingTopic));
         assertEquals(accountCount, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(topicCount, count(jdbc, "SELECT COUNT(*) FROM topics"));
-        assertEquals(0, latest().migrate().migrationsExecuted);
+        assertEquals(0, throughV19().migrate().migrationsExecuted);
     }
 
     @Test
@@ -76,7 +76,7 @@ class DepartmentBackfillMigrationIT {
         jdbc.update("INSERT INTO topic_supervisors(topic_id, lecturer_id, slot) VALUES (?, ?, 1)",
                 missingTopic, author);
 
-        assertThrows(RuntimeException.class, () -> latest().migrate());
+        assertThrows(RuntimeException.class, () -> throughV19().migrate());
 
         assertNull(topicDepartment(jdbc, missingTopic));
         assertEquals(otherDepartment, accountDepartment(jdbc, author));
@@ -91,7 +91,7 @@ class DepartmentBackfillMigrationIT {
         long lecturer = account(jdbc, "legacy.reuse", faculty, null, "LECTURER");
         long missingTopic = topic(jdbc, period(jdbc, faculty), lecturer, null);
 
-        assertEquals(3, latest().migrate().migrationsExecuted);
+        assertEquals(3, throughV19().migrate().migrationsExecuted);
 
         assertEquals(software, accountDepartment(jdbc, lecturer));
         assertEquals(software, topicDepartment(jdbc, missingTopic));
@@ -112,7 +112,7 @@ class DepartmentBackfillMigrationIT {
         jdbc.update("INSERT INTO topic_supervisors(topic_id, lecturer_id, slot) VALUES (?, ?, 2)",
                 missingTopic, colleague);
 
-        assertThrows(RuntimeException.class, () -> latest().migrate());
+        assertThrows(RuntimeException.class, () -> throughV19().migrate());
 
         assertNull(accountDepartment(jdbc, author));
         assertNull(topicDepartment(jdbc, missingTopic));
@@ -130,7 +130,7 @@ class DepartmentBackfillMigrationIT {
                 "SELECT id FROM faculties WHERE name = 'Khoa ngoài phạm vi T007'", Long.class);
         account(jdbc, "legacy.outside", outsideFaculty, null, "LECTURER");
 
-        assertThrows(RuntimeException.class, () -> latest().migrate());
+        assertThrows(RuntimeException.class, () -> throughV19().migrate());
 
         assertNull(accountDepartment(jdbc, author));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM departments WHERE name = 'Công nghệ phần mềm'"));
@@ -149,10 +149,11 @@ class DepartmentBackfillMigrationIT {
         return new JdbcTemplate(database.dataSource());
     }
 
-    private static Flyway latest() {
+    private static Flyway throughV19() {
         return Flyway.configure()
                 .dataSource(MySqlTestSupport.fromEnvironment().dataSource())
                 .locations(MIGRATIONS)
+                .target(MigrationVersion.fromVersion("19"))
                 .load();
     }
 

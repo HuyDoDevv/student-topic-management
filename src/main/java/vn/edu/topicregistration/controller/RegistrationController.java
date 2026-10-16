@@ -202,6 +202,7 @@ public class RegistrationController {
             model.addAttribute("withdrawForm", withdrawForm);
         }
         addDetailModel(model, registration);
+        model.addAttribute("progress", registrations.progressForVisible(registration.id()));
         return "registrations/detail";
     }
 

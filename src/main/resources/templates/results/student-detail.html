@@ -17,20 +17,25 @@
       <div class="text-secondary text-uppercase fw-bold">Điểm cuối</div>
       <div class="display-1 fw-bold text-primary mt-2" th:text="${result.finalScore}">8.50</div>
       <p class="text-secondary mt-2 mb-0" th:text="${evaluationSummary}">3 điểm đã nộp; trung bình 8.50</p>
+      <div th:if="${evidence != null}" class="mt-3">
+        <p class="mb-1" th:text="${'Công thức: ' + evidence.formula}">Công thức</p>
+        <p class="mb-1" th:text="${'Nguồn điểm: ' + evidence.submittedSourceCount + '/' + evidence.expectedSourceCount}">3/3</p>
+        <p class="mb-0" th:text="${'Trung bình nguồn: ' + (evidence.mean != null ? evidence.mean : 'Không đủ dữ liệu lịch sử')}">8.50</p>
+      </div>
       <p class="small text-secondary mt-3 mb-0" th:text="${'Công bố lúc ' + result.publishedAt}">Công bố lúc 21/09/2026 10:00</p>
     </div>
   </div>
 
-  <article class="card">
-    <div class="card-header"><h2 class="card-title">Điểm và nhận xét của hội đồng</h2></div>
+  <article class="card" th:if="${evidence != null}">
+    <div class="card-header"><h2 class="card-title">Căn cứ điểm đã công bố</h2></div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Giảng viên</th><th>Điểm</th><th>Nhận xét</th></tr></thead>
+        <thead><tr><th>Người chấm / Vai trò</th><th>Điểm đã nộp</th><th>Nhận xét</th></tr></thead>
         <tbody>
-        <tr th:each="evaluation : ${evaluations}">
-          <td data-label="Giảng viên" class="fw-semibold" th:text="${evaluation.evaluatorName}">Giảng viên A</td>
-          <td data-label="Điểm"><span class="badge bg-blue-lt fs-5" th:text="${evaluation.score}">8.50</span></td>
-          <td data-label="Nhận xét" th:text="${evaluation.feedback != null ? evaluation.feedback : 'Không có nhận xét'}">Đạt</td>
+        <tr th:each="source : ${evidence.sources}">
+          <td data-label="Người chấm / Vai trò"><strong th:text="${source.actorName}">Giảng viên A</strong><div class="small text-secondary" th:text="${source.role}">Thành viên</div></td>
+          <td data-label="Điểm đã nộp" th:text="${source.score != null ? source.score : '—'}">8.50</td>
+          <td data-label="Nhận xét" th:text="${source.feedback != null ? source.feedback : '—'}">Đạt</td>
         </tr>
         </tbody>
       </table>

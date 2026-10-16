@@ -14,40 +14,60 @@
       <a class="btn btn-outline-secondary" th:if="${assignment.currentChair and !assignment.directGrading}"
          th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
       <a class="btn btn-outline-primary" th:href="@{/reports/{id}(id=${assignment.registrationId})}">Xem báo cáo</a>
-      <form th:if="${assignment.directGrading and allSubmitted}" method="post"
-            th:action="@{/lecturer/direct-grading/{id}/complete(id=${assignment.councilId})}"
-            data-prevent-double-submit>
-        <input type="hidden" name="version" th:value="${assignment.councilVersion}">
-        <button class="btn btn-success" type="submit"
-                data-confirm="Hoàn tất lượt chấm này? Điểm và báo cáo sẽ bị khóa để chờ Trưởng khoa công bố.">Hoàn tất chấm</button>
-      </form>
     </div>
   </div>
+  <div class="alert alert-info" th:if="${assignment.directGrading and allSubmitted}">
+    Bạn đã nộp đủ điểm. Trưởng khoa sẽ đối soát, tổng hợp và công bố kết quả.
+  </div>
 
-  <div class="card">
-    <div class="card-header"><h2 class="card-title">Điểm theo từng sinh viên</h2></div>
+  <form class="card" method="post"
+        th:action="@{/lecturer/scoring/{councilId}/{registrationId}/draft(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}"
+        th:object="${groupScoreForm}">
+    <input type="hidden" th:field="*{councilVersion}">
+    <div class="card-header"><h2 class="card-title">Phiếu chấm toàn bộ nhóm</h2></div>
+    <div class="card-body pb-0">
+      <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu không hợp lệ.</div>
+      <p class="text-secondary mb-3">Nhập điểm và nhận xét cho tất cả sinh viên. Lưu nháp hoặc nộp điểm sẽ áp dụng cho toàn bộ nhóm.</p>
+    </div>
     <div class="table-responsive">
       <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Sinh viên</th><th>Vị trí</th><th>Điểm</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+        <thead><tr><th>Sinh viên</th><th>Vị trí</th><th style="min-width: 10rem">Điểm</th><th style="min-width: 18rem">Nhận xét</th><th>Trạng thái</th></tr></thead>
         <tbody>
-        <tr th:each="student : ${students}">
-          <td data-label="Sinh viên" class="fw-semibold" th:text="${student.studentName}">Sinh viên A</td>
+        <tr th:each="student, rowStat : ${students}">
+          <td data-label="Sinh viên" class="fw-semibold">
+            <input type="hidden" th:field="*{rows[__${rowStat.index}__].studentId}">
+            <input type="hidden" th:field="*{rows[__${rowStat.index}__].version}">
+            <span th:text="${student.studentName}">Sinh viên A</span>
+          </td>
           <td data-label="Vị trí" th:text="${student.leaderAtSubmission ? 'Trưởng nhóm' : 'Thành viên'}">Thành viên</td>
-          <td data-label="Điểm" th:text="${student.evaluation != null ? student.evaluation.score : '—'}">—</td>
+          <td data-label="Điểm">
+            <input class="form-control" type="number" min="0" max="10" step="0.25"
+                   th:field="*{rows[__${rowStat.index}__].score}"
+                   th:aria-label="${'Điểm tổng của ' + student.studentName}"
+                   th:classappend="${#fields.hasErrors('rows[' + rowStat.index + '].score')} ? 'is-invalid'">
+            <div class="invalid-feedback" th:errors="*{rows[__${rowStat.index}__].score}">Điểm không hợp lệ.</div>
+          </td>
+          <td data-label="Nhận xét">
+            <textarea class="form-control" rows="2"
+                      th:aria-label="${'Nhận xét riêng cho ' + student.studentName}"
+                      th:field="*{rows[__${rowStat.index}__].feedback}"></textarea>
+          </td>
           <td data-label="Trạng thái">
             <span class="badge" th:classappend="${student.evaluation != null and student.evaluation.status.name() == 'SUBMITTED'} ? 'bg-green-lt' : 'bg-secondary-lt'"
                   th:text="${student.evaluation == null ? 'Chưa chấm' : (student.evaluation.status.name() == 'SUBMITTED' ? 'Đã nộp' : 'Bản nháp')}">Chưa chấm</span>
-          </td>
-          <td data-label="Thao tác" class="text-end">
-            <a class="btn btn-sm btn-primary"
-               th:href="@{/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}(councilId=${assignment.councilId},registrationId=${assignment.registrationId},studentId=${student.studentId})}"
-               th:text="${student.evaluation == null ? 'Chấm điểm' : 'Xem / sửa'}">Chấm điểm</a>
           </td>
         </tr>
         </tbody>
       </table>
     </div>
-  </div>
+    <div class="card-footer d-flex flex-column flex-sm-row justify-content-end gap-2">
+      <button class="btn btn-outline-primary" type="submit"
+              th:formaction="@{/lecturer/scoring/{councilId}/{registrationId}/draft(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}">Lưu nháp toàn bộ</button>
+      <button class="btn btn-primary" type="submit"
+              th:formaction="@{/lecturer/scoring/{councilId}/{registrationId}/submit(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}"
+              onclick="return confirm('Nộp điểm cho toàn bộ sinh viên trong nhóm?')">Nộp toàn bộ</button>
+    </div>
+  </form>
 </section>
 </body>
 </html>

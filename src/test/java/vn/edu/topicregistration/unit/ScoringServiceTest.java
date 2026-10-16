@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import vn.edu.topicregistration.entity.CouncilEntity;
 import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
 import vn.edu.topicregistration.entity.DepartmentEntity;
@@ -36,6 +38,7 @@ import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.entity.RegistrationStatus;
 import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.ScoreComponentEntity;
 import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.entity.TopicEntity;
@@ -49,27 +52,50 @@ import vn.edu.topicregistration.repository.CouncilTopicRepository;
 import vn.edu.topicregistration.repository.EvaluationRepository;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
 import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.ScoreComponentRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.ScoringService;
-import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
+import vn.edu.topicregistration.service.DirectGradingService;
+import vn.edu.topicregistration.service.ScoringService.GroupScoreCommand;
+import vn.edu.topicregistration.service.ScoringService.ScoreRowCommand;
 
 class ScoringServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-20T02:00:00Z");
 
     @Test
+    void kltnMemberCannotSubmitWhenReviewerOverlapsCouncil() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        when(fixture.period().getTopicType()).thenReturn("KLTN");
+        when(fixture.council().getMode()).thenReturn(CouncilMode.COUNCIL);
+        ReviewerAssignmentEntity reviewer = mock(ReviewerAssignmentEntity.class);
+        when(reviewer.getReviewer()).thenReturn(fixture.evaluator());
+        when(dependencies.reviewerAssignments().findActiveByRegistrationIdForUpdate(
+                51L, List.of(ReviewerAssignmentEntity.Status.ASSIGNED,
+                        ReviewerAssignmentEntity.Status.SUBMITTED)))
+                .thenReturn(Optional.of(reviewer));
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        command(101L, "8.00", "Đạt", null)));
+
+        assertEquals(ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT, exception.code());
+        verify(dependencies.evaluations(), never()).save(any());
+    }
+
+    @Test
     void createsDraftUnderPeriodCouncilAndChildLocks() {
         Dependencies dependencies = dependencies();
         Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
-        when(dependencies.evaluations().saveAndFlush(any())).thenAnswer(
+        when(dependencies.evaluations().save(any())).thenAnswer(
                 invocation -> invocation.getArgument(0));
 
-        ScoringService.EvaluationView result = dependencies.service().saveDraft(
+        ScoringService.EvaluationView result = dependencies.service().saveGroupDraft(
                 41L,
                 51L,
-                101L,
-                new ScoreCommand(new BigDecimal("8.50"), "Nhận xét", null));
+                command(101L, "8.50", "Nhận xét", null)).getFirst();
 
         InOrder order = inOrder(
                 dependencies.periods(),
@@ -88,7 +114,7 @@ class ScoringServiceTest {
         order.verify(dependencies.evaluations()).findAllByCouncilIdForUpdate(41L);
 
         ArgumentCaptor<EvaluationEntity> saved = ArgumentCaptor.forClass(EvaluationEntity.class);
-        verify(dependencies.evaluations()).saveAndFlush(saved.capture());
+        verify(dependencies.evaluations()).save(saved.capture());
         assertEquals(fixture.evaluator(), saved.getValue().getEvaluator());
         assertEquals(new BigDecimal("8.50"), saved.getValue().getScore());
         assertEquals(EvaluationStatus.DRAFT, result.status());
@@ -102,14 +128,13 @@ class ScoringServiceTest {
                 7L, ScoreComponentEntity.COUNCIL_SCORE_NAME)).thenReturn(Optional.empty());
         when(dependencies.components().saveAndFlush(any())).thenAnswer(
                 invocation -> invocation.getArgument(0));
-        when(dependencies.evaluations().saveAndFlush(any())).thenAnswer(
+        when(dependencies.evaluations().save(any())).thenAnswer(
                 invocation -> invocation.getArgument(0));
 
-        ScoringService.EvaluationView result = dependencies.service().submit(
+        ScoringService.EvaluationView result = dependencies.service().submitGroup(
                 41L,
                 51L,
-                101L,
-                new ScoreCommand(new BigDecimal("9.00"), "Đạt", null));
+                command(101L, "9.00", "Đạt", null)).getFirst();
 
         verify(dependencies.components()).saveAndFlush(any(ScoreComponentEntity.class));
         assertEquals(EvaluationStatus.SUBMITTED, result.status());
@@ -136,11 +161,10 @@ class ScoringServiceTest {
         when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
                 .thenReturn(List.of(existing));
 
-        dependencies.service().submit(
+        dependencies.service().submitGroup(
                 41L,
                 51L,
-                101L,
-                new ScoreCommand(new BigDecimal("9.25"), "Đã sửa", 3L));
+                command(101L, "9.25", "Đã sửa", 3L));
 
         verify(existing).submit(new BigDecimal("9.25"), "Đã sửa", NOW);
         verify(dependencies.evaluations()).flush();
@@ -164,14 +188,117 @@ class ScoringServiceTest {
                 .thenReturn(List.of(existing));
 
         assertThrows(OptimisticLockingFailureException.class,
-                () -> dependencies.service().saveDraft(
+                () -> dependencies.service().saveGroupDraft(
                         41L,
                         51L,
-                        101L,
-                        new ScoreCommand(new BigDecimal("7.50"), null, 3L)));
+                        command(101L, "7.50", null, 3L)));
 
         verify(existing, never()).saveDraft(any(), any(), any());
         verify(dependencies.evaluations(), never()).flush();
+    }
+
+    @Test
+    void acceptsCompleteGroupsFromOneToThreeStudents() {
+        for (int size = 1; size <= 3; size++) {
+            Dependencies dependencies = dependencies();
+            Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+            List<RegistrationMemberEntity> snapshots = snapshots(dependencies, fixture, size);
+            when(dependencies.evaluations().save(any())).thenAnswer(
+                    invocation -> invocation.getArgument(0));
+
+            List<ScoringService.EvaluationView> saved = dependencies.service().saveGroupDraft(
+                    41L, 51L, new GroupScoreCommand(0L, snapshots.stream()
+                            .map(snapshot -> new ScoreRowCommand(
+                                    snapshot.getStudent().getId(),
+                                    new BigDecimal("8.00"), "Nhận xét", null))
+                            .toList()));
+
+            assertEquals(size, saved.size());
+            verify(dependencies.evaluations(), times(size)).save(any());
+            verify(dependencies.evaluations()).flush();
+        }
+    }
+
+    @Test
+    void rejectsMissingExtraAndDuplicateRowsBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        snapshots(dependencies, fixture, 2);
+
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        new GroupScoreCommand(0L, List.of(
+                                row(101L, "8.00", null)))));
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        new GroupScoreCommand(0L, List.of(
+                                row(101L, "8.00", null),
+                                row(102L, "8.00", null),
+                                row(999L, "8.00", null)))));
+        assertThrows(ApplicationException.class,
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        new GroupScoreCommand(0L, List.of(
+                                row(101L, "8.00", null),
+                                row(101L, "8.00", null)))));
+
+        verify(dependencies.evaluations(), never()).save(any());
+        verify(dependencies.evaluations(), never()).flush();
+    }
+
+    @Test
+    void invalidScoreInOneRowRejectsWholeGroupBeforeWriting() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        snapshots(dependencies, fixture, 3);
+
+        ApplicationException exception = assertThrows(ApplicationException.class,
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        new GroupScoreCommand(0L, List.of(
+                                row(101L, "8.00", null),
+                                row(102L, "8.25", null),
+                                row(103L, "8.10", null)))));
+
+        assertEquals(ApplicationErrorCode.INVALID_SCORE, exception.code());
+        verify(dependencies.evaluations(), never()).save(any());
+        verify(dependencies.evaluations(), never()).flush();
+    }
+
+    @Test
+    void staleRowRejectsWholeGroupBeforeAnyExistingEvaluationChanges() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        List<RegistrationMemberEntity> snapshots = snapshots(dependencies, fixture, 2);
+        EvaluationEntity first = evaluation(
+                dependencies, snapshots.get(0).getStudent(), 2L);
+        EvaluationEntity second = evaluation(
+                dependencies, snapshots.get(1).getStudent(), 5L);
+        when(dependencies.evaluations().findAllByCouncilIdForUpdate(41L))
+                .thenReturn(List.of(first, second));
+
+        assertThrows(OptimisticLockingFailureException.class,
+                () -> dependencies.service().saveGroupDraft(41L, 51L,
+                        new GroupScoreCommand(0L, List.of(
+                                row(101L, "9.00", 2L),
+                                row(102L, "9.00", 4L)))));
+
+        verify(first, never()).saveDraft(any(), any(), any());
+        verify(second, never()).saveDraft(any(), any(), any());
+        verify(dependencies.evaluations(), never()).flush();
+    }
+
+    @Test
+    void staleCouncilVersionRejectsGroupBeforeReadingRows() {
+        Dependencies dependencies = dependencies();
+        Fixture fixture = validFixture(dependencies, CouncilStatus.ACTIVE);
+        when(fixture.council().getVersion()).thenReturn(4L);
+
+        assertThrows(OptimisticLockingFailureException.class,
+                () -> dependencies.service().saveGroupDraft(41L, 51L,
+                        new GroupScoreCommand(3L, List.of(
+                                row(101L, "8.00", null)))));
+
+        verify(dependencies.registrationMembers(), never()).findAllByRegistrationId(51L);
+        verify(dependencies.evaluations(), never()).save(any());
     }
 
     @Test
@@ -182,10 +309,9 @@ class ScoringServiceTest {
                 new ActorIdentity(99L, Set.of(RoleCode.LECTURER), 2L));
 
         assertThrows(AccessDeniedException.class,
-                () -> outsiderDependencies.service().submit(
-                        41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(outsiderDependencies.evaluations(), never()).saveAndFlush(any());
+                () -> outsiderDependencies.service().submitGroup(
+                        41L, 51L, command(101L, "8.00", null, null)));
+        verify(outsiderDependencies.evaluations(), never()).save(any());
 
         Dependencies supervisorDependencies = dependencies();
         Fixture fixture = validFixture(supervisorDependencies, CouncilStatus.ACTIVE);
@@ -194,10 +320,9 @@ class ScoringServiceTest {
         when(fixture.topic().getSupervisors()).thenReturn(List.of(supervisor));
 
         assertThrows(AccessDeniedException.class,
-                () -> supervisorDependencies.service().submit(
-                        41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(supervisorDependencies.evaluations(), never()).saveAndFlush(any());
+                () -> supervisorDependencies.service().submitGroup(
+                        41L, 51L, command(101L, "8.00", null, null)));
+        verify(supervisorDependencies.evaluations(), never()).save(any());
     }
 
     @Test
@@ -206,14 +331,13 @@ class ScoringServiceTest {
         validFixture(dependencies, CouncilStatus.COMPLETED);
 
         ApplicationException exception = assertThrows(ApplicationException.class,
-                () -> dependencies.service().saveDraft(
+                () -> dependencies.service().saveGroupDraft(
                         41L,
                         51L,
-                        101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
+                        command(101L, "8.00", null, null)));
 
         assertEquals(ApplicationErrorCode.INVALID_COUNCIL_STATE, exception.code());
-        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+        verify(dependencies.evaluations(), never()).save(any());
     }
 
     @Test
@@ -229,6 +353,51 @@ class ScoringServiceTest {
     }
 
     @Test
+    void ownAssignmentCountsOnlySubmittedSnapshotStudents() {
+        Dependencies dependencies = dependencies();
+        readFixture(dependencies, CouncilStatus.ACTIVE);
+        UserAccountEntity secondStudent = mock(UserAccountEntity.class);
+        when(secondStudent.getId()).thenReturn(102L);
+        UserAccountEntity thirdStudent = mock(UserAccountEntity.class);
+        when(thirdStudent.getId()).thenReturn(103L);
+        RegistrationMemberEntity secondSnapshot = mock(RegistrationMemberEntity.class);
+        when(secondSnapshot.getStudent()).thenReturn(secondStudent);
+        RegistrationMemberEntity thirdSnapshot = mock(RegistrationMemberEntity.class);
+        when(thirdSnapshot.getStudent()).thenReturn(thirdStudent);
+        var firstSnapshot = dependencies.registrationMembers()
+                .findAllByRegistrationId(51L).getFirst();
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(List.of(firstSnapshot, secondSnapshot, thirdSnapshot));
+        EvaluationEntity submitted = mock(EvaluationEntity.class);
+        UserAccountEntity firstStudent = firstSnapshot.getStudent();
+        when(submitted.getStudent()).thenReturn(firstStudent);
+        when(submitted.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(submitted.getSubmittedAt()).thenReturn(NOW);
+        EvaluationEntity draft = mock(EvaluationEntity.class);
+        when(draft.getStudent()).thenReturn(secondStudent);
+        when(draft.getStatus()).thenReturn(EvaluationStatus.DRAFT);
+        EvaluationEntity thirdSubmitted = mock(EvaluationEntity.class);
+        when(thirdSubmitted.getStudent()).thenReturn(thirdStudent);
+        when(thirdSubmitted.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(thirdSubmitted.getSubmittedAt()).thenReturn(NOW);
+        when(dependencies.evaluations()
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        41L, 51L, 11L)).thenReturn(List.of(submitted, draft, thirdSubmitted));
+
+        var partial = dependencies.service().listForCurrentLecturer().getFirst();
+        assertEquals("DRAFT", partial.progressStatus());
+        assertEquals(2, partial.submittedCount());
+        assertEquals(3, partial.totalCount());
+        assertEquals(null, partial.fullySubmittedAt());
+
+        when(draft.getStatus()).thenReturn(EvaluationStatus.SUBMITTED);
+        when(draft.getSubmittedAt()).thenReturn(NOW.plusSeconds(60));
+        var complete = dependencies.service().listForCurrentLecturer().getFirst();
+        assertEquals("SUBMITTED", complete.progressStatus());
+        assertEquals(NOW.plusSeconds(60), complete.fullySubmittedAt());
+    }
+
+    @Test
     void transferredLecturerCannotListOpenOrWriteFormerAssignment() {
         Dependencies dependencies = dependencies();
         readFixture(dependencies, CouncilStatus.ACTIVE);
@@ -239,9 +408,9 @@ class ScoringServiceTest {
         assertThrows(AccessDeniedException.class,
                 () -> dependencies.service().workspace(41L, 51L));
         assertThrows(AccessDeniedException.class,
-                () -> dependencies.service().saveDraft(41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+                () -> dependencies.service().saveGroupDraft(41L, 51L,
+                        command(101L, "8.00", null, null)));
+        verify(dependencies.evaluations(), never()).save(any());
     }
 
     @Test
@@ -259,9 +428,9 @@ class ScoringServiceTest {
         assertThrows(AccessDeniedException.class,
                 () -> dependencies.service().workspace(41L, 51L));
         assertThrows(AccessDeniedException.class,
-                () -> dependencies.service().submit(41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        command(101L, "8.00", null, null)));
+        verify(dependencies.evaluations(), never()).save(any());
 
         when(dependencies.councilTopics().findByCouncilIdAndRegistrationId(41L, 51L))
                 .thenReturn(Optional.empty());
@@ -270,9 +439,9 @@ class ScoringServiceTest {
         assertThrows(ApplicationException.class,
                 () -> dependencies.service().workspace(41L, 51L));
         assertThrows(ApplicationException.class,
-                () -> dependencies.service().submit(41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        command(101L, "8.00", null, null)));
+        verify(dependencies.evaluations(), never()).save(any());
     }
 
     @Test
@@ -284,9 +453,9 @@ class ScoringServiceTest {
         assertThrows(ApplicationException.class,
                 () -> dependencies.service().workspace(41L, 51L));
         assertThrows(ApplicationException.class,
-                () -> dependencies.service().submit(41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+                () -> dependencies.service().submitGroup(41L, 51L,
+                        command(101L, "8.00", null, null)));
+        verify(dependencies.evaluations(), never()).save(any());
     }
 
     @Test
@@ -301,9 +470,9 @@ class ScoringServiceTest {
         assertThrows(ApplicationException.class,
                 () -> dependencies.service().workspace(41L, 51L));
         assertThrows(ApplicationException.class,
-                () -> dependencies.service().saveDraft(41L, 51L, 101L,
-                        new ScoreCommand(new BigDecimal("8.00"), null, null)));
-        verify(dependencies.evaluations(), never()).saveAndFlush(any());
+                () -> dependencies.service().saveGroupDraft(41L, 51L,
+                        command(101L, "8.00", null, null)));
+        verify(dependencies.evaluations(), never()).save(any());
     }
 
     private static Fixture readFixture(Dependencies dependencies, CouncilStatus status) {
@@ -319,6 +488,49 @@ class ScoringServiceTest {
         when(dependencies.members().findByCouncilIdAndLecturerId(41L, 11L))
                 .thenReturn(Optional.of(member));
         return fixture;
+    }
+
+    private static GroupScoreCommand command(
+            long studentId, String score, String feedback, Long version) {
+        return new GroupScoreCommand(0L, List.of(
+                new ScoreRowCommand(studentId, new BigDecimal(score), feedback, version)));
+    }
+
+    private static ScoreRowCommand row(long studentId, String score, Long version) {
+        return new ScoreRowCommand(studentId, new BigDecimal(score), null, version);
+    }
+
+    private static List<RegistrationMemberEntity> snapshots(
+            Dependencies dependencies, Fixture fixture, int size) {
+        List<RegistrationMemberEntity> rows = new java.util.ArrayList<>(
+                dependencies.registrationMembers().findAllByRegistrationId(51L));
+        for (int index = 2; index <= size; index++) {
+            UserAccountEntity student = mock(UserAccountEntity.class);
+            when(student.getId()).thenReturn(100L + index);
+            when(student.getFullName()).thenReturn("Sinh viên " + index);
+            RegistrationMemberEntity snapshot = mock(RegistrationMemberEntity.class);
+            when(snapshot.getRegistration()).thenReturn(fixture.registration());
+            when(snapshot.getStudent()).thenReturn(student);
+            when(snapshot.getSlot()).thenReturn(index);
+            rows.add(snapshot);
+        }
+        when(dependencies.registrationMembers().findAllByRegistrationId(51L))
+                .thenReturn(rows);
+        return rows;
+    }
+
+    private static EvaluationEntity evaluation(
+            Dependencies dependencies, UserAccountEntity student, long version) {
+        EvaluationEntity evaluation = mock(EvaluationEntity.class);
+        RegistrationEntity registration = registration(dependencies);
+        UserAccountEntity evaluator = evaluator(dependencies);
+        ScoreComponentEntity component = component(dependencies);
+        when(evaluation.getRegistration()).thenReturn(registration);
+        when(evaluation.getEvaluator()).thenReturn(evaluator);
+        when(evaluation.getStudent()).thenReturn(student);
+        when(evaluation.getComponent()).thenReturn(component);
+        when(evaluation.getVersion()).thenReturn(version);
+        return evaluation;
     }
 
     private static Fixture validFixture(Dependencies dependencies, CouncilStatus status) {
@@ -420,6 +632,7 @@ class ScoringServiceTest {
                 mock(RegistrationMemberRepository.class),
                 mock(ScoreComponentRepository.class),
                 mock(EvaluationRepository.class),
+                mock(ReviewerAssignmentRepository.class),
                 mock(AuthorizationPolicy.class));
     }
 
@@ -431,6 +644,7 @@ class ScoringServiceTest {
             RegistrationMemberRepository registrationMembers,
             ScoreComponentRepository components,
             EvaluationRepository evaluations,
+            ReviewerAssignmentRepository reviewerAssignments,
             AuthorizationPolicy authorization) {
         ScoringService service() {
             return new ScoringService(
@@ -441,6 +655,8 @@ class ScoringServiceTest {
                     registrationMembers,
                     components,
                     evaluations,
+                    reviewerAssignments,
+                    mock(DirectGradingService.class),
                     authorization,
                     Clock.fixed(NOW, ZoneOffset.UTC));
         }

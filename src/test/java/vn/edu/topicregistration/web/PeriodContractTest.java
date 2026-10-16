@@ -82,21 +82,17 @@ class PeriodContractTest {
         fixtures = new FixtureSupport(
                 dataSource, Clock.fixed(FIXED_NOW, TimeConfig.BUSINESS_ZONE));
         deanScope = fixtures.createOrganization("Khoa CNTT");
-        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
-                deanScope.facultyId(), "Công nghệ phần mềm");
-        departmentId = jdbc.queryForObject(
-                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
-                Long.class, deanScope.facultyId(), "Công nghệ phần mềm");
+        departmentId = insertDepartment(deanScope.facultyId(), "Công nghệ phần mềm");
         fixtures.createIdentity(
                 "dean", "Trưởng khoa", UNUSED_HASH, true,
-                deanScope, Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+                deanScope, Set.of(RoleCode.DEAN));
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
     }
 
     @Test
     void deanCreatesAValidPeriodAndReadsPersistedValues() throws Exception {
         mvc.perform(validCreateRequest("COURSE")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrlPattern("/periods/*"));
@@ -111,7 +107,7 @@ class PeriodContractTest {
         assertEquals(STUDENT_END, saved.studentEnd());
 
         mvc.perform(get("/periods/{id}", saved.id())
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt HK1")));
     }
@@ -119,7 +115,7 @@ class PeriodContractTest {
     @Test
     void createRejectsMissingOrOtherFacultyDepartment() throws Exception {
         mvc.perform(createRequest("COURSE", null)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -131,7 +127,7 @@ class PeriodContractTest {
                 "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
                 Long.class, otherScope.facultyId(), "Bộ môn Điện");
         mvc.perform(createRequest("COURSE", otherDepartmentId)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -139,7 +135,8 @@ class PeriodContractTest {
 
     @Test
     void dashboardQueriesAreScopedToPersistedRoleAndOrganization() throws Exception {
-        long ownPeriod = insertPeriod(deanScope.facultyId(), "Đợt CNTT", 0L);
+        long ownPeriod = insertPeriod(
+                deanScope.facultyId(), departmentId, "Đợt CNTT", 0L);
         jdbc.update("""
                 UPDATE registration_periods
                 SET lecturer_start = ?, lecturer_end = ?, student_start = ?, student_end = ?
@@ -150,7 +147,9 @@ class PeriodContractTest {
                 Timestamp.from(Instant.parse("2026-09-09T00:00:01Z")),
                 Timestamp.from(STUDENT_END), ownPeriod);
         FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization("Khoa Điện");
-        long otherPeriod = insertPeriod(otherScope.facultyId(), "Đợt Điện", 0L);
+        long otherDepartmentId = insertDepartment(otherScope.facultyId(), "Hệ thống điện");
+        long otherPeriod = insertPeriod(
+                otherScope.facultyId(), otherDepartmentId, "Đợt Điện", 0L);
         var lecturer = fixtures.createIdentity("lecturer-dashboard", "Giảng viên A", UNUSED_HASH,
                 true, deanScope, Set.of(RoleCode.LECTURER));
         var colleague = fixtures.createIdentity("colleague-dashboard", "Giảng viên B", UNUSED_HASH,
@@ -174,7 +173,7 @@ class PeriodContractTest {
                 VALUES (?, ?, ?, ?, 2)
                 """, groupId, ownPeriod, invitee.accountId(), student.accountId());
 
-        DashboardView deanView = dashboardFor("dean", "LECTURER", "DEAN");
+        DashboardView deanView = dashboardFor("dean", "DEAN");
         assertEquals(2, deanView.metrics().getFirst().value());
         assertEquals(1, deanView.metrics().getLast().value());
         DashboardView lecturerView = dashboardFor("lecturer-dashboard", "LECTURER");
@@ -216,7 +215,7 @@ class PeriodContractTest {
     @Test
     void formUsesCalendarDatesAndRejectsPastOrTimeValues() throws Exception {
         mvc.perform(get("/periods/new")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"departmentId\"")))
                 .andExpect(content().string(containsString("Công nghệ phần mềm")))
@@ -226,14 +225,14 @@ class PeriodContractTest {
 
         mvc.perform(baseCreateRequest(
                         "COURSE", "2026-09-09", "2026-09-11", "2026-09-12", "2026-09-13")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
         mvc.perform(baseCreateRequest(
                         "COURSE", "2026-09-10T08:00", "2026-09-11", "2026-09-12", "2026-09-13")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -243,20 +242,20 @@ class PeriodContractTest {
     void conditionalDatesAndScheduleValidationRejectTheWholeCreate() throws Exception {
         mvc.perform(baseCreateRequest("KLTN")
                         .param("reviewerScoreDeadline", "2026-09-20")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
         mvc.perform(baseCreateRequest("COURSE", "2026-09-11")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
 
         mvc.perform(validCreateRequest("COURSE")
                         .param("reviewerScoreDeadline", "2026-09-20")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
         assertEquals(0L, periodCount());
@@ -265,7 +264,7 @@ class PeriodContractTest {
     @Test
     void createRequiresCsrfAndPersistedDeanRole() throws Exception {
         mvc.perform(validCreateRequest("COURSE")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isForbidden());
         assertEquals(0L, periodCount());
 
@@ -282,25 +281,28 @@ class PeriodContractTest {
 
     @Test
     void listAndUpdateStayInsideThePersistedFacultyScope() throws Exception {
-        long ownPeriod = insertPeriod(deanScope.facultyId(), "Đợt khoa CNTT", 0L);
+        long ownPeriod = insertPeriod(
+                deanScope.facultyId(), departmentId, "Đợt khoa CNTT", 0L);
         FixtureSupport.OrganizationScope otherScope = fixtures.createOrganization("Khoa Điện");
-        long otherPeriod = insertPeriod(otherScope.facultyId(), "Đợt khoa Điện", 0L);
+        long otherDepartmentId = insertDepartment(otherScope.facultyId(), "Điện công nghiệp");
+        long otherPeriod = insertPeriod(
+                otherScope.facultyId(), otherDepartmentId, "Đợt khoa Điện", 0L);
 
         mvc.perform(get("/periods")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt khoa CNTT")))
                 .andExpect(content().string(not(containsString("Đợt khoa Điện"))));
 
-        mvc.perform(validUpdateRequest(otherPeriod, 0L)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+        mvc.perform(validUpdateRequest(otherPeriod, 0L, otherDepartmentId)
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/periods/{id}", otherPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/periods/{id}/edit", otherPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isNotFound());
         assertEquals("Đợt khoa Điện", periodName(otherPeriod));
         assertEquals("Đợt khoa CNTT", periodName(ownPeriod));
@@ -308,20 +310,15 @@ class PeriodContractTest {
 
     @Test
     void deanListAndDetailShowEachDepartmentInTheSameFaculty() throws Exception {
-        long softwarePeriod = insertPeriod(deanScope.facultyId(), "Đợt phần mềm", 0L);
-        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
-                departmentId, softwarePeriod);
-        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+        long softwarePeriod = insertPeriod(
+                deanScope.facultyId(), departmentId, "Đợt phần mềm", 0L);
+        long networkDepartmentId = insertDepartment(
                 deanScope.facultyId(), "Mạng máy tính");
-        long networkDepartmentId = jdbc.queryForObject(
-                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
-                Long.class, deanScope.facultyId(), "Mạng máy tính");
-        long networkPeriod = insertPeriod(deanScope.facultyId(), "Đợt mạng", 0L);
-        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
-                networkDepartmentId, networkPeriod);
+        long networkPeriod = insertPeriod(
+                deanScope.facultyId(), networkDepartmentId, "Đợt mạng", 0L);
 
         var list = mvc.perform(get("/periods")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Bộ môn")))
                 .andExpect(content().string(containsString("Công nghệ phần mềm")))
@@ -337,35 +334,22 @@ class PeriodContractTest {
                 .filter(row -> row.id() == networkPeriod).findFirst().orElseThrow().departmentName());
 
         mvc.perform(get("/periods/{id}", softwarePeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Công nghệ phần mềm")));
         mvc.perform(get("/periods/{id}", networkPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
+                        .with(user("dean").roles("DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Mạng máy tính")));
     }
 
     @Test
-    void legacyPeriodWithoutDepartmentHasExplicitLabelOnListAndDetail() throws Exception {
-        long legacyPeriod = insertPeriod(deanScope.facultyId(), "Đợt cũ", 0L);
-
-        mvc.perform(get("/periods")
-                        .with(user("dean").roles("LECTURER", "DEAN")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Chưa xác định Bộ môn")));
-        mvc.perform(get("/periods/{id}", legacyPeriod)
-                        .with(user("dean").roles("LECTURER", "DEAN")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Chưa xác định Bộ môn")));
-    }
-
-    @Test
     void validUpdatePersistsAtomicallyAndStaleVersionReturnsConflict() throws Exception {
-        long periodId = insertPeriod(deanScope.facultyId(), "Tên cũ", 3L);
+        long periodId = insertPeriod(
+                deanScope.facultyId(), departmentId, "Tên cũ", 3L);
 
-        mvc.perform(validUpdateRequest(periodId, 3L)
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+        mvc.perform(validUpdateRequest(periodId, 3L, departmentId)
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrlPattern("/periods/*"));
@@ -373,9 +357,9 @@ class PeriodContractTest {
         assertEquals("Tên đã sửa", periodName(periodId));
         assertEquals(4L, periodVersion(periodId));
 
-        mvc.perform(validUpdateRequest(periodId, 3L)
+        mvc.perform(validUpdateRequest(periodId, 3L, departmentId)
                         .param("name", "Ghi đè bằng version cũ")
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isConflict());
         assertEquals("Tên đã sửa", periodName(periodId));
@@ -384,18 +368,13 @@ class PeriodContractTest {
 
     @Test
     void deanCanChangeDepartmentBeforeOpeningWhenPeriodHasNoDependentData() throws Exception {
-        long periodId = insertPeriod(deanScope.facultyId(), "Tên cũ", 0L);
-        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
-                departmentId, periodId);
-        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+        long periodId = insertPeriod(
+                deanScope.facultyId(), departmentId, "Tên cũ", 0L);
+        long otherDepartmentId = insertDepartment(
                 deanScope.facultyId(), "Mạng máy tính");
-        long otherDepartmentId = jdbc.queryForObject(
-                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
-                Long.class, deanScope.facultyId(), "Mạng máy tính");
 
-        mvc.perform(validUpdateRequest(periodId, 0L)
-                        .param("departmentId", Long.toString(otherDepartmentId))
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+        mvc.perform(validUpdateRequest(periodId, 0L, otherDepartmentId)
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isSeeOther());
 
@@ -404,22 +383,17 @@ class PeriodContractTest {
 
     @Test
     void dependentGroupPreventsDepartmentChange() throws Exception {
-        long periodId = insertPeriod(deanScope.facultyId(), "Tên cũ", 0L);
-        jdbc.update("UPDATE registration_periods SET department_id = ? WHERE id = ?",
-                departmentId, periodId);
-        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+        long periodId = insertPeriod(
+                deanScope.facultyId(), departmentId, "Tên cũ", 0L);
+        long otherDepartmentId = insertDepartment(
                 deanScope.facultyId(), "Mạng máy tính");
-        long otherDepartmentId = jdbc.queryForObject(
-                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
-                Long.class, deanScope.facultyId(), "Mạng máy tính");
         var student = fixtures.createIdentity("student-dependent", "Sinh viên phụ thuộc",
                 UNUSED_HASH, true, deanScope, Set.of(RoleCode.STUDENT));
         jdbc.update("INSERT INTO student_groups(period_id, leader_student_id) VALUES (?, ?)",
                 periodId, student.accountId());
 
-        mvc.perform(validUpdateRequest(periodId, 0L)
-                        .param("departmentId", Long.toString(otherDepartmentId))
-                        .with(user("dean").roles("LECTURER", "DEAN"))
+        mvc.perform(validUpdateRequest(periodId, 0L, otherDepartmentId)
+                        .with(user("dean").roles("DEAN"))
                         .with(csrf()))
                 .andExpect(status().isUnprocessableContent());
 
@@ -483,9 +457,10 @@ class PeriodContractTest {
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-            validUpdateRequest(long periodId, long version) {
+            validUpdateRequest(long periodId, long version, long requestedDepartmentId) {
         return post("/periods/{id}", periodId)
                 .param("name", "Tên đã sửa")
+                .param("departmentId", Long.toString(requestedDepartmentId))
                 .param("topicType", "COURSE")
                 .param("lecturerStart", "2026-09-11")
                 .param("lecturerEnd", "2026-09-11")
@@ -494,18 +469,25 @@ class PeriodContractTest {
                 .param("version", Long.toString(version));
     }
 
-    private long insertPeriod(long facultyId, String name, long version) {
+    private long insertPeriod(long facultyId, long requestedDepartmentId, String name, long version) {
         jdbc.update("""
                 INSERT INTO registration_periods(
-                    faculty_id, name, topic_type,
+                    faculty_id, department_id, name, topic_type,
                     lecturer_start, lecturer_end, student_start, student_end,
                     reviewer_score_deadline, council_report_date, version)
-                VALUES (?, ?, 'COURSE', ?, ?, ?, ?, NULL, NULL, ?)
+                VALUES (?, ?, ?, 'COURSE', ?, ?, ?, ?, NULL, NULL, ?)
                 """,
-                facultyId, name,
+                facultyId, requestedDepartmentId, name,
                 Timestamp.from(LECTURER_START), Timestamp.from(LECTURER_END),
                 Timestamp.from(STUDENT_START), Timestamp.from(STUDENT_END), version);
         return jdbc.queryForObject("SELECT MAX(id) FROM registration_periods", Long.class);
+    }
+
+    private long insertDepartment(long facultyId, String name) {
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)", facultyId, name);
+        return jdbc.queryForObject(
+                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
+                Long.class, facultyId, name);
     }
 
     private long periodCount() {

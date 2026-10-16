@@ -93,14 +93,12 @@ class AdminAccountServiceTest {
     }
 
     @Test
-    void createsDeanWithLecturerRoleAndEncodedPassword() {
+    void createsDeanWithoutLecturerRoleAndWithEncodedPassword() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
         allowDefaultFaculty(dependencies);
         RoleEntity deanRole = role(RoleCode.DEAN);
-        RoleEntity lecturerRole = role(RoleCode.LECTURER);
-        when(dependencies.roles().findAllById(anyIterable())).thenReturn(List.of(
-                deanRole, lecturerRole));
+        when(dependencies.roles().findAllById(anyIterable())).thenReturn(List.of(deanRole));
         saveArguments(dependencies);
 
         var created = dependencies.service().createDean(new CreateDeanCommand(
@@ -109,7 +107,7 @@ class AdminAccountServiceTest {
         assertEquals("dean01", created.username());
         assertEquals("Trưởng khoa", created.accountTypeLabel());
         assertEquals(null, created.email());
-        assertAssignedRoles(dependencies, Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        assertAssignedRoles(dependencies, Set.of(RoleCode.DEAN));
         assertStoredPassword(dependencies, "temporary-password");
         assertTemporaryPassword(dependencies);
     }
@@ -143,7 +141,7 @@ class AdminAccountServiceTest {
         when(dean.getId()).thenReturn(8L);
         when(dean.getUsername()).thenReturn("dean02");
         when(dean.getFaculty()).thenReturn(faculty);
-        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN));
         when(dependencies.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
         when(dependencies.accounts().existsEnabledByFacultyAndRoleExcept(
                 3L, RoleCode.DEAN, 8L)).thenReturn(true);
@@ -168,7 +166,7 @@ class AdminAccountServiceTest {
         when(dean.getId()).thenReturn(8L);
         when(dean.getUsername()).thenReturn("dean02");
         when(dean.getFaculty()).thenReturn(faculty);
-        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN));
         when(dean.enable()).thenReturn(true);
         when(dependencies.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
 
@@ -303,7 +301,7 @@ class AdminAccountServiceTest {
         verify(student, never()).assignDepartment(any());
 
         UserAccountEntity dean = mock(UserAccountEntity.class);
-        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN));
         when(dean.getFaculty()).thenReturn(faculty);
         when(dependencies.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
         ApplicationException wrongFaculty = assertThrows(ApplicationException.class,

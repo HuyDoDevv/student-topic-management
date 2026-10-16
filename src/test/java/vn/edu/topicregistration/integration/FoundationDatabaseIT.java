@@ -30,7 +30,7 @@ class FoundationDatabaseIT {
 
     @Test
     void migrationCreatesTheExpectedFoundationSchema() throws Exception {
-        assertEquals(25, count("""
+        assertEquals(27, count("""
                 SELECT COUNT(*)
                 FROM information_schema.tables
                 WHERE table_schema = DATABASE()

@@ -6,6 +6,7 @@ import vn.edu.topicregistration.entity.UserAccountEntity;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
 import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationRepository;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
@@ -41,6 +42,7 @@ import vn.edu.topicregistration.service.TopicRules.TopicStatus;
 public class TopicAuthorService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;
+    private final RegistrationRepository registrations;
     private final UserAccountRepository accounts;
     private final AuthorizationPolicy authorization;
     private final EntityManager entityManager;
@@ -49,12 +51,14 @@ public class TopicAuthorService {
     public TopicAuthorService(
             RegistrationPeriodRepository periods,
             TopicRepository topics,
+            RegistrationRepository registrations,
             UserAccountRepository accounts,
             AuthorizationPolicy authorization,
             EntityManager entityManager,
             Clock clock) {
         this.periods = periods;
         this.topics = topics;
+        this.registrations = registrations;
         this.accounts = accounts;
         this.authorization = authorization;
         this.entityManager = entityManager;
@@ -93,6 +97,15 @@ public class TopicAuthorService {
         TopicDraft valid = applyRules(() -> TopicRules.validateForSave(
                 loaded.draft(), access(actor, locked.topic())));
 
+        List<UserAccountEntity> retainedLecturers = loaded.lecturers().stream()
+                .filter(lecturer -> locked.topic().getSupervisors().stream()
+                        .anyMatch(supervisor -> Objects.equals(
+                                supervisor.getLecturer().getId(), lecturer.getId())))
+                .toList();
+        if (retainedLecturers.size() < locked.topic().getSupervisors().size()) {
+            locked.topic().replaceSupervisors(retainedLecturers);
+            topics.flush();
+        }
         applyDraft(locked.topic(), valid, loaded.lecturers());
         topics.flush();
         return toView(locked.topic());
@@ -128,6 +141,25 @@ public class TopicAuthorService {
                 valid.studentRequirements(),
                 valid.expectedResults());
         topic.changeStatus(TopicStatus.PENDING_APPROVAL.name());
+        topics.flush();
+        return toView(topic);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public TopicView returnToDraft(long topicId, long expectedVersion) {
+        LockedTopic locked = lockedTopic(topicId, expectedVersion);
+        TopicEntity topic = locked.topic();
+        ActorIdentity actor = requireAuthor(topic);
+        DepartmentEntity department = requirePeriodDepartment(
+                locked.period(), topic.getAuthor(), actor.facultyId());
+        requireDepartmentAlignment(locked.period(),
+                departmentId(topic.getDepartment()), department.getId());
+        boolean hasRegistration = registrations.existsByPeriodIdAndTopicId(
+                locked.period().getId(), topicId);
+        TopicStatus nextStatus = applyRules(() -> TopicRules.returnToDraft(
+                access(actor, topic), locked.now(), locked.period().getLecturerStart(),
+                locked.period().getLecturerEnd(), hasRegistration));
+        topic.changeStatus(nextStatus.name());
         topics.flush();
         return toView(topic);
     }
@@ -213,6 +245,8 @@ public class TopicAuthorService {
                         actor.facultyId(), department.getId(), RoleCode.LECTURER);
         List<LecturerOption> coSupervisors = eligibleLecturers
                 .stream()
+                .filter(account -> account.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !account.getRoleCodes().contains(RoleCode.DEAN))
                 .filter(account -> !Objects.equals(account.getId(), actor.accountId()))
                 .map(account -> new LecturerOption(
                         account.getId(), displayName(account), account.getUsername()))
@@ -372,7 +406,8 @@ public class TopicAuthorService {
                 facultyId == null ? Long.MIN_VALUE : facultyId,
                 departmentId,
                 lecturer.isEnabled(),
-                lecturer.getRoleCodes().contains(RoleCode.LECTURER));
+                lecturer.getRoleCodes().contains(RoleCode.LECTURER)
+                        && !lecturer.getRoleCodes().contains(RoleCode.DEAN));
     }
 
     private TopicAccess access(ActorIdentity actor, TopicEntity topic) {
@@ -453,6 +488,8 @@ public class TopicAuthorService {
                         ApplicationErrorCode.TOPIC_DEPARTMENT_REQUIRED);
                 case INVALID_STATE -> throw new ApplicationException(
                         ApplicationErrorCode.INVALID_TOPIC_STATE);
+                case REGISTRATION_EXISTS -> throw new ApplicationException(
+                        ApplicationErrorCode.TOPIC_REGISTRATION_EXISTS);
                 case VALIDATION_FAILED -> throw new ApplicationException(
                         ApplicationErrorCode.VALIDATION_FAILED);
                 case WINDOW_CLOSED -> throw new ApplicationException(

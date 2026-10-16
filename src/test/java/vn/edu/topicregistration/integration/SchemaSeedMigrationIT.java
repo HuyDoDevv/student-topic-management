@@ -28,7 +28,7 @@ import vn.edu.topicregistration.seed.DemoSeedProperties;
 import vn.edu.topicregistration.seed.LocalDemoSeeder;
 import vn.edu.topicregistration.util.ProjectTime;
 
-/** T060/T008: migrate only an explicitly configured, isolated MySQL test database. */
+/** Migrate only an explicitly configured, isolated MySQL test database. */
 class SchemaSeedMigrationIT {
     private static final Instant DEMO_NOW = Instant.parse("2026-09-13T03:00:00Z");
     private static final String MIGRATION_LOCATION = "classpath:db/migration";
@@ -39,26 +39,26 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void emptyDatabaseMigratesThroughV19WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV25WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
         assertDoesNotThrow(() -> flyway(database).validate());
-        assertEquals(25, count(jdbc, """
+        assertEquals(27, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(72, constraintCount(jdbc, "CHECK"));
-        assertEquals(59, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(28, constraintCount(jdbc, "UNIQUE"));
-        assertEquals(26, constraintCount(jdbc, "PRIMARY KEY"));
+        assertEquals(81, constraintCount(jdbc, "CHECK"));
+        assertEquals(65, constraintCount(jdbc, "FOREIGN KEY"));
+        assertEquals(33, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(28, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
                 "trg_councils_validate_officers",
@@ -90,7 +90,8 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "chk_project_reports_content_type", "CHECK");
         assertConstraint(jdbc, "fk_accounts_faculty", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_departments_faculty", "FOREIGN KEY");
-        assertConstraint(jdbc, "fk_periods_department", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_periods_department_faculty", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_departments_id_faculty", "UNIQUE");
         assertConstraint(jdbc, "fk_accounts_department", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_topics_department_required", "FOREIGN KEY");
         assertConstraint(jdbc, "uq_departments_faculty_name", "UNIQUE");
@@ -110,6 +111,14 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_user_notifications_event_recipient", "UNIQUE");
         assertConstraint(jdbc, "fk_notification_events_actor", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_user_notifications_recipient", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_reviewers_one_active_registration", "UNIQUE");
+        assertConstraint(jdbc, "chk_reviewers_status", "CHECK");
+        assertConstraint(jdbc, "fk_reviewers_assigned_by", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_reviewers_replaced_by", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_reviewer_reports_assignment", "UNIQUE");
+        assertConstraint(jdbc, "chk_reviewer_reports_content_type", "CHECK");
+        assertConstraint(jdbc, "uq_reviewer_evaluations_assignment_student", "UNIQUE");
+        assertConstraint(jdbc, "fk_reviewer_evaluations_member", "FOREIGN KEY");
         assertEquals(1, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_name = 'departments'
@@ -128,7 +137,7 @@ class SchemaSeedMigrationIT {
         assertEquals(1, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.columns
                 WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
-                  AND column_name = 'department_id' AND is_nullable = 'YES'
+                  AND column_name = 'department_id' AND is_nullable = 'NO'
                 """));
         assertEquals(0, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.columns
@@ -199,6 +208,16 @@ class SchemaSeedMigrationIT {
                 SELECT COUNT(*) FROM user_roles role_assignment
                 JOIN user_accounts account ON account.id = role_assignment.user_id
                 WHERE account.username = 'admin.demo'
+                """));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM user_roles role_assignment
+                JOIN user_accounts account ON account.id = role_assignment.user_id
+                WHERE account.username = 'dean.demo' AND role_assignment.role_code = 'DEAN'
+                """));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM user_roles role_assignment
+                JOIN user_accounts account ON account.id = role_assignment.user_id
+                WHERE account.username = 'dean.demo'
                 """));
         assertEquals(0, count(jdbc, """
                 SELECT COUNT(*) FROM user_accounts

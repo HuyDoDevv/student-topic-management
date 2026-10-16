@@ -23,14 +23,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import vn.edu.topicregistration.dto.ResultActionForm;
 import vn.edu.topicregistration.entity.EvaluationStatus;
+import vn.edu.topicregistration.entity.CouncilMode;
 import vn.edu.topicregistration.entity.FinalResultStatus;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
+import vn.edu.topicregistration.service.ResultService.ResultEvidenceView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
+import vn.edu.topicregistration.service.ResultService.FacultyResultListView;
+import vn.edu.topicregistration.service.ResultService.ResultListFilter;
 import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
 import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
@@ -57,41 +61,51 @@ public class ResultController {
 
     @GetMapping("/faculty/results")
     public String list(
+            @RequestParam(required = false) Long period,
             @RequestParam(required = false) Long periodId,
             @RequestParam(required = false) Long registrationId,
+            @RequestParam(required = false) String topicType,
+            @RequestParam(required = false) String topicOrGroup,
+            @RequestParam(required = false) Long grader,
             @RequestParam(required = false) Long lecturerId,
             @RequestParam(required = false) FinalResultStatus status,
+            @RequestParam(defaultValue = "recent") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model) {
+        if (period != null && periodId != null && !period.equals(periodId)
+                || grader != null && lecturerId != null && !grader.equals(lecturerId)) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        Long selectedPeriod = period != null ? period : periodId;
+        Long selectedGrader = grader != null ? grader : lecturerId;
+        FacultyResultListView listing = results.listPageForCurrentDean(new ResultListFilter(
+                selectedPeriod, registrationId, topicType, topicOrGroup,
+                selectedGrader, status, sort, page, size));
         common(model);
-        var allResults = results.listForCurrentDean().stream()
-                .map(this::display)
-                .toList();
-        model.addAttribute("periodOptions", allResults.stream()
-                .map(result -> new FacultyResultPeriodOption(
-                        result.periodId(), result.periodName()))
-                .distinct()
+        model.addAttribute("periodOptions", listing.periods().stream()
+                .map(option -> new FacultyResultPeriodOption(option.id(), option.name()))
                 .toList());
-        model.addAttribute("lecturerOptions", allResults.stream()
-                .flatMap(result -> result.lecturers().stream())
-                .map(lecturer -> new FacultyResultLecturerOption(
-                        lecturer.id(), lecturer.name()))
-                .distinct()
+        model.addAttribute("lecturerOptions", listing.graders().stream()
+                .map(option -> new FacultyResultLecturerOption(option.id(), option.name()))
                 .toList());
-        model.addAttribute("selectedPeriodId", periodId);
+        model.addAttribute("selectedPeriodId", selectedPeriod);
         model.addAttribute("selectedRegistrationId", registrationId);
-        model.addAttribute("selectedLecturerId", lecturerId);
+        model.addAttribute("selectedTopicType", topicType);
+        model.addAttribute("selectedTopicOrGroup", topicOrGroup);
+        model.addAttribute("selectedLecturerId", selectedGrader);
         model.addAttribute("selectedStatus", status);
-        var filteredResults = allResults.stream()
-                .filter(result -> periodId == null || periodId.equals(result.periodId()))
-                .filter(result -> registrationId == null
-                        || registrationId.equals(result.registrationId()))
-                .filter(result -> lecturerId == null || result.lecturers().stream()
-                        .anyMatch(lecturer -> lecturerId.equals(lecturer.id())))
-                .filter(result -> status == null || status == result.status())
-                .toList();
-        model.addAttribute("results", filteredResults);
-        model.addAttribute("selectedGroupId", registrationId == null || filteredResults.isEmpty()
-                ? null : filteredResults.getFirst().groupId());
+        model.addAttribute("selectedSort", sort);
+        model.addAttribute("selectedSize", size);
+        model.addAttribute("page", listing.page());
+        model.addAttribute("totalPages", listing.totalPages());
+        model.addAttribute("totalGroups", listing.totalGroups());
+        model.addAttribute("hasPrevious", listing.page() > 0);
+        model.addAttribute("hasNext", listing.page() + 1 < listing.totalPages());
+        model.addAttribute("groups", listing.groups().stream()
+                .map(group -> new FacultyResultGroupPageView(group.registrationId(),
+                        group.students().stream().map(this::display).toList()))
+                .toList());
         return "results/faculty-list";
     }
 
@@ -110,6 +124,15 @@ public class ResultController {
         model.addAttribute("evaluations", detail.evaluations().stream()
                 .map(this::display)
                 .toList());
+        model.addAttribute("reviewerName", detail.reviewer() == null
+                ? null : detail.reviewer().reviewerName());
+        model.addAttribute("reviewerScore", detail.reviewer() == null
+                ? null : score(detail.reviewer().score()));
+        model.addAttribute("reviewerSubmittedAt", detail.reviewer() == null
+                ? null : format(detail.reviewer().submittedAt()));
+        model.addAttribute("reviewerFeedback", detail.reviewer() == null
+                ? null : detail.reviewer().feedback());
+        model.addAttribute("evidence", display(detail.evidence()));
         return "results/faculty-detail";
     }
 
@@ -131,6 +154,7 @@ public class ResultController {
         model.addAttribute("evaluations", detail.evaluations().stream()
                 .map(this::display)
                 .toList());
+        model.addAttribute("evidence", display(detail.evidence()));
         return "results/student-detail";
     }
 
@@ -176,6 +200,8 @@ public class ResultController {
                 result.topicTitle(),
                 result.councilId(),
                 result.councilName(),
+                result.mode(),
+                result.topicType(),
                 result.lecturers().stream()
                         .map(this::display)
                         .toList(),
@@ -202,6 +228,19 @@ public class ResultController {
                 evaluation.status() == EvaluationStatus.SUBMITTED
                         ? "Đã nộp" : "Bản nháp",
                 format(evaluation.submittedAt()));
+    }
+
+    private EvidencePageView display(ResultEvidenceView evidence) {
+        if (evidence == null) {
+            return null;
+        }
+        return new EvidencePageView(evidence.formula(), evidence.expectedSourceCount(),
+                evidence.submittedSourceCount(), score(evidence.mean()),
+                evidence.matchesFinalScore(), evidence.sources().stream()
+                        .map(source -> new SourcePageView(source.actorName(), source.role(),
+                                source.status(), score(source.score()), source.feedback(),
+                                format(source.submittedAt())))
+                        .toList());
     }
 
     private StudentResultPageView display(StudentResultSummaryView result) {
@@ -245,6 +284,8 @@ public class ResultController {
             String topicTitle,
             Long councilId,
             String councilName,
+            CouncilMode mode,
+            String topicType,
             List<FacultyResultLecturerPageView> lecturers,
             FinalResultStatus status,
             String statusLabel,
@@ -255,6 +296,17 @@ public class ResultController {
             long version) {
         public FacultyResultPageView {
             lecturers = List.copyOf(lecturers);
+        }
+    }
+
+    public record FacultyResultGroupPageView(
+            Long registrationId, List<FacultyResultPageView> students) {
+        public FacultyResultGroupPageView {
+            students = List.copyOf(students);
+        }
+
+        public FacultyResultPageView first() {
+            return students.getFirst();
         }
     }
 
@@ -275,6 +327,16 @@ public class ResultController {
             EvaluationStatus status,
             String statusLabel,
             String submittedAt) {
+    }
+
+    public record EvidencePageView(
+            String formula, int expectedSourceCount, int submittedSourceCount,
+            String mean, boolean matchesFinalScore, List<SourcePageView> sources) {
+    }
+
+    public record SourcePageView(
+            String actorName, String role, String status, String score,
+            String feedback, String submittedAt) {
     }
 
     public record StudentResultPageView(

@@ -48,7 +48,10 @@ public class AccountDetailsService implements UserDetailsService {
     private static void validateRoleCombination(Set<RoleCode> roles) {
         boolean studentMixedWithAnotherRole = roles.contains(RoleCode.STUDENT) && roles.size() > 1;
         boolean adminMixedWithAcademicRole = roles.contains(RoleCode.ADMIN) && roles.size() > 1;
-        if (roles.isEmpty() || studentMixedWithAnotherRole || adminMixedWithAcademicRole) {
+        boolean deanMixedWithLecturer = roles.contains(RoleCode.DEAN)
+                && roles.contains(RoleCode.LECTURER);
+        if (roles.isEmpty() || studentMixedWithAnotherRole || adminMixedWithAcademicRole
+                || deanMixedWithLecturer) {
             throw invalidCredentials();
         }
     }

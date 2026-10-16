@@ -63,7 +63,7 @@ class PeriodServiceTest {
         faculty = mock(FacultyEntity.class);
         department = mock(DepartmentEntity.class);
         dean = new ActorIdentity(
-                9L, Set.of(RoleCode.LECTURER, RoleCode.DEAN), 21L);
+                9L, Set.of(RoleCode.DEAN), 21L);
         when(faculty.getId()).thenReturn(21L);
         when(department.getId()).thenReturn(11L);
         when(department.getName()).thenReturn("Công nghệ phần mềm");

@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -35,6 +36,12 @@ import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultDetailView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultLecturerView;
 import vn.edu.topicregistration.service.ResultService.FacultyResultSummaryView;
+import vn.edu.topicregistration.service.ResultService.FacultyResultFilterOption;
+import vn.edu.topicregistration.service.ResultService.FacultyResultGroupView;
+import vn.edu.topicregistration.service.ResultService.FacultyResultListView;
+import vn.edu.topicregistration.service.ResultService.ResultListFilter;
+import vn.edu.topicregistration.service.ResultService.ResultEvidenceView;
+import vn.edu.topicregistration.service.ResultService.SourceEvidenceView;
 import vn.edu.topicregistration.service.ResultService.StudentResultDetailView;
 import vn.edu.topicregistration.service.ResultService.StudentResultSummaryView;
 import vn.edu.topicregistration.util.ProjectTime;
@@ -57,20 +64,22 @@ class ResultControllerTest {
 
     @Test
     void listsOnlyFacultyResultsReturnedByService() throws Exception {
-        when(results.listForCurrentDean()).thenReturn(List.of(summary()));
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(summary()));
 
         var response = mvc.perform(get("/faculty/results"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("results/faculty-list"))
-                .andExpect(model().attributeExists("results"))
+                .andExpect(model().attributeExists("groups"))
                 .andReturn();
 
         @SuppressWarnings("unchecked")
-        List<ResultController.FacultyResultPageView> pageResults =
-                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
-                        .getModel().get("results");
-        assertEquals("8.5", pageResults.getFirst().finalScore());
-        assertEquals("Đợt KLTN 2026", pageResults.getFirst().periodName());
+        List<ResultController.FacultyResultGroupPageView> groups =
+                (List<ResultController.FacultyResultGroupPageView>) response.getModelAndView()
+                        .getModel().get("groups");
+        assertEquals("8.5", groups.getFirst().first().finalScore());
+        assertEquals("Đợt KLTN 2026", groups.getFirst().first().periodName());
+        verify(results).listPageForCurrentDean(new ResultListFilter(
+                null, null, null, null, null, null, "recent", 0, 10));
     }
 
     @Test
@@ -91,7 +100,7 @@ class ResultControllerTest {
                 NOW,
                 NOW,
                 1L);
-        when(results.listForCurrentDean()).thenReturn(List.of(summary(), anotherPeriod));
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(anotherPeriod));
 
         var response = mvc.perform(get("/faculty/results").param("periodId", "8"))
                 .andExpect(status().isOk())
@@ -100,37 +109,23 @@ class ResultControllerTest {
                 .andReturn();
 
         @SuppressWarnings("unchecked")
-        List<ResultController.FacultyResultPageView> pageResults =
-                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
-                        .getModel().get("results");
+        List<ResultController.FacultyResultGroupPageView> groups =
+                (List<ResultController.FacultyResultGroupPageView>) response.getModelAndView()
+                        .getModel().get("groups");
         @SuppressWarnings("unchecked")
         List<ResultController.FacultyResultPeriodOption> periodOptions =
                 (List<ResultController.FacultyResultPeriodOption>) response.getModelAndView()
                         .getModel().get("periodOptions");
-        assertEquals(1, pageResults.size());
-        assertEquals(8L, pageResults.getFirst().periodId());
+        assertEquals(1, groups.size());
+        assertEquals(8L, groups.getFirst().first().periodId());
         assertEquals(2, periodOptions.size());
+        verify(results).listPageForCurrentDean(new ResultListFilter(
+                8L, null, null, null, null, null, "recent", 0, 10));
     }
 
     @Test
     void filtersFacultyResultsToTheSelectedRegistrationBeforePublication() throws Exception {
-        FacultyResultSummaryView anotherGroup = new FacultyResultSummaryView(
-                53L,
-                32L,
-                "Sinh viên B",
-                23L,
-                7L,
-                "Đợt KLTN 2026",
-                "Đề tài khác",
-                43L,
-                "Chấm độc lập khác",
-                List.of(new FacultyResultLecturerView(12L, "Giảng viên B")),
-                FinalResultStatus.READY,
-                new BigDecimal("6.5"),
-                NOW,
-                null,
-                0L);
-        when(results.listForCurrentDean()).thenReturn(List.of(summary(), anotherGroup));
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(summary()));
 
         var response = mvc.perform(get("/faculty/results")
                         .param("periodId", "7")
@@ -141,34 +136,19 @@ class ResultControllerTest {
                 .andReturn();
 
         @SuppressWarnings("unchecked")
-        List<ResultController.FacultyResultPageView> pageResults =
-                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
-                        .getModel().get("results");
-        assertEquals(1, pageResults.size());
-        assertEquals(51L, pageResults.getFirst().registrationId());
-        assertEquals(FinalResultStatus.READY, pageResults.getFirst().status());
+        List<ResultController.FacultyResultGroupPageView> groups =
+                (List<ResultController.FacultyResultGroupPageView>) response.getModelAndView()
+                        .getModel().get("groups");
+        assertEquals(1, groups.size());
+        assertEquals(51L, groups.getFirst().registrationId());
+        assertEquals(FinalResultStatus.READY, groups.getFirst().first().status());
+        verify(results).listPageForCurrentDean(new ResultListFilter(
+                7L, 51L, null, null, null, null, "recent", 0, 10));
     }
 
     @Test
     void combinesLecturerAndPublicationStatusFilters() throws Exception {
-        FacultyResultSummaryView publishedByAnotherLecturer = new FacultyResultSummaryView(
-                52L,
-                32L,
-                "Sinh viên B",
-                22L,
-                8L,
-                "Đợt môn học 2026",
-                "Đề tài khác",
-                42L,
-                "Chấm độc lập khác",
-                List.of(new FacultyResultLecturerView(12L, "Giảng viên B")),
-                FinalResultStatus.PUBLISHED,
-                new BigDecimal("7.75"),
-                NOW,
-                NOW,
-                1L);
-        when(results.listForCurrentDean()).thenReturn(List.of(
-                summary(), publishedByAnotherLecturer));
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(summary()));
 
         var response = mvc.perform(get("/faculty/results")
                         .param("lecturerId", "11")
@@ -179,16 +159,46 @@ class ResultControllerTest {
                 .andReturn();
 
         @SuppressWarnings("unchecked")
-        List<ResultController.FacultyResultPageView> pageResults =
-                (List<ResultController.FacultyResultPageView>) response.getModelAndView()
-                        .getModel().get("results");
+        List<ResultController.FacultyResultGroupPageView> groups =
+                (List<ResultController.FacultyResultGroupPageView>) response.getModelAndView()
+                        .getModel().get("groups");
         @SuppressWarnings("unchecked")
         List<ResultController.FacultyResultLecturerOption> lecturerOptions =
                 (List<ResultController.FacultyResultLecturerOption>) response.getModelAndView()
                         .getModel().get("lecturerOptions");
-        assertEquals(1, pageResults.size());
-        assertEquals(51L, pageResults.getFirst().registrationId());
+        assertEquals(1, groups.size());
+        assertEquals(51L, groups.getFirst().registrationId());
         assertEquals(2, lecturerOptions.size());
+        verify(results).listPageForCurrentDean(new ResultListFilter(
+                null, null, null, null, 11L, FinalResultStatus.READY, "recent", 0, 10));
+    }
+
+    @Test
+    void canonicalFiltersAndPaginationReachServiceWithoutClientFacultyScope() throws Exception {
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(summary()));
+
+        mvc.perform(get("/faculty/results")
+                        .param("period", "7")
+                        .param("topicType", "KLTN")
+                        .param("topicOrGroup", "N021")
+                        .param("grader", "11")
+                        .param("sort", "topic")
+                        .param("page", "2")
+                        .param("size", "20")
+                        .param("facultyId", "999"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedSort", "topic"));
+
+        verify(results).listPageForCurrentDean(new ResultListFilter(
+                7L, null, "KLTN", "N021", 11L, null, "topic", 2, 20));
+    }
+
+    @Test
+    void conflictingCanonicalAndLegacyFiltersAreRejected() throws Exception {
+        mvc.perform(get("/faculty/results").param("period", "7")
+                        .param("periodId", "8"))
+                .andExpect(status().isUnprocessableEntity());
+        verify(results, never()).listPageForCurrentDean(any());
     }
 
     @Test
@@ -268,6 +278,29 @@ class ResultControllerTest {
                 .andExpect(model().attributeExists("result", "evaluations"));
     }
 
+    @Test
+    void facultyDetailFormatsSourceEvidenceWithoutDraftScore() throws Exception {
+        ResultEvidenceView evidence = new ResultEvidenceView(
+                "(Điểm GVPB + điểm người chấm thứ hai) / 2", 2, 1,
+                null, false, List.of(
+                        new SourceEvidenceView(14L, "Giảng viên PB", "GVPB",
+                                "SUBMITTED", new BigDecimal("8.50"), "Đạt", NOW),
+                        new SourceEvidenceView(11L, "Giảng viên chấm", "Người chấm thứ hai",
+                                "DRAFT", null, null, null)));
+        when(results.detailForCurrentDean(51L, 31L)).thenReturn(
+                new FacultyResultDetailView(summary(), "Chưa đủ nguồn", "Trưởng khoa",
+                        null, List.of(), null, evidence));
+
+        var response = mvc.perform(get("/faculty/results/51/31"))
+                .andExpect(status().isOk()).andReturn();
+
+        var page = (ResultController.EvidencePageView) response
+                .getModelAndView().getModel().get("evidence");
+        assertEquals("8.5", page.sources().getFirst().score());
+        assertEquals("21/09/2026 09:00", page.sources().getFirst().submittedAt());
+        assertEquals(null, page.sources().get(1).score());
+    }
+
     private static FacultyResultDetailView detail() {
         return new FacultyResultDetailView(
                 summary(),
@@ -300,6 +333,16 @@ class ResultControllerTest {
                 NOW,
                 null,
                 0L);
+    }
+
+    private static FacultyResultListView listing(FacultyResultSummaryView result) {
+        return new FacultyResultListView(
+                List.of(new FacultyResultGroupView(result.registrationId(), List.of(result))),
+                1, 1, 0, 10,
+                List.of(new FacultyResultFilterOption(7L, "Đợt KLTN 2026"),
+                        new FacultyResultFilterOption(8L, "Đợt môn học 2026")),
+                List.of(new FacultyResultFilterOption(11L, "Giảng viên A"),
+                        new FacultyResultFilterOption(12L, "Giảng viên B")));
     }
 
     private static StudentResultSummaryView studentSummary() {

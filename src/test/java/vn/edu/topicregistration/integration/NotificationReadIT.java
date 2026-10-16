@@ -118,7 +118,8 @@ class NotificationReadIT {
                 otherRecipient.accountId(), "TOPIC:88:APPROVED", NotificationEventType.TOPIC_PROPOSAL_APPROVED,
                 NotificationTargetType.TOPIC, 88L, NOW.minusSeconds(10));
 
-        assertEquals("/topics/77", notifications.openForCurrentActor(own.getId()));
+        assertEquals("/notifications?target=unavailable",
+                notifications.openForCurrentActor(own.getId()));
         Instant firstReadAt = deliveries.findById(own.getId()).orElseThrow().getReadAt();
         assertEquals(NOW, firstReadAt);
 
@@ -128,6 +129,32 @@ class NotificationReadIT {
         ApplicationException notFound = assertThrows(ApplicationException.class,
                 () -> notifications.markAsReadForCurrentActor(foreign.getId()));
         assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, notFound.code());
+        assertNull(deliveries.findById(foreign.getId()).orElseThrow().getReadAt());
+    }
+
+    @Test
+    void publishedAnnouncementOpensAndForeignNotificationStillReturnsNotFound() throws Exception {
+        UserNotificationEntity own = delivery(
+                recipient.accountId(), "ANNOUNCEMENT:OPEN:PUBLISHED",
+                NotificationEventType.ANNOUNCEMENT_PUBLISHED,
+                NotificationTargetType.ANNOUNCEMENT, null, NOW.minusSeconds(20));
+        UserNotificationEntity foreign = delivery(
+                otherRecipient.accountId(), "TOPIC:FOREIGN:APPROVED",
+                NotificationEventType.TOPIC_PROPOSAL_APPROVED,
+                NotificationTargetType.TOPIC, 88L, NOW.minusSeconds(10));
+
+        mvc.perform(post("/notifications/{id}/open", own.getId())
+                        .with(user(recipient.username()).roles("STUDENT"))
+                        .with(csrf()))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl(
+                        "/announcements/" + own.getEvent().getTargetId()));
+        assertNotNull(deliveries.findById(own.getId()).orElseThrow().getReadAt());
+
+        mvc.perform(post("/notifications/{id}/open", foreign.getId())
+                        .with(user(recipient.username()).roles("STUDENT"))
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
         assertNull(deliveries.findById(foreign.getId()).orElseThrow().getReadAt());
     }
 
@@ -196,13 +223,15 @@ class NotificationReadIT {
         String resolvedEventKey = eventKey;
         Long resolvedTargetId = targetId;
         if (eventType == NotificationEventType.ANNOUNCEMENT_PUBLISHED) {
-            announcement = announcements.saveAndFlush(new AnnouncementEntity(
+            announcement = new AnnouncementEntity(
                     "Thông báo kiểm thử",
                     "Nội dung kiểm thử",
                     "Nhà trường",
                     null,
                     account,
-                    deliveredAt));
+                    deliveredAt);
+            announcement.publish(account, deliveredAt);
+            announcement = announcements.saveAndFlush(announcement);
             resolvedEventKey = "ANNOUNCEMENT:" + announcement.getId() + ":PUBLISHED";
             resolvedTargetId = announcement.getId();
         }

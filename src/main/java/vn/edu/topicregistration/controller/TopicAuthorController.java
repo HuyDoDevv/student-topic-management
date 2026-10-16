@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import vn.edu.topicregistration.service.TopicAuthorService.TopicFormContext;
 import vn.edu.topicregistration.service.TopicAuthorService.TopicView;
@@ -161,6 +162,20 @@ public class TopicAuthorController {
         return redirectTo(submitted.id());
     }
 
+    @PostMapping("/topics/{id}/return-to-draft")
+    RedirectView returnToDraft(
+            @PathVariable long id,
+            @RequestParam(name = "version", required = false) Long version,
+            RedirectAttributes redirectAttributes) {
+        if (version == null || version < 0) {
+            throw new ApplicationException(ApplicationErrorCode.VALIDATION_FAILED);
+        }
+        TopicView returned = topics.returnToDraft(id, version);
+        redirectAttributes.addFlashAttribute("returnToDraftNotice",
+                "Đề tài đã trở về bản nháp. Sau khi sửa, bạn cần gửi duyệt lại.");
+        return WebRedirects.seeOther("/topics/" + returned.id() + "/edit");
+    }
+
     private String renderForm(
             Model model,
             TopicDraftForm form,
@@ -204,7 +219,8 @@ public class TopicAuthorController {
             String statusClass,
             long version,
             List<String> supervisors,
-            boolean draft) {
+            boolean draft,
+            boolean approved) {
         static TopicPageView from(TopicView topic) {
             return new TopicPageView(
                     topic.id(),
@@ -221,7 +237,8 @@ public class TopicAuthorController {
                     statusClass(topic.status()),
                     topic.version(),
                     topic.supervisors().stream().map(supervisor -> supervisor.fullName()).toList(),
-                    topic.status() == TopicStatus.DRAFT);
+                    topic.status() == TopicStatus.DRAFT,
+                    topic.status() == TopicStatus.APPROVED);
         }
 
         public String supervisorNames() {

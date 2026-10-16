@@ -24,6 +24,7 @@ public final class NotificationEventKey {
             case REGISTRATION_REJECTED -> "REGISTRATION:" + sourceId + ":REJECTED";
             case REGISTRATION_AUTO_REJECTED -> "REGISTRATION:" + sourceId + ":AUTO_REJECTED";
             case DIRECT_GRADER_ASSIGNED -> "DIRECT_GRADING:" + sourceId + ":ASSIGNED";
+            case REVIEWER_ASSIGNED -> "REVIEWER:" + sourceId + ":ASSIGNED";
             case COUNCIL_MEMBER_ASSIGNED -> "COUNCIL_MEMBER:" + sourceId + ":ASSIGNED";
             case RESULT_PUBLISHED -> "RESULT:" + sourceId + ":PUBLISHED";
         };

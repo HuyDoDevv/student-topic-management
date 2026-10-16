@@ -16,15 +16,23 @@ class NavigationModelAdviceTest {
     private final NavigationModelAdvice advice = new NavigationModelAdvice();
 
     @Test
-    void deanLecturerGetsBoardsScoringAndFacultyResultsButNotStudentResults() {
-        ExtendedModelMap model = modelFor(RoleCode.DEAN, RoleCode.LECTURER);
+    void deanGetsManagementAndFacultyResultsWithoutLecturerNavigation() {
+        ExtendedModelMap model = modelFor(RoleCode.DEAN);
 
         assertEquals(true, model.get("canManageBoards"));
-        assertEquals(true, model.get("canScoreBoards"));
+        assertEquals(false, model.get("canScoreBoards"));
         assertEquals(true, model.get("canViewFacultyResults"));
         assertEquals(false, model.get("canViewStudentResults"));
         assertEquals(false, model.get("canAuthorTopics"));
         assertEquals(true, model.get("canManageAnnouncements"));
+    }
+
+    @Test
+    void malformedDualRolePrincipalHasNoLecturerNavigation() {
+        ExtendedModelMap model = modelFor(RoleCode.DEAN, RoleCode.LECTURER);
+        assertEquals(false, model.get("canAuthorTopics"));
+        assertEquals(false, model.get("canScoreBoards"));
+        assertEquals("Trưởng khoa", model.get("currentRoleLabel"));
     }
 
     @Test

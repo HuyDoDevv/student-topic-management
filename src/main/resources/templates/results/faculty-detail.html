@@ -5,14 +5,14 @@
 <section>
   <div class="page-header page-header-actions">
     <div>
-      <div class="page-pretitle" th:text="${result.councilName + ' · Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">Hội đồng · N001</div>
+      <div class="page-pretitle" th:text="${(result.mode.name() == 'DIRECT' ? 'Chấm trực tiếp' : result.councilName) + ' · Nhóm N' + #numbers.formatInteger(result.groupId, 3)}">Nhóm N001</div>
       <h1 class="page-title" th:text="${result.topicTitle}">Đề tài</h1>
       <p class="text-secondary mt-2 mb-0" th:text="${'Sinh viên: ' + result.studentName}">Sinh viên: A</p>
       <span class="badge mt-2" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span>
     </div>
     <div class="btn-list">
       <a class="btn btn-outline-secondary" th:href="@{/faculty/results}">Quay lại</a>
-      <a class="btn btn-outline-primary" th:href="@{/faculty/boards/{id}(id=${result.councilId})}">Xem hội đồng</a>
+      <a class="btn btn-outline-primary" th:if="${result.mode.name() == 'COUNCIL'}" th:href="@{/faculty/boards/{id}(id=${result.councilId})}">Xem hội đồng</a>
     </div>
   </div>
 
@@ -23,6 +23,14 @@
         <div class="card-body text-center">
           <div class="display-3 fw-bold text-primary" th:text="${result.finalScore}">8.50</div>
           <p class="text-secondary mt-2 mb-0" th:text="${evaluationSummary}">3 điểm đã nộp; trung bình 8.50</p>
+          <div th:if="${evidence != null}" class="mt-3 text-start">
+            <dl class="detail-list mb-0">
+              <dt>Công thức</dt><dd th:text="${evidence.formula}">Trung bình các nguồn</dd>
+              <dt>Đầu điểm</dt><dd th:text="${evidence.submittedSourceCount + '/' + evidence.expectedSourceCount}">3/3</dd>
+              <dt>Trung bình nguồn</dt><dd th:text="${evidence.mean != null ? evidence.mean : 'Chưa đủ căn cứ'}">8.50</dd>
+            </dl>
+            <p class="small text-warning mt-2 mb-0" th:if="${!evidence.matchesFinalScore}">Nguồn điểm hiện có không đủ hoặc không khớp điểm đã lưu. Kết quả lịch sử không bị tính lại.</p>
+          </div>
         </div>
         <div class="card-footer">
           <dl class="detail-list mb-0">
@@ -36,17 +44,18 @@
     </div>
 
     <div class="col-lg-8">
-      <article class="card h-100">
-        <div class="card-header"><h2 class="card-title">Điểm thành viên hội đồng</h2></div>
+      <article class="card h-100" th:if="${evidence != null}">
+        <div class="card-header"><h2 class="card-title">Căn cứ từng nguồn điểm</h2></div>
         <div class="table-responsive">
           <table class="table table-vcenter card-table responsive-table">
-            <thead><tr><th>Giảng viên</th><th>Điểm</th><th>Nhận xét</th><th>Đã nộp lúc</th></tr></thead>
+            <thead><tr><th>Người chấm / Vai trò</th><th>Trạng thái</th><th>Điểm đã nộp</th><th>Nhận xét</th><th>Đã nộp lúc</th></tr></thead>
             <tbody>
-            <tr th:each="evaluation : ${evaluations}">
-              <td data-label="Giảng viên" class="fw-semibold" th:text="${evaluation.evaluatorName}">Giảng viên A</td>
-              <td data-label="Điểm"><span class="badge bg-blue-lt fs-5" th:text="${evaluation.score}">8.50</span></td>
-              <td data-label="Nhận xét" th:text="${evaluation.feedback != null ? evaluation.feedback : 'Không có nhận xét'}">Đạt</td>
-              <td data-label="Đã nộp lúc" th:text="${evaluation.submittedAt}">21/09/2026 08:30</td>
+            <tr th:each="source : ${evidence.sources}">
+              <td data-label="Người chấm / Vai trò"><strong th:text="${source.actorName}">Giảng viên A</strong><div class="small text-secondary" th:text="${source.role}">Thành viên</div></td>
+              <td data-label="Trạng thái" th:text="${source.status == 'SUBMITTED' ? 'Đã nộp' : (source.status == 'DRAFT' ? 'Bản nháp' : 'Chưa bắt đầu')}">Đã nộp</td>
+              <td data-label="Điểm đã nộp" th:text="${source.score != null ? source.score : '—'}">8.50</td>
+              <td data-label="Nhận xét" th:text="${source.feedback != null ? source.feedback : '—'}">Đạt</td>
+              <td data-label="Đã nộp lúc" th:text="${source.submittedAt != null ? source.submittedAt : '—'}">21/09/2026 08:30</td>
             </tr>
             </tbody>
           </table>

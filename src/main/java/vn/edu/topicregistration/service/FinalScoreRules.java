@@ -34,7 +34,7 @@ public final class FinalScoreRules {
 
     public static void validateCompletion(CompletionContext context) {
         Objects.requireNonNull(context, "context");
-        if (!context.currentChair()) {
+        if (!context.authorizedActor()) {
             throw failure(FinalScoreFailure.ACCESS_DENIED);
         }
         if (context.status() != CouncilStatus.ACTIVE) {
@@ -63,7 +63,9 @@ public final class FinalScoreRules {
         }
         if (context.studentCount() < 1
                 || context.studentCount() != context.resultCount()
-                || !context.exactReadyResults()) {
+                || !context.exactReadyResults()
+                || !context.exactSubmittedSources()
+                || !context.scoresMatchSources()) {
             throw failure(FinalScoreFailure.RESULT_NOT_READY);
         }
     }
@@ -88,7 +90,7 @@ public final class FinalScoreRules {
 
     public record CompletionContext(
             CouncilStatus status,
-            boolean currentChair,
+            boolean authorizedActor,
             int assignmentCount,
             int memberCount,
             int studentCount,
@@ -97,13 +99,13 @@ public final class FinalScoreRules {
             CouncilMode mode) {
         public CompletionContext(
                 CouncilStatus status,
-                boolean currentChair,
+                boolean authorizedActor,
                 int assignmentCount,
                 int memberCount,
                 int studentCount,
                 int submittedEvaluationCount,
                 boolean exactSubmittedMatrix) {
-            this(status, currentChair, assignmentCount, memberCount,
+            this(status, authorizedActor, assignmentCount, memberCount,
                     studentCount, submittedEvaluationCount, exactSubmittedMatrix,
                     CouncilMode.COUNCIL);
         }
@@ -113,7 +115,14 @@ public final class FinalScoreRules {
             CouncilStatus status,
             int studentCount,
             int resultCount,
-            boolean exactReadyResults) {
+            boolean exactReadyResults,
+            boolean exactSubmittedSources,
+            boolean scoresMatchSources) {
+        public PublicationContext(
+                CouncilStatus status, int studentCount, int resultCount,
+                boolean exactReadyResults) {
+            this(status, studentCount, resultCount, exactReadyResults, true, true);
+        }
     }
 
     public enum FinalScoreFailure {

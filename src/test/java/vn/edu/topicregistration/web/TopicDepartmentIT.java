@@ -11,6 +11,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
@@ -26,6 +28,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
@@ -43,6 +47,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import vn.edu.topicregistration.config.TimeConfig;
@@ -72,6 +77,7 @@ class TopicDepartmentIT {
     FixtureSupport.IdentityFixture outsideDean;
     long departmentId;
     long otherDepartmentId;
+    long outsideDepartmentId;
     long periodId;
 
     @DynamicPropertySource
@@ -91,13 +97,13 @@ class TopicDepartmentIT {
         otherDepartmentId = department(faculty.facultyId(), "Hệ thống thông tin");
         lecturer = identity("topic-dept-author", faculty, Set.of(RoleCode.LECTURER));
         otherLecturer = identity("topic-dept-other", faculty, Set.of(RoleCode.LECTURER));
-        dean = identity("topic-dept-dean", faculty, Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+        dean = identity("topic-dept-dean", faculty, Set.of(RoleCode.DEAN));
         outsideDean = identity("topic-dept-outside-dean", otherFaculty,
-                Set.of(RoleCode.DEAN, RoleCode.LECTURER));
+                Set.of(RoleCode.DEAN));
         assignDepartment(lecturer, departmentId);
         assignDepartment(otherLecturer, otherDepartmentId);
         assignDepartment(dean, departmentId);
-        long outsideDepartmentId = department(otherFaculty.facultyId(), "Bộ môn ngoài Khoa");
+        outsideDepartmentId = department(otherFaculty.facultyId(), "Bộ môn ngoài Khoa");
         assignDepartment(outsideDean, outsideDepartmentId);
         periodId = period(faculty.facultyId(), departmentId, "Đợt phần mềm");
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
@@ -107,18 +113,16 @@ class TopicDepartmentIT {
     void lecturerPeriodListContainsOnlyOwnDepartmentAndDeanKeepsFacultyScope()
             throws Exception {
         long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
-        period(faculty.facultyId(), null, "Đợt legacy");
 
         mvc.perform(get("/topics").with(actor(lecturer, "LECTURER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt phần mềm")))
-                .andExpect(content().string(not(containsString("Đợt hệ thống"))))
-                .andExpect(content().string(not(containsString("Đợt legacy"))));
+                .andExpect(content().string(not(containsString("Đợt hệ thống"))));
         mvc.perform(get("/topics").with(actor(otherLecturer, "LECTURER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt hệ thống")))
                 .andExpect(content().string(not(containsString("Đợt phần mềm"))));
-        mvc.perform(get("/periods").with(actor(dean, "DEAN", "LECTURER")))
+        mvc.perform(get("/periods").with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt phần mềm")))
                 .andExpect(content().string(containsString("Đợt hệ thống")));
@@ -128,12 +132,13 @@ class TopicDepartmentIT {
     }
 
     @Test
-    void directOtherDepartmentOrLegacyPeriodUrlIsNotFoundAndDoesNotCreateTopic()
+    void directOtherDepartmentOrFacultyPeriodUrlIsNotFoundAndDoesNotCreateTopic()
             throws Exception {
         long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
-        long legacyPeriodId = period(faculty.facultyId(), null, "Đợt legacy");
+        long outsidePeriodId = period(
+                otherFaculty.facultyId(), outsideDepartmentId, "Đợt Khoa khác");
 
-        for (long blockedPeriodId : new long[] {otherPeriodId, legacyPeriodId}) {
+        for (long blockedPeriodId : new long[] {otherPeriodId, outsidePeriodId}) {
             mvc.perform(get("/periods/{periodId}/topics", blockedPeriodId)
                             .with(actor(lecturer, "LECTURER")))
                     .andExpect(status().isNotFound());
@@ -253,59 +258,336 @@ class TopicDepartmentIT {
 
     @Test
     void deanReviewsAcrossDepartmentsInOwnFacultyButNotAnotherFaculty() throws Exception {
+        long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
         long first = pendingTopic(lecturer, departmentId, "Đề tài phần mềm");
-        long second = pendingTopic(otherLecturer, otherDepartmentId, "Đề tài hệ thống");
+        long second = pendingTopic(otherPeriodId, otherLecturer, otherDepartmentId,
+                "Đề tài hệ thống");
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .with(actor(dean, "DEAN", "LECTURER")))
+                        .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đề tài phần mềm")))
-                .andExpect(content().string(containsString("Đề tài hệ thống")));
+                .andExpect(content().string(not(containsString("Đề tài hệ thống"))));
+        mvc.perform(get("/periods/{periodId}/topics/review", otherPeriodId)
+                        .with(actor(dean, "DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Đề tài hệ thống")))
+                .andExpect(content().string(not(containsString("Đề tài phần mềm"))));
         mvc.perform(post("/topics/{id}/approve", first)
-                        .with(actor(dean, "DEAN", "LECTURER")).with(csrf())
+                        .with(actor(dean, "DEAN")).with(csrf())
                         .param("version", "0"))
                 .andExpect(status().isSeeOther());
         mvc.perform(post("/topics/{id}/approve", second)
-                        .with(actor(dean, "DEAN", "LECTURER")).with(csrf())
+                        .with(actor(dean, "DEAN")).with(csrf())
                         .param("version", "0"))
                 .andExpect(status().isSeeOther());
         assertEquals(2L, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM topics WHERE status = 'APPROVED'", Long.class));
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .with(actor(outsideDean, "DEAN", "LECTURER")))
+                        .with(actor(outsideDean, "DEAN")))
                 .andExpect(status().isNotFound());
         mvc.perform(post("/topics/{id}/approve", first)
-                        .with(actor(outsideDean, "DEAN", "LECTURER")).with(csrf())
+                        .with(actor(outsideDean, "DEAN")).with(csrf())
                         .param("version", "1"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void deanFiltersReviewByDepartmentWithoutChangingFacultyScopeOrSummary() throws Exception {
-        pendingTopic(lecturer, departmentId, "Đề tài phần mềm T009");
-        pendingTopic(otherLecturer, otherDepartmentId, "Đề tài hệ thống T009");
-        long outsideDepartment = department(otherFaculty.facultyId(), "Bộ môn ngoài T009");
+    void authorReturnsApprovedTopicThenEditsAndResubmitsForReview() throws Exception {
+        long topicId = approvedTopic("Đề tài cần sửa");
+        long approvedVersion = topicVersion(topicId);
+
+        mvc.perform(get("/topics/{id}", topicId).with(actor(lecturer, "LECTURER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Trả về bản nháp để sửa")));
+        mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(approvedVersion)))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/topics/" + topicId + "/edit"))
+                .andExpect(flash().attribute("returnToDraftNotice",
+                        "Đề tài đã trở về bản nháp. Sau khi sửa, bạn cần gửi duyệt lại."));
+        assertEquals("DRAFT", topicStatus(topicId));
+        MvcResult editPage = mvc.perform(get("/topics/{id}/edit", topicId)
+                        .with(actor(lecturer, "LECTURER"))
+                        .flashAttr("returnToDraftNotice", "Sau khi sửa, bạn cần gửi duyệt lại."))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sau khi sửa, bạn cần gửi duyệt lại.")))
+                .andReturn();
+        long renderedVersion = renderedTopicVersion(editPage);
+        assertEquals(topicVersion(topicId), renderedVersion);
+        mvc.perform(post("/topics/{id}/draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(renderedVersion))
+                        .param("title", "Đề tài đã sửa")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả"))
+                .andExpect(status().isSeeOther());
+        long savedVersion = topicVersion(topicId);
+        assertEquals(renderedVersion + 1, savedVersion);
+        mvc.perform(post("/topics/{id}/draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(renderedVersion))
+                        .param("title", "Nội dung từ tab cũ")
+                        .param("description", "Mô tả cũ")
+                        .param("objectives", "Mục tiêu cũ")
+                        .param("studentRequirements", "Yêu cầu cũ")
+                        .param("expectedResults", "Kết quả cũ"))
+                .andExpect(status().isConflict());
+        assertEquals(savedVersion, topicVersion(topicId));
+        assertEquals("Đề tài đã sửa", jdbc.queryForObject(
+                "SELECT title FROM topics WHERE id = ?", String.class, topicId));
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(savedVersion)))
+                .andExpect(status().isSeeOther());
+        assertEquals("PENDING_APPROVAL", topicStatus(topicId));
+        assertEquals("Đề tài đã sửa", jdbc.queryForObject(
+                "SELECT title FROM topics WHERE id = ?", String.class, topicId));
+    }
+
+    @Test
+    void returnedTopicKeepsChangesAndRemovesCoSupervisorBeforeResubmission()
+            throws Exception {
+        FixtureSupport.IdentityFixture firstColleague = identity(
+                "topic-return-co-first", faculty, Set.of(RoleCode.LECTURER));
+        FixtureSupport.IdentityFixture secondColleague = identity(
+                "topic-return-co-second", faculty, Set.of(RoleCode.LECTURER));
+        assignDepartment(firstColleague, departmentId);
+        assignDepartment(secondColleague, departmentId);
+
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Đề tài có hai GVHD")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả")
+                        .param("coSupervisorIds", Long.toString(firstColleague.accountId())))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId))))
+                .andExpect(status().isSeeOther());
+        mvc.perform(post("/topics/{id}/approve", topicId)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId))))
+                .andExpect(status().isSeeOther());
+
+        Long[] coSupervisors = {firstColleague.accountId(), secondColleague.accountId(), null};
+        for (int index = 0; index < coSupervisors.length; index++) {
+            mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                            .with(actor(lecturer, "LECTURER")).with(csrf())
+                            .param("version", Long.toString(topicVersion(topicId))))
+                    .andExpect(status().isSeeOther());
+            MvcResult editPage = mvc.perform(get("/topics/{id}/edit", topicId)
+                            .with(actor(lecturer, "LECTURER")))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            long renderedVersion = renderedTopicVersion(editPage);
+            assertEquals(topicVersion(topicId), renderedVersion);
+            var saveRequest = post("/topics/{id}/draft", topicId)
+                    .with(actor(lecturer, "LECTURER")).with(csrf())
+                    .param("version", Long.toString(renderedVersion))
+                    .param("title", "Đề tài sửa lần " + index)
+                    .param("description", "Mô tả")
+                    .param("objectives", "Mục tiêu")
+                    .param("studentRequirements", "Yêu cầu")
+                    .param("expectedResults", "Kết quả");
+            if (coSupervisors[index] != null) {
+                saveRequest.param("coSupervisorIds", Long.toString(coSupervisors[index]));
+            }
+            mvc.perform(saveRequest).andExpect(status().isSeeOther());
+            assertEquals(lecturer.accountId(), jdbc.queryForObject(
+                    "SELECT lecturer_id FROM topic_supervisors WHERE topic_id = ? AND slot = 1",
+                    Long.class, topicId));
+            assertEquals(coSupervisors[index] == null ? 1L : 2L, jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM topic_supervisors WHERE topic_id = ?",
+                    Long.class, topicId));
+            if (coSupervisors[index] != null) {
+                assertEquals(coSupervisors[index], jdbc.queryForObject(
+                        "SELECT lecturer_id FROM topic_supervisors WHERE topic_id = ? AND slot = 2",
+                        Long.class, topicId));
+            }
+            mvc.perform(post("/topics/{id}/submit", topicId)
+                            .with(actor(lecturer, "LECTURER")).with(csrf())
+                            .param("version", Long.toString(topicVersion(topicId))))
+                    .andExpect(status().isSeeOther());
+            assertEquals("PENDING_APPROVAL", topicStatus(topicId));
+            if (index < coSupervisors.length - 1) {
+                mvc.perform(post("/topics/{id}/approve", topicId)
+                                .with(actor(dean, "DEAN")).with(csrf())
+                                .param("version", Long.toString(topicVersion(topicId))))
+                        .andExpect(status().isSeeOther());
+            }
+        }
+    }
+
+    @Test
+    void authorCanSaveReturnedTopicCreatedThroughAuthorFormWithPrimarySupervisor()
+            throws Exception {
+        mvc.perform(post("/periods/{periodId}/topics", periodId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("title", "Đề tài tạo từ form")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả"))
+                .andExpect(status().isSeeOther());
+        long topicId = latestTopicId();
+        assertEquals(lecturer.accountId(), jdbc.queryForObject(
+                "SELECT lecturer_id FROM topic_supervisors WHERE topic_id = ? AND slot = 1",
+                Long.class, topicId));
+
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId))))
+                .andExpect(status().isSeeOther());
+        mvc.perform(post("/topics/{id}/approve", topicId)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId))))
+                .andExpect(status().isSeeOther());
+        mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId))))
+                .andExpect(status().isSeeOther());
+        mvc.perform(post("/topics/{id}/draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId)))
+                        .param("title", "Đề tài đã sửa")
+                        .param("description", "Mô tả")
+                        .param("objectives", "Mục tiêu")
+                        .param("studentRequirements", "Yêu cầu")
+                        .param("expectedResults", "Kết quả"))
+                .andExpect(status().isSeeOther());
+        assertEquals("Đề tài đã sửa", jdbc.queryForObject(
+                "SELECT title FROM topics WHERE id = ?", String.class, topicId));
+        mvc.perform(post("/topics/{id}/submit", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(topicVersion(topicId))))
+                .andExpect(status().isSeeOther());
+        assertEquals("PENDING_APPROVAL", topicStatus(topicId));
+    }
+
+    @Test
+    void returnToDraftRejectsPublishedExpiredStaleAndUnauthorizedRequests() throws Exception {
+        long topicId = approvedTopic("Đề tài không được sửa");
+        long version = topicVersion(topicId);
+        for (FixtureSupport.IdentityFixture denied : new FixtureSupport.IdentityFixture[] {
+                otherLecturer, dean, outsideDean}) {
+            mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                            .with(actor(denied,
+                                    denied == otherLecturer ? "LECTURER" : "DEAN"))
+                            .with(csrf()).param("version", Long.toString(version)))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(version - 1)))
+                .andExpect(status().isConflict());
+        jdbc.update("UPDATE registration_periods SET lecturer_end = ? WHERE id = ?",
+                Timestamp.from(NOW.minusSeconds(1)), periodId);
+        mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(version)))
+                .andExpect(status().isUnprocessableEntity());
+        assertEquals("APPROVED", topicStatus(topicId));
+
+        jdbc.update("UPDATE topics SET status = 'PUBLISHED' WHERE id = ?", topicId);
+        mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                        .with(actor(lecturer, "LECTURER")).with(csrf())
+                        .param("version", Long.toString(version)))
+                .andExpect(status().isUnprocessableEntity());
+        assertEquals("PUBLISHED", topicStatus(topicId));
+    }
+
+    @Test
+    void anyRegistrationStatusBlocksReturningApprovedTopic() throws Exception {
+        for (String status : new String[] {"PENDING", "ACCEPTED", "REJECTED", "WITHDRAWN"}) {
+            long topicId = approvedTopic("Đề tài có đăng ký " + status);
+            FixtureSupport.IdentityFixture student = identity(
+                    "topic-return-student-" + status, faculty, Set.of(RoleCode.STUDENT));
+            FixtureSupport.IdentityFixture memberTwo = identity(
+                    "topic-return-member-two-" + status, faculty, Set.of(RoleCode.STUDENT));
+            FixtureSupport.IdentityFixture memberThree = identity(
+                    "topic-return-member-three-" + status, faculty, Set.of(RoleCode.STUDENT));
+            jdbc.update("INSERT INTO student_groups(period_id, leader_student_id, version) VALUES (?, ?, 0)",
+                    periodId, student.accountId());
+            long groupId = jdbc.queryForObject("SELECT MAX(id) FROM student_groups", Long.class);
+            jdbc.update("INSERT INTO group_memberships(group_id, period_id, student_id, slot) "
+                    + "VALUES (?, ?, ?, 2)", groupId, periodId, memberTwo.accountId());
+            jdbc.update("INSERT INTO group_memberships(group_id, period_id, student_id, slot) "
+                    + "VALUES (?, ?, ?, 3)", groupId, periodId, memberThree.accountId());
+            jdbc.update("INSERT INTO registrations(period_id, group_id, topic_id, status, "
+                    + "rejection_kind, rejection_reason, version) VALUES (?, ?, ?, ?, ?, ?, 0)",
+                    periodId, groupId, topicId, status,
+                    "REJECTED".equals(status) ? "MANUAL" : null,
+                    "REJECTED".equals(status) ? "Không phù hợp" : null);
+
+            mvc.perform(post("/topics/{id}/return-to-draft", topicId)
+                            .with(actor(lecturer, "LECTURER")).with(csrf())
+                            .param("version", Long.toString(topicVersion(topicId))))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(content().string(containsString("đã có đăng ký")));
+            assertEquals("APPROVED", topicStatus(topicId));
+        }
+    }
+
+    @Test
+    void deanReviewRejectsForgedDepartmentAndExcludesMismatchedTopics() throws Exception {
+        long valid = pendingTopic(lecturer, departmentId, "Đề tài đúng Bộ môn");
+        long mismatched = pendingTopic(otherLecturer, otherDepartmentId,
+                "Đề tài lệch Bộ môn");
 
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .param("departmentId", Long.toString(departmentId))
-                        .with(actor(dean, "DEAN", "LECTURER")))
+                        .with(actor(dean, "DEAN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Đề tài phần mềm T009")))
-                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
-                .andExpect(content().string(containsString("<span>2</span> chờ duyệt")));
+                .andExpect(content().string(containsString("Đề tài đúng Bộ môn")))
+                .andExpect(content().string(not(containsString("Đề tài lệch Bộ môn"))))
+                .andExpect(content().string(not(containsString("Tất cả Bộ môn trong Khoa"))))
+                .andExpect(content().string(containsString("<span>1</span> chờ duyệt")));
         mvc.perform(get("/periods/{periodId}/topics/review", periodId)
-                        .param("departmentId", Long.toString(outsideDepartment))
-                        .with(actor(dean, "DEAN", "LECTURER")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(not(containsString("Đề tài phần mềm T009"))))
-                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))))
-                .andExpect(content().string(not(containsString("Bộ môn ngoài T009"))));
-        mvc.perform(get("/periods/{periodId}/topics", periodId)
-                        .with(actor(lecturer, "LECTURER")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Công nghệ phần mềm")))
-                .andExpect(content().string(not(containsString("Đề tài hệ thống T009"))));
+                        .param("departmentId", Long.toString(otherDepartmentId))
+                        .with(actor(dean, "DEAN")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/topics/{id}/approve", valid)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0")
+                        .param("departmentId", Long.toString(otherDepartmentId)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/topics/{id}/reject", valid)
+                        .queryParam("departmentId", Long.toString(otherDepartmentId))
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/periods/{periodId}/topics/publish", periodId)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("departmentId", Long.toString(otherDepartmentId)))
+                .andExpect(status().isBadRequest());
+        for (long topicId : new long[] {valid, mismatched}) {
+            assertEquals("PENDING_APPROVAL", jdbc.queryForObject(
+                    "SELECT status FROM topics WHERE id = ?", String.class, topicId));
+        }
+        mvc.perform(post("/topics/{id}/approve", mismatched)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/topics/{id}/approve", valid)
+                        .with(actor(dean, "DEAN")).with(csrf())
+                        .param("version", "0"))
+                .andExpect(status().isSeeOther());
+        jdbc.update("UPDATE topics SET status = 'APPROVED' WHERE id = ?", mismatched);
+        mvc.perform(post("/periods/{periodId}/topics/publish", periodId)
+                        .with(actor(dean, "DEAN")).with(csrf()))
+                .andExpect(status().isSeeOther());
+        assertEquals("PUBLISHED", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, valid));
+        assertEquals("APPROVED", jdbc.queryForObject(
+                "SELECT status FROM topics WHERE id = ?", String.class, mismatched));
     }
 
     @Test
@@ -505,13 +787,12 @@ class TopicDepartmentIT {
     }
 
     @Test
-    void studentSeesDepartmentPeriodsInFacultyIncludingLegacyButNotAnotherFaculty()
+    void studentSeesAllDepartmentPeriodsInFacultyButNotAnotherFaculty()
             throws Exception {
         FixtureSupport.IdentityFixture student = identity(
                 "topic-dept-student-leader", faculty, Set.of(RoleCode.STUDENT));
         period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
-        period(faculty.facultyId(), null, "Đợt legacy");
-        period(otherFaculty.facultyId(), null, "Đợt Khoa khác");
+        period(otherFaculty.facultyId(), outsideDepartmentId, "Đợt Khoa khác");
 
         mvc.perform(get("/groups").with(actor(student, "STUDENT")))
                 .andExpect(status().isOk())
@@ -519,7 +800,6 @@ class TopicDepartmentIT {
                 .andExpect(content().string(containsString("Đợt hệ thống")))
                 .andExpect(content().string(containsString("Công nghệ phần mềm")))
                 .andExpect(content().string(containsString("Hệ thống thông tin")))
-                .andExpect(content().string(containsString("Chưa xác định Bộ môn")))
                 .andExpect(content().string(not(containsString("Đợt Khoa khác"))));
     }
 
@@ -603,6 +883,31 @@ class TopicDepartmentIT {
     private long latestTopicId() {
         return jdbc.queryForObject("SELECT MAX(id) FROM topics WHERE author_id = ?",
                 Long.class, lecturer.accountId());
+    }
+
+    private long approvedTopic(String title) throws Exception {
+        long topicId = pendingTopic(lecturer, departmentId, title);
+        mvc.perform(post("/topics/{id}/approve", topicId)
+                        .with(actor(dean, "DEAN")).with(csrf()).param("version", "0"))
+                .andExpect(status().isSeeOther());
+        return topicId;
+    }
+
+    private long topicVersion(long topicId) {
+        return jdbc.queryForObject("SELECT version FROM topics WHERE id = ?", Long.class, topicId);
+    }
+
+    private static long renderedTopicVersion(MvcResult result) throws Exception {
+        String html = result.getResponse().getContentAsString();
+        Matcher matcher = Pattern.compile(
+                        "<input(?=[^>]*\\bname=\"version\")(?=[^>]*\\bvalue=\"(\\d+)\")[^>]*>")
+                .matcher(html);
+        assertTrue(matcher.find(), "Edit form must render the persisted topic version");
+        return Long.parseLong(matcher.group(1));
+    }
+
+    private String topicStatus(long topicId) {
+        return jdbc.queryForObject("SELECT status FROM topics WHERE id = ?", String.class, topicId);
     }
 
     private FixtureSupport.IdentityFixture identity(String username,

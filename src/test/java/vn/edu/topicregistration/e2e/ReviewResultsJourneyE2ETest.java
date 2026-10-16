@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.SelectOption;
 
 import vn.edu.topicregistration.config.TimeConfig;
 import vn.edu.topicregistration.integration.FixtureSupport;
@@ -59,34 +60,48 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
         assertTrue(page().getByText("e2e-upload-source.pdf").isVisible());
 
         logout();
+        login("dean.demo");
+        assignReviewer(ReviewFixtureSupport.ACTIVE_TOPIC_ONE);
+        assignReviewer(ReviewFixtureSupport.ACTIVE_TOPIC_TWO);
+
+        logout();
+        login("lecturer3.demo");
+        submitReviewer(ReviewFixtureSupport.ACTIVE_TOPIC_ONE);
+        submitReviewer(ReviewFixtureSupport.ACTIVE_TOPIC_TWO);
+
+        logout();
         login("lecturer4.demo");
         assertTrue(link("Chấm điểm").isVisible());
         page().navigate(url("/lecturer/scoring/"
                 + fixture.activeCouncilId() + "/" + fixture.activeRegistrationOneId()));
-        page().locator("a.btn-primary").first().click();
-        String studentScoreUrl = page().url();
-        page().getByLabel("Điểm tổng").fill("9.25");
-        page().getByLabel("Nhận xét riêng cho sinh viên").fill("Browser acceptance score");
+        int scoreRows = page().locator("input[type=number]").count();
+        assertEquals(3, scoreRows);
+        assertEquals(1, page().locator("form.card input[name='_csrf']").count(),
+                "Phiếu chấm phải có CSRF token để POST từ trình duyệt");
+        for (int index = 0; index < scoreRows; index++) {
+            page().locator("input[type=number]").nth(index).fill("9.25");
+            page().locator("textarea").nth(index).fill("Browser acceptance score");
+        }
+        assertPostRedirect("Lưu nháp toàn bộ", "/draft");
+        assertEquals(3, page().getByText("Bản nháp", new Page.GetByTextOptions()
+                .setExact(true)).count());
         acceptNextConfirmation();
-        button("Nộp điểm").click();
-        assertEquals(studentScoreUrl, page().url(), page().locator("body").innerText());
-        assertTrue(page().getByText("Đã nộp điểm", new Page.GetByTextOptions()
-                .setExact(true)).isVisible());
-
-        logout();
-        login("lecturer1.demo");
-        page().navigate(url("/faculty/boards/" + fixture.activeCouncilId()));
-        acceptNextConfirmation();
-        button("Tổng hợp kết quả").click();
-        page().waitForURL(url("/faculty/boards/" + fixture.activeCouncilId()));
-        assertTrue(page().getByText("Đã hoàn tất", new Page.GetByTextOptions()
-                .setExact(true)).isVisible());
+        assertPostRedirect("Nộp toàn bộ", "/submit");
+        page().waitForURL(url("/lecturer/scoring/"
+                + fixture.activeCouncilId() + "/" + fixture.activeRegistrationOneId()));
+        assertEquals(3, page().getByText("Đã nộp", new Page.GetByTextOptions()
+                .setExact(true)).count());
 
         logout();
         login("dean.demo");
         assertTrue(link("Hội đồng").isVisible());
         assertTrue(link("Kết quả hội đồng").isVisible());
         page().navigate(url("/faculty/boards/" + fixture.activeCouncilId()));
+        acceptNextConfirmation();
+        assertPostRedirect("Tổng hợp kết quả", "/complete");
+        page().navigate(url("/faculty/boards/" + fixture.activeCouncilId()));
+        assertTrue(page().getByText("Đã hoàn tất", new Page.GetByTextOptions()
+                .setExact(true)).isVisible());
         acceptNextConfirmation();
         button("Công bố kết quả").click();
         page().waitForURL(url("/faculty/results"));
@@ -95,14 +110,14 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
         logout();
         login("student1.demo");
         page().navigate(url("/student/results/" + fixture.activeRegistrationOneId()));
-        assertEquals("8.75", page().locator(".display-1").textContent().strip());
+        assertEquals("8.31", page().locator(".display-1").textContent().strip());
         assertEquals(3, page().locator("tbody tr").count());
 
         logout();
         login("student2.demo");
         page().navigate(url("/student/results/" + fixture.activeRegistrationOneId()));
-        assertEquals("8.5", page().locator(".display-1").textContent().strip());
-        assertFalse(page().content().contains("Browser acceptance score"));
+        assertEquals("8.31", page().locator(".display-1").textContent().strip());
+        assertTrue(page().content().contains("Browser acceptance score"));
 
         logout();
         login("student4.demo");
@@ -110,6 +125,45 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
                 url("/student/results/" + fixture.activeRegistrationOneId()));
         assertEquals(404, denied.status());
         assertFalse(page().content().contains(ReviewFixtureSupport.ACTIVE_TOPIC_ONE));
+    }
+
+    private void assignReviewer(String topicTitle) {
+        page().navigate(url("/faculty/reviewers"));
+        var row = page().locator("tbody tr").filter(
+                new com.microsoft.playwright.Locator.FilterOptions().setHasText(topicTitle));
+        row.locator("select").selectOption(new SelectOption().setLabel("Giảng viên Demo 3"));
+        Response response = page().waitForResponse(
+                candidate -> candidate.url().endsWith("/faculty/reviewers")
+                        && "POST".equals(candidate.request().method()),
+                () -> row.locator("button").click());
+        assertEquals(303, response.status(), "Phân công GVPB: " + topicTitle);
+    }
+
+    private void submitReviewer(String topicTitle) {
+        page().navigate(url("/lecturer/reviewers"));
+        page().locator(".list-group-item").filter(
+                new com.microsoft.playwright.Locator.FilterOptions().setHasText(topicTitle))
+                .click();
+        page().locator("input[type=file]").setInputFiles(uploadFile);
+        int studentCount = page().locator("input[type=number]").count();
+        assertEquals(3, studentCount);
+        for (int index = 0; index < studentCount; index++) {
+            page().locator("input[type=number]").nth(index).fill("7.00");
+            page().locator("textarea").nth(index).fill("Đạt yêu cầu");
+        }
+        acceptNextConfirmation();
+        assertPostRedirect("Nộp phản biện", "/submit");
+        assertTrue(page().getByText("Đã nộp phản biện. Không thể sửa hoặc nộp lại.")
+                .isVisible());
+    }
+
+    private void assertPostRedirect(String buttonName, String pathSuffix) {
+        Response response = page().waitForResponse(
+                candidate -> candidate.url().endsWith(pathSuffix)
+                        && "POST".equals(candidate.request().method()),
+                () -> button(buttonName).click());
+        assertEquals(303, response.status(),
+                buttonName + " chuyển tới " + page().url());
     }
 
     private void login(String username) {

@@ -52,6 +52,8 @@ public final class MySqlTestSupport {
                 "spring.datasource.url", url,
                 "spring.datasource.username", username,
                 "spring.datasource.password", password,
+                "spring.datasource.hikari.maximum-pool-size", "4",
+                "spring.datasource.hikari.minimum-idle", "0",
                 "server.address", "127.0.0.1",
                 "server.port", "0",
                 "spring.main.banner-mode", "off");

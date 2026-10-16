@@ -12,7 +12,6 @@ import vn.edu.topicregistration.repository.TopicRepository;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
 
 import java.util.List;
-import java.util.Comparator;
 import java.util.Objects;
 
 import org.springframework.context.annotation.Profile;
@@ -63,7 +62,8 @@ public class TopicReviewService {
         RegistrationPeriodEntity period = lockedPeriod(periodId);
         authorization.requireDeanOfFaculty(period.getFaculty().getId());
 
-        List<TopicEntity> approved = topics.findAllApprovedByPeriodIdForUpdate(periodId);
+        List<TopicEntity> approved = topics.findAllApprovedByPeriodIdAndDepartmentIdForUpdate(
+                periodId, requiredDepartmentId(period));
         for (TopicEntity topic : approved) {
             TopicStatus nextStatus = applyRule(() -> TopicReviewRules.publish(statusOf(topic)));
             topic.changeStatus(nextStatus.name());
@@ -76,11 +76,6 @@ public class TopicReviewService {
 
     @Transactional(readOnly = true)
     public ReviewWorkspace reviewWorkspace(long periodId) {
-        return reviewWorkspace(periodId, null);
-    }
-
-    @Transactional(readOnly = true)
-    public ReviewWorkspace reviewWorkspace(long periodId, Long departmentId) {
         var actor = authorization.requireRole(RoleCode.DEAN);
         if (actor.facultyId() == null) {
             throw new AccessDeniedException("Dean faculty scope is missing");
@@ -90,10 +85,14 @@ public class TopicReviewService {
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         authorization.requireDeanOfFaculty(period.getFaculty().getId());
+        if (period.getDepartment() == null) {
+            return new ReviewWorkspace(period.getId(), List.of());
+        }
 
-        List<ReviewTopicView> allTopics = topics
-                .findAllVisibleByPeriodIdAndStatusIn(
+        List<ReviewTopicView> visibleTopics = topics
+                .findAllVisibleForReview(
                         periodId,
+                        requiredDepartmentId(period),
                         List.of(
                                 TopicStatus.PENDING_APPROVAL.name(),
                                 TopicStatus.APPROVED.name(),
@@ -101,21 +100,7 @@ public class TopicReviewService {
                 .stream()
                 .map(this::toReviewView)
                 .toList();
-        Long selectedDepartmentId = departmentId != null && departmentId > 0
-                ? departmentId : null;
-        List<DepartmentOption> departmentOptions = allTopics.stream()
-                .filter(topic -> topic.departmentId() != null)
-                .map(topic -> new DepartmentOption(topic.departmentId(), topic.departmentName()))
-                .distinct()
-                .sorted(Comparator.comparing(DepartmentOption::name))
-                .toList();
-        List<ReviewTopicView> visibleTopics = selectedDepartmentId == null
-                ? allTopics
-                : allTopics.stream()
-                        .filter(topic -> selectedDepartmentId.equals(topic.departmentId()))
-                        .toList();
-        return new ReviewWorkspace(period.getId(), visibleTopics, allTopics,
-                departmentOptions, selectedDepartmentId);
+        return new ReviewWorkspace(period.getId(), visibleTopics);
     }
 
     private ReviewResult review(
@@ -164,6 +149,10 @@ public class TopicReviewService {
         if (!Objects.equals(topic.getPeriod().getId(), period.getId())) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
+        if (topic.getDepartment() == null
+                || !Objects.equals(topic.getDepartment().getId(), requiredDepartmentId(period))) {
+            throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
+        }
         if (topic.getVersion() != expectedVersion) {
             throw new OptimisticLockingFailureException("Topic version is stale");
         }
@@ -174,6 +163,13 @@ public class TopicReviewService {
         return periods.findByIdForUpdate(periodId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    private long requiredDepartmentId(RegistrationPeriodEntity period) {
+        if (period.getDepartment() == null) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        return period.getDepartment().getId();
     }
 
     private TopicStatus statusOf(TopicEntity topic) {
@@ -245,36 +241,28 @@ public class TopicReviewService {
 
     public record ReviewWorkspace(
             long periodId,
-            List<ReviewTopicView> topics,
-            List<ReviewTopicView> allTopics,
-            List<DepartmentOption> departmentOptions,
-            Long selectedDepartmentId) {
+            List<ReviewTopicView> topics) {
         public ReviewWorkspace {
             topics = List.copyOf(topics);
-            allTopics = List.copyOf(allTopics);
-            departmentOptions = List.copyOf(departmentOptions);
         }
 
         public long pendingCount() {
-            return allTopics.stream()
+            return topics.stream()
                     .filter(topic -> topic.status() == TopicStatus.PENDING_APPROVAL)
                     .count();
         }
 
         public long approvedCount() {
-            return allTopics.stream()
+            return topics.stream()
                     .filter(topic -> topic.status() == TopicStatus.APPROVED)
                     .count();
         }
 
         public long publishedCount() {
-            return allTopics.stream()
+            return topics.stream()
                     .filter(topic -> topic.status() == TopicStatus.PUBLISHED)
                     .count();
         }
-    }
-
-    public record DepartmentOption(long id, String name) {
     }
 
     public record ReviewTopicView(

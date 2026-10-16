@@ -14,6 +14,11 @@
     </div>
   </div>
 
+  <div class="alert alert-info" role="status" th:if="${returnToDraftNotice != null}"
+       th:text="${returnToDraftNotice}">
+    Sau khi sửa đề tài, bạn cần gửi duyệt lại.
+  </div>
+
   <form class="card content-form" method="post" data-prevent-double-submit
         th:object="${form}"
         th:action="${editing ? '/topics/' + topic.id + '/draft' : '/periods/' + period.id + '/topics'}">

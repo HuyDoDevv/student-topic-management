@@ -108,9 +108,15 @@ public class TopicEntity {
     }
 
     public void replaceSupervisors(List<UserAccountEntity> lecturers) {
-        supervisors.clear();
+        supervisors.removeIf(supervisor -> lecturers.stream()
+                .noneMatch(lecturer -> lecturer.getId().equals(
+                        supervisor.getLecturer().getId())));
         for (int index = 0; index < lecturers.size(); index++) {
-            supervisors.add(new TopicSupervisorEntity(this, lecturers.get(index), index + 1));
+            UserAccountEntity lecturer = lecturers.get(index);
+            if (supervisors.stream().noneMatch(supervisor -> supervisor.getLecturer().getId()
+                    .equals(lecturer.getId()))) {
+                supervisors.add(new TopicSupervisorEntity(this, lecturer, index + 1));
+            }
         }
     }
 

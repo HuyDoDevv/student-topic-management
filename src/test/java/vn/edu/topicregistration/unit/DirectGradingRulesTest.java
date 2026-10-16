@@ -24,16 +24,16 @@ class DirectGradingRulesTest {
             false);
 
     @Test
-    void acceptsCourseAndResearchAssignmentsWithOneIndependentLecturer() {
+    void acceptsCourseResearchAndTlcnAssignmentsWithOneIndependentLecturer() {
         assertDoesNotThrow(() -> DirectGradingRules.validate(VALID));
         assertDoesNotThrow(() -> DirectGradingRules.validate(
                 VALID.withTopicType("NCKH")));
+        assertDoesNotThrow(() -> DirectGradingRules.validate(
+                VALID.withTopicType("TLCN")));
     }
 
     @Test
-    void rejectsThesisTypesBecauseTheyKeepTheCouncilWorkflow() {
-        assertFailure(Failure.UNSUPPORTED_TYPE,
-                VALID.withTopicType("TLCN"));
+    void rejectsKltnBecauseItKeepsCouncilWorkflow() {
         assertFailure(Failure.UNSUPPORTED_TYPE,
                 VALID.withTopicType("KLTN"));
     }

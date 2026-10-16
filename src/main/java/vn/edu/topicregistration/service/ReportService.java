@@ -91,6 +91,11 @@ public class ReportService {
         return toWorkspace(registration, current, access);
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasCurrentReportForVisibleRegistration(long registrationId) {
+        return workspace(registrationId).report() != null;
+    }
+
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReportWorkspace upload(long registrationId, Long expectedVersion, ReportUpload upload) {
         Objects.requireNonNull(upload, "upload");

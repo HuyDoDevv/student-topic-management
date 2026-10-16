@@ -3,7 +3,10 @@ package vn.edu.topicregistration.integration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
@@ -36,7 +39,13 @@ import vn.edu.topicregistration.service.CouncilService;
 import vn.edu.topicregistration.service.CouncilService.CreateCouncilCommand;
 import vn.edu.topicregistration.service.DirectGradingService;
 import vn.edu.topicregistration.service.DirectGradingService.AssignCommand;
+import vn.edu.topicregistration.service.NotificationService;
+import vn.edu.topicregistration.service.NotificationTargetResolver;
 import vn.edu.topicregistration.service.ResultService;
+import vn.edu.topicregistration.service.ReviewerAssignmentService;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.ReportUpload;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.ScoreRow;
+import vn.edu.topicregistration.service.ReviewerAssignmentService.SubmissionCommand;
 
 /** T008: assignment and result publication notifications use trusted workflow snapshots. */
 @SpringBootTest
@@ -61,6 +70,12 @@ class ReviewResultNotificationIT {
 
     @Autowired
     ResultService results;
+
+    @Autowired
+    ReviewerAssignmentService reviewers;
+
+    @Autowired
+    NotificationService notifications;
 
     @Autowired
     RollbackProbe rollbackProbe;
@@ -118,8 +133,11 @@ class ReviewResultNotificationIT {
                         'notification-test.pdf', 'application/pdf', 128, 0)
                 """, registrationId, submittedBy, Timestamp.from(NOW.minusSeconds(30)));
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
-        var assignment = directGrading.assign(new AssignCommand(registrationId, graderId));
+        authenticate("dean.demo", RoleCode.DEAN);
+        long registrationVersion = requiredLong(
+                "SELECT version FROM registrations WHERE id = ?", registrationId);
+        var assignment = directGrading.assign(new AssignCommand(
+                registrationId, graderId, registrationVersion));
 
         assertEquals(1, count("""
                 SELECT COUNT(*)
@@ -139,9 +157,25 @@ class ReviewResultNotificationIT {
                 WHERE event.event_type = 'DIRECT_GRADER_ASSIGNED'
                   AND delivery.recipient_id = ?
                 """, otherLecturerId));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM council_members
+                WHERE council_id = ? AND lecturer_id = ? AND slot = 1
+                """, assignment.id(), graderId));
 
+        authenticate("lecturer4.demo", RoleCode.LECTURER);
+        long notificationId = requiredLong("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_type = 'DIRECT_GRADER_ASSIGNED'
+                  AND event.target_id = ? AND delivery.recipient_id = ?
+                """, assignment.id(), graderId);
+        assertEquals("/lecturer/scoring/" + assignment.id() + "/" + registrationId,
+                notifications.openForCurrentActor(notificationId));
+
+        authenticate("dean.demo", RoleCode.DEAN);
         assertThrows(RuntimeException.class,
-                () -> directGrading.assign(new AssignCommand(registrationId, otherLecturerId)));
+                () -> directGrading.assign(new AssignCommand(
+                        registrationId, otherLecturerId, registrationVersion)));
         assertEquals(1, count("""
                 SELECT COUNT(*) FROM notification_events
                 WHERE event_type = 'DIRECT_GRADER_ASSIGNED'
@@ -161,7 +195,7 @@ class ReviewResultNotificationIT {
         long memberId = requiredLong(
                 "SELECT id FROM user_accounts WHERE username = 'lecturer5.demo'");
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         var council = councils.create(new CreateCouncilCommand(
                 periodId,
                 "[TEST] Hội đồng nhận thông báo",
@@ -188,15 +222,40 @@ class ReviewResultNotificationIT {
         assertEquals(3, count("""
                 SELECT COUNT(*) FROM council_members WHERE council_id = ?
                 """, council.id()));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM council_members
+                WHERE council_id = ? AND lecturer_id = ? AND slot = 1
+                """, council.id(), chairId));
+        assertEquals(1, count("""
+                SELECT COUNT(*) FROM council_members
+                WHERE council_id = ? AND lecturer_id = ? AND slot = 2
+                """, council.id(), secretaryId));
+
+        authenticate("lecturer1.demo", RoleCode.LECTURER);
+        long chairNotificationId = requiredLong("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_type = 'COUNCIL_MEMBER_ASSIGNED'
+                  AND event.target_id = ? AND delivery.recipient_id = ?
+                """, council.id(), chairId);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                notifications.openForCurrentActor(chairNotificationId));
     }
 
     @Test
     void resultPublicationNotifiesEachSnapshotStudentAndRollsBackAtomically() {
-        authenticate("lecturer1.demo", RoleCode.LECTURER);
+        List<Long> registrationIds = jdbc.queryForList(
+                "SELECT registration_id FROM council_topics WHERE council_id = ? "
+                        + "ORDER BY registration_id",
+                Long.class, fixture.activeCouncilId());
+        for (Long registrationId : registrationIds) {
+            submitReviewer(registrationId);
+        }
+        authenticate("dean.demo", RoleCode.DEAN);
         var completed = results.complete(fixture.activeCouncilId(), 0L);
         assertEquals(6, completed.resultCount());
 
-        authenticate("dean.demo", RoleCode.DEAN, RoleCode.LECTURER);
+        authenticate("dean.demo", RoleCode.DEAN);
         assertThrows(IllegalStateException.class,
                 () -> rollbackProbe.publishThenFail(
                         fixture.activeCouncilId(), completed.version()));
@@ -247,6 +306,27 @@ class ReviewResultNotificationIT {
                 SELECT COUNT(*) FROM notification_events
                 WHERE event_type = 'RESULT_PUBLISHED'
                 """));
+    }
+
+    private void submitReviewer(long registrationId) {
+        long reviewerId = requiredLong(
+                "SELECT id FROM user_accounts WHERE username = 'lecturer3.demo'");
+        authenticate("dean.demo", RoleCode.DEAN);
+        long version = requiredLong(
+                "SELECT version FROM registrations WHERE id = ?", registrationId);
+        long assignmentId = reviewers.assign(new ReviewerAssignmentService.AssignCommand(
+                registrationId, reviewerId, version));
+        List<Long> students = jdbc.queryForList(
+                "SELECT student_id FROM registration_members WHERE registration_id = ? "
+                        + "ORDER BY slot", Long.class, registrationId);
+        byte[] pdf = "%PDF-1.7\nT018 reviewer report"
+                .getBytes(StandardCharsets.US_ASCII);
+        authenticate("lecturer3.demo", RoleCode.LECTURER);
+        reviewers.submit(assignmentId, new SubmissionCommand(0L,
+                new ReportUpload("review.pdf", "application/pdf", pdf.length,
+                        () -> new ByteArrayInputStream(pdf)),
+                students.stream().map(studentId -> new ScoreRow(studentId,
+                        new BigDecimal("7.00"), "Đạt yêu cầu")).toList()));
     }
 
     private int count(String sql, Object... arguments) {

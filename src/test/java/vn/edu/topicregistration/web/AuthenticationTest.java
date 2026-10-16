@@ -74,6 +74,7 @@ class AuthenticationTest {
                 Set.of(RoleCode.STUDENT, RoleCode.DEAN));
         UserAccountEntity lecturerDean = account("lecturer-dean", true,
                 Set.of(RoleCode.LECTURER, RoleCode.DEAN));
+        UserAccountEntity dean = account("dean", true, Set.of(RoleCode.DEAN));
         UserAccountEntity rateUser = account("rate-user", true, Set.of(RoleCode.LECTURER));
         UserAccountEntity resetUser = account("reset-user", true, Set.of(RoleCode.LECTURER));
         when(accounts.findByUsername("lecturer")).thenReturn(Optional.of(lecturer));
@@ -83,6 +84,7 @@ class AuthenticationTest {
         when(accounts.findByUsername("student-admin")).thenReturn(Optional.of(studentAdmin));
         when(accounts.findByUsername("student-dean")).thenReturn(Optional.of(studentDean));
         when(accounts.findByUsername("lecturer-dean")).thenReturn(Optional.of(lecturerDean));
+        when(accounts.findByUsername("dean")).thenReturn(Optional.of(dean));
         when(accounts.findByUsername("rate-user")).thenReturn(Optional.of(rateUser));
         when(accounts.findByUsername("reset-user")).thenReturn(Optional.of(resetUser));
     }
@@ -113,9 +115,8 @@ class AuthenticationTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(authenticated().withUsername("student").withRoles("STUDENT"));
 
-        mvc.perform(formLogin().user("lecturer-dean").password(PASSWORD))
-                .andExpect(authenticated().withUsername("lecturer-dean")
-                        .withRoles("LECTURER", "DEAN"));
+        mvc.perform(formLogin().user("dean").password(PASSWORD))
+                .andExpect(authenticated().withUsername("dean").withRoles("DEAN"));
     }
 
     @Test
@@ -134,6 +135,8 @@ class AuthenticationTest {
         mvc.perform(formLogin().user("student-admin").password(PASSWORD))
                 .andExpect(unauthenticated());
         mvc.perform(formLogin().user("student-dean").password(PASSWORD))
+                .andExpect(unauthenticated());
+        mvc.perform(formLogin().user("lecturer-dean").password(PASSWORD))
                 .andExpect(unauthenticated());
     }
 

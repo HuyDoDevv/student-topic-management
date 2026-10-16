@@ -1,7 +1,9 @@
 package vn.edu.topicregistration.web;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -121,6 +123,104 @@ class CouncilControllerTest {
                         && command.expectedVersion() == 4L
                         && command.scheduledAt().equals(
                                 Instant.parse("2026-09-20T02:00:00Z"))));
+    }
+
+    @Test
+    void detailPublishesNextVietnamMinuteAsScheduleHint() throws Exception {
+        when(councils.detailForCurrentDean(41L)).thenReturn(detail());
+
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("minScheduleAt", "2026-09-14T15:01"));
+    }
+
+    @Test
+    void completionActionAppearsOnlyWhenServiceGrantsDeanCapability() throws Exception {
+        CouncilSummaryView active = new CouncilSummaryView(
+                41L, 7L, "Đợt KLTN", 4L, "Công nghệ phần mềm",
+                "Hội đồng KLTN", CouncilStatus.ACTIVE, 4L);
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                active, List.of(), List.of(), List.of(), List.of(),
+                false, false, null, null, false));
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(model().attribute("nextAction", org.hamcrest.Matchers.nullValue()));
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                active, List.of(), List.of(), List.of(), List.of(),
+                true, true, null, null, false));
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(model().attributeExists("nextAction"));
+    }
+
+    @Test
+    void detailExposesProgressWithoutAnyScoreValue() throws Exception {
+        var progress = new CouncilService.CouncilTopicProgressView(51L,
+                "Đề tài thử nghiệm", List.of(new CouncilService.CouncilMemberProgressView(
+                        "Giảng viên A", "Chủ tịch", "SUBMITTED", 2, 2, NOW)));
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                summary(), List.of(), List.of(), List.of(), List.of(progress),
+                false, true, null, null, false));
+
+        var result = mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk()).andReturn();
+
+        @SuppressWarnings("unchecked")
+        var rows = (List<CouncilController.TopicProgressPageView>) result
+                .getModelAndView().getModel().get("progress");
+        assertEquals("15:00", rows.getFirst().members().getFirst()
+                .submittedAt().substring(11));
+        assertEquals(2, rows.getFirst().members().getFirst().submittedCount());
+    }
+
+    @Test
+    void expiredScheduleReturnsToDetailWithScheduledAtFieldError() throws Exception {
+        when(councils.detailForCurrentDean(41L)).thenReturn(detail());
+        when(councils.saveAssignment(org.mockito.ArgumentMatchers.eq(41L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new CouncilService.InvalidScheduleException());
+
+        mvc.perform(post("/faculty/boards/41/assignments")
+                        .param("registrationId", "51")
+                        .param("scheduledAt", "2026-09-14T15:00")
+                        .param("location", "Phòng A1")
+                        .param("version", "4"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("councils/detail"))
+                .andExpect(model().attributeHasFieldErrors("assignmentForm", "scheduledAt"));
+    }
+
+    @Test
+    void memberUpdateUsesVersionAndWhitelistedIds() throws Exception {
+        when(councils.updateMembers(org.mockito.ArgumentMatchers.eq(41L),
+                org.mockito.ArgumentMatchers.any())).thenReturn(summary());
+
+        mvc.perform(post("/faculty/boards/41/members")
+                        .param("chairId", "11")
+                        .param("secretaryId", "12")
+                        .param("memberIds", "13", "14")
+                        .param("version", "4")
+                        .param("status", "ACTIVE")
+                        .param("councilId", "99"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/faculty/boards/41"));
+
+        verify(councils).updateMembers(org.mockito.ArgumentMatchers.eq(41L),
+                argThat(command -> command.chairId() == 11L
+                        && command.secretaryId() == 12L
+                        && command.memberIds().equals(List.of(13L, 14L))
+                        && command.expectedVersion() == 4L));
+    }
+
+    @Test
+    void memberUpdateRejectsMissingVersionWithoutCallingService() throws Exception {
+        when(councils.detailForCurrentDean(41L)).thenReturn(detail());
+        mvc.perform(post("/faculty/boards/41/members")
+                        .param("chairId", "11")
+                        .param("secretaryId", "12")
+                        .param("memberIds", "13"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(view().name("councils/detail"));
+        org.mockito.Mockito.verify(councils, never()).updateMembers(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test

@@ -2,7 +2,6 @@ package vn.edu.topicregistration.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -65,8 +64,11 @@ class RegistrationPeriodPersistenceIT {
     void entityMappingPersistsAndQueriesByFaculty() {
         FacultyEntity faculty = new FacultyEntity("Khoa CNTT persistence");
         entityManager.persist(faculty);
+        DepartmentEntity department = new DepartmentEntity(faculty, "Công nghệ phần mềm");
+        entityManager.persist(department);
         RegistrationPeriodEntity saved = periods.saveAndFlush(new RegistrationPeriodEntity(
                 faculty,
+                department,
                 "Đợt KLTN",
                 "KLTN",
                 LECTURER_START,
@@ -83,7 +85,7 @@ class RegistrationPeriodPersistenceIT {
 
         assertEquals("Đợt KLTN", loaded.getName());
         assertEquals("KLTN", loaded.getTopicType());
-        assertNull(loaded.getDepartment());
+        assertEquals(department.getId(), loaded.getDepartment().getId());
         assertEquals(LECTURER_START, loaded.getLecturerStart());
         assertEquals(LocalDate.of(2026, 9, 20), loaded.getReviewerScoreDeadline());
         assertEquals(1, periods.findAllByFacultyIdOrderByLecturerStartDesc(faculty.getId()).size());
@@ -136,8 +138,11 @@ class RegistrationPeriodPersistenceIT {
     void repositoryAcquiresPessimisticWriteLock() {
         FacultyEntity faculty = new FacultyEntity("Khoa lock");
         entityManager.persist(faculty);
+        DepartmentEntity department = new DepartmentEntity(faculty, "Bộ môn khóa");
+        entityManager.persist(department);
         RegistrationPeriodEntity saved = periods.saveAndFlush(new RegistrationPeriodEntity(
                 faculty,
+                department,
                 "Đợt khóa",
                 "COURSE",
                 LECTURER_START,
