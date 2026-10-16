@@ -84,7 +84,9 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: fixture ở mỗi mốc trả đúng nhãn/action; Khoa/registration khác
     không lộ; published là trạng thái terminal.
 
-- [ ] **T007 Làm rõ vai trò sinh viên trên danh sách nhóm** `[FB-09]`
+- [x] **T007 Làm rõ vai trò sinh viên trên danh sách nhóm** `[FB-09]`
+  - Nghiệm thu 2026-10-16: 14 unit test nhóm và 1 web integration test pass
+    trên MySQL 8.4 DB test; role/topic/status/action tách đúng theo từng đợt.
   - File: `GroupService.java`, `GroupController.java`, `templates/groups/list.html`,
     `templates/fragments/group-period-cards.html`, `GroupPeriodPhaseTest.java` và
     web test nhóm.
