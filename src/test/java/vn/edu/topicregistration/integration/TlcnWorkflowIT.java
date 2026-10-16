@@ -35,7 +35,8 @@ import vn.edu.topicregistration.repository.ReportFileRepository;
 import vn.edu.topicregistration.service.DirectGradingService;
 import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ScoringService;
-import vn.edu.topicregistration.service.ScoringService.ScoreCommand;
+import vn.edu.topicregistration.service.ScoringService.GroupScoreCommand;
+import vn.edu.topicregistration.service.ScoringService.ScoreRowCommand;
 import vn.edu.topicregistration.util.ProjectTime;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -96,10 +97,11 @@ class TlcnWorkflowIT {
                 "SELECT grading_mode FROM councils WHERE id = ?", String.class, councilId));
 
         authenticate("lecturer4.demo", "LECTURER");
-        for (Long studentId : students) {
-            scoring.submit(councilId, registrationId, studentId,
-                    new ScoreCommand(new BigDecimal("8.50"), "Đạt yêu cầu", null));
-        }
+        var scoreWorkspace = scoring.workspace(councilId, registrationId);
+        scoring.submitGroup(councilId, registrationId, new GroupScoreCommand(
+                scoreWorkspace.assignment().councilVersion(),
+                students.stream().map(studentId -> new ScoreRowCommand(
+                        studentId, new BigDecimal("8.50"), "Đạt yêu cầu", null)).toList()));
 
         authenticate("dean.demo", "DEAN");
         long councilVersion = id("SELECT version FROM councils WHERE id = ?", councilId);
@@ -146,13 +148,19 @@ class TlcnWorkflowIT {
         jdbc.update("DELETE FROM reviewer_reports WHERE assignment_id IN "
                 + "(SELECT id FROM reviewer_assignments WHERE registration_id = ?)",
                 registrationId);
-        long studentId = id("SELECT student_id FROM registration_members "
-                + "WHERE registration_id = ? ORDER BY slot LIMIT 1", registrationId);
+        long councilVersion = id("SELECT version FROM councils WHERE id = ?", councilId);
+        List<Long> students = jdbc.queryForList(
+                "SELECT student_id FROM registration_members WHERE registration_id = ? "
+                        + "ORDER BY slot",
+                Long.class, registrationId);
         authenticate("lecturer4.demo", "LECTURER");
 
-        assertThrows(RuntimeException.class, () -> scoring.submit(
-                councilId, registrationId, studentId,
-                new ScoreCommand(new BigDecimal("8.50"), "Đạt yêu cầu", null)));
+        assertThrows(RuntimeException.class, () -> scoring.submitGroup(
+                councilId, registrationId, new GroupScoreCommand(
+                        councilVersion,
+                        students.stream().map(studentId -> new ScoreRowCommand(
+                                studentId, new BigDecimal("8.50"),
+                                "Đạt yêu cầu", null)).toList())));
         assertEquals(0L, id("SELECT COUNT(*) FROM evaluations WHERE council_id = ?", councilId));
     }
 

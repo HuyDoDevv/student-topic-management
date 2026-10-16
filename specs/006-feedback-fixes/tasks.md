@@ -94,7 +94,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: một SV có nhiều đợt và hai vai trò khác nhau vẫn phân biệt đúng,
     không trộn group/action giữa period.
 
-- [ ] **T008 Chấm toàn bộ thành viên nhóm trên một màn hình** `[FB-05]`
+- [x] **T008 Chấm toàn bộ thành viên nhóm trên một màn hình** `[FB-05]`
   - Tạo `src/main/java/vn/edu/topicregistration/dto/GroupScoreForm.java`.
   - Sửa `ScoringController.java`, `ScoringService.java`,
     `templates/scoring/form.html`, `templates/scoring/student-form.html`,

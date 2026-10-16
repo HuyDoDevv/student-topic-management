@@ -3,10 +3,13 @@ package vn.edu.topicregistration.service;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Lazy;
@@ -89,21 +92,19 @@ public class ScoringService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EvaluationView saveDraft(
+    public List<EvaluationView> saveGroupDraft(
             long councilId,
             long registrationId,
-            long studentId,
-            ScoreCommand command) {
-        return mutate(councilId, registrationId, studentId, command, false);
+            GroupScoreCommand command) {
+        return mutateGroup(councilId, registrationId, command, false);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public EvaluationView submit(
+    public List<EvaluationView> submitGroup(
             long councilId,
             long registrationId,
-            long studentId,
-            ScoreCommand command) {
-        return mutate(councilId, registrationId, studentId, command, true);
+            GroupScoreCommand command) {
+        return mutateGroup(councilId, registrationId, command, true);
     }
 
     @Transactional(readOnly = true)
@@ -171,23 +172,10 @@ public class ScoringService {
                 toAssignmentView(assignment, lecturer.accountId()), students);
     }
 
-    @Transactional(readOnly = true)
-    public StudentScoreWorkspace studentWorkspace(
-            long councilId, long registrationId, long studentId) {
-        ScoreWorkspace workspace = workspace(councilId, registrationId);
-        StudentScoreView student = workspace.students().stream()
-                .filter(candidate -> candidate.studentId() == studentId)
-                .findFirst()
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        return new StudentScoreWorkspace(workspace.assignment(), student);
-    }
-
-    private EvaluationView mutate(
+    private List<EvaluationView> mutateGroup(
             long councilId,
             long registrationId,
-            long studentId,
-            ScoreCommand command,
+            GroupScoreCommand command,
             boolean submit) {
         Objects.requireNonNull(command, "command");
         long periodId = councils.findPeriodIdByCouncilId(councilId)
@@ -200,6 +188,10 @@ public class ScoringService {
         CouncilEntity council = councils.findByIdForUpdate(councilId)
                 .orElseThrow(() -> new ApplicationException(
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (command.expectedCouncilVersion() == null
+                || council.getVersion() != command.expectedCouncilVersion()) {
+            throw new OptimisticLockingFailureException("Council version is stale");
+        }
         if (!Objects.equals(council.getPeriod().getId(), period.getId())) {
             throw new ApplicationException(ApplicationErrorCode.CONFLICT);
         }
@@ -257,66 +249,99 @@ public class ScoringService {
                         ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
             }
         }
-        RegistrationMemberEntity snapshotStudent = registrationMembers
-                .findAllByRegistrationId(registrationId)
-                .stream()
-                .filter(candidate -> Objects.equals(
-                        candidate.getStudent().getId(), studentId))
-                .findFirst()
-                .orElseThrow(() -> new ApplicationException(
-                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        List<RegistrationMemberEntity> snapshotStudents = registrationMembers
+                .findAllByRegistrationId(registrationId);
+        if (snapshotStudents.isEmpty() || snapshotStudents.size() > 3) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        Map<Long, ScoreRowCommand> commandByStudent = exactRows(
+                snapshotStudents, command.rows());
         boolean assignedMember = member != null
                 && Objects.equals(member.getLecturer().getId(), actor.accountId());
         boolean supervisor = isSupervisor(registration, actor.accountId());
-        applyRules(new ScoreContext(
-                council.getStatus(),
-                registration.getStatus(),
-                assignedMember,
-                supervisor,
-                command.score()));
+        for (ScoreRowCommand row : command.rows()) {
+            applyRules(new ScoreContext(
+                    council.getStatus(),
+                    registration.getStatus(),
+                    assignedMember,
+                    supervisor,
+                    row.score()));
+        }
         List<EvaluationEntity> lockedEvaluations = evaluations
                 .findAllByCouncilIdForUpdate(councilId);
-        ScoreComponentEntity component = components
-                .findByPeriodIdAndName(periodId, ScoreComponentEntity.COUNCIL_SCORE_NAME)
-                .orElseGet(() -> components.saveAndFlush(new ScoreComponentEntity(period)));
-        Optional<EvaluationEntity> existing = lockedEvaluations.stream()
+        Optional<ScoreComponentEntity> existingComponent = components
+                .findByPeriodIdAndName(periodId, ScoreComponentEntity.COUNCIL_SCORE_NAME);
+        Map<Long, EvaluationEntity> existingByStudent = lockedEvaluations.stream()
                 .filter(evaluation -> Objects.equals(
                         evaluation.getRegistration().getId(), registrationId))
                 .filter(evaluation -> Objects.equals(
-                        evaluation.getStudent().getId(), studentId))
-                .filter(evaluation -> Objects.equals(
                         evaluation.getEvaluator().getId(), actor.accountId()))
-                .filter(evaluation -> Objects.equals(
-                        evaluation.getComponent().getId(), component.getId()))
-                .findFirst();
-        validateVersion(existing, command.expectedVersion());
+                .filter(evaluation -> existingComponent.isPresent()
+                        && Objects.equals(evaluation.getComponent().getId(),
+                                existingComponent.get().getId()))
+                .collect(Collectors.toMap(
+                        evaluation -> evaluation.getStudent().getId(),
+                        evaluation -> evaluation));
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            Long studentId = snapshot.getStudent().getId();
+            validateVersion(Optional.ofNullable(existingByStudent.get(studentId)),
+                    commandByStudent.get(studentId).expectedVersion());
+        }
 
         Instant now = clock.instant();
-        if (existing.isPresent()) {
-            EvaluationEntity evaluation = existing.get();
-            if (submit) {
-                evaluation.submit(command.score(), command.feedback(), now);
-            } else {
-                evaluation.saveDraft(command.score(), command.feedback(), now);
-            }
-            evaluations.flush();
-            return toView(evaluation);
-        }
-
+        ScoreComponentEntity component = existingComponent.orElseGet(
+                () -> components.saveAndFlush(new ScoreComponentEntity(period)));
         UserAccountEntity evaluator = Objects.requireNonNull(member, "member").getLecturer();
-        EvaluationEntity evaluation = new EvaluationEntity(
-                registration,
-                snapshotStudent.getStudent(),
-                evaluator,
-                component,
-                council,
-                command.score(),
-                command.feedback(),
-                now);
-        if (submit) {
-            evaluation.submit(command.score(), command.feedback(), now);
+        List<EvaluationEntity> changed = new java.util.ArrayList<>();
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            Long studentId = snapshot.getStudent().getId();
+            ScoreRowCommand row = commandByStudent.get(studentId);
+            EvaluationEntity evaluation = existingByStudent.get(studentId);
+            if (evaluation == null) {
+                evaluation = new EvaluationEntity(
+                        registration,
+                        snapshot.getStudent(),
+                        evaluator,
+                        component,
+                        council,
+                        row.score(),
+                        row.feedback(),
+                        now);
+                if (submit) {
+                    evaluation.submit(row.score(), row.feedback(), now);
+                }
+                evaluation = evaluations.save(evaluation);
+            } else if (submit) {
+                evaluation.submit(row.score(), row.feedback(), now);
+            } else {
+                evaluation.saveDraft(row.score(), row.feedback(), now);
+            }
+            changed.add(evaluation);
         }
-        return toView(evaluations.saveAndFlush(evaluation));
+        evaluations.flush();
+        return changed.stream().map(ScoringService::toView).toList();
+    }
+
+    private static Map<Long, ScoreRowCommand> exactRows(
+            List<RegistrationMemberEntity> snapshotStudents,
+            List<ScoreRowCommand> rows) {
+        if (rows == null || rows.size() != snapshotStudents.size()) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        Map<Long, ScoreRowCommand> rowByStudent = new LinkedHashMap<>();
+        for (ScoreRowCommand row : rows) {
+            if (row == null || row.studentId() == null
+                    || rowByStudent.putIfAbsent(row.studentId(), row) != null) {
+                throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+            }
+        }
+        Set<Long> snapshotIds = snapshotStudents.stream()
+                .map(snapshot -> snapshot.getStudent().getId())
+                .collect(Collectors.toSet());
+        if (!snapshotIds.equals(rowByStudent.keySet())) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        return rowByStudent;
     }
 
     private static void validateVersion(
@@ -444,7 +469,16 @@ public class ScoringService {
         }
     }
 
-    public record ScoreCommand(
+    public record GroupScoreCommand(
+            Long expectedCouncilVersion,
+            List<ScoreRowCommand> rows) {
+        public GroupScoreCommand {
+            rows = rows == null ? null : List.copyOf(rows);
+        }
+    }
+
+    public record ScoreRowCommand(
+            Long studentId,
             BigDecimal score,
             String feedback,
             Long expectedVersion) {
@@ -526,8 +560,4 @@ public class ScoringService {
             EvaluationView evaluation) {
     }
 
-    public record StudentScoreWorkspace(
-            ScoringAssignmentView assignment,
-            StudentScoreView student) {
-    }
 }

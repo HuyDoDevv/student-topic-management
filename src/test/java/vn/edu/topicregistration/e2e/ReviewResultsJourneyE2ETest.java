@@ -63,15 +63,18 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
         assertTrue(link("Chấm điểm").isVisible());
         page().navigate(url("/lecturer/scoring/"
                 + fixture.activeCouncilId() + "/" + fixture.activeRegistrationOneId()));
-        page().locator("a.btn-primary").first().click();
-        String studentScoreUrl = page().url();
-        page().getByLabel("Điểm tổng").fill("9.25");
-        page().getByLabel("Nhận xét riêng cho sinh viên").fill("Browser acceptance score");
+        int scoreRows = page().locator("input[type=number]").count();
+        assertEquals(3, scoreRows);
+        for (int index = 0; index < scoreRows; index++) {
+            page().locator("input[type=number]").nth(index).fill("9.25");
+            page().locator("textarea").nth(index).fill("Browser acceptance score");
+        }
         acceptNextConfirmation();
-        button("Nộp điểm").click();
-        assertEquals(studentScoreUrl, page().url(), page().locator("body").innerText());
-        assertTrue(page().getByText("Đã nộp điểm", new Page.GetByTextOptions()
-                .setExact(true)).isVisible());
+        button("Nộp toàn bộ").click();
+        page().waitForURL(url("/lecturer/scoring/"
+                + fixture.activeCouncilId() + "/" + fixture.activeRegistrationOneId()));
+        assertEquals(3, page().getByText("Đã nộp", new Page.GetByTextOptions()
+                .setExact(true)).count());
 
         logout();
         login("lecturer1.demo");

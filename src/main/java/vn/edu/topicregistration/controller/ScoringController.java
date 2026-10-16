@@ -18,13 +18,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
-import vn.edu.topicregistration.dto.ScoreForm;
+import vn.edu.topicregistration.dto.GroupScoreForm;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.ScoringService;
 import vn.edu.topicregistration.service.ScoringService.ScoreWorkspace;
 import vn.edu.topicregistration.service.ScoringService.ScoringAssignmentView;
-import vn.edu.topicregistration.service.ScoringService.StudentScoreWorkspace;
 import vn.edu.topicregistration.util.ProjectTime;
 
 @Controller
@@ -41,9 +40,15 @@ public class ScoringController {
         this.projectTime = projectTime;
     }
 
-    @InitBinder("scoreForm")
+    @InitBinder("groupScoreForm")
     void whitelistFields(WebDataBinder binder) {
-        binder.setAllowedFields("score", "feedback", "version");
+        binder.setAllowedFields(
+                "councilVersion",
+                "rows[*].studentId",
+                "rows[*].score",
+                "rows[*].feedback",
+                "rows[*].version");
+        binder.setAutoGrowCollectionLimit(3);
     }
 
     @GetMapping("/lecturer/scoring")
@@ -61,7 +66,71 @@ public class ScoringController {
             @PathVariable long registrationId,
             Model model) {
         ScoreWorkspace workspace = scoring.workspace(councilId, registrationId);
+        return renderGroup(model, workspace, GroupScoreForm.from(workspace));
+    }
+
+    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/draft")
+    public Object saveDraft(
+            @PathVariable long councilId,
+            @PathVariable long registrationId,
+            @Valid @ModelAttribute("groupScoreForm") GroupScoreForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            Model model) {
+        return mutate(
+                councilId, registrationId,
+                form, bindingResult, response, model, false);
+    }
+
+    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/submit")
+    public Object submit(
+            @PathVariable long councilId,
+            @PathVariable long registrationId,
+            @Valid @ModelAttribute("groupScoreForm") GroupScoreForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            Model model) {
+        return mutate(
+                councilId, registrationId,
+                form, bindingResult, response, model, true);
+    }
+
+    private Object mutate(
+            long councilId,
+            long registrationId,
+            GroupScoreForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            Model model,
+            boolean submit) {
+        rejectInvalidScoreIncrements(form, bindingResult);
+        if (bindingResult.hasErrors()) {
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderGroup(model, scoring.workspace(councilId, registrationId), form);
+        }
+        try {
+            if (submit) {
+                scoring.submitGroup(councilId, registrationId, form.toCommand());
+            } else {
+                scoring.saveGroupDraft(councilId, registrationId, form.toCommand());
+            }
+            return redirect(councilId, registrationId);
+        } catch (ApplicationException exception) {
+            if (exception.code() != ApplicationErrorCode.INVALID_SCORE) {
+                throw exception;
+            }
+            bindingResult.reject("score.invalid",
+                    "Điểm phải từ 0 đến 10 và tăng theo bước 0,25.");
+            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+            return renderGroup(model, scoring.workspace(councilId, registrationId), form);
+        }
+    }
+
+    private String renderGroup(Model model, ScoreWorkspace workspace, GroupScoreForm form) {
         common(model);
+        if (!model.containsAttribute("groupScoreForm")) {
+            model.addAttribute("groupScoreForm", form);
+        }
         model.addAttribute("assignment", display(workspace.assignment()));
         model.addAttribute("students", workspace.students());
         model.addAttribute("allSubmitted", !workspace.students().isEmpty()
@@ -72,93 +141,14 @@ public class ScoringController {
         return "scoring/form";
     }
 
-    @GetMapping("/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}")
-    public String studentForm(
-            @PathVariable long councilId,
-            @PathVariable long registrationId,
-            @PathVariable long studentId,
-            Model model) {
-        StudentScoreWorkspace workspace = scoring.studentWorkspace(
-                councilId, registrationId, studentId);
-        return renderStudent(model, workspace,
-                ScoreForm.from(workspace.student().evaluation()));
-    }
-
-    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}/draft")
-    public Object saveDraft(
-            @PathVariable long councilId,
-            @PathVariable long registrationId,
-            @PathVariable long studentId,
-            @Valid @ModelAttribute("scoreForm") ScoreForm form,
-            BindingResult bindingResult,
-            HttpServletResponse response,
-            Model model) {
-        return mutate(
-                councilId, registrationId, studentId,
-                form, bindingResult, response, model, false);
-    }
-
-    @PostMapping("/lecturer/scoring/{councilId}/{registrationId}/students/{studentId}/submit")
-    public Object submit(
-            @PathVariable long councilId,
-            @PathVariable long registrationId,
-            @PathVariable long studentId,
-            @Valid @ModelAttribute("scoreForm") ScoreForm form,
-            BindingResult bindingResult,
-            HttpServletResponse response,
-            Model model) {
-        return mutate(
-                councilId, registrationId, studentId,
-                form, bindingResult, response, model, true);
-    }
-
-    private Object mutate(
-            long councilId,
-            long registrationId,
-            long studentId,
-            ScoreForm form,
-            BindingResult bindingResult,
-            HttpServletResponse response,
-            Model model,
-            boolean submit) {
-        if (bindingResult.hasErrors()) {
-            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return renderStudent(model,
-                    scoring.studentWorkspace(councilId, registrationId, studentId), form);
-        }
-        try {
-            if (submit) {
-                scoring.submit(councilId, registrationId, studentId, form.toCommand());
-            } else {
-                scoring.saveDraft(councilId, registrationId, studentId, form.toCommand());
+    private static void rejectInvalidScoreIncrements(
+            GroupScoreForm form, BindingResult bindingResult) {
+        for (int index = 0; index < form.getRows().size(); index++) {
+            if (!form.getRows().get(index).hasValidScoreIncrement()) {
+                bindingResult.rejectValue("rows[" + index + "].score", "score.increment",
+                        "Điểm phải tăng theo bước 0,25.");
             }
-            return redirect(councilId, registrationId, studentId);
-        } catch (ApplicationException exception) {
-            if (exception.code() != ApplicationErrorCode.INVALID_SCORE) {
-                throw exception;
-            }
-            bindingResult.rejectValue("score", "score.invalid",
-                    "Điểm phải từ 0 đến 10 và tăng theo bước 0,25.");
-            response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
-            return renderStudent(model,
-                    scoring.studentWorkspace(councilId, registrationId, studentId), form);
         }
-    }
-
-    private String renderStudent(
-            Model model, StudentScoreWorkspace workspace, ScoreForm form) {
-        common(model);
-        if (!model.containsAttribute("scoreForm")) {
-            model.addAttribute("scoreForm", form);
-        }
-        model.addAttribute("assignment", display(workspace.assignment()));
-        model.addAttribute("student", workspace.student());
-        model.addAttribute("evaluation", workspace.student().evaluation());
-        model.addAttribute("submitted",
-                workspace.student().evaluation() != null
-                        && workspace.student().evaluation().status()
-                                == vn.edu.topicregistration.entity.EvaluationStatus.SUBMITTED);
-        return "scoring/student-form";
     }
 
     private AssignmentPageView display(ScoringAssignmentView assignment) {
@@ -183,10 +173,9 @@ public class ScoringController {
         return value == null ? null : DATE_TIME.format(projectTime.toBusinessTime(value));
     }
 
-    private static Object redirect(long councilId, long registrationId, long studentId) {
+    private static Object redirect(long councilId, long registrationId) {
         return WebRedirects.seeOther(
-                "/lecturer/scoring/" + councilId + "/" + registrationId
-                        + "/students/" + studentId);
+                "/lecturer/scoring/" + councilId + "/" + registrationId);
     }
 
     private static void common(Model model) {
