@@ -93,7 +93,7 @@ class KltnWorkflowIT {
                 "SELECT registration_id FROM council_topics WHERE council_id = ? "
                         + "ORDER BY registration_id", Long.class, councilId);
         assertEquals(2, registrations.size());
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         long version = id("SELECT version FROM councils WHERE id = ?", councilId);
         assertThrows(ApplicationException.class, () -> results.complete(councilId, version));
         assertEquals(0L, id("SELECT COUNT(*) FROM final_results WHERE council_id = ?", councilId));
@@ -101,7 +101,7 @@ class KltnWorkflowIT {
         for (Long registrationId : registrations) {
             submitReviewer(registrationId);
         }
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         results.complete(councilId, version);
         assertEquals(3L, id("SELECT COUNT(*) FROM final_results WHERE registration_id = ? "
                 + "AND status = 'READY' AND final_score = 8.13", registrations.getFirst()));
@@ -167,7 +167,7 @@ class KltnWorkflowIT {
                 "SELECT registration_id FROM council_topics WHERE council_id = ? "
                         + "ORDER BY registration_id", Long.class, councilId);
         submitReviewer(registrations.getFirst());
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         long version = id("SELECT version FROM councils WHERE id = ?", councilId);
 
         assertThrows(ApplicationException.class, () -> results.complete(councilId, version));
@@ -187,7 +187,7 @@ class KltnWorkflowIT {
         for (Long registrationId : registrations) {
             submitReviewer(registrationId);
         }
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         long version = id("SELECT version FROM councils WHERE id = ?", councilId);
 
         results.complete(councilId, version);
@@ -210,7 +210,7 @@ class KltnWorkflowIT {
                 + "ORDER BY id LIMIT 1", councilId);
         jdbc.update("UPDATE evaluations SET status = 'DRAFT', submitted_at = NULL WHERE id = ?",
                 evaluationId);
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         long version = id("SELECT version FROM councils WHERE id = ?", councilId);
 
         assertThrows(ApplicationException.class, () -> results.complete(councilId, version));
@@ -227,7 +227,7 @@ class KltnWorkflowIT {
         for (Long registrationId : registrations) {
             submitReviewer(registrationId);
         }
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         long version = id("SELECT version FROM councils WHERE id = ?", councilId);
         results.complete(councilId, version);
         jdbc.update("DELETE FROM reviewer_reports WHERE assignment_id IN "
@@ -254,7 +254,7 @@ class KltnWorkflowIT {
         for (Long registrationId : registrations) {
             submitReviewer(registrationId);
         }
-        authenticate("lecturer1.demo", "LECTURER");
+        authenticate("dean.demo", "DEAN");
         long version = id("SELECT version FROM councils WHERE id = ?", councilId);
         results.complete(councilId, version);
         jdbc.update("UPDATE user_accounts SET enabled = FALSE WHERE username = 'lecturer5.demo'");

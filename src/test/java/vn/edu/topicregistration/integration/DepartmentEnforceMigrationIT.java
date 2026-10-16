@@ -31,7 +31,7 @@ class DepartmentEnforceMigrationIT {
         long accountsBefore = count(jdbc, "SELECT COUNT(*) FROM user_accounts");
         long topicsBefore = count(jdbc, "SELECT COUNT(*) FROM topics");
 
-        Flyway flyway = latest();
+        Flyway flyway = throughV19();
         assertEquals(2, flyway.migrate().migrationsExecuted);
         flyway.validate();
 
@@ -52,7 +52,7 @@ class DepartmentEnforceMigrationIT {
         long author = account(jdbc, "t008.null", faculty, softwareDepartment(jdbc));
         long topic = topic(jdbc, period(jdbc, faculty), author, null);
 
-        assertThrows(RuntimeException.class, () -> latest().migrate());
+        assertThrows(RuntimeException.class, () -> throughV19().migrate());
 
         assertEquals(0, count(jdbc,
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '18' AND success = 1"));
@@ -74,7 +74,7 @@ class DepartmentEnforceMigrationIT {
                 Long.class, faculty);
         topic(jdbc, period(jdbc, faculty), author, other);
 
-        assertThrows(RuntimeException.class, () -> latest().migrate());
+        assertThrows(RuntimeException.class, () -> throughV19().migrate());
 
         assertEquals(true, topicDepartmentNullable(jdbc));
         assertEquals(0, count(jdbc,
@@ -91,9 +91,9 @@ class DepartmentEnforceMigrationIT {
         return new JdbcTemplate(database.dataSource());
     }
 
-    private static Flyway latest() {
+    private static Flyway throughV19() {
         return Flyway.configure().dataSource(MySqlTestSupport.fromEnvironment().dataSource())
-                .locations(MIGRATIONS).load();
+                .locations(MIGRATIONS).target(MigrationVersion.fromVersion("19")).load();
     }
 
     private static long canonicalFaculty(JdbcTemplate jdbc) {

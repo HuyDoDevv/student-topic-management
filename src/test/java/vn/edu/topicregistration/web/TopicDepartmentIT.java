@@ -77,6 +77,7 @@ class TopicDepartmentIT {
     FixtureSupport.IdentityFixture outsideDean;
     long departmentId;
     long otherDepartmentId;
+    long outsideDepartmentId;
     long periodId;
 
     @DynamicPropertySource
@@ -102,7 +103,7 @@ class TopicDepartmentIT {
         assignDepartment(lecturer, departmentId);
         assignDepartment(otherLecturer, otherDepartmentId);
         assignDepartment(dean, departmentId);
-        long outsideDepartmentId = department(otherFaculty.facultyId(), "Bộ môn ngoài Khoa");
+        outsideDepartmentId = department(otherFaculty.facultyId(), "Bộ môn ngoài Khoa");
         assignDepartment(outsideDean, outsideDepartmentId);
         periodId = period(faculty.facultyId(), departmentId, "Đợt phần mềm");
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
@@ -112,13 +113,11 @@ class TopicDepartmentIT {
     void lecturerPeriodListContainsOnlyOwnDepartmentAndDeanKeepsFacultyScope()
             throws Exception {
         long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
-        period(faculty.facultyId(), null, "Đợt legacy");
 
         mvc.perform(get("/topics").with(actor(lecturer, "LECTURER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt phần mềm")))
-                .andExpect(content().string(not(containsString("Đợt hệ thống"))))
-                .andExpect(content().string(not(containsString("Đợt legacy"))));
+                .andExpect(content().string(not(containsString("Đợt hệ thống"))));
         mvc.perform(get("/topics").with(actor(otherLecturer, "LECTURER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Đợt hệ thống")))
@@ -133,12 +132,13 @@ class TopicDepartmentIT {
     }
 
     @Test
-    void directOtherDepartmentOrLegacyPeriodUrlIsNotFoundAndDoesNotCreateTopic()
+    void directOtherDepartmentOrFacultyPeriodUrlIsNotFoundAndDoesNotCreateTopic()
             throws Exception {
         long otherPeriodId = period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
-        long legacyPeriodId = period(faculty.facultyId(), null, "Đợt legacy");
+        long outsidePeriodId = period(
+                otherFaculty.facultyId(), outsideDepartmentId, "Đợt Khoa khác");
 
-        for (long blockedPeriodId : new long[] {otherPeriodId, legacyPeriodId}) {
+        for (long blockedPeriodId : new long[] {otherPeriodId, outsidePeriodId}) {
             mvc.perform(get("/periods/{periodId}/topics", blockedPeriodId)
                             .with(actor(lecturer, "LECTURER")))
                     .andExpect(status().isNotFound());
@@ -787,13 +787,12 @@ class TopicDepartmentIT {
     }
 
     @Test
-    void studentSeesDepartmentPeriodsInFacultyIncludingLegacyButNotAnotherFaculty()
+    void studentSeesAllDepartmentPeriodsInFacultyButNotAnotherFaculty()
             throws Exception {
         FixtureSupport.IdentityFixture student = identity(
                 "topic-dept-student-leader", faculty, Set.of(RoleCode.STUDENT));
         period(faculty.facultyId(), otherDepartmentId, "Đợt hệ thống");
-        period(faculty.facultyId(), null, "Đợt legacy");
-        period(otherFaculty.facultyId(), null, "Đợt Khoa khác");
+        period(otherFaculty.facultyId(), outsideDepartmentId, "Đợt Khoa khác");
 
         mvc.perform(get("/groups").with(actor(student, "STUDENT")))
                 .andExpect(status().isOk())
@@ -801,7 +800,6 @@ class TopicDepartmentIT {
                 .andExpect(content().string(containsString("Đợt hệ thống")))
                 .andExpect(content().string(containsString("Công nghệ phần mềm")))
                 .andExpect(content().string(containsString("Hệ thống thông tin")))
-                .andExpect(content().string(containsString("Chưa xác định Bộ môn")))
                 .andExpect(content().string(not(containsString("Đợt Khoa khác"))));
     }
 

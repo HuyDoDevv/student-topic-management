@@ -39,26 +39,26 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void emptyDatabaseMigratesThroughV22WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV25WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
         assertDoesNotThrow(() -> flyway(database).validate());
-        assertEquals(25, count(jdbc, """
+        assertEquals(27, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(72, constraintCount(jdbc, "CHECK"));
-        assertEquals(59, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(29, constraintCount(jdbc, "UNIQUE"));
-        assertEquals(26, constraintCount(jdbc, "PRIMARY KEY"));
+        assertEquals(81, constraintCount(jdbc, "CHECK"));
+        assertEquals(65, constraintCount(jdbc, "FOREIGN KEY"));
+        assertEquals(33, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(28, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
                 "trg_councils_validate_officers",
@@ -111,6 +111,14 @@ class SchemaSeedMigrationIT {
         assertConstraint(jdbc, "uq_user_notifications_event_recipient", "UNIQUE");
         assertConstraint(jdbc, "fk_notification_events_actor", "FOREIGN KEY");
         assertConstraint(jdbc, "fk_user_notifications_recipient", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_reviewers_one_active_registration", "UNIQUE");
+        assertConstraint(jdbc, "chk_reviewers_status", "CHECK");
+        assertConstraint(jdbc, "fk_reviewers_assigned_by", "FOREIGN KEY");
+        assertConstraint(jdbc, "fk_reviewers_replaced_by", "FOREIGN KEY");
+        assertConstraint(jdbc, "uq_reviewer_reports_assignment", "UNIQUE");
+        assertConstraint(jdbc, "chk_reviewer_reports_content_type", "CHECK");
+        assertConstraint(jdbc, "uq_reviewer_evaluations_assignment_student", "UNIQUE");
+        assertConstraint(jdbc, "fk_reviewer_evaluations_member", "FOREIGN KEY");
         assertEquals(1, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_name = 'departments'

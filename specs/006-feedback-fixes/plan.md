@@ -2,6 +2,9 @@
 
 **Branch**: `feature/006-feedback-fixes` | **Date**: 2026-10-14 | **Spec**: [spec.md](spec.md)
 
+**Thứ tự thực hiện được rà soát**: 2026-10-15. Giữ nguyên mã task đã dùng trong
+commit và tài liệu; thứ tự làm việc nằm ở phần "Thứ tự thực hiện và điểm chặn".
+
 ## Summary
 
 Feature 006 tách hoàn toàn DEAN khỏi vai trò giảng viên, sửa các luồng/UI trong
@@ -12,18 +15,21 @@ kết quả đã công bố và không chạy migration trên DB ứng dụng.
 
 ## Behavior hiện tại
 
-- `AdminAccountService` tạo DEAN với cả `DEAN` và `LECTURER`; các query chọn
-  người chấm/hội đồng dựa trên role giảng viên nên DEAN vẫn xuất hiện.
+- T002 đã có commit tách DEAN khỏi LECTURER (`e403ae5`), nhưng trạng thái
+  nghiệm thu cần đối soát vì report migration gần nhất chưa kết nối được DB test.
+- T003 đã được ghi nhận hoàn thành. T004 có commit (`27c4e35`) nhưng chưa có
+  bằng chứng E2E mới cho code đó. T005 còn lỗi UI người dùng báo và thay đổi
+  chưa commit, nên đang tạm dừng chứ không được coi là hoàn thành.
 - `DirectGradingRules` chỉ hỗ trợ `COURSE` và `NCKH`; `CouncilRules` lại hỗ trợ
   cả `TLCN` và `KLTN`.
 - Schema V1 có bảng `reviewer_assignments` tối giản nhưng runtime chưa có entity,
   lifecycle, deadline, báo cáo phản biện và điểm phản biện theo từng sinh viên.
 - `evaluations` và `final_results` hiện dựa trên hạ tầng council/direct grading;
   chưa biểu diễn công thức riêng TLCN/KLTN có đầu điểm GVPB.
-- Topic chỉ sửa ở `DRAFT`; form chấm tách theo từng sinh viên; danh sách kết quả
-  phẳng; tiến trình sinh viên và tiến độ hội đồng chưa đủ chi tiết.
-- Một số notification target trỏ tới route quản lý của DEAN dù người nhận là
-  giảng viên; lịch bảo vệ chưa chặn thời điểm quá khứ tại service.
+- Form chấm tách theo từng sinh viên; danh sách kết quả phẳng; tiến trình sinh
+  viên và tiến độ hội đồng chưa đủ chi tiết.
+- Notification target đã được sửa trong T004 nhưng cần nghiệm thu E2E; lịch bảo
+  vệ chưa chặn thời điểm quá khứ tại service.
 
 ## Lý do cần thay đổi
 
@@ -60,16 +66,19 @@ Tài khoản DEAN mới chỉ có `DEAN`; migration bỏ `LECTURER` khỏi tài 
 `DEAN` nhưng giữ tài khoản và lịch sử. Repository lẫn service loại DEAN khỏi ứng
 viên. Bổ sung kiểm thử một DEAN hoạt động/Khoa và race create/unlock.
 
-### T003–T008 — Sửa các luồng độc lập
+### T003–T005, T007–T008 — Các luồng độc lập trước nền phản biện
 
 | Task | File chính | Thay đổi |
 |---|---|---|
 | T003 | `TopicReviewService`, `TopicRepository`, `TopicModerationController`, `templates/topics/review.html`, test | Duyệt đúng Bộ môn của đợt; bỏ bộ lọc thừa; chặn tham số giả mạo. |
 | T004 | `NotificationTargetResolver`, `NotificationService`, nơi phát event, test inbox/E2E | Resolve target theo quyền người nhận; fallback inbox khi nhiệm vụ hết hiệu lực. |
-| T005 | `TopicRules`, `TopicReviewRules`, author/review service/controller/template/test | Cho `APPROVED → DRAFT` trong điều kiện an toàn và bắt buộc duyệt lại. |
-| T006 | registration/report/result service, registration controller, detail template/test | Dẫn xuất chín bước tiến trình sinh viên. |
+| T005 (tạm dừng) | `TopicRules`, `TopicReviewRules`, author/review service/controller/template/test | Cho `APPROVED → DRAFT` trong điều kiện an toàn; chỉ nghiệm thu sau khi lỗi UI đã được xử lý. |
 | T007 | group service/controller/templates/test | Hiển thị đợt, Bộ môn, nhóm, đề tài, vai trò và trạng thái từng thẻ. |
 | T008 | `GroupScoreForm`, scoring controller/service/templates/test | Chấm cả nhóm trong một transaction, validate toàn payload và version. |
+
+T002 và T004 cần đối soát acceptance từ code/test hiện có. T005 không chặn
+những luồng độc lập theo yêu cầu tạm bỏ qua của người dùng, nhưng phải quay lại
+trước nghiệm thu T018. Không sửa T005 ngoài một plan riêng được duyệt.
 
 ### T009–T010 — Nền và workflow phản biện
 
@@ -93,6 +102,13 @@ thiếu GVPB hoặc người chấm thì chưa sẵn sàng/công bố.
   Mọi lần sửa kiểm tra lại GVHD, GVPB, DEAN và xung đột đề tài.
 - Lịch bảo vệ phải ở tương lai theo clock server; form hiển thị lỗi tại chỗ và
   optimistic locking vẫn áp dụng khi sửa lịch.
+
+### T006 — Tiến trình sinh viên sau khi nguồn dữ liệu ổn định
+
+Đặt T006 sau T009–T012, và sau T013–T014 trong hàng đợi triển khai, để dẫn xuất
+chín bước từ registration, report, reviewer/direct/council assignment, điểm và
+kết quả thật. Không suy diễn phản biện đã nộp từ row phân công V1; không thêm
+DB status tổng hợp dư thừa và không lộ điểm chưa công bố cho sinh viên.
 
 ### T015–T017 — Tiến độ, căn cứ và danh sách kết quả
 
@@ -126,30 +142,20 @@ Các vùng code dự kiến cho T002–T017: `src/main/java/.../{security,entity
 repository,service,controller}/`, `src/main/resources/{db/migration,templates}/`
 và test unit/web/integration/E2E tương ứng. T001 không cấp quyền sửa các vùng này.
 
-## Dependency Graph
+## Thứ tự thực hiện và điểm chặn
 
 ```text
-T001
- ├─ T002
- ├─ T003
- ├─ T004
- ├─ T005
- ├─ T006
- ├─ T007
- └─ T008
-       ↓
-      T009 → T010
-               ├─ T011 TLCN
-               └─ T012 KLTN → T013 → T014
-                                 ↓
-                              T015 → T016 → T017
-                                             ↓
-                                            T018
+T001 → đối soát T002 → T003 → đối soát T004 → T007 → T008
+     → T009 → T010 → T011 → T012 → T013 → T014
+     → T006 → T015 → T016 → T017 → T018
+T005: tạm dừng; quay lại nghiệm thu trước T018.
 ```
 
-T002 là nền quyền cho mọi danh sách ứng viên. T009–T010 là nền dữ liệu và
-workflow bắt buộc trước công thức TLCN/KLTN. T015–T017 chỉ hoàn thiện sau khi
-nguồn điểm và lifecycle đã ổn định.
+Đây là hàng đợi làm việc, không biến mọi cặp liên tiếp thành phụ thuộc kỹ thuật.
+T002 là nền quyền cho phân công mới; T009–T010 là nền dữ liệu/workflow trước
+T011–T012. T006 cần các nguồn này nên chuyển sau luồng TLCN/KLTN và hội đồng.
+T015–T017 chỉ hoàn thiện khi nguồn điểm/lifecycle ổn định. T018 còn phụ thuộc
+nghiệm thu T005; không đánh dấu xong chỉ vì có commit hoặc checkbox.
 
 ## Protected Areas đã có trong plan
 

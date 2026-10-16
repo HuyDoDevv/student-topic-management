@@ -87,17 +87,17 @@ class FacultyScopeMigrationIT {
         long accountsBefore = count(jdbc, "SELECT COUNT(*) FROM user_accounts");
         long topicsBefore = count(jdbc, "SELECT COUNT(*) FROM topics");
         long councilsBefore = count(jdbc, "SELECT COUNT(*) FROM councils");
-        Flyway latest = Flyway.configure().dataSource(database.dataSource())
-                .locations(MIGRATIONS).load();
-        latest.migrate();
-        assertDoesNotThrow(latest::validate);
+        Flyway throughV18 = Flyway.configure().dataSource(database.dataSource())
+                .locations(MIGRATIONS).target(MigrationVersion.fromVersion("18")).load();
+        throughV18.migrate();
+        assertDoesNotThrow(throughV18::validate);
         assertEquals(accountsBefore, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(topicsBefore, count(jdbc, "SELECT COUNT(*) FROM topics"));
         assertEquals(councilsBefore, count(jdbc, "SELECT COUNT(*) FROM councils"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM topics WHERE department_id IS NULL"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM user_accounts WHERE username LIKE 't010.%' AND department_id IS NULL"));
         assertEquals(0, count(jdbc, "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'councils' AND column_name = 'department_id'"));
-        assertEquals(0, latest.migrate().migrationsExecuted);
+        assertEquals(0, throughV18.migrate().migrationsExecuted);
     }
 
     @Test

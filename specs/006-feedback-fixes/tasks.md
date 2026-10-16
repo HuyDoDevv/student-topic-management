@@ -4,10 +4,17 @@
 [data-model.md](data-model.md), [contracts/web.md](contracts/web.md),
 [quickstart.md](quickstart.md), [checklists/requirements.md](checklists/requirements.md).
 
-**Status rule**: T001 đã được người dùng cấp quyền bằng `IMPLEMENT APPROVED PLAN`
-ngày 2026-10-14. T002–T018 hiện `[ ]`; mỗi task phải qua
+**Status rule**: Mỗi task phải qua
 `INSPECT → PLAN → APPROVE → IMPLEMENT → VERIFY → REPORT` riêng theo `AGENTS.md`.
-Task file, checkbox hoặc trạng thái “ready” không tự cấp quyền sửa code/DB/Git.
+`[x]` chỉ dùng khi có bằng chứng nghiệm thu; commit hoặc checkbox không tự cấp
+quyền sửa code/DB/Git. Giữ nguyên mã T001–T018 để bảo toàn tham chiếu lịch sử.
+
+**Kiểm kê 2026-10-15**: T002 đã có commit `e403ae5` nhưng cần đối soát test
+migration/acceptance; T003 đã được ghi nhận hoàn thành; T004 đã có commit
+`27c4e35` nhưng cần đối soát E2E trên code hiện tại. Code T005 đã được lưu ở
+commit WIP `a928727`; lỗi UI sửa bản nháp người dùng báo vẫn chưa được xác nhận
+hết và được theo dõi riêng ở B005-01 bên dưới. Không đánh dấu task hoàn thành chỉ
+vì có commit. T005 phải được nghiệm thu trước T018.
 
 ## Phase 1 — Feature foundation
 
@@ -44,7 +51,7 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: DEAN vẫn quản lý/duyệt/phân công/công bố nhưng không mở route đề
     xuất/chấm và không thể bị gán qua POST giả mạo.
 
-## Phase 3 — Independent feedback flows
+## Phase 3 — Independent flows before reviewer foundation
 
 - [x] **T003 Bỏ bộ lọc Bộ môn thừa ở trang duyệt đề xuất** `[FB-02]`
   - File: `TopicReviewService.java`, `TopicRepository.java`,
@@ -65,7 +72,10 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: target hợp lệ mở đúng; nhiệm vụ hết hiệu lực về inbox có message,
     không 404; Khoa/owner khác vẫn bị chặn.
 
-- [x] **T005 Cho sửa đề tài đã duyệt nhưng chưa công bố** `[FB-07]`
+- [ ] **T005 Cho sửa đề tài đã duyệt nhưng chưa công bố** `[FB-07]`
+  - Trạng thái: code đã lưu trong commit WIP `a928727`; chưa nghiệm thu vì lỗi
+    B005-01 vẫn mở. Tạm hoãn sửa lỗi theo yêu cầu người dùng; không chặn task
+    độc lập nhưng phải nghiệm thu trước T018.
   - File: `TopicRules.java`, `TopicReviewRules.java`, `TopicAuthorService.java`,
     `TopicReviewService.java`, `TopicAuthorController.java`,
     `TopicReviewController.java`, `templates/topics/detail.html`,
@@ -75,14 +85,9 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: topic published/có registration/hết hạn bị chặn; DEAN không sửa
     nội dung thay lecturer; stale version không ghi đè.
 
-- [x] **T006 Hiển thị đầy đủ tiến trình cho sinh viên** `[FB-08]`
-  - File: `RegistrationService.java`, `ReportService.java`, `ResultService.java`,
-    `RegistrationController.java`, `templates/registrations/detail.html`,
-    `templates/groups/detail.html` và test registration/result.
-  - Dẫn xuất chín bước trong spec, không thêm DB status dư thừa nếu nguồn hiện có
-    đủ suy ra.
-  - Acceptance: fixture ở mỗi mốc trả đúng nhãn/action; Khoa/registration khác
-    không lộ; published là trạng thái terminal.
+  - **B005-01 — lỗi sửa bản nháp sau khi trả đề tài đã duyệt**: người dùng báo
+    thao tác cập nhật trên UI vẫn lỗi. Cần tái hiện, xác định nguyên nhân, lập
+    plan sửa riêng và kiểm thử lại trên UI/DB test trước khi đóng T005.
 
 - [x] **T007 Làm rõ vai trò sinh viên trên danh sách nhóm** `[FB-09]`
   - Nghiệm thu 2026-10-16: 14 unit test nhóm và 1 web integration test pass
@@ -169,7 +174,18 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: past/equal-now bị từ chối ngay form, future được nhận; timezone
     client không đổi quyết định; không chuyển lỗi validation sang trang 422 chung.
 
-## Phase 6 — Progress, result evidence and navigation
+## Phase 6 — Student progress, result evidence and navigation
+
+- [x] **T006 Hiển thị đầy đủ tiến trình cho sinh viên** `[FB-08]`
+  - Chỉ thực hiện sau T009–T012; đặt sau T013–T014 trong hàng đợi để nguồn
+    phản biện/chấm và lifecycle hội đồng ổn định trước khi dựng tiến trình.
+  - File: `RegistrationService.java`, `ReportService.java`, `ResultService.java`,
+    `RegistrationController.java`, `templates/registrations/detail.html`,
+    `templates/groups/detail.html` và test registration/result.
+  - Dẫn xuất chín bước trong spec, không thêm DB status dư thừa nếu nguồn hiện có
+    đủ suy ra.
+  - Acceptance: fixture ở mỗi mốc trả đúng nhãn/action; Khoa/registration khác
+    không lộ; published là trạng thái terminal.
 
 - [x] **T015 Hiển thị tiến độ chấm cho Chủ tịch và DEAN** `[FB-17]`
   - File: `ScoringService.java`, `CouncilService.java`, `CouncilController.java`,
@@ -210,23 +226,23 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: đủ evidence cho SC-006-01–07; task còn mở nếu bất kỳ gate bắt buộc
     chưa đạt. Không sửa lỗi ngoài scope trong lúc acceptance.
 
-## Dependencies
+## Thứ tự thực hiện và điểm chặn
 
 ```text
-T001 → T002
-  ├──→ T003, T004, T005, T006, T007, T008
-  └──→ T009 → T010 → T011
-                   └→ T012 → T013 → T014
-                                  └→ T015 → T016 → T017 → T018
-
-T008 ───────────────────────────────┘
+T001 → đối soát T002 → T003 → đối soát T004 → T007 → T008
+     → T009 → T010 → T011 → T012 → T013 → T014
+     → T006 → T015 → T016 → T017 → T018
+T005: tạm dừng; quay lại nghiệm thu trước T018.
 ```
 
-- T003–T008 độc lập về nghiệp vụ nhưng đều dùng invariant DEAN từ T002 khi có
-  danh sách/quyền liên quan.
-- T009 phải hoàn tất trước T010; T010 trước TLCN/KLTN.
-- T012 trước sửa lifecycle/schedule/progress/result hội đồng.
-- T016 trước T017 để link danh sách tới căn cứ ổn định.
+- Đây là **hàng đợi thực hiện**, không khẳng định mọi cặp liên tiếp đều phụ thuộc
+  kỹ thuật. Giữ ID task cũ để commit, feedback và test vẫn truy vết được.
+- T002 phải có nghiệm thu quyền trước các phân công mới; T009 phải hoàn tất
+  trước T010; T010 trước T011/T012. T006 cần nguồn phản biện và điểm từ
+  T009–T012, nên không được triển khai sớm theo vị trí ID của nó.
+- T012 trước lifecycle/schedule hội đồng T013/T014; T008 và T014 trước tiến độ
+  chấm T015; T016 trước danh sách liên kết căn cứ T017.
+- T018 chỉ hoàn thành khi T005 và mọi task còn mở đã đạt acceptance thực tế.
 
 ## Feedback coverage summary
 

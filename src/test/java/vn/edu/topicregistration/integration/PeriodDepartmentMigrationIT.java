@@ -254,11 +254,10 @@ class PeriodDepartmentMigrationIT {
     @Test
     void freshDatabaseWithoutHistoricalPeriodMigratesThroughV21() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
-        database.resetAndMigrate();
-        Flyway latest = Flyway.configure().dataSource(database.dataSource())
-                .locations("classpath:db/migration").load();
-        latest.validate();
-        assertEquals(0, latest.migrate().migrationsExecuted);
+        resetAndMigrateThrough(database, "21");
+        Flyway throughV21 = flywayThrough(database, "21");
+        throughV21.validate();
+        assertEquals(0, throughV21.migrate().migrationsExecuted);
         assertEquals(0L, id(new JdbcTemplate(database.dataSource()),
                 "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(1L, id(new JdbcTemplate(database.dataSource()), """
@@ -283,11 +282,10 @@ class PeriodDepartmentMigrationIT {
         assertEquals(2, flywayThrough(database, "20").migrate().migrationsExecuted);
         long[] before = businessRowCounts(jdbc);
 
-        Flyway latest = Flyway.configure().dataSource(database.dataSource())
-                .locations("classpath:db/migration").load();
-        assertEquals(1, latest.migrate().migrationsExecuted);
-        latest.validate();
-        assertEquals(0, latest.migrate().migrationsExecuted);
+        Flyway throughV21 = flywayThrough(database, "21");
+        assertEquals(1, throughV21.migrate().migrationsExecuted);
+        throughV21.validate();
+        assertEquals(0, throughV21.migrate().migrationsExecuted);
         assertArrayEquals(before, businessRowCounts(jdbc));
         assertEquals(web, id(jdbc,
                 "SELECT department_id FROM registration_periods WHERE id = ?", legacy));
@@ -327,7 +325,7 @@ class PeriodDepartmentMigrationIT {
         long unassigned = period(jdbc, faculty, "T013 chưa ánh xạ");
         long[] before = businessRowCounts(jdbc);
 
-        assertThrows(FlywayException.class, () -> migrateLatest(database));
+        assertThrows(FlywayException.class, () -> migrateThroughV21(database));
 
         assertEquals(1L, id(jdbc, """
                 SELECT COUNT(*) FROM information_schema.columns
@@ -360,7 +358,7 @@ class PeriodDepartmentMigrationIT {
                 otherDepartment, period);
         long[] before = businessRowCounts(jdbc);
 
-        assertThrows(FlywayException.class, () -> migrateLatest(database));
+        assertThrows(FlywayException.class, () -> migrateThroughV21(database));
 
         assertEquals(1L, id(jdbc, """
                 SELECT COUNT(*) FROM information_schema.columns
@@ -396,9 +394,8 @@ class PeriodDepartmentMigrationIT {
                 .target(MigrationVersion.fromVersion(version)).load();
     }
 
-    private static void migrateLatest(MySqlTestSupport database) {
-        Flyway.configure().dataSource(database.dataSource())
-                .locations("classpath:db/migration").load().migrate();
+    private static void migrateThroughV21(MySqlTestSupport database) {
+        flywayThrough(database, "21").migrate();
     }
 
     private static long canonicalFaculty(JdbcTemplate jdbc) {

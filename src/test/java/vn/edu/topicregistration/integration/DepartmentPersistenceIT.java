@@ -109,7 +109,8 @@ class DepartmentPersistenceIT {
                 null,
                 faculty,
                 department));
-        RegistrationPeriodEntity period = period(faculty, "Đợt mapping Department");
+        RegistrationPeriodEntity period = period(
+                faculty, department, "Đợt mapping Department");
         entityManager.persist(period);
         TopicEntity topic = topics.saveAndFlush(new TopicEntity(period, author, department));
         entityManager.clear();
@@ -127,12 +128,15 @@ class DepartmentPersistenceIT {
     void legacyAccountCanRemainWithoutDepartmentButTopicCannot() {
         FacultyEntity faculty = new FacultyEntity("Khoa legacy Department");
         entityManager.persist(faculty);
+        DepartmentEntity department = departments.saveAndFlush(
+                new DepartmentEntity(faculty, "Bộ môn cho đợt legacy"));
         UserAccountEntity author = accounts.saveAndFlush(new UserAccountEntity(
                 "Giảng viên legacy",
                 "legacy.department.lecturer",
                 "NOT_A_LOGIN_HASH",
                 faculty));
-        RegistrationPeriodEntity period = period(faculty, "Đợt legacy Department");
+        RegistrationPeriodEntity period = period(
+                faculty, department, "Đợt legacy Department");
         entityManager.persist(period);
         entityManager.clear();
 
@@ -142,9 +146,11 @@ class DepartmentPersistenceIT {
                 period.getId(), author.getId()));
     }
 
-    private static RegistrationPeriodEntity period(FacultyEntity faculty, String name) {
+    private static RegistrationPeriodEntity period(
+            FacultyEntity faculty, DepartmentEntity department, String name) {
         return new RegistrationPeriodEntity(
                 faculty,
+                department,
                 name,
                 "COURSE",
                 LECTURER_START,

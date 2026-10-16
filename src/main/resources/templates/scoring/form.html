@@ -20,7 +20,9 @@
     Bạn đã nộp đủ điểm. Trưởng khoa sẽ đối soát, tổng hợp và công bố kết quả.
   </div>
 
-  <form class="card" method="post" th:object="${groupScoreForm}">
+  <form class="card" method="post"
+        th:action="@{/lecturer/scoring/{councilId}/{registrationId}/draft(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}"
+        th:object="${groupScoreForm}">
     <input type="hidden" th:field="*{councilVersion}">
     <div class="card-header"><h2 class="card-title">Phiếu chấm toàn bộ nhóm</h2></div>
     <div class="card-body pb-0">
