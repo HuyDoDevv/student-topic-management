@@ -306,13 +306,18 @@ class AuthorizationMatrixTest {
     }
 
     private long period(long facultyId, String name) {
+        jdbc.update("INSERT INTO departments(faculty_id, name) VALUES (?, ?)",
+                facultyId, "Bộ môn mặc định " + name);
+        long departmentId = jdbc.queryForObject(
+                "SELECT id FROM departments WHERE faculty_id = ? AND name = ?",
+                Long.class, facultyId, "Bộ môn mặc định " + name);
         jdbc.update("""
                 INSERT INTO registration_periods(
-                    faculty_id, name, topic_type,
+                    faculty_id, department_id, name, topic_type,
                     lecturer_start, lecturer_end, student_start, student_end,
                     reviewer_score_deadline, council_report_date, version)
-                VALUES (?, ?, 'COURSE', ?, ?, ?, ?, NULL, NULL, 0)
-                """, facultyId, name,
+                VALUES (?, ?, ?, 'COURSE', ?, ?, ?, ?, NULL, NULL, 0)
+                """, facultyId, departmentId, name,
                 Timestamp.from(NOW.minusSeconds(14400)),
                 Timestamp.from(NOW.minusSeconds(10800)),
                 Timestamp.from(NOW.minusSeconds(7200)),

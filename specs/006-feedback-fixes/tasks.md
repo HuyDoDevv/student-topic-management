@@ -24,7 +24,10 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
 
 ## Phase 2 — Authorization foundation
 
-- [ ] **T002 Tách hoàn toàn DEAN khỏi vai trò giảng viên** `[FB-01, FB-03, FB-10]`
+- [x] **T002 Tách hoàn toàn DEAN khỏi vai trò giảng viên** `[FB-01, FB-03, FB-10]`
+  - Nghiệm thu 2026-10-16: 75 test unit/integration liên quan và 5 test
+    `AuthorizationMatrixTest` đạt trên MySQL 8.4 DB test; V22 validate/rerun,
+    giữ lịch sử, giới hạn DEAN hoạt động, chặn URL và POST giả mạo.
   - File dự kiến:
     - `src/main/java/vn/edu/topicregistration/service/AdminAccountService.java`
     - `src/main/java/vn/edu/topicregistration/security/AuthorizationPolicy.java`
