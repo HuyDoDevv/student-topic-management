@@ -7,6 +7,7 @@ public enum NotificationTargetType {
     TOPIC,
     REGISTRATION,
     DIRECT_GRADING,
+    REVIEWER_ASSIGNMENT,
     COUNCIL,
     RESULT,
     NONE

@@ -20,6 +20,8 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -45,6 +47,7 @@ import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.util.ProjectTime;
+import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 
 @Service
 @Profile("!test")
@@ -66,6 +69,7 @@ public class ReviewerAssignmentService {
     private final ReportFileRepository files;
     private final AuthorizationPolicy authorization;
     private final ProjectTime time;
+    private final NotificationService notifications;
 
     public ReviewerAssignmentService(
             RegistrationPeriodRepository periods,
@@ -79,7 +83,8 @@ public class ReviewerAssignmentService {
             ReviewerEvaluationRepository evaluations,
             ReportFileRepository files,
             AuthorizationPolicy authorization,
-            ProjectTime time) {
+            ProjectTime time,
+            NotificationService notifications) {
         this.periods = periods;
         this.registrations = registrations;
         this.members = members;
@@ -92,6 +97,7 @@ public class ReviewerAssignmentService {
         this.files = files;
         this.authorization = authorization;
         this.time = time;
+        this.notifications = notifications;
     }
 
     @Transactional(readOnly = true)
@@ -181,9 +187,11 @@ public class ReviewerAssignmentService {
         UserAccountEntity reviewer = eligibleReviewer(registration, command.reviewerId());
         UserAccountEntity actor = accounts.findById(dean.accountId())
                 .orElseThrow(ReviewerAssignmentService::missing);
-        return assignments.saveAndFlush(new ReviewerAssignmentEntity(
+        ReviewerAssignmentEntity saved = assignments.saveAndFlush(new ReviewerAssignmentEntity(
                 registration, reviewer, locked.period().getReviewerScoreDeadline(),
-                actor, time.now())).getId();
+                actor, time.now()));
+        notifyReviewer(saved, dean.accountId());
+        return saved.getId();
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -216,9 +224,24 @@ public class ReviewerAssignmentService {
         Instant now = time.now();
         current.markReplaced(actor, now);
         assignments.flush();
-        return assignments.saveAndFlush(new ReviewerAssignmentEntity(
+        ReviewerAssignmentEntity saved = assignments.saveAndFlush(new ReviewerAssignmentEntity(
                 registration, reviewer, locked.period().getReviewerScoreDeadline(),
-                actor, now)).getId();
+                actor, now));
+        notifyReviewer(saved, dean.accountId());
+        return saved.getId();
+    }
+
+    private void notifyReviewer(ReviewerAssignmentEntity assignment, long deanId) {
+        notifications.emit(new EmissionCommand(
+                NotificationEventType.REVIEWER_ASSIGNED,
+                assignment.getId(),
+                deanId,
+                List.of(assignment.getReviewer().getId()),
+                "Bạn được phân công phản biện đề tài",
+                "Vui lòng xem nhiệm vụ, nộp báo cáo PDF và chấm điểm từng sinh viên đúng hạn.",
+                null,
+                NotificationTargetType.REVIEWER_ASSIGNMENT,
+                assignment.getId()));
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

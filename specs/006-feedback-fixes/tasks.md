@@ -54,7 +54,9 @@ liệu ứng dụng bị sửa. Sau report T001 quay lại READ ONLY.
   - Acceptance: URL/query/body giả mạo Department khác không trả dữ liệu và không
     thay đổi quyết định; DEAN vẫn xử lý mọi Department trong Khoa qua từng đợt.
 
-- [ ] **T004 Sửa link thông báo gây 404** `[FB-04]`
+- [x] **T004 Sửa link thông báo gây 404** `[FB-04]`
+  - Nghiệm thu 2026-10-16: unit/web 19/19, integration 7/7 và E2E 1/1 pass
+    trên DB test MySQL 8.4; link GVPB mở đúng nhiệm vụ, phân công cũ fallback.
   - File: `NotificationTargetResolver.java`, `NotificationService.java`, nơi phát
     notification trong `DirectGradingService`, `CouncilService`,
     `TopicReviewService`, `NotificationInboxWebTest`, `NotificationFlowE2ETest`.

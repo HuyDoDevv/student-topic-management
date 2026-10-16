@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,8 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.NotificationEventType;
+import vn.edu.topicregistration.entity.NotificationTargetType;
 import vn.edu.topicregistration.entity.RegistrationEntity;
 import vn.edu.topicregistration.entity.RegistrationMemberEntity;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
@@ -44,6 +47,7 @@ import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
 import vn.edu.topicregistration.service.ReviewerAssignmentService;
+import vn.edu.topicregistration.service.NotificationService;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.AssignCommand;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.ReportUpload;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.ScoreRow;
@@ -62,10 +66,12 @@ class ReviewerAssignmentServiceTest {
     private final ReviewerEvaluationRepository evaluations = mock(ReviewerEvaluationRepository.class);
     private final ReportFileRepository files = mock(ReportFileRepository.class);
     private final AuthorizationPolicy authorization = mock(AuthorizationPolicy.class);
+    private final NotificationService notifications = mock(NotificationService.class);
     private final ReviewerAssignmentService service = new ReviewerAssignmentService(
             periods, registrations, members, accounts, councilTopics, councilMembers,
             assignments, reports, evaluations, files, authorization,
-            new ProjectTime(Clock.fixed(Instant.parse("2026-10-15T16:59:59Z"), ZoneOffset.UTC)));
+            new ProjectTime(Clock.fixed(Instant.parse("2026-10-15T16:59:59Z"), ZoneOffset.UTC)),
+            notifications);
 
     @Test
     void validAssignmentRequiresScopedDeanAndEligibleReviewer() {
@@ -87,6 +93,12 @@ class ReviewerAssignmentServiceTest {
 
         assertEquals(71L, service.assign(new AssignCommand(51L, 11L, 0L)));
         verify(assignments).saveAndFlush(any());
+        verify(notifications).emit(argThat(command ->
+                command.eventType() == NotificationEventType.REVIEWER_ASSIGNED
+                        && command.targetType() == NotificationTargetType.REVIEWER_ASSIGNMENT
+                        && command.sourceId() == 71L
+                        && command.targetId() == 71L
+                        && command.recipientIds().equals(List.of(11L))));
     }
 
     @Test

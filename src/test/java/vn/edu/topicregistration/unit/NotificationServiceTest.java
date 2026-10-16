@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,8 @@ import vn.edu.topicregistration.entity.FinalResultStatus;
 import vn.edu.topicregistration.entity.GroupInvitationEntity;
 import vn.edu.topicregistration.entity.GroupInvitationStatus;
 import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.StudentGroupEntity;
 import vn.edu.topicregistration.entity.FacultyEntity;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
@@ -43,6 +46,7 @@ import vn.edu.topicregistration.repository.AnnouncementRepository;
 import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.GroupInvitationRepository;
 import vn.edu.topicregistration.repository.NotificationEventRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.StudentGroupRepository;
 import vn.edu.topicregistration.repository.UserAccountRepository;
 import vn.edu.topicregistration.repository.UserNotificationRepository;
@@ -71,6 +75,7 @@ class NotificationServiceTest {
         assertEquals("REGISTRATION:7:REJECTED", key(NotificationEventType.REGISTRATION_REJECTED));
         assertEquals("REGISTRATION:7:AUTO_REJECTED", key(NotificationEventType.REGISTRATION_AUTO_REJECTED));
         assertEquals("DIRECT_GRADING:7:ASSIGNED", key(NotificationEventType.DIRECT_GRADER_ASSIGNED));
+        assertEquals("REVIEWER:7:ASSIGNED", key(NotificationEventType.REVIEWER_ASSIGNED));
         assertEquals("COUNCIL_MEMBER:7:ASSIGNED", key(NotificationEventType.COUNCIL_MEMBER_ASSIGNED));
         assertEquals("RESULT:7:PUBLISHED", key(NotificationEventType.RESULT_PUBLISHED));
         assertThrows(IllegalArgumentException.class,
@@ -252,6 +257,8 @@ class NotificationServiceTest {
         when(dependencies.topics().getOwn(4L)).thenReturn(topic);
         assertEquals("/topics/4", dependencies.resolver().resolve(
                 event(NotificationTargetType.TOPIC, 4L), lecturer));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event(NotificationTargetType.TOPIC, 4L), student));
 
         assertEquals("/registrations/4", dependencies.resolver().resolve(
                 event(NotificationTargetType.REGISTRATION, 4L), student));
@@ -311,6 +318,40 @@ class NotificationServiceTest {
     }
 
     @Test
+    void reviewerNotificationOpensOnlyCurrentReviewersUnexpiredAssignment() {
+        ResolverDependencies dependencies = resolverDependencies();
+        ActorIdentity reviewer = new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L);
+        ReviewerAssignmentEntity assignment = mock(ReviewerAssignmentEntity.class);
+        RegistrationEntity registration = mock(RegistrationEntity.class);
+        RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
+        FacultyEntity faculty = mock(FacultyEntity.class);
+        UserAccountEntity reviewerAccount = account(11L);
+        when(assignment.getReviewer()).thenReturn(reviewerAccount);
+        when(assignment.getRegistration()).thenReturn(registration);
+        when(registration.getPeriod()).thenReturn(period);
+        when(period.getFaculty()).thenReturn(faculty);
+        when(faculty.getId()).thenReturn(2L);
+        when(assignment.getStatus()).thenReturn(ReviewerAssignmentEntity.Status.ASSIGNED);
+        when(assignment.getDeadlineDate()).thenReturn(LocalDate.of(2026, 9, 24));
+        when(dependencies.reviewerAssignments().findDetailedById(7L))
+                .thenReturn(Optional.of(assignment));
+        NotificationEventEntity event = event(NotificationTargetType.REVIEWER_ASSIGNMENT, 7L);
+
+        assertEquals("/lecturer/reviewers/7", dependencies.resolver().resolve(event, reviewer));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event, new ActorIdentity(12L, Set.of(RoleCode.LECTURER), 2L)));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE, dependencies.resolver().resolve(
+                event, new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 3L)));
+        when(assignment.getStatus()).thenReturn(ReviewerAssignmentEntity.Status.REPLACED);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                dependencies.resolver().resolve(event, reviewer));
+        when(assignment.getStatus()).thenReturn(ReviewerAssignmentEntity.Status.ASSIGNED);
+        when(assignment.getDeadlineDate()).thenReturn(LocalDate.of(2026, 9, 23));
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                dependencies.resolver().resolve(event, reviewer));
+    }
+
+    @Test
     void openMarksOnlyOwnedNotificationReadAfterResolvingFallback() {
         Dependencies dependencies = dependencies();
         ActorIdentity actor = new ActorIdentity(9L, Set.of(RoleCode.STUDENT), 2L);
@@ -348,12 +389,13 @@ class NotificationServiceTest {
         RegistrationService registrations = mock(RegistrationService.class);
         ScoringService scoring = mock(ScoringService.class);
         FinalResultRepository results = mock(FinalResultRepository.class);
+        ReviewerAssignmentRepository reviewerAssignments = mock(ReviewerAssignmentRepository.class);
         NotificationTargetResolver resolver = new NotificationTargetResolver(
                 announcements, invitations, groups, topics, registrations, scoring,
-                results, Clock.fixed(NOW, ZoneOffset.UTC));
+                results, reviewerAssignments, Clock.fixed(NOW, ZoneOffset.UTC));
         return new ResolverDependencies(
                 resolver, announcements, invitations, groups, topics, registrations,
-                scoring, results);
+                scoring, results, reviewerAssignments);
     }
 
     private record ResolverDependencies(
@@ -364,7 +406,8 @@ class NotificationServiceTest {
             TopicAuthorService topics,
             RegistrationService registrations,
             ScoringService scoring,
-            FinalResultRepository results) {
+            FinalResultRepository results,
+            ReviewerAssignmentRepository reviewerAssignments) {
     }
 
     private static String key(NotificationEventType type) {

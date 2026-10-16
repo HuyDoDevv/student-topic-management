@@ -22,6 +22,44 @@ class ReviewerAssessmentMigrationIT {
     }
 
     @Test
+    void v25AddsReviewerNotificationTypesWithoutChangingExistingEvents() {
+        MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
+        Flyway throughV24 = flyway(database, "24", true);
+        throughV24.clean();
+        throughV24.migrate();
+        JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
+        jdbc.update("""
+                INSERT INTO notification_events(
+                    event_key, category, event_type, title, body,
+                    target_type, target_id, created_at)
+                VALUES ('TOPIC:1:APPROVED', 'ACADEMIC_EVENT', 'TOPIC_PROPOSAL_APPROVED',
+                    'Lịch sử', 'Không thay đổi', 'TOPIC', 1, '2026-10-15 00:00:00')
+                """);
+        long historicalCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM notification_events WHERE event_key = 'TOPIC:1:APPROVED'",
+                Long.class);
+
+        Flyway throughV25 = flyway(database, "25", false);
+        assertEquals(1, throughV25.migrate().migrationsExecuted);
+        assertDoesNotThrow(throughV25::validate);
+        assertEquals(0, throughV25.migrate().migrationsExecuted);
+        assertEquals(historicalCount, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM notification_events WHERE event_key = 'TOPIC:1:APPROVED'",
+                Long.class));
+        jdbc.update("""
+                INSERT INTO notification_events(
+                    event_key, category, event_type, title, body,
+                    target_type, target_id, created_at)
+                VALUES ('REVIEWER:1:ASSIGNED', 'ACADEMIC_EVENT', 'REVIEWER_ASSIGNED',
+                    'Phân công', 'Mở nhiệm vụ', 'REVIEWER_ASSIGNMENT', 1,
+                    '2026-10-16 00:00:00')
+                """);
+        assertEquals(1L, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM notification_events WHERE event_key = 'REVIEWER:1:ASSIGNED'",
+                Long.class));
+    }
+
+    @Test
     void emptyV1DatabaseMigratesThroughV23AndRerunIsIdempotent() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         Flyway throughV1 = flyway(database, "1", true);

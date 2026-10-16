@@ -11,6 +11,7 @@ public enum NotificationEventType {
     REGISTRATION_REJECTED(NotificationCategory.ACADEMIC_EVENT),
     REGISTRATION_AUTO_REJECTED(NotificationCategory.ACADEMIC_EVENT),
     DIRECT_GRADER_ASSIGNED(NotificationCategory.ACADEMIC_EVENT),
+    REVIEWER_ASSIGNED(NotificationCategory.ACADEMIC_EVENT),
     COUNCIL_MEMBER_ASSIGNED(NotificationCategory.ACADEMIC_EVENT),
     RESULT_PUBLISHED(NotificationCategory.ACADEMIC_EVENT);
 

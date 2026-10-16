@@ -42,6 +42,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.service.ReviewerAssignmentService;
+import vn.edu.topicregistration.service.NotificationService;
+import vn.edu.topicregistration.service.NotificationTargetResolver;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.AssignCommand;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.ReportUpload;
 import vn.edu.topicregistration.service.ReviewerAssignmentService.ScoreRow;
@@ -59,6 +61,7 @@ class ReviewerWorkflowIT {
     @TempDir static Path reportRoot;
     @Autowired JdbcTemplate jdbc;
     @Autowired ReviewerAssignmentService reviewers;
+    @Autowired NotificationService notifications;
     @Autowired WebApplicationContext context;
     private MockMvc mvc;
     private long registrationId;
@@ -90,6 +93,14 @@ class ReviewerWorkflowIT {
         authenticate("dean.demo", RoleCode.DEAN);
         long assignmentId = reviewers.assign(new AssignCommand(registrationId, reviewerId, version));
         assertEquals("ASSIGNED", assignmentStatus(assignmentId));
+        long notificationId = id("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_key = ? AND delivery.recipient_id = ?
+                """, "REVIEWER:" + assignmentId + ":ASSIGNED", reviewerId);
+        authenticate("lecturer2.demo", RoleCode.LECTURER);
+        assertEquals("/lecturer/reviewers/" + assignmentId,
+                notifications.openForCurrentActor(notificationId));
 
         List<Long> students = jdbc.queryForList(
                 "SELECT student_id FROM registration_members WHERE registration_id = ? ORDER BY slot",
@@ -146,6 +157,22 @@ class ReviewerWorkflowIT {
         assertEquals(2L, count(
                 "SELECT COUNT(*) FROM reviewer_assignments WHERE registration_id = ?",
                 registrationId));
+        long oldNotificationId = id("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_key = ? AND delivery.recipient_id = ?
+                """, "REVIEWER:" + oldId + ":ASSIGNED", account("lecturer2.demo"));
+        long newNotificationId = id("""
+                SELECT delivery.id FROM user_notifications delivery
+                JOIN notification_events event ON event.id = delivery.event_id
+                WHERE event.event_key = ? AND delivery.recipient_id = ?
+                """, "REVIEWER:" + newId + ":ASSIGNED", account("lecturer3.demo"));
+        authenticate("lecturer2.demo", RoleCode.LECTURER);
+        assertEquals(NotificationTargetResolver.UNAVAILABLE,
+                notifications.openForCurrentActor(oldNotificationId));
+        authenticate("lecturer3.demo", RoleCode.LECTURER);
+        assertEquals("/lecturer/reviewers/" + newId,
+                notifications.openForCurrentActor(newNotificationId));
         authenticate("lecturer2.demo", RoleCode.LECTURER);
         assertThrows(AccessDeniedException.class,
                 () -> reviewers.submissionWorkspace(oldId));

@@ -11,14 +11,17 @@ import vn.edu.topicregistration.entity.FinalResultStatus;
 import vn.edu.topicregistration.entity.GroupInvitationStatus;
 import vn.edu.topicregistration.entity.NotificationEventEntity;
 import vn.edu.topicregistration.entity.NotificationTargetType;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
 import vn.edu.topicregistration.entity.RoleCode;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.repository.AnnouncementRepository;
 import vn.edu.topicregistration.repository.FinalResultRepository;
 import vn.edu.topicregistration.repository.GroupInvitationRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
 import vn.edu.topicregistration.repository.StudentGroupRepository;
 import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.config.TimeConfig;
 
 @Component
 @Profile("!test")
@@ -32,6 +35,7 @@ public class NotificationTargetResolver {
     private final RegistrationService registrations;
     private final ScoringService scoring;
     private final FinalResultRepository results;
+    private final ReviewerAssignmentRepository reviewerAssignments;
     private final Clock clock;
 
     public NotificationTargetResolver(
@@ -42,6 +46,7 @@ public class NotificationTargetResolver {
             RegistrationService registrations,
             ScoringService scoring,
             FinalResultRepository results,
+            ReviewerAssignmentRepository reviewerAssignments,
             Clock clock) {
         this.announcements = announcements;
         this.invitations = invitations;
@@ -50,6 +55,7 @@ public class NotificationTargetResolver {
         this.registrations = registrations;
         this.scoring = scoring;
         this.results = results;
+        this.reviewerAssignments = reviewerAssignments;
         this.clock = clock;
     }
 
@@ -69,9 +75,10 @@ public class NotificationTargetResolver {
             case ANNOUNCEMENT -> announcement(event, id);
             case GROUP_INVITATION -> invitation(id, actor);
             case GROUP -> group(id, actor);
-            case TOPIC -> topic(id);
+            case TOPIC -> topic(id, actor);
             case REGISTRATION -> registration(id);
             case DIRECT_GRADING -> directGrading(id);
+            case REVIEWER_ASSIGNMENT -> reviewerAssignment(id, actor);
             case COUNCIL -> council(id);
             case RESULT -> result(id, actor);
             case NONE -> throw new IllegalStateException("NONE handled before target switch");
@@ -117,7 +124,11 @@ public class NotificationTargetResolver {
                 .orElse(UNAVAILABLE);
     }
 
-    private String topic(long id) {
+    private String topic(long id, ActorIdentity actor) {
+        if (!actor.roles().contains(RoleCode.LECTURER)
+                || actor.roles().contains(RoleCode.DEAN)) {
+            return UNAVAILABLE;
+        }
         try {
             var topic = topics.getOwn(id);
             topics.formContext(topic.periodId());
@@ -172,6 +183,22 @@ public class NotificationTargetResolver {
                 .anyMatch(assignment -> Objects.equals(assignment.councilId(), id)
                         && !assignment.directGrading());
         return visible ? "/lecturer/scoring" : UNAVAILABLE;
+    }
+
+    private String reviewerAssignment(long id, ActorIdentity actor) {
+        if (!actor.roles().contains(RoleCode.LECTURER)) {
+            return UNAVAILABLE;
+        }
+        return reviewerAssignments.findDetailedById(id)
+                .filter(item -> Objects.equals(item.getReviewer().getId(), actor.accountId()))
+                .filter(item -> Objects.equals(item.getRegistration().getPeriod()
+                        .getFaculty().getId(), actor.facultyId()))
+                .filter(item -> item.getStatus() == ReviewerAssignmentEntity.Status.SUBMITTED
+                        || (item.getStatus() == ReviewerAssignmentEntity.Status.ASSIGNED
+                        && !clock.instant().atZone(TimeConfig.BUSINESS_ZONE).toLocalDate()
+                                .isAfter(item.getDeadlineDate())))
+                .map(item -> "/lecturer/reviewers/" + id)
+                .orElse(UNAVAILABLE);
     }
 
     private String result(long id, ActorIdentity actor) {
