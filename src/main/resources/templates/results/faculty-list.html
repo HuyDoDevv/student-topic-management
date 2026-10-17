@@ -92,83 +92,97 @@
     </div>
   </div>
 
-  <article class="card mb-3 overflow-hidden"
-           th:each="period, periodStat : ${periodGroups}"
-           th:with="periodOpen=${period.containsRegistration(selectedRegistrationId)
-             or (selectedRegistrationId == null and selectedPeriodId != null and selectedPeriodId == period.periodId)
-             or (selectedRegistrationId == null and selectedPeriodId == null and periodStat.first)
-             or (selectedRegistrationId == null and selectedTopicOrGroup != null and !#strings.isEmpty(#strings.trim(selectedTopicOrGroup)))}">
-    <div class="card-header p-0">
-      <h2 class="m-0 w-100">
-        <button class="accordion-button"
-                th:classappend="${periodOpen} ? '' : ' collapsed'"
-                type="button"
-                data-bs-toggle="collapse"
-                data-result-period-toggle
-                th:attr="data-bs-target=|#result-period-${period.periodId}|,aria-controls=|result-period-${period.periodId}|,aria-expanded=${periodOpen}">
-          <span class="d-flex flex-wrap gap-2 align-items-center w-100 pe-2">
-            <span class="flex-fill">
-              <span class="d-block text-secondary small" th:text="${period.topicType}">KLTN</span>
-              <span class="d-block fw-semibold" th:text="${period.periodName}">Đợt khóa luận</span>
-            </span>
-            <span class="badge bg-blue-lt" th:text="${#lists.size(period.topics) + ' đề tài'}">2 đề tài</span>
-            <span class="badge bg-azure-lt" th:text="${period.groupCount() + ' nhóm trên trang'}">3 nhóm trên trang</span>
-            <span class="badge bg-secondary-lt" th:text="${period.studentCount() + ' sinh viên'}">9 sinh viên</span>
-          </span>
-        </button>
-      </h2>
-    </div>
-
-    <div class="collapse" th:id="|result-period-${period.periodId}|"
-         th:classappend="${periodOpen} ? ' show' : ''">
-      <div class="card-body p-0">
-        <section class="border-top" th:each="topic : ${period.topics}"
-                 th:with="topicOpen=${topic.containsRegistration(selectedRegistrationId)
-                   or (selectedRegistrationId == null and selectedTopicOrGroup != null and !#strings.isEmpty(#strings.trim(selectedTopicOrGroup)))}">
-          <h3 class="m-0">
-            <button class="accordion-button bg-transparent py-3"
-                    th:classappend="${topicOpen} ? '' : ' collapsed'"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-result-topic-toggle
-                    th:attr="data-bs-target=|#result-topic-${period.periodId}-${topic.topicId}|,aria-controls=|result-topic-${period.periodId}-${topic.topicId}|,aria-expanded=${topicOpen}">
-              <span class="d-flex flex-wrap gap-2 align-items-center w-100 pe-2">
-                <span class="flex-fill fw-semibold" th:text="${topic.topicTitle}">Tên đề tài</span>
-                <span class="badge bg-blue-lt" th:text="${topic.groupCount() + ' nhóm trên trang'}">2 nhóm trên trang</span>
-                <span class="badge bg-azure-lt" th:text="${topic.studentCount() + ' sinh viên'}">6 sinh viên</span>
+  <div class="accordion" data-result-accordion>
+    <article class="card mb-3 overflow-hidden"
+             th:each="period, periodStat : ${periodGroups}"
+             th:with="periodOpen=${period.containsRegistration(selectedRegistrationId)
+               or (selectedRegistrationId == null and selectedPeriodId != null and selectedPeriodId == period.periodId)
+               or (selectedRegistrationId == null and selectedPeriodId == null and periodStat.first)
+               or (selectedRegistrationId == null and selectedTopicOrGroup != null and !#strings.isEmpty(#strings.trim(selectedTopicOrGroup)))}">
+      <div class="card-header p-0">
+        <h2 class="m-0 w-100">
+          <button class="accordion-button"
+                  th:classappend="${periodOpen} ? '' : ' collapsed'"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-result-period-toggle
+                  th:attr="data-bs-target=|#result-period-${period.periodId}|,aria-controls=|result-period-${period.periodId}|,aria-expanded=${periodOpen}">
+            <span class="d-flex flex-wrap gap-2 align-items-center w-100 pe-2">
+              <span class="flex-fill">
+                <span class="d-block text-secondary small" th:text="${period.topicType}">KLTN</span>
+                <span class="d-block fw-semibold" th:text="${period.periodName}">Đợt khóa luận</span>
               </span>
-            </button>
-          </h3>
+              <span class="badge bg-blue-lt" th:text="${#lists.size(period.topics) + ' đề tài'}">2 đề tài</span>
+              <span class="badge bg-azure-lt" th:text="${period.groupCount() + ' nhóm trên trang'}">3 nhóm trên trang</span>
+              <span class="badge bg-secondary-lt" th:text="${period.studentCount() + ' sinh viên'}">9 sinh viên</span>
+            </span>
+            <span class="accordion-button-toggle" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6l6 -6"/>
+              </svg>
+            </span>
+          </button>
+        </h2>
+      </div>
 
-          <div class="collapse" data-result-topic-body
-               th:id="|result-topic-${period.periodId}-${topic.topicId}|"
-               th:classappend="${topicOpen} ? ' show' : ''">
-            <div class="border-top" th:each="group : ${topic.groups}" th:with="first=${group.first()}">
-              <div class="d-flex flex-wrap gap-2 align-items-center px-3 py-2 bg-light-lt">
-                <span class="fw-semibold" th:text="${'Nhóm N' + #numbers.formatInteger(first.groupId, 3)}">Nhóm N001</span>
-                <span class="badge bg-azure-lt" th:text="${#lists.size(group.students) + ' sinh viên'}">3 sinh viên</span>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table responsive-table mb-0">
-                  <thead><tr><th>Sinh viên</th><th>Hình thức chấm</th><th>Điểm cuối</th><th>Trạng thái</th><th>Thời điểm</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
-                  <tbody>
-                  <tr th:each="result : ${group.students}">
-                    <td data-label="Sinh viên" class="fw-semibold" th:text="${result.studentName}">Sinh viên A</td>
-                    <td data-label="Hình thức chấm" th:text="${result.mode.name() == 'DIRECT' ? (result.topicType == 'TLCN' ? 'Phản biện + chấm lần hai' : 'Chấm trực tiếp') : result.councilName}">Chấm điểm</td>
-                    <td data-label="Điểm cuối"><span class="fs-3 fw-bold" th:text="${result.finalScore}">8.50</span></td>
-                    <td data-label="Trạng thái"><span class="badge" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span></td>
-                    <td data-label="Thời điểm" th:text="${result.publishedAt != null ? result.publishedAt : result.consolidatedAt}">21/09/2026 09:00</td>
-                    <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/faculty/results/{registrationId}/{studentId}(registrationId=${result.registrationId},studentId=${result.studentId})}">Xem căn cứ</a></td>
-                  </tr>
-                  </tbody>
-                </table>
+      <div class="collapse" th:id="|result-period-${period.periodId}|"
+           th:classappend="${periodOpen} ? ' show' : ''">
+        <div class="card-body p-0">
+          <section class="border-top" th:each="topic : ${period.topics}"
+                   th:with="topicOpen=${topic.containsRegistration(selectedRegistrationId)
+                     or (selectedRegistrationId == null and selectedTopicOrGroup != null and !#strings.isEmpty(#strings.trim(selectedTopicOrGroup)))}">
+            <h3 class="m-0">
+              <button class="accordion-button bg-transparent py-3"
+                      th:classappend="${topicOpen} ? '' : ' collapsed'"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-result-topic-toggle
+                      th:attr="data-bs-target=|#result-topic-${period.periodId}-${topic.topicId}|,aria-controls=|result-topic-${period.periodId}-${topic.topicId}|,aria-expanded=${topicOpen}">
+                <span class="d-flex flex-wrap gap-2 align-items-center w-100 pe-2">
+                  <span class="flex-fill fw-semibold" th:text="${topic.topicTitle}">Tên đề tài</span>
+                  <span class="badge bg-blue-lt" th:text="${topic.groupCount() + ' nhóm trên trang'}">2 nhóm trên trang</span>
+                  <span class="badge bg-azure-lt" th:text="${topic.studentCount() + ' sinh viên'}">6 sinh viên</span>
+                </span>
+                <span class="accordion-button-toggle" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6l6 -6"/>
+                  </svg>
+                </span>
+              </button>
+            </h3>
+
+            <div class="collapse" data-result-topic-body
+                 th:id="|result-topic-${period.periodId}-${topic.topicId}|"
+                 th:classappend="${topicOpen} ? ' show' : ''">
+              <div class="border-top" th:each="group : ${topic.groups}" th:with="first=${group.first()}">
+                <div class="d-flex flex-wrap gap-2 align-items-center px-3 py-2 bg-light-lt">
+                  <span class="fw-semibold" th:text="${'Nhóm N' + #numbers.formatInteger(first.groupId, 3)}">Nhóm N001</span>
+                  <span class="badge bg-azure-lt" th:text="${#lists.size(group.students) + ' sinh viên'}">3 sinh viên</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table responsive-table mb-0">
+                    <thead><tr><th>Sinh viên</th><th>Hình thức chấm</th><th>Điểm cuối</th><th>Trạng thái</th><th>Thời điểm</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+                    <tbody>
+                    <tr th:each="result : ${group.students}">
+                      <td data-label="Sinh viên" class="fw-semibold" th:text="${result.studentName}">Sinh viên A</td>
+                      <td data-label="Hình thức chấm" th:text="${result.mode.name() == 'DIRECT' ? (result.topicType == 'TLCN' ? 'Phản biện + chấm lần hai' : 'Chấm trực tiếp') : result.councilName}">Chấm điểm</td>
+                      <td data-label="Điểm cuối"><span class="fs-3 fw-bold" th:text="${result.finalScore}">8.50</span></td>
+                      <td data-label="Trạng thái"><span class="badge" th:classappend="${result.statusClass}" th:text="${result.statusLabel}">Sẵn sàng</span></td>
+                      <td data-label="Thời điểm" th:text="${result.publishedAt != null ? result.publishedAt : result.consolidatedAt}">21/09/2026 09:00</td>
+                      <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/faculty/results/{registrationId}/{studentId}(registrationId=${result.registrationId},studentId=${result.studentId})}">Xem căn cứ</a></td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
-    </div>
-  </article>
+    </article>
+  </div>
 
   <nav class="d-flex align-items-center justify-content-between gap-2" aria-label="Phân trang kết quả"
        th:if="${totalPages > 1}">

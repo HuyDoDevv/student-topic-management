@@ -132,8 +132,10 @@ class ResultControllerTest {
 
         renderedMvc().perform(get("/faculty/results"))
                 .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"accordion\" data-result-accordion")))
                 .andExpect(content().string(containsString("data-result-period-toggle")))
                 .andExpect(content().string(containsString("data-result-topic-toggle")))
+                .andExpect(content().string(containsString("class=\"accordion-button-toggle\"")))
                 .andExpect(content().string(containsString("result-topic-7-101")))
                 .andExpect(content().string(containsString("2 nhóm trên trang")))
                 .andExpect(content().string(containsString("Nhóm N021")))
