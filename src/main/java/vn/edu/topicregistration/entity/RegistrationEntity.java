@@ -20,7 +20,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "registrations")
 public class RegistrationEntity {
-    public static final String TOPIC_TAKEN_REASON = "Đề tài đã nhận nhóm";
+    public static final String TOPIC_TAKEN_REASON = "Đề tài đã đủ số lượng nhóm";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

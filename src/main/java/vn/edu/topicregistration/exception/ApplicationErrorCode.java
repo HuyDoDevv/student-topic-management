@@ -22,7 +22,7 @@ public enum ApplicationErrorCode {
     INVALID_INVITATION_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Lời mời không còn hợp lệ", "Lời mời đã được phản hồi, bị hủy hoặc đã hết hiệu lực."),
     INVALID_GROUP_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái nhóm không hợp lệ", "Nhóm không thể thực hiện thao tác này ở trạng thái hiện tại."),
     ACTIVE_REGISTRATION_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Nhóm đã có đăng ký đang xử lý", "Hãy xử lý đăng ký hiện tại trước khi gửi đăng ký mới."),
-    TOPIC_TAKEN(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài đã nhận nhóm", "Hãy chọn một đề tài khác."),
+    TOPIC_TAKEN(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài đã đủ số lượng nhóm", "Hãy chọn một đề tài khác."),
     TOPIC_DEPARTMENT_REQUIRED(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài thiếu Bộ môn hợp lệ", "Giảng viên hoặc đề tài chưa có Bộ môn thuộc đúng Khoa. Vui lòng liên hệ quản trị viên để cập nhật trước khi tạo hoặc gửi đề tài."),
     INVALID_TOPIC_STATE(HttpStatus.UNPROCESSABLE_CONTENT, "Trạng thái đề tài không hợp lệ", "Đề tài không thể thực hiện thao tác này ở trạng thái hiện tại."),
     TOPIC_REGISTRATION_EXISTS(HttpStatus.UNPROCESSABLE_CONTENT, "Đề tài đã có đăng ký", "Đề tài đã có đăng ký nên không thể trả về bản nháp."),

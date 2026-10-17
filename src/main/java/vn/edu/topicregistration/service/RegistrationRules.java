@@ -30,7 +30,7 @@ public final class RegistrationRules {
         if (context.activeRegistration()) {
             throw failure(Failure.ACTIVE_REGISTRATION);
         }
-        if (context.topicAccepted()) {
+        if (context.topicFull()) {
             throw failure(Failure.TOPIC_TAKEN);
         }
     }
@@ -44,9 +44,9 @@ public final class RegistrationRules {
         }
     }
 
-    public static void validateAccept(State status, boolean topicAlreadyAccepted) {
+    public static void validateAccept(State status, boolean topicFull) {
         requirePending(status);
-        if (topicAlreadyAccepted) {
+        if (topicFull) {
             throw failure(Failure.TOPIC_TAKEN);
         }
     }
@@ -119,7 +119,7 @@ public final class RegistrationRules {
             boolean activeRegistration,
             boolean samePeriod,
             boolean topicPublished,
-            boolean topicAccepted,
+            boolean topicFull,
             Instant now,
             Instant studentStart,
             Instant studentEnd) {

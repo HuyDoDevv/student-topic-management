@@ -75,5 +75,7 @@ public interface RegistrationRepository extends JpaRepository<RegistrationEntity
             long topicId,
             RegistrationStatus status);
 
+    long countByTopicIdAndStatus(long topicId, RegistrationStatus status);
+
     boolean existsByPeriodIdAndTopicId(long periodId, long topicId);
 }

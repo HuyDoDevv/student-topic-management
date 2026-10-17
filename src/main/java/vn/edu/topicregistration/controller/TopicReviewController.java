@@ -27,9 +27,10 @@ public class TopicReviewController {
     RedirectView approve(
             @PathVariable long id,
             @RequestParam(name = "version", required = false) Long version,
+            @RequestParam(name = "maxGroupCount", defaultValue = "1") int maxGroupCount,
             @RequestParam(name = "departmentId", required = false) String departmentId) {
         rejectDepartmentParameter(departmentId);
-        ReviewResult result = topics.approve(id, requiredVersion(version));
+        ReviewResult result = topics.approve(id, requiredVersion(version), maxGroupCount);
         return proposalReview(result.periodId());
     }
 
