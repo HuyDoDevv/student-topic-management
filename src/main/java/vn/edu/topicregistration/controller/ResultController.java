@@ -82,8 +82,9 @@ public class ResultController {
         }
         Long selectedPeriod = period != null ? period : periodId;
         Long selectedGrader = grader != null ? grader : lecturerId;
+        String selectedTopicType = blankToNull(topicType);
         FacultyResultListView listing = results.listPageForCurrentDean(new ResultListFilter(
-                selectedPeriod, registrationId, topicType, topicOrGroup,
+                selectedPeriod, registrationId, selectedTopicType, topicOrGroup,
                 selectedGrader, status, sort, page, size));
         common(model);
         model.addAttribute("periodOptions", listing.periods().stream()
@@ -94,7 +95,7 @@ public class ResultController {
                 .toList());
         model.addAttribute("selectedPeriodId", selectedPeriod);
         model.addAttribute("selectedRegistrationId", registrationId);
-        model.addAttribute("selectedTopicType", topicType);
+        model.addAttribute("selectedTopicType", selectedTopicType);
         model.addAttribute("selectedTopicOrGroup", topicOrGroup);
         model.addAttribute("selectedLecturerId", selectedGrader);
         model.addAttribute("selectedStatus", status);
@@ -295,6 +296,14 @@ public class ResultController {
 
     private static String score(BigDecimal value) {
         return ScoreFormat.display(value);
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.strip();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private static String statusLabel(FinalResultStatus status) {

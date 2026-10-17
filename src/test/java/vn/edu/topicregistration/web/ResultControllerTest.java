@@ -265,6 +265,25 @@ class ResultControllerTest {
     }
 
     @Test
+    void blankOptionalSelectValuesDoNotRejectGroupSearch() throws Exception {
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(summary()));
+
+        mvc.perform(get("/faculty/results")
+                        .param("period", "1")
+                        .param("topicType", "")
+                        .param("topicOrGroup", "N010")
+                        .param("grader", "")
+                        .param("status", "")
+                        .param("sort", "recent")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedTopicOrGroup", "N010"));
+
+        verify(results).listPageForCurrentDean(new ResultListFilter(
+                1L, null, null, "N010", null, null, "recent", 0, 10));
+    }
+
+    @Test
     void conflictingCanonicalAndLegacyFiltersAreRejected() throws Exception {
         mvc.perform(get("/faculty/results").param("period", "7")
                         .param("periodId", "8"))
