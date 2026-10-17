@@ -242,7 +242,7 @@ class ResultControllerTest {
     void canonicalFiltersAndPaginationReachServiceWithoutClientFacultyScope() throws Exception {
         when(results.listPageForCurrentDean(any())).thenReturn(listing(summary()));
 
-        mvc.perform(get("/faculty/results")
+        renderedMvc().perform(get("/faculty/results")
                         .param("period", "7")
                         .param("topicType", "KLTN")
                         .param("topicOrGroup", "N021")
@@ -252,7 +252,13 @@ class ResultControllerTest {
                         .param("size", "20")
                         .param("facultyId", "999"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("selectedSort", "topic"));
+                .andExpect(model().attribute("selectedSort", "topic"))
+                .andExpect(model().attribute("selectedTopicOrGroup", "N021"))
+                .andExpect(content().string(containsString("class=\"card data-card mb-4\"")))
+                .andExpect(content().string(containsString("data-result-filters")))
+                .andExpect(content().string(containsString(
+                        "class=\"col-md-2 result-filter-submit\"")))
+                .andExpect(content().string(containsString("value=\"N021\"")));
 
         verify(results).listPageForCurrentDean(new ResultListFilter(
                 7L, null, "KLTN", "N021", 11L, null, "topic", 2, 20));

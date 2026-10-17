@@ -11,13 +11,14 @@
     </div>
   </div>
 
-  <div class="card data-card" th:if="${!periodOptions.isEmpty()}">
+  <div class="card data-card mb-4" th:if="${!periodOptions.isEmpty()}">
     <div class="card-header">
       <h2 class="card-title">Danh sách kết quả</h2>
       <span class="badge bg-blue-lt ms-auto" th:text="${totalGroups + ' nhóm'}">1 nhóm</span>
     </div>
     <div class="card-body border-bottom py-3">
-      <form method="get" th:action="@{/faculty/results}" class="row g-2 align-items-end">
+      <form method="get" th:action="@{/faculty/results}"
+            class="row g-2 align-items-end" data-result-filters>
         <div class="col-md-4">
           <label class="form-label" for="period">Đợt đăng ký</label>
           <select class="form-select" id="period" name="period">
@@ -53,7 +54,7 @@
                     th:selected="${lecturer.id == selectedLecturerId}">Giảng viên</option>
           </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label" for="status">Trạng thái công bố</label>
           <select class="form-select" id="status" name="status">
             <option value="" th:selected="${selectedStatus == null}">Tất cả trạng thái</option>
@@ -63,7 +64,7 @@
                     th:selected="${selectedStatus != null and selectedStatus.name() == 'PUBLISHED'}">Đã công bố</option>
           </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label" for="sort">Sắp xếp</label>
           <select class="form-select" id="sort" name="sort">
             <option value="recent" th:selected="${selectedSort == 'recent'}">Mới tổng hợp nhất</option>
@@ -80,7 +81,9 @@
             <option value="50" th:selected="${selectedSize == 50}">50</option>
           </select>
         </div>
-        <div class="col-md-1"><button type="submit" class="btn btn-primary w-100">Lọc</button></div>
+        <div class="col-md-2 result-filter-submit">
+          <button type="submit" class="btn btn-primary w-100">Lọc</button>
+        </div>
       </form>
     </div>
     <div class="card-body py-2 bg-azure-lt" th:if="${selectedRegistrationId != null}">
