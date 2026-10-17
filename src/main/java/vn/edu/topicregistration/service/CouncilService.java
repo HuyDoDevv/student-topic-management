@@ -111,6 +111,7 @@ public class CouncilService {
         RegistrationPeriodEntity period = lockedPeriod(command.periodId());
         long facultyId = requiredFacultyId(period);
         ActorIdentity dean = authorization.requireDeanOfFaculty(facultyId);
+        requireCreationWindowOpen(period);
         String name = normalizedName(command.name());
         List<Long> requestedIds = requestedMemberIds(command);
         List<UserAccountEntity> lecturers = requestedIds.stream()
@@ -372,7 +373,7 @@ public class CouncilService {
         List<CouncilPeriodOption> periodOptions = periods
                 .findAllByFacultyIdOrderByLecturerStartDesc(dean.facultyId())
                 .stream()
-                .filter(period -> CouncilRules.isSupportedTopicType(period.getTopicType()))
+                .filter(this::isCreationWindowOpen)
                 .map(period -> new CouncilPeriodOption(
                         period.getId(), period.getName(), period.getTopicType()))
                 .toList();
@@ -386,9 +387,7 @@ public class CouncilService {
                         ApplicationErrorCode.RESOURCE_NOT_FOUND));
         long facultyId = requiredFacultyId(period);
         authorization.requireDeanOfFaculty(facultyId);
-        if (!CouncilRules.isSupportedTopicType(period.getTopicType())) {
-            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
-        }
+        requireCreationWindowOpen(period);
         List<LecturerOption> lecturerOptions = accounts
                 .findEnabledByFacultyAndRole(facultyId, RoleCode.LECTURER)
                 .stream()
@@ -653,6 +652,20 @@ public class CouncilService {
             throw new AccessDeniedException("Dean faculty scope is missing");
         }
         return dean;
+    }
+
+    private boolean isCreationWindowOpen(RegistrationPeriodEntity period) {
+        return CouncilRules.isSupportedTopicType(period.getTopicType())
+                && !clock.instant().isAfter(period.getStudentEnd());
+    }
+
+    private void requireCreationWindowOpen(RegistrationPeriodEntity period) {
+        if (!CouncilRules.isSupportedTopicType(period.getTopicType())) {
+            throw new ApplicationException(ApplicationErrorCode.INVALID_COUNCIL_STATE);
+        }
+        if (clock.instant().isAfter(period.getStudentEnd())) {
+            throw new ApplicationException(ApplicationErrorCode.WINDOW_CLOSED);
+        }
     }
 
     private static long requiredFacultyId(RegistrationPeriodEntity period) {
