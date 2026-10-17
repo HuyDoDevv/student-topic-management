@@ -29,6 +29,7 @@ import vn.edu.topicregistration.controller.CouncilController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.service.CouncilService;
+import vn.edu.topicregistration.service.CouncilService.CouncilAssignmentView;
 import vn.edu.topicregistration.service.CouncilService.CouncilCreationOptions;
 import vn.edu.topicregistration.service.CouncilService.CouncilDetailView;
 import vn.edu.topicregistration.service.CouncilService.CouncilPeriodOption;
@@ -132,6 +133,34 @@ class CouncilControllerTest {
         mvc.perform(get("/faculty/boards/41"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("minScheduleAt", "2026-09-14T15:01"));
+    }
+
+    @Test
+    void detailPreservesAssignmentReviewerAndSchedulePresentation() throws Exception {
+        var assignment = new CouncilAssignmentView(
+                51L,
+                9L,
+                "Đề tài thử nghiệm",
+                NOW,
+                "Phòng A1-01",
+                "Giảng viên phản biện",
+                "Chưa nộp");
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                summary(), List.of(), List.of(assignment), List.of(), List.of(),
+                false, true, null, null, false));
+
+        var result = mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        var assignments = (List<CouncilController.CouncilAssignmentPageView>) result
+                .getModelAndView().getModel().get("assignments");
+        var pageAssignment = assignments.getFirst();
+        assertEquals("Giảng viên phản biện", pageAssignment.reviewerName());
+        assertEquals("Chưa nộp", pageAssignment.reviewerStatus());
+        assertEquals("14/09/2026 15:00", pageAssignment.scheduledAt());
+        assertEquals("Phòng A1-01", pageAssignment.location());
     }
 
     @Test
