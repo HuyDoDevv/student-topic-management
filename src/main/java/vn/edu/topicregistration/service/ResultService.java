@@ -931,6 +931,7 @@ public class ResultService {
                 result.getRegistration().getGroup().getId(),
                 result.getRegistration().getPeriod().getId(),
                 result.getRegistration().getPeriod().getName(),
+                result.getRegistration().getTopic().getId(),
                 result.getRegistration().getTopic().getTitle(),
                 result.getCouncil().getId(),
                 result.getCouncil().getName(),
@@ -1117,6 +1118,7 @@ public class ResultService {
             Long groupId,
             Long periodId,
             String periodName,
+            Long topicId,
             String topicTitle,
             Long councilId,
             String councilName,
@@ -1133,12 +1135,12 @@ public class ResultService {
         }
         public FacultyResultSummaryView(
                 Long registrationId, Long studentId, String studentName, Long groupId,
-                Long periodId, String periodName, String topicTitle, Long councilId,
+                Long periodId, String periodName, Long topicId, String topicTitle, Long councilId,
                 String councilName, List<FacultyResultLecturerView> lecturers,
                 FinalResultStatus status, BigDecimal finalScore, Instant consolidatedAt,
                 Instant publishedAt, long version) {
             this(registrationId, studentId, studentName, groupId, periodId, periodName,
-                    topicTitle, councilId, councilName, CouncilMode.COUNCIL, "KLTN",
+                    topicId, topicTitle, councilId, councilName, CouncilMode.COUNCIL, "KLTN",
                     lecturers, status, finalScore, consolidatedAt, publishedAt, version);
         }
     }

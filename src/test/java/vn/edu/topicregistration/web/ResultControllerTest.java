@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.web;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,6 +26,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.spring6.view.ThymeleafViewResolver;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 import vn.edu.topicregistration.controller.ResultController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
@@ -69,7 +74,7 @@ class ResultControllerTest {
         var response = mvc.perform(get("/faculty/results"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("results/faculty-list"))
-                .andExpect(model().attributeExists("groups"))
+                .andExpect(model().attributeExists("groups", "periodGroups"))
                 .andReturn();
 
         @SuppressWarnings("unchecked")
@@ -83,6 +88,59 @@ class ResultControllerTest {
     }
 
     @Test
+    void groupsResultCardsByPeriodThenTopicWithoutMergingDuplicateTitles() throws Exception {
+        FacultyResultSummaryView firstGroup = summary(
+                51L, 21L, 7L, "Đợt KLTN 2026", 101L, "Đề tài trùng tên");
+        FacultyResultSummaryView secondGroup = summary(
+                52L, 22L, 7L, "Đợt KLTN 2026", 101L, "Đề tài trùng tên");
+        FacultyResultSummaryView differentTopic = summary(
+                53L, 23L, 7L, "Đợt KLTN 2026", 102L, "Đề tài trùng tên");
+        FacultyResultSummaryView differentPeriod = summary(
+                54L, 24L, 8L, "Đợt KLTN 2027", 103L, "Đề tài khác");
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(List.of(
+                new FacultyResultGroupView(51L, List.of(firstGroup)),
+                new FacultyResultGroupView(52L, List.of(secondGroup)),
+                new FacultyResultGroupView(53L, List.of(differentTopic)),
+                new FacultyResultGroupView(54L, List.of(differentPeriod)))));
+
+        var response = mvc.perform(get("/faculty/results"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ResultController.FacultyResultPeriodPageView> periods =
+                (List<ResultController.FacultyResultPeriodPageView>) response.getModelAndView()
+                        .getModel().get("periodGroups");
+        assertEquals(2, periods.size());
+        assertEquals(2, periods.getFirst().topics().size());
+        assertEquals(3, periods.getFirst().groupCount());
+        assertEquals(2, periods.getFirst().topics().getFirst().groupCount());
+        assertEquals(101L, periods.getFirst().topics().getFirst().topicId());
+        assertEquals(102L, periods.getFirst().topics().get(1).topicId());
+        assertEquals(1, periods.get(1).groupCount());
+    }
+
+    @Test
+    void rendersPeriodAndTopicAccordionsWithGroupsInside() throws Exception {
+        FacultyResultSummaryView firstGroup = summary(
+                51L, 21L, 7L, "Đợt KLTN 2026", 101L, "Đề tài gom nhóm");
+        FacultyResultSummaryView secondGroup = summary(
+                52L, 22L, 7L, "Đợt KLTN 2026", 101L, "Đề tài gom nhóm");
+        when(results.listPageForCurrentDean(any())).thenReturn(listing(List.of(
+                new FacultyResultGroupView(51L, List.of(firstGroup)),
+                new FacultyResultGroupView(52L, List.of(secondGroup)))));
+
+        renderedMvc().perform(get("/faculty/results"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-result-period-toggle")))
+                .andExpect(content().string(containsString("data-result-topic-toggle")))
+                .andExpect(content().string(containsString("result-topic-7-101")))
+                .andExpect(content().string(containsString("2 nhóm trên trang")))
+                .andExpect(content().string(containsString("Nhóm N021")))
+                .andExpect(content().string(containsString("Nhóm N022")));
+    }
+
+    @Test
     void filtersFacultyResultsByPeriodAndKeepsAllPeriodOptions() throws Exception {
         FacultyResultSummaryView anotherPeriod = new FacultyResultSummaryView(
                 52L,
@@ -91,6 +149,7 @@ class ResultControllerTest {
                 22L,
                 8L,
                 "Đợt môn học 2026",
+                102L,
                 "Đề tài môn học",
                 42L,
                 "Chấm độc lập",
@@ -317,14 +376,25 @@ class ResultControllerTest {
     }
 
     private static FacultyResultSummaryView summary() {
+        return summary(51L, 21L, 7L, "Đợt KLTN 2026", 101L, "Đề tài thử nghiệm");
+    }
+
+    private static FacultyResultSummaryView summary(
+            long registrationId,
+            long groupId,
+            long periodId,
+            String periodName,
+            long topicId,
+            String topicTitle) {
         return new FacultyResultSummaryView(
-                51L,
+                registrationId,
                 31L,
                 "Sinh viên A",
-                21L,
-                7L,
-                "Đợt KLTN 2026",
-                "Đề tài thử nghiệm",
+                groupId,
+                periodId,
+                periodName,
+                topicId,
+                topicTitle,
                 41L,
                 "Hội đồng KLTN",
                 List.of(new FacultyResultLecturerView(11L, "Giảng viên A")),
@@ -336,13 +406,40 @@ class ResultControllerTest {
     }
 
     private static FacultyResultListView listing(FacultyResultSummaryView result) {
+        return listing(List.of(
+                new FacultyResultGroupView(result.registrationId(), List.of(result))));
+    }
+
+    private static FacultyResultListView listing(List<FacultyResultGroupView> groups) {
         return new FacultyResultListView(
-                List.of(new FacultyResultGroupView(result.registrationId(), List.of(result))),
-                1, 1, 0, 10,
+                groups,
+                groups.size(), 1, 0, 10,
                 List.of(new FacultyResultFilterOption(7L, "Đợt KLTN 2026"),
                         new FacultyResultFilterOption(8L, "Đợt môn học 2026")),
                 List.of(new FacultyResultFilterOption(11L, "Giảng viên A"),
                         new FacultyResultFilterOption(12L, "Giảng viên B")));
+    }
+
+    private MockMvc renderedMvc() {
+        ResultController controller = new ResultController(
+                results, new ProjectTime(Clock.fixed(NOW, ZoneOffset.UTC)));
+        return standaloneSetup(controller)
+                .setControllerAdvice(new WebExceptionHandler())
+                .setViewResolvers(viewResolver())
+                .build();
+    }
+
+    private static ThymeleafViewResolver viewResolver() {
+        ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
+        templateResolver.setPrefix("templates/");
+        templateResolver.setSuffix(".html");
+        templateResolver.setCharacterEncoding("UTF-8");
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(templateResolver);
+        ThymeleafViewResolver viewResolver = new ThymeleafViewResolver();
+        viewResolver.setTemplateEngine(engine);
+        viewResolver.setCharacterEncoding("UTF-8");
+        return viewResolver;
     }
 
     private static StudentResultSummaryView studentSummary() {

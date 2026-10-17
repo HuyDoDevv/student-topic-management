@@ -105,7 +105,12 @@ class ReviewResultsJourneyE2ETest extends BrowserTestSupport {
         acceptNextConfirmation();
         button("Công bố kết quả").click();
         page().waitForURL(url("/faculty/results"));
-        assertEquals(3, page().getByText(ReviewFixtureSupport.ACTIVE_TOPIC_ONE).count());
+        var publishedTopic = page().getByText(
+                ReviewFixtureSupport.ACTIVE_TOPIC_ONE,
+                new Page.GetByTextOptions().setExact(true));
+        assertEquals(1, publishedTopic.count());
+        publishedTopic.click();
+        assertTrue(page().getByText("Xem căn cứ").first().isVisible());
 
         logout();
         login("student1.demo");

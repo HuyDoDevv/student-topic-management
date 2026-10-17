@@ -3,8 +3,11 @@ package vn.edu.topicregistration.controller;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -102,10 +105,12 @@ public class ResultController {
         model.addAttribute("totalGroups", listing.totalGroups());
         model.addAttribute("hasPrevious", listing.page() > 0);
         model.addAttribute("hasNext", listing.page() + 1 < listing.totalPages());
-        model.addAttribute("groups", listing.groups().stream()
+        List<FacultyResultGroupPageView> groups = listing.groups().stream()
                 .map(group -> new FacultyResultGroupPageView(group.registrationId(),
                         group.students().stream().map(this::display).toList()))
-                .toList());
+                .toList();
+        model.addAttribute("groups", groups);
+        model.addAttribute("periodGroups", groupByPeriodAndTopic(groups));
         return "results/faculty-list";
     }
 
@@ -197,6 +202,7 @@ public class ResultController {
                 result.groupId(),
                 result.periodId(),
                 result.periodName(),
+                result.topicId(),
                 result.topicTitle(),
                 result.councilId(),
                 result.councilName(),
@@ -212,6 +218,36 @@ public class ResultController {
                 format(result.consolidatedAt()),
                 format(result.publishedAt()),
                 result.version());
+    }
+
+    private static List<FacultyResultPeriodPageView> groupByPeriodAndTopic(
+            List<FacultyResultGroupPageView> groups) {
+        Map<Long, List<FacultyResultGroupPageView>> groupsByPeriod = new LinkedHashMap<>();
+        for (FacultyResultGroupPageView group : groups) {
+            groupsByPeriod.computeIfAbsent(
+                            group.first().periodId(), ignored -> new ArrayList<>())
+                    .add(group);
+        }
+        return groupsByPeriod.values().stream()
+                .map(periodGroups -> {
+                    FacultyResultPageView first = periodGroups.getFirst().first();
+                    Map<Long, List<FacultyResultGroupPageView>> groupsByTopic =
+                            new LinkedHashMap<>();
+                    for (FacultyResultGroupPageView group : periodGroups) {
+                        groupsByTopic.computeIfAbsent(
+                                group.first().topicId(), ignored -> new ArrayList<>())
+                                .add(group);
+                    }
+                    List<FacultyResultTopicPageView> topics = groupsByTopic.values().stream()
+                            .map(topicGroups -> new FacultyResultTopicPageView(
+                                    topicGroups.getFirst().first().topicId(),
+                                    topicGroups.getFirst().first().topicTitle(),
+                                    topicGroups))
+                            .toList();
+                    return new FacultyResultPeriodPageView(
+                            first.periodId(), first.periodName(), first.topicType(), topics);
+                })
+                .toList();
     }
 
     private FacultyResultLecturerPageView display(FacultyResultLecturerView lecturer) {
@@ -281,6 +317,7 @@ public class ResultController {
             Long groupId,
             Long periodId,
             String periodName,
+            Long topicId,
             String topicTitle,
             Long councilId,
             String councilName,
@@ -296,6 +333,48 @@ public class ResultController {
             long version) {
         public FacultyResultPageView {
             lecturers = List.copyOf(lecturers);
+        }
+    }
+
+    public record FacultyResultTopicPageView(
+            Long topicId, String topicTitle, List<FacultyResultGroupPageView> groups) {
+        public FacultyResultTopicPageView {
+            groups = List.copyOf(groups);
+        }
+
+        public int groupCount() {
+            return groups.size();
+        }
+
+        public int studentCount() {
+            return groups.stream().mapToInt(group -> group.students().size()).sum();
+        }
+
+        public boolean containsRegistration(Long registrationId) {
+            return registrationId != null && groups.stream()
+                    .anyMatch(group -> registrationId.equals(group.registrationId()));
+        }
+    }
+
+    public record FacultyResultPeriodPageView(
+            Long periodId,
+            String periodName,
+            String topicType,
+            List<FacultyResultTopicPageView> topics) {
+        public FacultyResultPeriodPageView {
+            topics = List.copyOf(topics);
+        }
+
+        public int groupCount() {
+            return topics.stream().mapToInt(FacultyResultTopicPageView::groupCount).sum();
+        }
+
+        public int studentCount() {
+            return topics.stream().mapToInt(FacultyResultTopicPageView::studentCount).sum();
+        }
+
+        public boolean containsRegistration(Long registrationId) {
+            return topics.stream().anyMatch(topic -> topic.containsRegistration(registrationId));
         }
     }
 
