@@ -1220,6 +1220,94 @@ input[readonly] {
   color: #7794ad;
 }
 
+/* Faculty results hierarchy */
+[data-result-accordion] {
+  --tblr-accordion-gap: .9rem;
+}
+
+[data-result-accordion] .result-period-card {
+  margin-bottom: 0 !important;
+  border-color: rgba(82, 119, 154, .2);
+  box-shadow: 0 1px 2px rgba(15, 61, 94, .035), 0 8px 24px rgba(15, 61, 94, .055);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+[data-result-accordion] .result-period-card:hover {
+  border-color: rgba(6, 111, 209, .25);
+  box-shadow: 0 2px 5px rgba(15, 61, 94, .05), 0 12px 28px rgba(15, 61, 94, .075);
+  transform: translateY(-1px);
+}
+
+.result-period-button {
+  min-height: 4.6rem;
+  background: linear-gradient(100deg, rgba(238, 247, 255, .8), rgba(255, 255, 255, .96));
+}
+
+.result-period-button.collapsed {
+  background: rgba(249, 251, 253, .82);
+}
+
+.result-period-heading,
+.result-period-metrics,
+.result-topic-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem;
+}
+
+.result-period-name {
+  color: #25394c;
+  font-size: 1.05rem;
+  font-weight: 720;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.result-type-badge {
+  flex: 0 0 auto;
+  padding-inline: .7rem;
+  font-weight: 750;
+  letter-spacing: .035em;
+}
+
+.result-period-metrics {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+.result-topic-button {
+  min-height: 3.8rem;
+  transition: background-color .18s ease, color .18s ease;
+}
+
+.result-topic-button:hover,
+.result-topic-button:focus-visible,
+.result-topic-button:not(.collapsed) {
+  background: rgba(238, 247, 255, .5) !important;
+}
+
+.result-topic-title {
+  min-width: min(20rem, 100%);
+  color: #31465a;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.result-topic-groups {
+  justify-content: flex-end;
+}
+
+.result-group-badge {
+  padding-inline: .7rem;
+  font-weight: 650;
+}
+
+.result-group-table + .result-group-table {
+  border-top: 1px solid rgba(98, 105, 118, .16);
+}
+
 /* Authentication */
 .auth-page {
   background: radial-gradient(circle at 20% 20%, #dff2f5, transparent 35%), linear-gradient(160deg, #f8fbfd, #e9eff5);
@@ -1390,6 +1478,17 @@ input[readonly] {
 
   .review-summary,
   .review-topic-actions {
+    justify-content: flex-start;
+  }
+
+  .result-period-summary,
+  .result-topic-summary {
+    align-items: flex-start !important;
+  }
+
+  .result-period-metrics,
+  .result-topic-groups {
+    width: 100%;
     justify-content: flex-start;
   }
 

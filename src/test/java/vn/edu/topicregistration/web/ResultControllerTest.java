@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.web;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -121,7 +122,7 @@ class ResultControllerTest {
     }
 
     @Test
-    void rendersPeriodAndTopicAccordionsWithGroupsInside() throws Exception {
+    void rendersPeriodTypeAndGroupBadgesWithoutRedundantCounts() throws Exception {
         FacultyResultSummaryView firstGroup = summary(
                 51L, 21L, 7L, "Đợt KLTN 2026", 101L, "Đề tài gom nhóm");
         FacultyResultSummaryView secondGroup = summary(
@@ -136,10 +137,13 @@ class ResultControllerTest {
                 .andExpect(content().string(containsString("data-result-period-toggle")))
                 .andExpect(content().string(containsString("data-result-topic-toggle")))
                 .andExpect(content().string(containsString("class=\"accordion-button-toggle\"")))
+                .andExpect(content().string(containsString("result-type-badge\">KLTN</span>")))
+                .andExpect(content().string(containsString("data-result-topic-groups")))
                 .andExpect(content().string(containsString("result-topic-7-101")))
-                .andExpect(content().string(containsString("2 nhóm trên trang")))
                 .andExpect(content().string(containsString("Nhóm N021")))
-                .andExpect(content().string(containsString("Nhóm N022")));
+                .andExpect(content().string(containsString("Nhóm N022")))
+                .andExpect(content().string(not(containsString("nhóm trên trang"))))
+                .andExpect(content().string(not(containsString("1 sinh viên"))));
     }
 
     @Test
