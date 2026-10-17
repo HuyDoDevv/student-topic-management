@@ -10,9 +10,6 @@ import java.util.Optional;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
-import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistration;
-import vn.edu.topicregistration.service.ActiveRegistrationQuery.ActiveRegistrationStatus;
-
 @Repository
 @Profile("!test")
 public class ActiveRegistrationQueryAdapter implements ActiveRegistrationQuery {
@@ -35,7 +32,9 @@ public class ActiveRegistrationQueryAdapter implements ActiveRegistrationQuery {
     }
 
     @Override
-    public Optional<ActiveRegistration> findForGroup(long periodId, long groupId) {
+    public Optional<ActiveRegistrationQuery.ActiveRegistration> findForGroup(
+            long periodId,
+            long groupId) {
         return registrations
                 .findFirstByPeriodIdAndGroupIdAndStatusInOrderBySubmittedAtDescIdDesc(
                         periodId,
@@ -44,14 +43,15 @@ public class ActiveRegistrationQueryAdapter implements ActiveRegistrationQuery {
                 .map(this::toActiveRegistration);
     }
 
-    private ActiveRegistration toActiveRegistration(RegistrationEntity registration) {
-        ActiveRegistrationStatus status = switch (registration.getStatus()) {
-            case PENDING -> ActiveRegistrationStatus.PENDING;
-            case ACCEPTED -> ActiveRegistrationStatus.ACCEPTED;
+    private ActiveRegistrationQuery.ActiveRegistration toActiveRegistration(
+            RegistrationEntity registration) {
+        ActiveRegistrationQuery.ActiveRegistrationStatus status = switch (registration.getStatus()) {
+            case PENDING -> ActiveRegistrationQuery.ActiveRegistrationStatus.PENDING;
+            case ACCEPTED -> ActiveRegistrationQuery.ActiveRegistrationStatus.ACCEPTED;
             default -> throw new IllegalStateException(
                     "Inactive registration returned by active registration query");
         };
-        return new ActiveRegistration(
+        return new ActiveRegistrationQuery.ActiveRegistration(
                 registration.getId(),
                 registration.getTopic().getTitle(),
                 status);

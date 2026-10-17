@@ -93,7 +93,7 @@ class CouncilServiceTest {
         order.verify(dependencies.members()).saveAll(any());
 
         ArgumentCaptor<Iterable<CouncilMemberEntity>> savedMembers =
-                ArgumentCaptor.forClass(Iterable.class);
+                ArgumentCaptor.captor();
         verify(dependencies.members()).saveAll(savedMembers.capture());
         List<CouncilMemberEntity> additional = ((List<CouncilMemberEntity>) savedMembers
                 .getValue());
@@ -532,7 +532,7 @@ class CouncilServiceTest {
     @Test
     void activeChairInFacultyWithCurrentMembershipCanViewOnlyAssignedCouncil() {
         Dependencies dependencies = dependencies();
-        CouncilEntity council = detailCouncil(dependencies, CouncilStatus.ACTIVE);
+        detailCouncil(dependencies, CouncilStatus.ACTIVE);
         when(dependencies.authorization().currentActor()).thenReturn(
                 new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
         when(dependencies.members().existsByCouncilIdAndLecturerId(41L, 11L))

@@ -161,7 +161,7 @@ class ResultListQueryIT {
 
         mvc.perform(get("/faculty/results").param("sort", "id desc")
                         .with(user("dean.demo").roles("DEAN")))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
 
         mvc.perform(get("/faculty/results")
                         .with(user("student1.demo").roles("STUDENT")))

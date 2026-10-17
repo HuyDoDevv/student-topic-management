@@ -293,9 +293,6 @@ public class ReviewerAssignmentService {
             assignment.markSubmitted(now);
             assignments.flush();
         } catch (IOException exception) {
-            if (stored != null) {
-                files.delete(stored.storageKey());
-            }
             throw new ApplicationException(ApplicationErrorCode.REPORT_STORAGE_FAILED);
         } catch (RuntimeException exception) {
             if (stored != null) {

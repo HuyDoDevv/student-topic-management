@@ -197,7 +197,7 @@ class RegistrationFeedbackRegressionTest {
                 authorization,
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 mock(vn.edu.topicregistration.service.ReportService.class),
-                mock(org.springframework.beans.factory.ObjectProvider.class));
+                mock());
 
         FacultyEntity faculty = mock(FacultyEntity.class);
         RegistrationPeriodEntity period = mock(RegistrationPeriodEntity.class);
@@ -279,7 +279,7 @@ class RegistrationFeedbackRegressionTest {
                 authorization,
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 mock(vn.edu.topicregistration.service.ReportService.class),
-                mock(org.springframework.beans.factory.ObjectProvider.class));
+                mock());
     }
 
     private static UserAccountEntity account(long id, String username, String fullName) {

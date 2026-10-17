@@ -290,7 +290,7 @@ class ResultControllerTest {
     void conflictingCanonicalAndLegacyFiltersAreRejected() throws Exception {
         mvc.perform(get("/faculty/results").param("period", "7")
                         .param("periodId", "8"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         verify(results, never()).listPageForCurrentDean(any());
     }
 

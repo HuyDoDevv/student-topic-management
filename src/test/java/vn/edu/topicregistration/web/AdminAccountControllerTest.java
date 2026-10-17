@@ -170,11 +170,11 @@ class AdminAccountControllerTest {
                         .param("fullName", "Trưởng khoa Hai")
                         .param("password", "temporary-password")
                         .param("departmentId", "11"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/dean-form"))
                 .andExpect(model().attributeHasErrors("deanAccountForm"));
         mvc.perform(post("/admin/accounts/9/unlock"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("error/error"))
                 .andExpect(model().attribute("errorCode", "DEAN_ALREADY_ACTIVE"));
     }
@@ -185,7 +185,7 @@ class AdminAccountControllerTest {
                         .param("username", "lecturer02")
                         .param("fullName", "Giảng viên Hai")
                         .param("password", "temporary-password"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(model().attributeHasFieldErrors("lecturerAccountForm", "departmentId"));
         verify(accounts, never()).createLecturer(any());
 
@@ -221,7 +221,7 @@ class AdminAccountControllerTest {
         verify(accounts).assignStaffDepartment(7L, 11L);
 
         mvc.perform(post("/admin/accounts/7/department"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(model().attributeHasFieldErrors("staffDepartmentForm", "departmentId"));
     }
 
@@ -233,7 +233,7 @@ class AdminAccountControllerTest {
                         .param("className", "")
                         .param("cohortCode", "2023")
                         .param("password", "short"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/student-form"))
                 .andExpect(model().attributeHasFieldErrors(
                         "studentAccountForm", "studentCode", "fullName", "className",
@@ -250,7 +250,7 @@ class AdminAccountControllerTest {
                         .param("className", "23110 CL1")
                         .param("cohortCode", "K2023")
                         .param("password", "temporary-password"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/student-form"))
                 .andExpect(model().attributeHasFieldErrors(
                         "studentAccountForm", "studentCode", "className"));
@@ -281,7 +281,7 @@ class AdminAccountControllerTest {
                         .param("username", ".lecturer")
                         .param("fullName", "")
                         .param("password", "short"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/lecturer-form"))
                 .andExpect(model().attributeHasFieldErrors(
                         "lecturerAccountForm", "username", "fullName", "password"));
@@ -290,7 +290,7 @@ class AdminAccountControllerTest {
                         .param("username", "dean-")
                         .param("fullName", "")
                         .param("password", "short"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/dean-form"))
                 .andExpect(model().attributeHasFieldErrors(
                         "deanAccountForm", "username", "fullName", "password"));
@@ -305,7 +305,7 @@ class AdminAccountControllerTest {
                         .param("username", "dean02")
                         .param("fullName", "Trưởng khoa Hai")
                         .param("password", "😀".repeat(30)))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/dean-form"))
                 .andExpect(model().attributeHasErrors("deanAccountForm"));
 
@@ -327,7 +327,7 @@ class AdminAccountControllerTest {
         mvc.perform(post("/admin/accounts/7/password/reset")
                         .param("newPassword", "short")
                         .param("confirmPassword", "different"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/reset-password"))
                 .andExpect(model().attributeHasErrors("adminResetPasswordForm"));
 
@@ -378,7 +378,7 @@ class AdminAccountControllerTest {
         mvc.perform(post("/admin/accounts/7/password/reset")
                         .param("newPassword", "current-password")
                         .param("confirmPassword", "current-password"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/accounts/reset-password"))
                 .andExpect(model().attributeHasFieldErrors(
                         "adminResetPasswordForm", "newPassword"));

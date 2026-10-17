@@ -580,14 +580,6 @@ public class ResultService {
         return new LockedBoard(period, council, actor);
     }
 
-    private ActorIdentity currentLecturer() {
-        ActorIdentity lecturer = authorization.requireRole(RoleCode.LECTURER);
-        if (lecturer.accountId() == null) {
-            throw new AccessDeniedException("Lecturer account is missing");
-        }
-        return lecturer;
-    }
-
     private ActorIdentity currentDean() {
         ActorIdentity dean = authorization.requireRole(RoleCode.DEAN);
         if (dean.accountId() == null || dean.facultyId() == null) {

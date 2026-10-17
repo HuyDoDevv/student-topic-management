@@ -233,7 +233,7 @@ class CouncilControllerTest {
                         .param("scheduledAt", "2026-09-14T15:00")
                         .param("location", "Phòng A1")
                         .param("version", "4"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("councils/detail"))
                 .andExpect(model().attributeHasFieldErrors("assignmentForm", "scheduledAt"));
     }
@@ -267,7 +267,7 @@ class CouncilControllerTest {
                         .param("chairId", "11")
                         .param("secretaryId", "12")
                         .param("memberIds", "13"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("councils/detail"));
         org.mockito.Mockito.verify(councils, never()).updateMembers(
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
@@ -332,7 +332,6 @@ class CouncilControllerTest {
                 4L);
     }
 
-    @SuppressWarnings("unused")
     private static CouncilDetailView detail() {
         return new CouncilDetailView(summary(), List.of(), List.of(), List.of());
     }

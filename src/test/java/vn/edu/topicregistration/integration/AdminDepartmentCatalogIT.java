@@ -113,7 +113,7 @@ class AdminDepartmentCatalogIT {
                         .param("facultyId", Long.toString(faculty.facultyId()))
                         .param("name", "cÔng NGHỆ PHẦN MỀM")
                         .with(actor(admin, "ADMIN")).with(csrf()))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         mvc.perform(post("/admin/departments")
                         .param("facultyId", Long.toString(otherFaculty.facultyId()))
                         .param("name", "Công nghệ phần mềm")

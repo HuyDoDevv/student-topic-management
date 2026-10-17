@@ -121,7 +121,6 @@ class PeriodServiceTest {
                 null);
         Instant openingTime = LECTURER_START;
         when(transactions.mutate(eq(7L), eq(0L), eq(11L), any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
             Function<LockedPeriodContext, Object> mutation = invocation.getArgument(3);
             return mutation.apply(new LockedPeriodContext(current, dean, openingTime));
         });
@@ -162,7 +161,6 @@ class PeriodServiceTest {
 
     private void runCreateFactoryInsideTransaction() {
         when(transactions.create(eq(21L), eq(11L), any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
             Function<CreationContext, RegistrationPeriodEntity> factory = invocation.getArgument(2);
             return factory.apply(new CreationContext(faculty, department, dean, NOW));
         });

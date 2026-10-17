@@ -197,12 +197,12 @@ class TopicDepartmentIT {
 
         mvc.perform(get("/periods/{periodId}/topics/new", periodId)
                         .with(actor(lecturer, "LECTURER")))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(content().string(containsString("Bộ môn")));
         mvc.perform(post("/periods/{periodId}/topics", periodId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("title", "Không hợp lệ"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         assertEquals(0L, topicCount());
     }
 
@@ -214,7 +214,7 @@ class TopicDepartmentIT {
         mvc.perform(post("/periods/{periodId}/topics", periodId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("title", "Không hợp lệ"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         assertEquals(0L, topicCount());
     }
 
@@ -250,7 +250,7 @@ class TopicDepartmentIT {
         mvc.perform(post("/topics/{id}/submit", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("version", "0"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(content().string(containsString("Bộ môn")));
         assertEquals("DRAFT", jdbc.queryForObject(
                 "SELECT status FROM topics WHERE id = ?", String.class, topicId));
@@ -494,14 +494,14 @@ class TopicDepartmentIT {
         mvc.perform(post("/topics/{id}/return-to-draft", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("version", Long.toString(version)))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         assertEquals("APPROVED", topicStatus(topicId));
 
         jdbc.update("UPDATE topics SET status = 'PUBLISHED' WHERE id = ?", topicId);
         mvc.perform(post("/topics/{id}/return-to-draft", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("version", Long.toString(version)))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         assertEquals("PUBLISHED", topicStatus(topicId));
     }
 
@@ -531,7 +531,7 @@ class TopicDepartmentIT {
             mvc.perform(post("/topics/{id}/return-to-draft", topicId)
                             .with(actor(lecturer, "LECTURER")).with(csrf())
                             .param("version", Long.toString(topicVersion(topicId))))
-                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(status().isUnprocessableContent())
                     .andExpect(content().string(containsString("đã có đăng ký")));
             assertEquals("APPROVED", topicStatus(topicId));
         }
@@ -662,7 +662,7 @@ class TopicDepartmentIT {
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("title", "Sai Bộ môn")
                         .param("coSupervisorIds", Long.toString(otherLecturer.accountId())))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(content().string(containsString("không cùng Bộ môn")));
         assertEquals(0L, topicCount());
 
@@ -676,7 +676,7 @@ class TopicDepartmentIT {
                         .param("title", "Bản nháp bị giả mạo")
                         .param("version", "0")
                         .param("coSupervisorIds", Long.toString(otherLecturer.accountId())))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(content().string(containsString("không cùng Bộ môn")));
         assertEquals("Bản nháp hợp lệ", jdbc.queryForObject(
                 "SELECT title FROM topics WHERE id = ?", String.class, topicId));
@@ -702,11 +702,11 @@ class TopicDepartmentIT {
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("title", "Không được lưu")
                         .param("version", "0"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         mvc.perform(post("/topics/{id}/submit", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("version", "0"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         assertEquals("Đề tài gốc", jdbc.queryForObject(
                 "SELECT title FROM topics WHERE id = ?", String.class, topicId));
         assertEquals("DRAFT", jdbc.queryForObject(
@@ -736,7 +736,7 @@ class TopicDepartmentIT {
         mvc.perform(post("/topics/{id}/submit", topicId)
                         .with(actor(lecturer, "LECTURER")).with(csrf())
                         .param("version", "0"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
         assertEquals("DRAFT", jdbc.queryForObject(
                 "SELECT status FROM topics WHERE id = ?", String.class, topicId));
     }
@@ -869,7 +869,7 @@ class TopicDepartmentIT {
                             .with(actor(leader, "STUDENT")).with(csrf())
                             .param("topicId", Long.toString(blockedTopic))
                             .param("version", "0"))
-                    .andExpect(status().isUnprocessableEntity());
+                    .andExpect(status().isUnprocessableContent());
         }
         assertEquals(0L, jdbc.queryForObject("SELECT COUNT(*) FROM registrations", Long.class));
         mvc.perform(post("/groups/{groupId}/registrations", groupId)
