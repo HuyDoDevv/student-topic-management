@@ -257,7 +257,10 @@ class ResultControllerTest {
                 .andExpect(content().string(containsString("class=\"card data-card mb-4\"")))
                 .andExpect(content().string(containsString("data-result-filters")))
                 .andExpect(content().string(containsString(
-                        "class=\"col-md-2 result-filter-submit\"")))
+                        "class=\"col-md-2 result-filter-actions\"")))
+                .andExpect(content().string(containsString("data-result-filter-reset")))
+                .andExpect(content().string(containsString(
+                        "href=\"/faculty/results\">Đặt lại</a>")))
                 .andExpect(content().string(containsString("value=\"N021\"")));
 
         verify(results).listPageForCurrentDean(new ResultListFilter(
