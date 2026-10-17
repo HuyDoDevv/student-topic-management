@@ -85,10 +85,12 @@
     </div>
   </article>
 
-  <div th:object="${memberForm}" th:if="${!canEditMembers && #fields.hasGlobalErrors()}"
-       class="alert alert-danger mt-3" role="alert">
-    <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Không thể sửa thành viên.</div>
-  </div>
+  <th:block th:object="${memberForm}">
+    <div th:if="${!canEditMembers && #fields.hasGlobalErrors()}"
+         class="alert alert-danger mt-3" role="alert">
+      <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Không thể sửa thành viên.</div>
+    </div>
+  </th:block>
 
   <form class="card mt-3" method="post" th:if="${canEditMembers}"
         th:action="@{/faculty/boards/{id}/members(id=${board.id})}"
