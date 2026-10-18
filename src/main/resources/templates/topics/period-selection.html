@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chọn đợt đề tài', ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle">ĐỀ TÀI</div>
+      <h1 class="page-title">Chọn đợt đăng ký</h1>
+      <p class="text-secondary mt-2 mb-0">Mỗi đề tài thuộc một đợt. Chọn đợt để xem hoặc tạo đề tài của bạn.</p>
+    </div>
+  </div>
+
+  <section class="mb-4" th:if="${!activePeriods.isEmpty()}">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h2 class="h3 mb-1">Đợt còn hiệu lực</h2>
+        <p class="text-secondary mb-0">Các đợt chưa kết thúc thời gian đăng ký sinh viên.</p>
+      </div>
+      <span class="badge bg-blue-lt" th:text="${#lists.size(activePeriods)} + ' đợt'">2 đợt</span>
+    </div>
+    <div class="row row-cards">
+      <div class="col-md-6 col-xl-4" th:each="period : ${activePeriods}">
+        <article class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <div class="mb-3">
+              <span class="badge"
+                    th:classappend="${period.lecturerOpen ? 'bg-green-lt' : 'bg-yellow-lt'}"
+                    th:text="${period.lecturerOpen ? 'Đang nhận đề tài GV' : 'Ngoài hạn tạo mới'}">Trạng thái</span>
+            </div>
+            <h3 class="h4" th:text="${period.name}">Tên đợt</h3>
+            <p class="text-secondary">
+              <span th:text="${period.lecturerOpen ? 'Có thể tạo đề tài mới trong đợt này.' : 'Chỉ xem đề tài và bản nháp đã có.'}">Mô tả</span>
+            </p>
+            <a class="btn btn-outline-primary mt-auto"
+               th:href="@{/periods/{id}/topics(id=${period.id})}">Mở danh sách đề tài</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section th:if="${!expiredPeriods.isEmpty()}">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h2 class="h3 mb-1">Đợt đã hết hạn</h2>
+        <p class="text-secondary mb-0">Dữ liệu cũ được giữ để bạn xem đề tài và bản nháp.</p>
+      </div>
+      <span class="badge bg-secondary-lt" th:text="${#lists.size(expiredPeriods)} + ' đợt'">1 đợt</span>
+    </div>
+    <div class="row row-cards">
+      <div class="col-md-6 col-xl-4" th:each="period : ${expiredPeriods}">
+      <article class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3">
+            <span class="badge bg-secondary-lt">Đã hết hạn</span>
+          </div>
+          <h3 class="h4" th:text="${period.name}">Tên đợt</h3>
+          <p class="text-secondary">Không thể tạo đề tài mới; đề tài và bản nháp cũ vẫn xem được.</p>
+          <a class="btn btn-outline-primary mt-auto"
+             th:href="@{/periods/{id}/topics(id=${period.id})}">Mở danh sách đề tài</a>
+        </div>
+      </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="card" th:if="${activePeriods.isEmpty() and expiredPeriods.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Trưởng khoa cần tạo đợt trước khi giảng viên đề xuất đề tài.')}"></div>
+</section>
+</body>
+</html>

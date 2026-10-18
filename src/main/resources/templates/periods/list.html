@@ -3,31 +3,92 @@
 <body>
 <section>
   <div class="page-header page-header-actions">
-    <div><div class="page-pretitle">QUẢN LÝ HỌC VỤ</div><h1 class="page-title">Đợt đăng ký</h1><p class="text-secondary mt-2 mb-0">Quản lý lịch giảng viên đề xuất và sinh viên đăng ký đề tài.</p></div>
+    <div>
+      <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
+      <h1 class="page-title">Đợt đăng ký</h1>
+      <p class="text-secondary mt-2 mb-0">Theo dõi các đợt đăng ký, gồm cả lịch sử đã quá hạn trong khoa.</p>
+    </div>
     <a class="btn btn-primary" th:href="@{/periods/new}"><span aria-hidden="true">＋</span> Tạo đợt</a>
   </div>
-  <div class="card data-card" th:if="${periods != null and !periods.isEmpty()}">
-    <div class="card-header">
-      <div><h2 class="card-title mb-1">Danh sách đợt đăng ký</h2><div class="text-secondary small">Theo dõi lịch và trạng thái theo từng học kỳ</div></div>
-      <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(periods)} + ' đợt'">2 đợt</span>
+
+  <div class="card data-card" th:if="${!periods.isEmpty()}">
+    <div class="card-header table-toolbar">
+      <div class="input-icon flex-fill topic-search">
+        <span class="input-icon-addon" aria-hidden="true">⌕</span>
+        <input class="form-control" type="search" placeholder="Tìm theo tên, loại đợt hoặc Bộ môn"
+               aria-label="Tìm đợt đăng ký" data-table-filter>
+      </div>
+      <div class="ms-md-auto">
+        <select class="form-select" aria-label="Lọc loại đợt" data-row-filter="type">
+          <option value="">Tất cả loại đợt</option>
+          <option value="Đồ án môn học">Đồ án môn học</option>
+          <option value="Nghiên cứu khoa học">Nghiên cứu khoa học</option>
+          <option value="Tiểu luận chuyên ngành">Tiểu luận chuyên ngành</option>
+          <option value="Khóa luận tốt nghiệp">Khóa luận tốt nghiệp</option>
+        </select>
+      </div>
+      <div>
+        <select class="form-select" aria-label="Lọc trạng thái đợt" data-status-filter>
+          <option value="">Tất cả trạng thái</option>
+          <option value="Sắp nhận đề tài GV">Sắp nhận đề tài GV</option>
+          <option value="Đang nhận đề tài GV">Đang nhận đề tài GV</option>
+          <option value="Chờ đăng ký SV">Chờ đăng ký SV</option>
+          <option value="Đang nhận đăng ký SV">Đang nhận đăng ký SV</option>
+          <option value="Đã kết thúc">Đã quá hạn</option>
+        </select>
+      </div>
+      <div>
+        <select class="form-select" aria-label="Lọc công việc chờ xử lý" data-positive-filter>
+          <option value="">Tất cả công việc</option>
+          <option value="pendingAny">Có việc chờ xử lý</option>
+          <option value="pendingTopics">Có đề tài chờ duyệt</option>
+          <option value="pendingRegistrations">Có nhóm chờ xét</option>
+          <option value="pendingPublications">Có đề tài chờ công bố</option>
+        </select>
+      </div>
+      <span class="badge bg-blue-lt" th:text="${#lists.size(periods)} + ' đợt'">3 đợt</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-vcenter card-table responsive-table">
-        <thead><tr><th>Tên đợt</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+      <table class="table table-vcenter card-table responsive-table" data-filter-table>
+        <thead>
+        <tr>
+          <th>Tên đợt</th><th>Bộ môn</th><th>Loại</th><th>Lịch giảng viên</th><th>Lịch sinh viên</th>
+          <th>Đề tài chờ duyệt</th><th>Nhóm chờ xét</th><th>Đề tài chờ công bố</th>
+          <th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th>
+        </tr>
+        </thead>
         <tbody>
-        <tr th:each="item : ${periods}">
-          <td data-label="Tên đợt"><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đồ án chuyên ngành</a></td>
-          <td data-label="Loại" th:text="${item.type}">Đồ án</td>
-          <td data-label="Lịch giảng viên" class="text-secondary" th:text="${item.lecturerWindow}">01/09 – 15/09</td>
-          <td data-label="Lịch sinh viên" class="text-secondary" th:text="${item.studentWindow}">20/09 – 30/09</td>
-          <td data-label="Trạng thái"><span class="badge bg-blue-lt" th:text="${item.status}">Đang mở</span></td>
+        <tr th:each="item : ${periods}"
+            th:attr="data-status=${item.status},data-type=${item.type},data-pending-topics=${item.pendingTopicCount},data-pending-registrations=${item.pendingRegistrationCount},data-pending-publications=${item.approvedTopicCount},data-pending-any=${item.pendingTopicCount + item.pendingRegistrationCount + item.approvedTopicCount}">
+          <td data-label="Tên đợt"><a class="fw-semibold" th:href="@{/periods/{id}(id=${item.id})}" th:text="${item.name}">Đợt HK1</a></td>
+          <td data-label="Bộ môn" th:text="${item.departmentName}">Công nghệ phần mềm</td>
+          <td data-label="Loại" th:text="${item.type}">Đồ án môn học</td>
+          <td data-label="Lịch giảng viên" class="text-secondary" th:text="${item.lecturerWindow}">10/09/2026 – 15/09/2026</td>
+          <td data-label="Lịch sinh viên" class="text-secondary" th:text="${item.studentWindow}">16/09/2026 – 30/09/2026</td>
+          <td data-label="Đề tài chờ duyệt">
+            <span class="badge bg-yellow-lt pending-count-badge" th:if="${item.pendingTopicCount > 0}"
+                  th:text="${item.pendingTopicCount}">1</span>
+            <span class="pending-count-zero" th:if="${item.pendingTopicCount == 0}">0</span>
+          </td>
+          <td data-label="Nhóm chờ xét">
+            <span class="badge bg-blue-lt pending-count-badge" th:if="${item.pendingRegistrationCount > 0}"
+                  th:text="${item.pendingRegistrationCount}">1</span>
+            <span class="pending-count-zero" th:if="${item.pendingRegistrationCount == 0}">0</span>
+          </td>
+          <td data-label="Đề tài chờ công bố">
+            <span class="badge bg-purple-lt pending-count-badge" th:if="${item.approvedTopicCount > 0}"
+                  th:text="${item.approvedTopicCount}">1</span>
+            <span class="pending-count-zero" th:if="${item.approvedTopicCount == 0}">0</span>
+          </td>
+          <td data-label="Trạng thái"><span class="badge" th:classappend="${item.statusClass}" th:text="${item.status}">Chưa mở</span></td>
           <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/periods/{id}(id=${item.id})}">Xem chi tiết</a></td>
         </tr>
         </tbody>
       </table>
     </div>
   </div>
-  <div class="card" th:if="${periods == null or periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Tạo đợt đầu tiên để bắt đầu quy trình đề tài.')}" ></div>
+
+  <div class="card" th:if="${periods.isEmpty()}" th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Tạo đợt mới để bắt đầu quy trình đề tài.')}" ></div>
 </section>
 </body>
 </html>

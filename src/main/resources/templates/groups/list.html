@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Nhóm sinh viên', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">NHÓM SINH VIÊN</div>
+      <h1 class="page-title">Nhóm của tôi theo đợt</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Mỗi thẻ cho biết nhóm, vai trò và đề tài của bạn trong đúng đợt đó. Thành viên chỉ được thêm sau khi chấp nhận lời mời.
+      </p>
+    </div>
+    <a class="btn btn-outline-primary invitation-link" th:href="@{/group-invitations}">
+      Lời mời của tôi
+      <span class="badge bg-primary text-primary-fg ms-1" th:if="${pendingInvitationCount > 0}"
+            th:text="${pendingInvitationCount}">1</span>
+    </a>
+  </div>
+
+  <section class="mb-4" th:if="${!upcomingPeriods.isEmpty()}">
+    <h2 class="h3 mb-1">Sắp đăng ký</h2>
+    <p class="text-secondary mb-3">Chưa đến ngày bắt đầu đăng ký sinh viên.</p>
+    <div th:replace="~{fragments/group-period-cards :: cards(${upcomingPeriods})}"></div>
+  </section>
+
+  <section class="mb-4" th:if="${!openPeriods.isEmpty()}">
+    <h2 class="h3 mb-1">Đang đăng ký</h2>
+    <p class="text-secondary mb-3">Bạn có thể tạo nhóm, phản hồi lời mời và quản lý nhóm theo điều kiện hiện tại.</p>
+    <div th:replace="~{fragments/group-period-cards :: cards(${openPeriods})}"></div>
+  </section>
+
+  <section th:if="${!endedPeriods.isEmpty()}">
+    <h2 class="h3 mb-1">Đã kết thúc</h2>
+    <p class="text-secondary mb-3">Không thể tạo nhóm mới; nhóm và lời mời cũ vẫn được giữ để xem.</p>
+    <div th:replace="~{fragments/group-period-cards :: cards(${endedPeriods})}"></div>
+  </section>
+
+  <div class="card"
+       th:if="${upcomingPeriods.isEmpty() and openPeriods.isEmpty() and endedPeriods.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có đợt đăng ký', 'Nhóm sẽ được tạo khi trưởng khoa mở đợt đăng ký cho sinh viên.')}" ></div>
+</section>
+</body>
+</html>

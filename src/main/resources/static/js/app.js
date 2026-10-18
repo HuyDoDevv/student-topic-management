@@ -13,17 +13,93 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  document.querySelectorAll("[data-digits-only]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const digits = input.value.replace(/\D/g, "");
+      if (input.value !== digits) input.value = digits;
+    });
+  });
+
   document.querySelectorAll("form[data-prevent-double-submit]").forEach((form) => {
-    form.addEventListener("submit", () => {
+    form.addEventListener("submit", (event) => {
+      const confirmation = event.submitter?.dataset.confirm ?? form.dataset.confirm;
+      if (confirmation && !window.confirm(confirmation)) {
+        event.preventDefault();
+        return;
+      }
+
+      if (form.dataset.submitting === "true") {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.submitting = "true";
       form.querySelectorAll("button[type='submit']").forEach((button) => {
-        button.disabled = true;
+        button.setAttribute("aria-disabled", "true");
         button.setAttribute("aria-busy", "true");
       });
     });
   });
 
+  document.querySelectorAll("[data-supervisor-group]").forEach((group) => {
+    const choices = [...group.querySelectorAll("input[type='checkbox']")];
+    const selectionLimit = Number.parseInt(group.dataset.supervisorLimit ?? "2", 10);
+    const updateChoices = () => {
+      const selectedCount = choices.filter((choice) => choice.checked).length;
+      choices.forEach((choice) => {
+        choice.disabled = selectedCount >= selectionLimit && !choice.checked;
+      });
+    };
+    choices.forEach((choice) => choice.addEventListener("change", updateChoices));
+    updateChoices();
+  });
+
+  document.querySelectorAll("[data-period-form]").forEach((form) => {
+    const type = form.querySelector("[data-period-type]");
+    const conditionalFields = [...form.querySelectorAll("[data-period-conditional]")];
+    const today = form.dataset.today ?? "";
+    const lecturerStart = form.querySelector("#lecturer-start");
+    const lecturerEnd = form.querySelector("#lecturer-end");
+    const studentStart = form.querySelector("#student-start");
+    const studentEnd = form.querySelector("#student-end");
+
+    const addDays = (value, days) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+      const [year, month, day] = value.split("-").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day + days));
+      return date.toISOString().slice(0, 10);
+    };
+    const laterDate = (...values) => values.filter(Boolean).sort().at(-1) ?? "";
+    const setMinimum = (input, value) => {
+      if (input && value) input.min = value;
+    };
+    const updateScheduleMinimums = () => {
+      setMinimum(lecturerStart, today);
+      setMinimum(lecturerEnd, laterDate(today, lecturerStart?.value));
+      setMinimum(studentStart, laterDate(today, addDays(lecturerEnd?.value ?? "", 1)));
+      setMinimum(studentEnd, laterDate(today, studentStart?.value));
+    };
+
+    const updateConditionalFields = () => {
+      const selected = type?.value ?? "";
+      conditionalFields.forEach((container) => {
+        const applies = container.dataset.periodConditional.split(",").includes(selected);
+        const input = container.querySelector("input");
+        container.hidden = !applies;
+        if (input && input.dataset.locked !== "true") input.disabled = !applies;
+      });
+    };
+    type?.addEventListener("change", updateConditionalFields);
+    [lecturerStart, lecturerEnd, studentStart, studentEnd].forEach((input) => {
+      input?.addEventListener("change", updateScheduleMinimums);
+    });
+    updateConditionalFields();
+    updateScheduleMinimums();
+  });
+
   const search = document.querySelector("[data-table-filter]");
   const status = document.querySelector("[data-status-filter]");
+  const exactFilters = [...document.querySelectorAll("[data-row-filter]")];
+  const positiveFilters = [...document.querySelectorAll("[data-positive-filter]")];
   const rows = [...document.querySelectorAll("[data-filter-table] tbody tr")];
   const filterRows = () => {
     const query = search?.value.trim().toLocaleLowerCase("vi") ?? "";
@@ -31,9 +107,21 @@ document.addEventListener("DOMContentLoaded", () => {
     rows.forEach((row) => {
       const matchesText = row.textContent.toLocaleLowerCase("vi").includes(query);
       const matchesStatus = !selectedStatus || row.dataset.status === selectedStatus;
-      row.hidden = !(matchesText && matchesStatus);
+      const matchesExactFilters = exactFilters.every((filter) => {
+        const value = filter.value;
+        return !value || row.dataset[filter.dataset.rowFilter] === value;
+      });
+      const matchesPositiveFilters = positiveFilters.every((filter) => {
+        const key = filter.value;
+        return !key || Number(row.dataset[key] ?? "0") > 0;
+      });
+      row.hidden = !(
+        matchesText && matchesStatus && matchesExactFilters && matchesPositiveFilters
+      );
     });
   };
   search?.addEventListener("input", filterRows);
   status?.addEventListener("change", filterRows);
+  exactFilters.forEach((filter) => filter.addEventListener("change", filterRows));
+  positiveFilters.forEach((filter) => filter.addEventListener("change", filterRows));
 });

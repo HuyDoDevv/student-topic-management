@@ -1,17 +1,33 @@
 <!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Tổng quan', ~{::section})}">
 <body><section>
-  <div class="page-header dashboard-heading"><div><div class="page-pretitle">DASHBOARD</div><h1 class="page-title">Tổng quan học vụ</h1><p class="text-secondary mt-2 mb-0">Theo dõi đề tài, nhóm sinh viên và các mốc học vụ tại một nơi.</p></div><div class="date-label"><span aria-hidden="true">◷</span> <time th:text="${today}">07/09/2026</time></div></div>
-  <div class="welcome-panel mb-4"><div><span class="welcome-eyebrow">TỪ Ý TƯỞNG ĐẾN THÀNH QUẢ</span><h2>Chào mừng đến với<br>không gian đề tài sinh viên.</h2><p>Nơi kết nối sinh viên, giảng viên và những ý tưởng mới.<br class="d-none d-md-block">Bắt đầu hành trình học tập và nghiên cứu của bạn.</p></div><div class="welcome-art" aria-hidden="true"><div class="art-orbit"></div><div class="art-sheet"><div class="art-square">ĐT</div><div class="art-line"></div><div class="art-line short"></div><div class="art-check">✓</div></div><div class="art-tag">Ý tưởng · Nghiên cứu · Kết quả</div></div></div>
-  <div class="row row-cards mb-4">
-    <div class="col-sm-6 col-xl-3"><div class="card metric-card"><div class="card-body"><div class="metric-label"><span>Đề tài</span><span class="metric-icon bg-blue-lt" aria-hidden="true">▤</span></div><div class="metric-value" th:text="${topicCount ?: '—'}">—</div><div class="text-secondary small">Trong các đợt đang theo dõi</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card metric-card"><div class="card-body"><div class="metric-label"><span>Nhóm sinh viên</span><span class="metric-icon bg-teal-lt" aria-hidden="true">♧</span></div><div class="metric-value" th:text="${groupCount ?: '—'}">—</div><div class="text-secondary small">Nhóm đã được thành lập</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card metric-card"><div class="card-body"><div class="metric-label"><span>Đợt đăng ký</span><span class="metric-icon bg-purple-lt" aria-hidden="true">▣</span></div><div class="metric-value" th:text="${periodCount ?: '—'}">—</div><div class="text-secondary small">Đợt học vụ trong hệ thống</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card metric-card"><div class="card-body"><div class="metric-label"><span>Kết quả công bố</span><span class="metric-icon bg-orange-lt" aria-hidden="true">✓</span></div><div class="metric-value" th:text="${publishedResultCount ?: '—'}">—</div><div class="text-secondary small">Kết quả đã công bố</div></div></div></div>
+  <div class="page-header dashboard-heading">
+    <div>
+      <div class="page-pretitle" th:text="${dashboard.audience}">Vai trò</div>
+      <h1 class="page-title" th:text="${dashboard.title}">Tổng quan</h1>
+      <p class="text-secondary mt-2 mb-0" th:text="${dashboard.subtitle}">Nội dung theo vai trò.</p>
+    </div>
+    <div class="date-label"><span aria-hidden="true">◷</span> <time th:text="${today}">14/09/2026</time></div>
   </div>
-  <div class="row row-cards">
-    <div class="col-lg-8"><div class="card h-100"><div class="card-header"><h2 class="card-title">Đợt đăng ký hiện tại</h2><span class="badge bg-blue-lt ms-auto" th:text="${currentPeriod?.status ?: 'Chưa cập nhật'}">Chưa cập nhật</span></div><div class="card-body" th:if="${currentPeriod != null}"><h3 class="h2" th:text="${currentPeriod.name}">Tên đợt</h3><p class="text-secondary" th:text="${currentPeriod.type}">Loại đợt</p><div class="row g-3 mt-2"><div class="col-md-6"><div class="subheader">Giảng viên đề xuất</div><strong th:text="${currentPeriod.lecturerWindow}">Chưa cập nhật</strong></div><div class="col-md-6"><div class="subheader">Sinh viên đăng ký</div><strong th:text="${currentPeriod.studentWindow}">Chưa cập nhật</strong></div></div><a class="btn btn-outline-primary mt-4" th:href="@{/periods/{id}(id=${currentPeriod.id})}">Xem chi tiết đợt</a></div><div class="empty dashboard-empty" th:if="${currentPeriod == null}"><div class="empty-symbol" aria-hidden="true">▣</div><h3 class="empty-title">Chưa có đợt đăng ký để hiển thị</h3><p class="empty-subtitle text-secondary">Thông tin về đợt đăng ký và các mốc thời gian<br class="d-none d-md-block">sẽ được cập nhật tại đây.</p></div></div></div>
-    <div class="col-lg-4"><div class="card h-100"><div class="card-header"><h2 class="card-title">Hành trình đề tài</h2><button class="btn btn-sm btn-ghost-secondary ms-auto" data-bs-toggle="modal" data-bs-target="#journey-help" type="button" aria-label="Tìm hiểu hành trình đề tài">Tìm hiểu</button></div><div class="card-body"><ol class="journey-list"><li><span>01</span><div><h3>Lựa chọn đề tài</h3><p>Tìm hướng nghiên cứu phù hợp.</p></div></li><li><span>02</span><div><h3>Đăng ký cùng nhóm</h3><p>Kết nối thành viên và gửi đăng ký.</p></div></li><li><span>03</span><div><h3>Thực hiện &amp; báo cáo</h3><p>Phát triển ý tưởng cùng giảng viên.</p></div></li><li><span>04</span><div><h3>Đánh giá &amp; kết quả</h3><p>Theo dõi kết quả sau công bố.</p></div></li></ol></div></div></div>
+
+  <div class="row row-cards mb-4" th:if="${!dashboard.metrics.isEmpty()}">
+    <div class="col-sm-6 col-xl-3" th:each="metric : ${dashboard.metrics}">
+      <div class="card metric-card h-100"><div class="card-body">
+        <div class="metric-label"><span th:text="${metric.label}">Số liệu</span><span class="metric-icon bg-blue-lt" aria-hidden="true">▤</span></div>
+        <div class="metric-value" th:text="${metric.value}">0</div>
+        <p class="text-secondary small mb-3" th:text="${metric.description}">Mô tả</p>
+        <a class="stretched-link" th:if="${metric.href != null}" th:href="${metric.href}"
+           th:aria-label="|Xem ${metric.label}|">Xem chi tiết <span aria-hidden="true">→</span></a>
+      </div></div>
+    </div>
   </div>
-  <div class="modal modal-blur fade" id="journey-help" tabindex="-1" aria-labelledby="journey-help-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="journey-help-title">Hành trình đề tài</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body"><p>Sinh viên chọn đề tài đã công bố, lập nhóm và gửi đăng ký. Sau khi được chấp thuận, nhóm thực hiện đề tài với sự hướng dẫn của giảng viên và nộp báo cáo.</p><p class="mb-0">Kết quả được hiển thị sau khi hoàn tất đánh giá và được Khoa công bố. Các chức năng này sẽ được mở trong những đợt cập nhật tiếp theo.</p></div><div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal">Đã hiểu</button></div></div></div></div>
+
+  <div class="card dashboard-focus" th:classappend="${dashboard.focus.badgeClass == 'bg-green-lt'} ? ' dashboard-focus-success' : ''">
+    <div class="card-body">
+      <span class="badge mb-3" th:classappend="${dashboard.focus.badgeClass}" th:text="${dashboard.focus.label}">TRẠNG THÁI</span>
+      <h2 class="h2 mb-2" th:text="${dashboard.focus.title}">Việc cần làm</h2>
+      <p class="text-secondary mb-0" th:text="${dashboard.focus.description}">Hướng dẫn tiếp theo.</p>
+      <a class="btn btn-primary mt-4" th:if="${dashboard.focus.href != null}" th:href="${dashboard.focus.href}" th:text="${dashboard.focus.actionLabel}">Xem chi tiết</a>
+    </div>
+  </div>
 </section></body></html>

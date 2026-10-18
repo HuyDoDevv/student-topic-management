@@ -1,11 +1,94 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Chi tiết đăng ký', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chi tiết đăng ký', ~{::section})}">
 <body>
 <section>
-  <div class="page-header page-header-actions"><div><div class="page-pretitle">ĐĂNG KÝ #<span th:text="${registrationId}">1</span></div><h1 class="page-title" th:text="${topic.title}">Tên đề tài</h1><div class="mt-2"><span class="badge bg-yellow-lt" th:text="${registrationStatus}">PENDING</span></div></div><form th:action="@{/registrations/{id}/withdraw(id=${registrationId})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-outline-danger" type="submit">Rút đăng ký</button></form></div>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">ĐĂNG KÝ #<span th:text="${registration.id}">1</span></div>
+      <h1 class="page-title" th:text="${registration.topicTitle}">Tên đề tài</h1>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+        <span class="badge" th:classappend="${registration.statusClass}"
+              th:text="${registration.statusLabel}">Chờ xét</span>
+        <span class="text-secondary" th:text="${registration.periodName}">Đợt đăng ký</span>
+      </div>
+    </div>
+    <div class="btn-list">
+      <a class="btn btn-outline-secondary"
+         th:href="${registration.deanViewer} ? @{/periods/{id}(id=${registration.periodId})} : @{/groups/{id}(id=${registration.groupId})}">Quay lại</a>
+      <a class="btn btn-outline-primary" th:if="${registration.status.name() == 'ACCEPTED'}"
+         th:href="@{/reports/{id}(id=${registration.id})}">Báo cáo</a>
+      <a class="btn btn-primary" th:if="${registration.canDecide}"
+         th:href="@{/registrations/{id}/decision(id=${registration.id})}">Xét duyệt</a>
+      <form th:if="${registration.canWithdraw}"
+            th:action="@{/registrations/{id}/withdraw(id=${registration.id})}"
+            th:object="${withdrawForm}" method="post" data-prevent-double-submit
+            data-confirm="Bạn chắc chắn muốn rút đăng ký đang chờ xét?">
+        <input type="hidden" th:field="*{version}">
+        <button class="btn btn-outline-danger" type="submit">Rút đăng ký</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" role="alert" th:if="${registration.rejectionReason != null}">
+    <div class="fw-bold">Lý do từ chối</div>
+    <div class="mt-1" th:text="${registration.rejectionReason}">Đề tài đã nhận nhóm</div>
+  </div>
+
   <div class="row row-cards">
-    <div class="col-lg-8"><article class="card"><div class="card-header"><h2 class="card-title">Thông tin đăng ký</h2></div><div class="card-body"><dl class="detail-list detail-list-grid"><dt>Nhóm</dt><dd th:text="${groupCode}">N01</dd><dt>Trạng thái</dt><dd th:text="${registrationStatus}">PENDING</dd><dt>Đề tài</dt><dd th:text="${topic.title}">Tên đề tài</dd><dt>Giảng viên hướng dẫn</dt><dd th:text="${topic.supervisors}">Giảng viên</dd></dl><div class="timeline-note mt-4"><span class="timeline-dot"></span><div><strong>Đã gửi đăng ký</strong><p class="text-secondary mb-0">Đang chờ trưởng khoa xét duyệt.</p></div></div></div></article></div>
-    <div class="col-lg-4"><aside class="card"><div class="card-header"><h2 class="card-title">Thành viên nhóm</h2></div><div class="list-group list-group-flush"><div class="list-group-item" th:each="member : ${members}"><strong th:text="${member.name}">Sinh viên</strong><div class="text-secondary" th:text="|${member.code} · ${member.role}|">Mã số · Vai trò</div></div></div></aside></div>
+    <div class="col-lg-8">
+      <article class="card h-100">
+        <div class="card-header"><h2 class="card-title">Thông tin đăng ký</h2></div>
+        <div class="card-body">
+          <dl class="detail-list detail-list-grid">
+            <dt>Nhóm</dt><dd th:text="${groupCode}">N001</dd>
+            <dt>Đề tài</dt><dd th:text="${registration.topicTitle}">Tên đề tài</dd>
+            <dt>Khoa</dt><dd th:text="${registration.topicFaculty}">Khoa</dd>
+            <dt>Giảng viên đề xuất</dt><dd th:text="${registration.topicAuthor}">Giảng viên</dd>
+            <dt>Giảng viên hướng dẫn</dt><dd th:text="${registration.supervisors}">Giảng viên hướng dẫn</dd>
+            <dt>Gửi lúc</dt><dd th:text="${registration.submittedAt}">11/09/2026 10:30</dd>
+          </dl>
+
+          <div class="registration-timeline mt-4" aria-label="Tiến trình đăng ký và chấm điểm">
+            <div class="timeline-note" th:each="step : ${progress.steps}">
+              <span class="timeline-dot" th:classappend="${step.state.name() == 'COMPLETED' or (step.number == 9 and step.state.name() == 'CURRENT')} ? ' is-success' : ' is-muted'"></span>
+              <div>
+                <strong th:text="${step.number + '. ' + step.label}">1. Chờ xét đăng ký</strong>
+                <span class="badge ms-2" th:classappend="${step.state.name() == 'CURRENT'} ? ' bg-blue-lt' : ' bg-secondary-lt'"
+                      th:text="${step.state.name() == 'COMPLETED' ? 'Đã xong' : step.state.name() == 'CURRENT' ? 'Hiện tại' : step.state.name() == 'NOT_APPLICABLE' ? 'Không áp dụng' : 'Chưa đến'}">Hiện tại</span>
+                <a class="d-block mt-1" th:if="${step.actionHref != null}"
+                   th:href="${step.actionHref}" th:text="${step.actionLabel}">Xem bước tiếp theo</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-lg-4">
+      <aside class="card h-100">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Thành viên tại thời điểm gửi</h2>
+            <span class="small text-secondary">Danh sách này được giữ nguyên trong lịch sử đăng ký.</span>
+          </div>
+          <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(members)} + '/3'">3/3</span>
+        </div>
+        <div class="list-group list-group-flush">
+          <div class="list-group-item" th:each="member : ${members}">
+            <div class="d-flex align-items-start gap-3">
+              <span class="avatar avatar-sm bg-blue-lt" th:text="${#strings.substring(member.name, 0, 1)}">S</span>
+              <div class="min-w-0">
+                <strong class="d-block" th:text="${member.name}">Sinh viên</strong>
+                <span class="text-secondary small" th:text="${member.code}">23110001</span>
+                <span aria-hidden="true" class="text-secondary"> · </span>
+                <span class="text-secondary small" th:text="${member.role}">Thành viên</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>
 </section>
 </body>

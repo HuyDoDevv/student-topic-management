@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Quản lý thông báo', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">THÔNG BÁO CHÍNH THỨC</div>
+      <h1 class="page-title">Quản lý thông báo</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Phạm vi: <strong th:text="${managerScope.sourceName}">Nhà trường</strong>.
+        Bản đã công bố không thể sửa hoặc công bố lại.
+      </p>
+    </div>
+    <a class="btn btn-primary" th:href="@{/announcements/new}"><span aria-hidden="true">＋</span> Tạo thông báo</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header table-toolbar">
+      <form class="d-flex flex-wrap gap-2" method="get" th:action="@{/announcements/manage}">
+        <label class="visually-hidden" for="announcement-status">Lọc trạng thái</label>
+        <select class="form-select" id="announcement-status" name="status" onchange="this.form.submit()">
+          <option value="ALL" th:selected="${selectedStatus.name() == 'ALL'}">Tất cả trạng thái</option>
+          <option value="DRAFT" th:selected="${selectedStatus.name() == 'DRAFT'}">Bản nháp</option>
+          <option value="PUBLISHED" th:selected="${selectedStatus.name() == 'PUBLISHED'}">Đã công bố</option>
+        </select>
+        <noscript><button class="btn btn-outline-secondary" type="submit">Lọc</button></noscript>
+      </form>
+      <span class="badge bg-blue-lt ms-md-auto" th:text="${announcementPage.totalElements + ' thông báo'}">1 thông báo</span>
+    </div>
+
+    <div class="table-responsive" th:if="${!announcements.isEmpty()}">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead><tr><th>Tiêu đề</th><th>Nguồn</th><th>Trạng thái</th><th>Cập nhật</th><th><span class="visually-hidden">Thao tác</span></th></tr></thead>
+        <tbody>
+        <tr th:each="announcement : ${announcements}">
+          <td data-label="Tiêu đề"><a class="fw-semibold" th:href="@{/announcements/{id}(id=${announcement.id})}"
+                                      th:text="${announcement.title}">Thông báo học vụ</a></td>
+          <td data-label="Nguồn" th:text="${announcement.sourceName}">Nhà trường</td>
+          <td data-label="Trạng thái">
+            <span class="badge bg-green-lt" th:if="${announcement.published}">Đã công bố</span>
+            <span class="badge bg-yellow-lt" th:unless="${announcement.published}">Bản nháp</span>
+          </td>
+          <td data-label="Cập nhật"><time th:datetime="${announcement.updatedAt}" th:text="${announcement.updatedAt}">2026-09-24</time></td>
+          <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary"
+              th:href="@{/announcements/{id}(id=${announcement.id})}">Xem chi tiết</a></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div th:if="${announcements.isEmpty()}"
+         th:insert="~{fragments/feedback :: empty('Chưa có thông báo', 'Tạo bản nháp để chuẩn bị nội dung chính thức.')}"></div>
+
+    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+         th:if="${announcementPage.totalElements > 0}">
+      <span class="text-secondary" th:text="${'Trang ' + displayedPage + ' / ' + displayedTotalPages}">Trang 1 / 1</span>
+      <nav aria-label="Phân trang thông báo" th:if="${displayedTotalPages > 1}">
+        <div class="btn-list">
+          <a class="btn btn-outline-secondary" th:if="${announcementPage.hasPrevious()}"
+             th:href="@{/announcements/manage(status=${selectedStatus},page=${currentPage - 1})}">Trang trước</a>
+          <a class="btn btn-outline-secondary" th:if="${announcementPage.hasNext()}"
+             th:href="@{/announcements/manage(status=${selectedStatus},page=${currentPage + 1})}">Trang sau</a>
+        </div>
+      </nav>
+    </div>
+  </div>
+</section>
+</body>
+</html>

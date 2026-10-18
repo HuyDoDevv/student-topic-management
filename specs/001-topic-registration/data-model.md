@@ -1,62 +1,88 @@
 > Cập nhật ngày 2026-09-09: database dùng MySQL 8.4 LTS. Schema 20 bảng nằm tại
-> `src/main/resources/db/migration/V1__full_system.sql` và được Flyway áp dụng.
+> `src/main/resources/db/migration/V1__full_system.sql`; V2 bắt buộc ngày theo loại đợt,
+> V3 bắt buộc khoảng GV kết thúc trước khi khoảng SV bắt đầu. Thay đổi Q-07 ngày
+> 2026-09-11 thêm bảng lời mời bằng V5; V6 bắt buộc metadata từ chối registration;
+> V7 thêm snapshot thành viên/trưởng nhóm bất biến tại thời điểm gửi,
+> không sửa các migration đã dùng.
 
-# Data Model — Thiết kế có điều kiện
+# Data Model — Thiết kế triển khai
 
 Áp dụng [spec](spec.md) FR-01–15. MySQL 8.4 LTS; tên/kiểu dưới đây là thiết kế kỹ thuật,
-không thêm nghiệp vụ. Q có ảnh hưởng schema được ghi rõ; thay đổi sau khi chốt phải được
-thực hiện bằng migration mới.
+không thêm nghiệp vụ. Các quyết định Q ảnh hưởng schema đã được chốt; thay đổi sau này phải
+được thực hiện bằng migration mới.
 
 ## Entities
 
 | Entity / bảng dự kiến | Trường chính | Quan hệ và ghi chú |
 |---|---|---|
-| Department / departments | id bigint PK, name text | Bộ môn thuộc khoa; DEAN giới hạn theo khoa, LECTURER theo bộ môn hiện tại |
-| UserAccount / user_accounts | id bigint PK, username text unique, password_hash text, department_id FK, enabled boolean | Mật khẩu không lưu plaintext; `enabled=false` khóa đăng nhập tài khoản gây sự cố |
-| UserRole / user_roles | user_id FK, role_code | PK hai trường; ADMIN/STUDENT/LECTURER/DEAN. LECTURER có thể kết hợp DEAN; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN chỉ xử lý sự cố khẩn cấp bằng ẩn mềm nội dung, khóa tài khoản vi phạm và lưu dấu vết; không có quyền học vụ/đăng ký/cơ cấu tổ chức |
-| RegistrationPeriod / registration_periods | id, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Bốn mốc đăng ký timestamptz; ngày giai đoạn sau kiểu date dự kiến, độ chính xác/bắt buộc còn Q-02 |
-| Topic / topics | id, period_id FK, department_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Bản đề tài thuộc một đợt cho luồng hiện tại. Nếu Q-05 cho tái sử dụng, tách catalog và offering bằng migration trước triển khai phần đó |
-| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1–2 là chỗ kỹ thuật, không phân thứ bậc GVHD |
-| StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version | Trưởng nhóm luôn là thành viên; không thêm tên nhóm bắt buộc |
-| GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Một tư cách SV/đợt; slot 1–3 chỉ bảo vệ sức chứa |
-| Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | rejected/withdrawn không tái dùng ID khi đăng ký lại; tạo hàng mới; retention còn Q-09 |
+| Faculty / faculties | id bigint PK, name varchar(255) | Khoa là scope duy nhất của tài khoản học vụ và đợt đăng ký. Phiên bản hiện tại seed đúng một `Khoa Công nghệ Thông tin`; chưa có CRUD khoa |
+| UserAccount / user_accounts | id bigint PK, username text unique, email varchar(254) unique nullable, password_hash text, faculty_id FK nullable, enabled boolean | STUDENT/LECTURER/DEAN liên kết trực tiếp tới khoa; ADMIN có thể không có khoa. Sinh viên mới dùng MSSV làm username và email `{mssv}@student.hcmute.edu.vn`; LECTURER/DEAN mới để email null chờ tự cập nhật ở feature sau; mật khẩu luôn băm |
+| Role / roles | code PK, name | Danh mục role ADMIN/STUDENT/LECTURER/DEAN |
+| UserRole / user_roles | user_id FK, role_code FK | PK hai trường; provisioning chỉ nhận STUDENT→STUDENT, LECTURER→LECTURER hoặc DEAN→DEAN+LECTURER và không tạo ADMIN. Tài khoản có DEAN không được dùng luồng tác giả đề tài; STUDENT không kết hợp ADMIN/LECTURER/DEAN. ADMIN không có quyền học vụ/đăng ký/cơ cấu tổ chức |
+| StudentProfile / student_profiles | user_id PK/FK, student_code varchar(32) unique, class_name varchar(64), cohort_code varchar(16) | Hồ sơ riêng cho sinh viên được tạo mới; `cohort_code` bắt buộc dạng `K2026`. Tài khoản sinh viên đã tồn tại trước V14 được giữ nguyên và có thể chưa có profile |
+| RegistrationPeriod / registration_periods | id, faculty_id FK, name, topic_type, lecturer_start/end, student_start/end, reviewer_score_deadline, council_report_date, version | Form nhận bốn ngày đăng ký; nội bộ lưu `TIMESTAMP(6)` UTC để suy ra trạng thái. Hai ngày phụ dùng `DATE`: TLCN/KLTN bắt buộc hạn điểm GVPB, KLTN bắt buộc thêm ngày hội đồng; loại khác phải để null |
+| Topic / topics | id, period_id FK, author_id FK, title, description, objectives, student_requirements, expected_results, status, version | Mỗi đề tài thuộc đúng một đợt và kế thừa khoa từ đợt; phiên bản đầu không tái sử dụng/sao chép đề tài giữa các đợt |
+| TopicSupervisor / topic_supervisors | topic_id FK, lecturer_id FK, slot | Một hàng/GVHD; slot 1 luôn là tác giả/GVHD chính do backend tự gán, slot 2 là GVHD phối hợp không bắt buộc; người phối hợp phải là tài khoản LECTURER đang hoạt động cùng khoa; chỉ thay đổi khi topic DRAFT |
+| StudentGroup / student_groups | id, period_id FK, leader_student_id FK, version, dissolved_at | Tạo trong hạn SV; nhóm đang hoạt động có trưởng nhóm là thành viên; giải tán bằng `dissolved_at` để giữ lịch sử đăng ký, không thêm tên nhóm bắt buộc hoặc trạng thái nhóm nháp |
+| GroupMembership / group_memberships | group_id, period_id, student_id FK, slot | Thành viên đã chấp nhận; một tư cách SV/đợt, slot 1–3 bảo vệ sức chứa; thành viên thường được tự rời theo FR-08 |
+| GroupInvitation / group_invitations | id, group_id, period_id, student_id FK, invited_by FK, slot, status, created_at, responded_at, version, pending guards | Lời mời PENDING giữ slot nhưng chưa tạo membership; ACCEPTED/REJECTED/CANCELLED giữ lịch sử phản hồi; hết hiệu lực được suy ra từ student_end |
+| Registration / registrations | id, period_id, group_id, topic_id, status, submitted_at, decided_at, withdrawn_at, decision_actor_id, rejection_kind, rejection_reason, version | REJECTED/WITHDRAWN không tái dùng ID khi đăng ký lại; tạo hàng mới; từ chối thủ công bắt buộc có reason sau khi trim; giữ toàn bộ lịch sử không thời hạn trong phiên bản đầu |
+| RegistrationMember / registration_members | registration_id, student_id, slot, leader_at_submission | Snapshot bất biến đúng ba thành viên, vị trí và trưởng nhóm tại lúc tạo registration; lịch sử không đọc lại group_memberships hiện tại |
 
 Các FK danh tính trỏ cùng UserAccount; service xác minh vai trò GV/SV đúng đối tượng.
-Không suy ra department bắt buộc cho trưởng khoa hay quyền sinh viên từ FK bộ môn.
-Chưa chốt schema phạm vi khoa: không bỏ trống scope rồi hiểu là toàn quyền.
+Trưởng khoa thao tác dữ liệu trong khoa mình; sinh viên xem đề tài công bố trong khoa và
+chỉ thay đổi nhóm/đăng ký mà quan hệ dữ liệu cho phép. Không bỏ trống scope rồi hiểu là toàn quyền.
+
+Tạo từng tài khoản dùng ba route/form riêng và transaction service. Service khóa loại tài khoản
+theo route, kiểm tra mật khẩu, khoa mặc định và dữ liệu trùng trước khi ghi. Với sinh viên,
+MSSV được chuẩn hóa làm username, email được sinh tự động và account/profile được ghi nguyên tử.
+Không có luồng import CSV hoặc file mẫu tài khoản.
 
 Quy tắc moderation của ADMIN không xóa cứng nội dung. Dữ liệu nội dung cần cờ/trạng thái
 ẩn và metadata `hidden_by`, `hidden_at`, `hidden_reason`; mọi thay đổi schema tương ứng phải
 được tạo bằng migration trước khi cài quyền này. Đây là luồng sự cố riêng, không làm thay
 đổi trạng thái duyệt học vụ của đề tài và không cho ADMIN sửa nội dung.
 
-Dữ liệu nhập form dùng giờ Asia/Ho_Chi_Minh, chuyển sang instant lưu timestamptz.
-Hiển thị lại bằng cùng zone; không dùng múi giờ trình duyệt để quyết định hạn.
+Dữ liệu nhập form chỉ nhận ngày `yyyy-MM-dd` theo Asia/Ho_Chi_Minh, không nhận giờ/phút/giây.
+Ngày bắt đầu quy đổi thành `00:00:00`; ngày kết thúc thành `23:59:59.999999`, rồi lưu
+`TIMESTAMP(6)` UTC. Khi đọc, quy đổi lại thành ngày bằng cùng zone; không dùng múi giờ
+trình duyệt để quyết định hạn. Tạo mới và đổi loại không nhận ngày trước ngày hiện tại.
 version bigint là optimistic concurrency token kỹ thuật, không phải trạng thái nghiệp vụ.
 
 ## Database invariants
 
 | ID | Cơ chế DB dự kiến | REQ / FR |
 |---|---|---|
-| DB-01 | NOT NULL tên/loại/bốn mốc; CHECK lecturer_start < lecturer_end AND lecturer_end <= student_start AND student_start < student_end | REQ-04–05; FR-02–03 |
-| DB-02 | CHECK reviewer_score_deadline IS NULL nếu không TLCN/KLTN; council_report_date IS NULL nếu không KLTN. Bắt buộc khi áp dụng chưa chốt; chưa hoàn tất DDL | REQ-06–07; FR-04, Q-02 |
+| DB-01 | NOT NULL tên/loại/bốn mốc; CHECK lecturer_start < lecturer_end AND lecturer_end < student_start AND student_start < student_end | REQ-04–05; FR-02–03 |
+| DB-02 | CHECK theo loại: COURSE/NCKH có cả hai ngày null; TLCN có reviewer_score_deadline NOT NULL và council_report_date null; KLTN có cả hai ngày NOT NULL | REQ-06–07; FR-04 |
 | DB-03 | CHECK status thuộc DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED; khi khác DRAFT, cả 5 trường nội dung trim khác rỗng | REQ-08–09; FR-05,14 |
 | DB-04 | PK(topic_id,lecturer_id), UNIQUE(topic_id,slot), CHECK slot BETWEEN 1 AND 2 | REQ-10; FR-06 |
 | DB-05 | PK(group_id,student_id); UNIQUE(period_id,student_id); UNIQUE(group_id,slot); CHECK slot BETWEEN 1 AND 3 | REQ-12–13; FR-08–09 |
-| DB-06 | leader_student_id NOT NULL; FK (group.id,leader_student_id) → membership(group_id,student_id), DEFERRABLE INITIALLY DEFERRED | REQ-12; FR-08 |
+| DB-06 | leader_student_id NOT NULL; trigger sau insert tự tạo membership slot 1; trigger cập nhật/xóa bảo đảm leader luôn là thành viên khi `dissolved_at IS NULL`; nhóm giải tán giữ hàng lịch sử nhưng không còn membership | REQ-12; FR-08 |
 | DB-07 | UNIQUE(id,period_id) trên topic/group; membership FK(group_id,period_id) → group; registration FK(group_id,period_id) và FK(topic_id,period_id) | REQ-13–15; FR-09–10 |
-| DB-08 | Partial UNIQUE(period_id,group_id) WHERE status IN ('PENDING','ACCEPTED') | REQ-14; FR-10,13 |
-| DB-09 | Partial UNIQUE(period_id,topic_id) WHERE status='ACCEPTED' | Xác nhận U Q-10; FR-11 |
-| DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
+| DB-08 | Generated column nullable `active_group_guard` kết hợp UNIQUE(period_id,active_group_guard) khi status PENDING/ACCEPTED | REQ-14; FR-10,13 |
+| DB-09 | Generated column nullable `accepted_topic_guard` kết hợp UNIQUE(period_id,accepted_topic_guard) khi status ACCEPTED | Xác nhận U Q-10; FR-11 |
+| DB-10 | CHECK registration status trong PENDING/ACCEPTED/REJECTED/WITHDRAWN; manual rejection có rejection_kind=MANUAL và reason không rỗng sau khi trim; automatic rejection có rejection_kind=TOPIC_TAKEN và đúng lý do đã chốt | FR-11–13 |
+| DB-11 | `group_invitations` có CHECK status PENDING/ACCEPTED/REJECTED/CANCELLED và slot 1–3; generated guard + UNIQUE bảo đảm một PENDING/SV/đợt và một PENDING/slot/nhóm; FK(group_id,period_id) giữ cùng đợt | U Q-07 ngày 2026-09-11; FR-08–10 |
+| DB-12 | Trigger tạo registration chỉ chấp nhận nhóm có đúng 3 membership và leader là thành viên, rồi chụp nguyên tử vào `registration_members`; PK(registration_id,student_id), UNIQUE slot và leader guard; trigger chặn update/delete snapshot | U ngày 2026-09-12; FR-08,10,13 |
 
-DB-06 cùng membership FK tạo vòng quan hệ có chủ đích: insert nhóm và thành viên trưởng
-nhóm trong cùng transaction, kiểm tra FK deferred ở commit. Điều này bảo đảm tối thiểu
-một thành viên và đúng một leader; không được xóa leader mà không chuyển leader hợp lệ.
+DB-06 dùng trigger vì MySQL không hỗ trợ deferred FK: insert nhóm tự tạo membership của
+trưởng nhóm; đổi leader chỉ nhận thành viên hiện hữu và không được xóa leader khi chưa
+chuyển quyền. Điều này bảo đảm tối thiểu một thành viên và đúng một leader.
 DB-05 bảo vệ tối đa 3 mà không dùng CHECK đếm hàng.
+Tổng membership và lời mời PENDING nằm ở hai bảng nên service kiểm tra lại dưới khóa period,
+cấp slot chưa dùng ở cả hai bảng và giữ tổng không quá ba. DB-05/DB-11 là hàng rào cuối
+cho từng loại hàng; không dựa riêng vào kiểm tra trước transaction.
 
 Không UNIQUE(group_id,topic_id) trên mọi trạng thái: phải cho đăng ký lại sau rút/từ chối.
-Không CHECK đọc bảng khác để kiểm tra số GVHD hay department. Service dưới khóa giao dịch
-kiểm tra tối thiểu 1 GVHD khi gửi duyệt, cùng bộ môn, quyền và trạng thái. Bản nháp có thể
+Mỗi lần đăng ký lại tạo một hàng mới. Không cascade hoặc job purge xóa registration
+REJECTED/WITHDRAWN; lịch sử được giữ không thời hạn trong phiên bản đầu.
+Mỗi hàng mới chỉ được tạo khi nhóm có đúng ba thành viên; trigger cùng thao tác insert lưu
+snapshot thành viên/vị trí/trưởng nhóm. Snapshot không cập nhật hoặc xóa khi nhóm hiện tại
+thay đổi sau rút/từ chối. Dữ liệu lịch sử có trước V7 chỉ được backfill tốt nhất từ membership
+còn tồn tại tại thời điểm migration vì schema cũ không lưu lịch sử membership.
+Không CHECK đọc bảng khác để kiểm tra số GVHD hay phạm vi khoa. Service dưới khóa giao dịch
+kiểm tra tối thiểu 1 GVHD khi gửi duyệt, cùng khoa, quyền và trạng thái. Bản nháp có thể
 0 GVHD; giới hạn tối đa vẫn 2. Các đường ghi phải qua cùng service transaction.
 Không cấp quyền ghi DB cho người dùng ứng dụng; sửa DB trực tiếp bằng DBeaver không phải
 luồng nghiệp vụ được hỗ trợ và không thay thế kiểm thử backend.
@@ -68,44 +94,67 @@ luồng nghiệp vụ được hỗ trợ và không thay thế kiểm thử bac
 | Khoảng thời gian | Nhãn kỹ thuật |
 |---|---|
 | now < lecturer_start | BEFORE_LECTURER |
-| lecturer_start <= now < lecturer_end | LECTURER_OPEN |
-| lecturer_end <= now < student_start | BETWEEN_WINDOWS |
-| student_start <= now < student_end | STUDENT_OPEN |
-| now >= student_end | REGISTRATION_CLOSED |
+| lecturer_start <= now <= lecturer_end | LECTURER_OPEN |
+| lecturer_end < now < student_start | BETWEEN_WINDOWS |
+| student_start <= now <= student_end | STUDENT_OPEN |
+| now > student_end | REGISTRATION_CLOSED |
 
-BETWEEN_WINDOWS có thể rỗng. Công bố đề tài là điều kiện riêng; STUDENT_OPEN không tự
+BETWEEN_WINDOWS là khoảng sau cuối ngày GV đến trước đầu ngày SV. Công bố đề tài là điều kiện riêng; STUDENT_OPEN không tự
 công bố. REGISTRATION_CLOSED chỉ nói đóng đăng ký, không kết thúc toàn bộ dự án hoặc
-tự từ chối pending. Sửa loại/bốn mốc chỉ trước lecturer_start **đang lưu** (FR-15).
+tự từ chối pending. Trước lecturer_start **đang lưu**, DEAN được sửa tên, loại và bốn ngày
+nếu cấu hình mới hợp lệ. Từ lecturer_start, tên/loại/mốc bắt đầu bị khóa; chỉ được tăng
+mốc kết thúc khi giai đoạn tương ứng chưa hết hạn và toàn bộ thứ tự vẫn hợp lệ. Với từng
+ngày phụ đang áp dụng, chỉ được tăng giá trị khi ngày hiện tại tại Asia/Ho_Chi_Minh còn
+trước giá trị đang lưu; từ đầu ngày đang lưu thì khóa, không cho mở lại (FR-04, FR-15).
 
 ### Đề tài
 
 | Từ → đến | Actor | Điều kiện |
 |---|---|---|
-| DRAFT → DRAFT | GV tác giả | Chỉ sửa nháp của mình; không suy diễn thêm deadline sửa nháp |
-| DRAFT → PENDING_APPROVAL | GV tác giả | Trong hạn GV, đủ 5 nội dung, 1–2 GVHD cùng bộ môn |
+| DRAFT → DRAFT | GV tác giả không có role DEAN | Chỉ sửa nội dung/GVHD phối hợp của nháp mình tạo; tác giả luôn là GVHD chính, danh mục phối hợp lấy từ tài khoản LECTURER đang hoạt động cùng khoa |
+| DRAFT → PENDING_APPROVAL | GV tác giả không có role DEAN | Trong hạn GV, đủ 5 nội dung, tác giả ở slot 1 và tối đa một GVHD phối hợp cùng khoa |
 | PENDING_APPROVAL → APPROVED | Trưởng khoa | Chỉ đề tài thuộc khoa của trưởng khoa |
 | PENDING_APPROVAL → DRAFT | Trưởng khoa | Từ chối; gửi lại vẫn phải trong hạn GV |
 | APPROVED → PUBLISHED | Trưởng khoa | Công bố; không nhảy qua duyệt |
 
-Không có sửa GV sau DRAFT, hủy công bố hoặc xóa topic trong phạm vi đã chốt.
-Công bố danh sách thể hiện bằng tập đề tài PUBLISHED; granularity công bố cần đối chiếu
-AC nếu yêu cầu công bố toàn danh sách một lần. Contract giữ thao tác tập hợp nguyên tử
-là đề xuất kỹ thuật, không cho công bố DRAFT/PENDING.
+Không sửa nội dung hoặc GVHD từ PENDING_APPROVAL trở đi; khi bị từ chối về DRAFT,
+tác giả có thể sửa và gửi lại trong hạn GV. Không có thay GVHD trong quá trình thực hiện,
+hủy công bố hoặc xóa topic trong phạm vi đã chốt.
+Công bố danh sách thể hiện bằng tập đề tài PUBLISHED. Một lệnh công bố khóa đợt rồi
+chuyển toàn bộ topic APPROVED của đúng đợt sang PUBLISHED trong cùng giao dịch; topic
+DRAFT/PENDING_APPROVAL không đổi. Nếu không còn topic APPROVED thì lệnh không tạo thay đổi.
+Không lưu cờ công bố riêng ở registration_periods và không tự động công bố theo đồng hồ.
+Ngày bắt đầu SV là mốc UI nhắc trưởng khoa hoàn tất, không phải khóa cứng thao tác.
 
 ### Đăng ký
 
 | Từ → đến | Actor/trigger | Điều kiện |
 |---|---|---|
-| Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm 1–3, không active khác |
+| Chưa tồn tại → PENDING | Trưởng nhóm | SV window, topic PUBLISHED cùng đợt, chưa có ACCEPTED topic, nhóm đúng 3 thành viên đã chấp nhận và đúng một leader; lưu snapshot bất biến, không active khác và không còn lời mời PENDING |
 | PENDING → ACCEPTED | Trưởng khoa | Chưa có accepted khác; đồng thời auto-reject pending khác cùng topic/đợt |
-| PENDING → REJECTED | Trưởng khoa | Lý do bắt buộc chưa chốt Q-09 |
+| PENDING → REJECTED | Trưởng khoa | Lý do bắt buộc, không rỗng sau khi trim; validation lỗi giữ nguyên PENDING |
 | PENDING → REJECTED | Auto khi topic nhận nhóm khác | Lý do chính xác “Đề tài đã nhận nhóm” |
 | PENDING → WITHDRAWN | Trưởng nhóm | Trong hạn SV |
 | REJECTED/WITHDRAWN → đăng ký mới PENDING | Trưởng nhóm | Tạo ID mới, đầy đủ điều kiện gửi; hàng cũ không đổi |
 
-Không chuyển ACCEPTED sang WITHDRAWN. Không tự chọn FIFO hoặc ưu tiên rút/accept.
-Nhóm không cần trạng thái dư thừa: quyền sửa suy ra từ thời gian và không tồn tại
-đăng ký PENDING/ACCEPTED. Tạo nhóm/rời nhóm vẫn Q-07, không thêm trạng thái “nhóm nháp”.
+Không chuyển ACCEPTED sang WITHDRAWN. Khi rút và accept đồng thời, giao dịch lấy khóa period
+trước quyết định trạng thái cuối; giao dịch sau đọc lại trạng thái và bị từ chối.
+### Lời mời và thành viên nhóm
+
+| Từ → đến | Actor | Điều kiện |
+|---|---|---|
+| Chưa tồn tại → PENDING | Trưởng nhóm | Trong hạn SV, không active registration, SV cùng khoa chưa có nhóm/lời mời PENDING trong đợt, tổng membership + PENDING dưới 3 |
+| PENDING → ACCEPTED + membership | SV được mời | Trong hạn SV, không active registration; khóa period, kiểm tra lại slot/sức chứa rồi tạo membership nguyên tử |
+| PENDING → REJECTED | SV được mời | Được phép bất cứ lúc nào; không tạo membership, giải phóng guard/slot |
+| PENDING → CANCELLED | Trưởng nhóm | Trong hạn SV, không active registration; giải phóng guard/slot |
+| membership → không còn | Chính thành viên thường hoặc trưởng nhóm | Trong hạn SV, không active registration; chính thành viên được tự rời, trưởng nhóm được xóa thành viên thường |
+| nhóm một người → DISSOLVED | Trưởng nhóm | Trong hạn SV, không active registration; đặt `dissolved_at`, hủy các lời mời PENDING và xóa membership trưởng nhóm trong cùng transaction |
+
+Lời mời còn PENDING sau `student_end` được hiển thị là hết hiệu lực và không thể chấp nhận;
+không cần job đổi trạng thái. Từ chối vẫn cập nhật thành REJECTED để giải phóng generated
+guard. Nhóm không có trạng thái nháp; `dissolved_at` chỉ là dấu lưu lịch sử và nhóm này bị
+loại khỏi mọi truy vấn nhóm đang hoạt động. Trưởng nhóm có thành viên khác phải chuyển quyền
+trước khi tự rời. Không tự chọn trưởng nhóm mới. Đăng ký đề tài bị chặn khi còn lời mời PENDING.
 
 ## Transaction protocol and concurrency
 
@@ -122,16 +171,17 @@ Nếu khách hàng yêu cầu deadline theo commit, phải xác nhận và sửa
 
 | Command/race | Cách bảo vệ |
 |---|---|
-| Cùng SV vào hai nhóm | Khóa period + DB-05; nhóm ở hai đợt độc lập |
-| Thêm 2 người khi nhóm có 2 | Kiểm tra lại sau khóa, cấp slot trống; tối đa 3 ở commit |
+| Hai nhóm mời cùng SV | Khóa period + DB-11; chỉ một lời mời PENDING/SV/đợt |
+| Mời/accept đồng thời khi còn một chỗ | Khóa period, đọc membership + invitation PENDING, cấp slot trống; DB-05/DB-11 chặn vi phạm cuối |
+| SV accept trong khi được thêm vào nhóm khác | Khóa period + DB-05; đọc lại membership/lời mời trước khi tạo membership nguyên tử |
 | Chuyển leader / gửi đăng ký | Khóa period, đọc lại leader; gửi chỉ với leader còn hiệu lực |
-| Sửa nhóm / gửi | Kiểm tra không active sau khóa; không sửa sau khi PENDING hình thành |
+| Rời/giải tán / gửi đăng ký | Chung khóa period; gửi kiểm tra không còn lời mời PENDING, rời/giải tán kiểm tra không active |
 | Hai đăng ký của cùng nhóm | Khóa + DB-08; thất bại không tạo hàng dở dang |
 | Hai accept cùng topic | Khóa + DB-09; một accepted, pending khác auto-rejected |
 | Accept / đăng ký mới | Chung khóa: nếu gửi trước thì nằm trong auto-reject; nếu gửi sau thì bị từ chối |
 | Sửa draft / gửi duyệt | Chung khóa; kiểm tra status và version trước ghi |
 | Sửa lịch / mở đợt | Kiểm tra giờ và lecturer_start hiện hành sau khóa; không dùng giờ được đề nghị |
-| Rút / accept | Trạng thái cuối loại trừ nhau; **chính sách ưu tiên còn Q-09**, chưa phê duyệt hành vi chọn người thắng |
+| Rút / accept | Chung khóa period; giao dịch lấy khóa trước hoàn tất, giao dịch sau đọc lại trạng thái không còn PENDING và bị từ chối; không để lại trạng thái kép |
 
 Accept transaction: khóa → xác thực scope/actor → đọc PENDING và topic → kiểm tra chưa
 accepted → đổi đăng ký được chọn thành ACCEPTED → đổi tất cả PENDING khác sang REJECTED,
@@ -142,15 +192,22 @@ Lỗi unique/FK/check/stale version chuyển thành lỗi nghiệp vụ thích h
 Deadlock/lock timeout trả xung đột có thể thử lại; không tự retry vô hạn hoặc ghi một phần.
 Không coi version từ client là bằng chứng quyền.
 
-Cập nhật role/bộ môn chưa có endpoint. Nếu sau này bổ sung, phải khóa các hàng danh tính
-liên quan hoặc phối hợp cùng protocol để không đổi quyền trong lúc command ghi dữ liệu.
+Không có endpoint sửa role/khoa của tài khoản hiện hữu. Endpoint tạo mới chỉ gán tổ hợp role
+cố định theo loại tài khoản và khoa CNTT mặc định từ database. Nếu sau này bổ sung cập nhật,
+phải khóa các hàng danh tính liên quan hoặc phối hợp cùng protocol để không đổi quyền trong lúc command ghi dữ liệu.
 Không dựa vào role cache session để vượt kiểm tra service; thay đổi qua SQL ngoài ứng dụng
 trong khi test không đại diện một luồng quản trị đã chốt.
 
 ## Migration and sample data
 
-V1 hiện tạo toàn bộ 20 bảng, khóa ngoại, chỉ mục và trigger đã được thiết kế. Các quyết
-định nghiệp vụ còn mở làm thay đổi schema phải được đưa vào V2 trở đi sau khi xác nhận.
+V1 tạo 20 bảng nền, khóa ngoại, chỉ mục và trigger đã được thiết kế. Q-05/Q-06
+đã chốt giữ mô hình topic theo đợt và supervisors hiện tại, không cần tách catalog/offering
+hoặc bảng lịch sử thay GVHD. V2 thay hai
+CHECK ngày đợt bằng ràng buộc DB-02 đã xác nhận. V3 siết hai giai đoạn đăng ký không được
+trùng mốc kết thúc GV/bắt đầu SV. V4–V6 lần lượt bổ sung moderation, lời mời nhóm và
+metadata từ chối. V7 tạo `registration_members`, backfill dữ liệu lịch sử tốt nhất có thể,
+kiểm tra đủ đúng ba thành viên khi insert registration và chặn sửa/xóa snapshot. Mọi thay
+đổi nghiệp vụ sau này phải đi qua migration tiếp theo.
 Không gán lại số phiên bản đã tồn tại hoặc sửa migration đã chạy trên database chung.
 
 Test migration từ rỗng, schema trước → sau với fixture và dữ liệu vi phạm để kiểm tra
@@ -158,8 +215,10 @@ thất bại có kiểm soát. Backup trước thay đổi local có dữ liệu
 sửa tiến tiếp, không giả định rollback schema không mất dữ liệu.
 
 Seed local chủ động, idempotent theo mã fixture; một khoa thử nghiệm (không xác nhận scope),
-hai bộ môn, một dean, ba GV, tối thiểu bảy SV, nhóm 1/2/3 người, hai nhóm chờ cùng topic,
+một khoa CNTT, một dean, ba GV, tối thiểu bảy SV, nhóm 1/2/3 người, hai nhóm chờ cùng topic,
 topic ở mỗi trạng thái và các loại đợt. Mật khẩu được cấp qua môi trường rồi hash;
 không lưu mật khẩu sử dụng được trong SQL/docs. Không tự xóa dữ liệu có sẵn hoặc dời
-thời gian đợt mỗi lần restart. Seed là dụng cụ demo, không phải chính sách cấp tài khoản.
-Retention lịch sử chưa chốt: không tạo job purge/cascade xóa lịch sử.
+thời gian đợt mỗi lần restart. Seed là dụng cụ demo; màn hình ADMIN mới là luồng cấp tài khoản
+thủ công/import của phiên bản này.
+Giữ lịch sử registration REJECTED/WITHDRAWN không thời hạn; không tạo job purge hoặc
+cascade xóa lịch sử trong phiên bản đầu.

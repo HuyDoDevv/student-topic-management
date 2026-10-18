@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Hội đồng', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">QUẢN LÝ HỌC VỤ</div>
+      <h1 class="page-title">Hội đồng</h1>
+      <p class="text-secondary mt-2 mb-0">Theo dõi hội đồng TLCN/KLTN trong phạm vi khoa.</p>
+    </div>
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
+            data-bs-target="#create-board" aria-expanded="false" aria-controls="create-board">Lập hội đồng</button>
+  </div>
+
+  <div class="collapse mb-3" id="create-board">
+    <form class="card" method="get" th:action="@{/faculty/boards/new}">
+      <div class="card-header"><h2 class="card-title">Chọn phạm vi hội đồng mới</h2></div>
+      <div class="card-body">
+        <div class="alert alert-warning mb-3" role="status"
+             th:if="${creationOptions.periods.isEmpty()}">
+          Cần có ít nhất một đợt TLCN/KLTN trong khoa trước khi lập hội đồng.
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="periodId">Đợt TLCN/KLTN</label>
+            <select class="form-select" id="periodId" name="periodId" required
+                    th:disabled="${creationOptions.periods.isEmpty()}">
+              <option value="">Chọn đợt</option>
+              <option th:each="period : ${creationOptions.periods}" th:value="${period.id}"
+                      th:text="${period.name + ' · ' + period.topicType}">Đợt KLTN</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-end">
+        <button class="btn btn-primary" type="submit"
+                th:disabled="${creationOptions.periods.isEmpty()}">Tiếp tục</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card data-card" th:if="${!boards.isEmpty()}">
+    <div class="card-header">
+      <h2 class="card-title">Danh sách hội đồng</h2>
+      <span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(boards)} + ' hội đồng'">1 hội đồng</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead>
+        <tr><th>Hội đồng</th><th>Đợt</th><th>Khoa</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="board : ${boards}">
+          <td data-label="Hội đồng" class="fw-semibold" th:text="${board.name}">Hội đồng KLTN</td>
+          <td data-label="Đợt" th:text="${board.periodName}">Đợt KLTN</td>
+          <td data-label="Khoa" th:text="${board.facultyName}">Khoa Công nghệ Thông tin</td>
+          <td data-label="Trạng thái"><span class="badge" th:classappend="${board.statusClass}" th:text="${board.statusLabel}">Nháp</span></td>
+          <td data-label="Thao tác" class="text-end"><a class="btn btn-sm btn-ghost-primary" th:href="@{/faculty/boards/{id}(id=${board.id})}">Xem chi tiết</a></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:if="${boards.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có hội đồng', 'Mở một đợt TLCN/KLTN để lập hội đồng đầu tiên.')}"></div>
+</section>
+</body>
+</html>

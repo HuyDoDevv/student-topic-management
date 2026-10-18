@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main :: page('Thêm sinh viên', ~{::section})}">
+
+<body>
+  <section>
+    <div class="page-header page-header-actions">
+      <div>
+        <div class="page-pretitle">QUẢN LÝ SINH VIÊN</div>
+        <h1 class="page-title">Thêm sinh viên</h1>
+        <p class="text-secondary mt-2 mb-0">Cấp tài khoản và thông tin học tập ban đầu cho sinh viên.</p>
+      </div>
+      <a class="btn btn-outline-secondary" th:href="@{/admin/accounts/students}">← Về danh sách</a>
+    </div>
+
+    <form class="card account-form-shell" method="post" th:action="@{/admin/accounts/students}"
+      th:object="${studentAccountForm}" data-prevent-double-submit>
+      <div class="card-header account-form-header">
+        <div>
+          <h2 class="card-title">Thông tin sinh viên</h2>
+        </div>
+        <span class="badge bg-azure-lt">Sinh viên</span>
+      </div>
+      <div class="card-body account-form-body">
+        <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary th:if="${#fields.hasAnyErrors()}">
+          <strong>Chưa thể tạo sinh viên.</strong>
+          <p class="mb-0 mt-1">Vui lòng kiểm tra các trường được đánh dấu bên dưới.</p>
+          <ul class="mb-0 mt-2" th:if="${#fields.hasGlobalErrors()}">
+            <li th:each="error : ${#fields.globalErrors()}" th:text="${error}">Dữ liệu chưa hợp lệ.</li>
+          </ul>
+        </div>
+
+        <div class="account-scope-panel account-scope-student">
+          <span class="account-scope-mark" aria-hidden="true">SV</span>
+          <div>
+            <span class="account-scope-eyebrow">Phạm vi tài khoản</span>
+            <strong>Sinh viên · <span th:text="${facultyName}">Khoa Công nghệ Thông tin</span></strong>
+          </div>
+        </div>
+
+        <div class="account-form-section">
+          <div class="account-form-section-heading">
+            <h3>Thông tin định danh</h3>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="fullName">Họ tên <span class="text-danger">*</span></label>
+              <input class="form-control" id="fullName" type="text" th:field="*{fullName}" th:errorclass="is-invalid"
+                maxlength="255" autocomplete="name" placeholder="Ví dụ: Nguyễn Văn An" required>
+              <div class="invalid-feedback" th:errors="*{fullName}">Họ tên chưa hợp lệ.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="studentCode">MSSV <span class="text-danger">*</span></label>
+              <input class="form-control" id="studentCode" type="text" th:field="*{studentCode}"
+                th:errorclass="is-invalid" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="off"
+                spellcheck="false" placeholder="Ví dụ: 23110001" data-digits-only required>
+              <div class="invalid-feedback" th:errors="*{studentCode}">MSSV chưa hợp lệ.</div>
+            </div>
+          </div>
+
+          <div class="account-derived-panel" aria-label="Thông tin được hệ thống tạo tự động">
+            <div>
+              <span>Tên đăng nhập</span>
+              <strong>Dùng MSSV đã nhập</strong>
+            </div>
+            <div>
+              <span>Email sinh viên</span>
+              <strong>&lt;MSSV&gt;@student.hcmute.edu.vn</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-form-section">
+          <div class="account-form-section-heading">
+            <h3>Thông tin học tập</h3>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="className">Lớp <span class="text-danger">*</span></label>
+              <input class="form-control" id="className" type="text" th:field="*{className}" th:errorclass="is-invalid"
+                maxlength="64" pattern="[A-Za-z0-9]+" autocomplete="off" autocapitalize="characters"
+                spellcheck="false" placeholder="Ví dụ: 23110CL1" required>
+              <div class="invalid-feedback" th:errors="*{className}">Lớp chưa hợp lệ.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cohortCode">Khóa <span class="text-danger">*</span></label>
+              <input class="form-control" id="cohortCode" type="text" th:field="*{cohortCode}"
+                th:errorclass="is-invalid" maxlength="5" placeholder="Ví dụ: K2026" pattern="[Kk][0-9]{4}"
+                autocapitalize="characters" spellcheck="false" required>
+              <div class="invalid-feedback" th:errors="*{cohortCode}">Khóa chưa hợp lệ.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-form-section">
+          <div class="account-form-section-heading">
+            <h3>Bảo mật ban đầu</h3>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="password">Mật khẩu tạm thời <span class="text-danger">*</span></label>
+              <div class="input-group input-group-flat">
+                <input class="form-control" id="password" type="password" th:field="*{password}"
+                  th:errorclass="is-invalid" minlength="8" maxlength="72" autocomplete="new-password"
+                  aria-describedby="password-error" required>
+                <button class="input-group-text account-password-toggle" type="button" data-password-toggle
+                  aria-controls="password" aria-label="Hiện mật khẩu">Hiện</button>
+              </div>
+              <div class="invalid-feedback d-block" id="password-error" th:if="${#fields.hasErrors('password')}"
+                th:errors="*{password}">Mật khẩu chưa hợp lệ.</div>
+              <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('passwordWithinBcryptLimit')}"
+                th:errors="*{passwordWithinBcryptLimit}">Mật khẩu vượt quá giới hạn.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer account-form-actions d-flex flex-wrap align-items-center justify-content-end gap-3">
+        <div class="btn-list account-action-buttons">
+          <a class="btn btn-ghost-secondary" th:href="@{/admin/accounts/students}">Hủy</a>
+          <button class="btn btn-primary" type="submit">Tạo sinh viên</button>
+        </div>
+      </div>
+    </form>
+  </section>
+</body>
+
+</html>

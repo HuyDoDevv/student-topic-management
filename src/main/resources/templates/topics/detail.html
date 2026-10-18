@@ -1,14 +1,80 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Chi tiết đề tài', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chi tiết đề tài', ~{::section})}">
 <body>
 <section>
   <div class="page-header page-header-actions">
-    <div><div class="page-pretitle">CHI TIẾT ĐỀ TÀI</div><h1 class="page-title" th:text="${topic.title}">Hệ thống quản lý đăng ký đề tài</h1><div class="mt-2"><span class="badge bg-blue-lt" th:text="${topic.status}">PUBLISHED</span></div></div>
-    <div class="btn-list"><a class="btn btn-outline-primary" th:href="@{/topics/{id}/edit(id=${topic.id})}">Sửa bản nháp</a><form th:action="@{/topics/{id}/submit(id=${topic.id})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-primary" type="submit">Gửi duyệt</button></form></div>
+    <div>
+      <div class="page-pretitle" th:text="${period.name}">CHI TIẾT ĐỀ TÀI</div>
+      <h1 class="page-title"
+          th:text="${#strings.isEmpty(topic.title) ? 'Đề tài chưa đặt tên' : topic.title}">Tên đề tài</h1>
+      <div class="mt-2">
+        <span class="badge" th:classappend="${topic.statusClass}"
+              th:text="${topic.status}">Nháp</span>
+      </div>
+    </div>
+    <div class="btn-list" th:if="${topic.draft or (topic.approved and period.lecturerOpen)}">
+      <a class="btn btn-outline-primary" th:if="${topic.draft}"
+         th:href="@{/topics/{id}/edit(id=${topic.id})}">Sửa bản nháp</a>
+      <form th:if="${topic.draft}" th:action="@{/topics/{id}/submit(id=${topic.id})}" method="post" data-prevent-double-submit>
+        <input type="hidden" name="version" th:value="${topic.version}">
+        <button class="btn btn-primary" type="submit" th:disabled="${!period.lecturerOpen}">Gửi duyệt</button>
+      </form>
+      <form th:if="${topic.approved and period.lecturerOpen}"
+            th:action="@{/topics/{id}/return-to-draft(id=${topic.id})}" method="post" data-prevent-double-submit>
+        <input type="hidden" name="version" th:value="${topic.version}">
+        <button class="btn btn-outline-primary" type="submit">Trả về bản nháp để sửa</button>
+      </form>
+    </div>
   </div>
+
+  <div class="alert alert-warning" th:if="${topic.draft and !period.lecturerOpen}">
+    Hiện không nằm trong thời gian giảng viên đề xuất đề tài. Bạn vẫn có thể sửa bản nháp, nhưng chỉ gửi duyệt khi đợt mở.
+  </div>
+
+  <div class="alert alert-info" th:if="${topic.approved and period.lecturerOpen}">
+    Chỉ có thể trả đề tài về bản nháp khi chưa công bố và chưa có bất kỳ đăng ký nào.
+    Sau khi sửa, bạn cần gửi duyệt lại.
+  </div>
+
   <div class="row row-cards">
-    <div class="col-lg-8"><article class="card"><div class="card-body topic-content"><h2>Mô tả</h2><p>Thiết kế hệ thống tập trung để quản lý đợt, đề tài, nhóm sinh viên và quá trình đăng ký.</p><h2>Mục tiêu</h2><p>Xây dựng luồng đăng ký có kiểm soát quyền, thời gian và trạng thái; dữ liệu nhất quán khi nhiều nhóm thao tác đồng thời.</p><h2>Yêu cầu sinh viên</h2><p>Nắm vững Java, Spring Boot, cơ sở dữ liệu quan hệ và phát triển giao diện web.</p><h2>Kết quả dự kiến</h2><p>Ứng dụng web chạy được, mã nguồn, tài liệu thiết kế và báo cáo kiểm thử.</p></div></article></div>
-    <div class="col-lg-4"><aside class="card"><div class="card-header"><h2 class="card-title">Thông tin đề tài</h2></div><div class="card-body"><dl class="detail-list"><dt>Đợt</dt><dd th:text="${period.name}">Đợt đăng ký</dd><dt>Bộ môn</dt><dd th:text="${topic.department}">Công nghệ phần mềm</dd><dt>Người đề xuất</dt><dd th:text="${topic.author}">Giảng viên</dd><dt>Giảng viên hướng dẫn</dt><dd th:text="${topic.supervisors}">Giảng viên hướng dẫn</dd></dl></div></aside></div>
+    <div class="col-lg-8">
+      <article class="card">
+        <div class="card-body topic-content">
+          <h2>Mô tả</h2>
+          <p class="topic-text" th:text="${#strings.isEmpty(topic.description) ? 'Chưa cập nhật.' : topic.description}">Mô tả đề tài</p>
+
+          <h2>Mục tiêu</h2>
+          <p class="topic-text" th:text="${#strings.isEmpty(topic.objectives) ? 'Chưa cập nhật.' : topic.objectives}">Mục tiêu đề tài</p>
+
+          <h2>Yêu cầu sinh viên</h2>
+          <p class="topic-text" th:text="${#strings.isEmpty(topic.studentRequirements) ? 'Chưa cập nhật.' : topic.studentRequirements}">Yêu cầu sinh viên</p>
+
+          <h2>Kết quả dự kiến</h2>
+          <p class="topic-text" th:text="${#strings.isEmpty(topic.expectedResults) ? 'Chưa cập nhật.' : topic.expectedResults}">Kết quả dự kiến</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-lg-4">
+      <aside class="card">
+        <div class="card-header"><h2 class="card-title">Thông tin đề tài</h2></div>
+        <div class="card-body">
+          <dl class="detail-list">
+            <dt>Đợt</dt>
+            <dd th:text="${period.name}">Đợt đăng ký</dd>
+            <dt>Khoa</dt>
+            <dd th:text="${topic.faculty}">Khoa Công nghệ Thông tin</dd>
+            <dt>Người đề xuất</dt>
+            <dd th:text="${topic.author}">Giảng viên</dd>
+            <dt>Giảng viên hướng dẫn</dt>
+            <dd th:text="${topic.supervisorNames}">Chưa chọn</dd>
+          </dl>
+        </div>
+      </aside>
+      <a class="btn btn-ghost-secondary mt-3"
+         th:href="@{/periods/{id}/topics(id=${period.id})}">← Quay lại danh sách</a>
+    </div>
   </div>
 </section>
 </body>

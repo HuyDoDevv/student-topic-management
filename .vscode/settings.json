@@ -1,0 +1,4 @@
+{
+  "spring-boot.ls.problem.boot2.EXTRACT_REQUEST_MAPPING_PARENT_PATH": "IGNORE",
+  "spring-boot.ls.problem.boot4.SPRING_DATA_STRING_PROPERTY_REFERENCE": "IGNORE"
+}
