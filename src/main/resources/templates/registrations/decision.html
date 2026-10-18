@@ -1,11 +1,112 @@
 <!doctype html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/main :: page('Xét duyệt đăng ký', ~{::section})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Xét duyệt đăng ký', ~{::section})}">
 <body>
 <section>
-  <div class="page-header"><div><div class="page-pretitle">XÉT DUYỆT ĐĂNG KÝ #<span th:text="${registrationId}">1</span></div><h1 class="page-title" th:text="${topic.title}">Tên đề tài</h1><p class="text-secondary mt-2 mb-0">Nhóm <span th:text="${groupCode}">N01</span> · <span th:text="${#lists.size(members)}">3</span> thành viên</p></div></div>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">XÉT DUYỆT ĐĂNG KÝ #<span th:text="${registration.id}">1</span></div>
+      <h1 class="page-title" th:text="${registration.topicTitle}">Tên đề tài</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Nhóm <strong th:text="${groupCode}">N001</strong>
+        <span aria-hidden="true"> · </span>
+        <span th:text="${#lists.size(members)} + ' thành viên'">3 thành viên</span>
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary"
+       th:href="@{/periods/{id}(id=${registration.periodId})}">Về chi tiết đợt</a>
+  </div>
+
+  <div class="alert alert-info" role="status" th:if="${registration.canDecide}">
+    Trưởng khoa cần hoàn tất xét duyệt đăng ký để nhóm sinh viên biết kết quả. Khi chấp nhận một nhóm, các đăng ký đang chờ khác của cùng đề tài sẽ bị từ chối trong cùng giao dịch.
+  </div>
+
+  <div class="alert" role="status" th:if="${!registration.canDecide}"
+       th:classappend="${registration.status.name() == 'ACCEPTED'} ? ' alert-success' : (${registration.status.name() == 'REJECTED'} ? ' alert-danger' : ' alert-secondary')">
+    <div class="fw-bold" th:text="${registration.statusLabel}">Đã xử lý</div>
+    <div class="mt-1" th:if="${registration.rejectionReason != null}"
+         th:text="${registration.rejectionReason}">Đề tài đã nhận nhóm</div>
+    <div class="mt-1" th:if="${registration.decidedAt != null}"
+         th:text="|Thời gian xử lý: ${registration.decidedAt}|">Thời gian xử lý</div>
+  </div>
+
   <div class="row row-cards">
-    <div class="col-lg-7"><div class="card"><div class="card-header"><h2 class="card-title">Hồ sơ đăng ký</h2></div><div class="card-body"><dl class="detail-list"><dt>Đề tài</dt><dd th:text="${topic.title}">Tên đề tài</dd><dt>Giảng viên đề xuất</dt><dd th:text="${topic.author}">Giảng viên</dd><dt>Giảng viên hướng dẫn</dt><dd th:text="${topic.supervisors}">Giảng viên hướng dẫn</dd><dt>Nhóm sinh viên</dt><dd><ul class="list-unstyled mb-0"><li th:each="member : ${members}" th:text="|${member.code} · ${member.name} · ${member.role}|">Sinh viên</li></ul></dd></dl></div></div></div>
-    <div class="col-lg-5"><div class="card mb-3"><div class="card-body"><h2 class="h3">Chấp nhận đăng ký</h2><p class="text-secondary">Đề tài được gán cho nhóm này. Các đăng ký đang chờ khác của cùng đề tài sẽ bị từ chối trong cùng giao dịch.</p><form th:action="@{/registrations/{id}/accept(id=${registrationId})}" method="post" data-prevent-double-submit><input type="hidden" name="version" value="0"><button class="btn btn-success w-100" type="submit">Chấp nhận</button></form></div></div><div class="card"><form th:action="@{/registrations/{id}/reject(id=${registrationId})}" method="post" data-prevent-double-submit><div class="card-body"><h2 class="h3">Từ chối đăng ký</h2><label class="form-label required" for="rejection-reason">Lý do</label><textarea class="form-control" id="rejection-reason" name="reason" rows="4" required placeholder="Nêu lý do để nhóm sinh viên biết cách xử lý"></textarea><input type="hidden" name="version" value="0"></div><div class="card-footer"><button class="btn btn-outline-danger w-100" type="submit">Từ chối</button></div></form></div></div>
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-header"><h2 class="card-title">Hồ sơ đăng ký</h2></div>
+        <div class="card-body">
+          <dl class="detail-list">
+            <dt>Đợt đăng ký</dt><dd th:text="${registration.periodName}">Đợt đăng ký</dd>
+            <dt>Đề tài</dt><dd th:text="${registration.topicTitle}">Tên đề tài</dd>
+            <dt>Khoa</dt><dd th:text="${registration.topicFaculty}">Khoa</dd>
+            <dt>Giảng viên đề xuất</dt><dd th:text="${registration.topicAuthor}">Giảng viên</dd>
+            <dt>Giảng viên hướng dẫn</dt><dd th:text="${registration.supervisors}">Giảng viên hướng dẫn</dd>
+            <dt>Gửi đăng ký</dt><dd th:text="${registration.submittedAt}">11/09/2026 10:30</dd>
+            <dt>Thành viên tại thời điểm gửi</dt>
+            <dd>
+              <ul class="registration-member-list mb-0">
+                <li th:each="member : ${members}">
+                  <strong th:text="${member.code}">23110001</strong>
+                  <span th:text="${member.name}">Sinh viên</span>
+                  <span class="badge bg-secondary-lt" th:text="${member.role}">Thành viên</span>
+                </li>
+              </ul>
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5" th:if="${registration.canDecide}">
+      <div class="card mb-3 registration-accept-card">
+        <form th:action="@{/registrations/{id}/accept(id=${registration.id})}"
+              th:object="${acceptForm}" method="post" data-prevent-double-submit
+              data-confirm="Chấp nhận nhóm này thực hiện đề tài? Các đăng ký đang chờ khác sẽ bị từ chối.">
+          <div class="card-body">
+            <h2 class="h3">Chấp nhận đăng ký</h2>
+            <p class="text-secondary">Đề tài được gán cho nhóm này và danh sách thành viên tiếp tục được khóa.</p>
+            <input type="hidden" th:field="*{version}">
+            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('version')}"
+                 th:errors="*{version}">Phiên bản dữ liệu không hợp lệ.</div>
+          </div>
+          <div class="card-footer"><button class="btn btn-success w-100" type="submit">Chấp nhận</button></div>
+        </form>
+      </div>
+
+      <div class="card registration-reject-card">
+        <form th:action="@{/registrations/{id}/reject(id=${registration.id})}"
+              th:object="${rejectForm}" method="post" data-prevent-double-submit>
+          <div class="card-body">
+            <h2 class="h3">Từ chối đăng ký</h2>
+            <p class="text-secondary">Nhóm sẽ thấy lý do và có thể chọn đề tài khác trong thời gian đăng ký.</p>
+            <label class="form-label required" for="rejection-reason">Lý do</label>
+            <textarea class="form-control" id="rejection-reason" th:field="*{reason}" rows="4"
+                      th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'"
+                      required placeholder="Nêu rõ lý do để nhóm sinh viên xử lý"></textarea>
+            <div class="invalid-feedback" th:errors="*{reason}">Vui lòng nhập lý do từ chối.</div>
+            <input type="hidden" th:field="*{version}">
+            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('version')}"
+                 th:errors="*{version}">Phiên bản dữ liệu không hợp lệ.</div>
+          </div>
+          <div class="card-footer"><button class="btn btn-outline-danger w-100" type="submit">Từ chối đăng ký</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-5" th:if="${!registration.canDecide}">
+      <aside class="card h-100">
+        <div class="card-header"><h2 class="card-title">Kết quả xét duyệt</h2></div>
+        <div class="card-body">
+          <span class="badge mb-3" th:classappend="${registration.statusClass}"
+                th:text="${registration.statusLabel}">Đã xử lý</span>
+          <p class="mb-0" th:if="${registration.rejectionReason != null}"
+             th:text="${registration.rejectionReason}">Đề tài đã nhận nhóm</p>
+          <p class="text-secondary mb-0" th:if="${registration.rejectionReason == null}">
+            Quyết định đã được lưu vào hệ thống.
+          </p>
+        </div>
+      </aside>
+    </div>
   </div>
 </section>
 </body>

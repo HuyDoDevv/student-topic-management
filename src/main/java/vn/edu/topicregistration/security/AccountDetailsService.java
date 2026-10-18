@@ -1,0 +1,62 @@
+package vn.edu.topicregistration.security;
+
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.FacultyEntity;
+import vn.edu.topicregistration.entity.UserAccountEntity;
+import vn.edu.topicregistration.repository.UserAccountRepository;
+
+import java.util.Set;
+
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
+@Service
+public class AccountDetailsService implements UserDetailsService {
+    private final UserAccountRepository accounts;
+
+    public AccountDetailsService(UserAccountRepository accounts) {
+        this.accounts = accounts;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        UserAccountEntity account = accounts.findByUsername(username)
+                .orElseThrow(AccountDetailsService::invalidCredentials);
+        Set<RoleCode> roles = account.getRoleCodes();
+        validateRoleCombination(roles);
+
+        FacultyEntity faculty = account.getFaculty();
+        Long facultyId = faculty == null ? null : faculty.getId();
+
+        return new AccountPrincipal(
+                account.getId(),
+                account.getUsername(),
+                account.getPasswordHash(),
+                account.getFullName(),
+                account.isEnabled(),
+                account.isMustChangePassword(),
+                account.getSecurityVersion(),
+                roles,
+                facultyId);
+    }
+
+    private static void validateRoleCombination(Set<RoleCode> roles) {
+        boolean studentMixedWithAnotherRole = roles.contains(RoleCode.STUDENT) && roles.size() > 1;
+        boolean adminMixedWithAcademicRole = roles.contains(RoleCode.ADMIN) && roles.size() > 1;
+        boolean deanMixedWithLecturer = roles.contains(RoleCode.DEAN)
+                && roles.contains(RoleCode.LECTURER);
+        if (roles.isEmpty() || studentMixedWithAnotherRole || adminMixedWithAcademicRole
+                || deanMixedWithLecturer) {
+            throw invalidCredentials();
+        }
+    }
+
+    private static UsernameNotFoundException invalidCredentials() {
+        return new UsernameNotFoundException("Invalid account or role assignment");
+    }
+}

@@ -1,5 +1,7 @@
 # Maven build output
 /target/
+*.class
+*.jar
 
 # Local environment and secrets
 .env
@@ -7,8 +9,15 @@
 !.env.example
 
 # VS Code settings on this machine
-/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+/.idea/
+
+# Optional repository-local report storage (production uses REPORT_STORAGE_ROOT)
+/.report-storage/
 
 # Logs and macOS metadata
 *.log
+*.tmp
+*.swp
 .DS_Store

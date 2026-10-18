@@ -1,0 +1,563 @@
+package vn.edu.topicregistration.service;
+
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
+
+import vn.edu.topicregistration.entity.CouncilEntity;
+import vn.edu.topicregistration.entity.CouncilMemberEntity;
+import vn.edu.topicregistration.entity.CouncilMode;
+import vn.edu.topicregistration.entity.CouncilStatus;
+import vn.edu.topicregistration.entity.CouncilTopicEntity;
+import vn.edu.topicregistration.entity.EvaluationEntity;
+import vn.edu.topicregistration.entity.EvaluationStatus;
+import vn.edu.topicregistration.entity.RegistrationEntity;
+import vn.edu.topicregistration.entity.RegistrationMemberEntity;
+import vn.edu.topicregistration.entity.RegistrationPeriodEntity;
+import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.entity.ReviewerAssignmentEntity;
+import vn.edu.topicregistration.entity.RoleCode;
+import vn.edu.topicregistration.entity.ScoreComponentEntity;
+import vn.edu.topicregistration.entity.TopicSupervisorEntity;
+import vn.edu.topicregistration.entity.UserAccountEntity;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
+import vn.edu.topicregistration.repository.CouncilMemberRepository;
+import vn.edu.topicregistration.repository.CouncilRepository;
+import vn.edu.topicregistration.repository.CouncilTopicRepository;
+import vn.edu.topicregistration.repository.EvaluationRepository;
+import vn.edu.topicregistration.repository.RegistrationPeriodRepository;
+import vn.edu.topicregistration.repository.RegistrationMemberRepository;
+import vn.edu.topicregistration.repository.ReviewerAssignmentRepository;
+import vn.edu.topicregistration.repository.ScoreComponentRepository;
+import vn.edu.topicregistration.security.AuthorizationPolicy;
+import vn.edu.topicregistration.security.AuthorizationPolicy.ActorIdentity;
+import vn.edu.topicregistration.service.ScoreRules.ScoreContext;
+import vn.edu.topicregistration.service.ScoreRules.ScoreRuleException;
+import vn.edu.topicregistration.util.ScoreFormat;
+
+@Service
+@Profile("!test")
+public class ScoringService {
+    private final RegistrationPeriodRepository periods;
+    private final CouncilRepository councils;
+    private final CouncilTopicRepository councilTopics;
+    private final CouncilMemberRepository members;
+    private final RegistrationMemberRepository registrationMembers;
+    private final ScoreComponentRepository components;
+    private final EvaluationRepository evaluations;
+    private final ReviewerAssignmentRepository reviewerAssignments;
+    private final DirectGradingService directGrading;
+    private final AuthorizationPolicy authorization;
+    private final Clock clock;
+
+    public ScoringService(
+            RegistrationPeriodRepository periods,
+            CouncilRepository councils,
+            CouncilTopicRepository councilTopics,
+            CouncilMemberRepository members,
+            RegistrationMemberRepository registrationMembers,
+            ScoreComponentRepository components,
+            EvaluationRepository evaluations,
+            ReviewerAssignmentRepository reviewerAssignments,
+            @Lazy DirectGradingService directGrading,
+            AuthorizationPolicy authorization,
+            Clock clock) {
+        this.periods = periods;
+        this.councils = councils;
+        this.councilTopics = councilTopics;
+        this.members = members;
+        this.registrationMembers = registrationMembers;
+        this.components = components;
+        this.evaluations = evaluations;
+        this.reviewerAssignments = reviewerAssignments;
+        this.directGrading = directGrading;
+        this.authorization = authorization;
+        this.clock = clock;
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public List<EvaluationView> saveGroupDraft(
+            long councilId,
+            long registrationId,
+            GroupScoreCommand command) {
+        return mutateGroup(councilId, registrationId, command, false);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public List<EvaluationView> submitGroup(
+            long councilId,
+            long registrationId,
+            GroupScoreCommand command) {
+        return mutateGroup(councilId, registrationId, command, true);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ScoringAssignmentView> listForCurrentLecturer() {
+        ActorIdentity lecturer = currentLecturer();
+        return councilTopics.findAllForLecturerByCouncilStatus(
+                        lecturer.accountId(), CouncilStatus.ACTIVE)
+                .stream()
+                .filter(assignment -> assignment.getCouncil().getStatus()
+                        == CouncilStatus.ACTIVE)
+                .filter(assignment -> sameFaculty(lecturer, assignment))
+                .filter(ScoringService::samePeriod)
+                .filter(assignment -> assignment.getRegistration().getStatus()
+                        == RegistrationStatus.ACCEPTED)
+                .filter(assignment -> !isSupervisor(
+                        assignment.getRegistration(), lecturer.accountId()))
+                .map(assignment -> toAssignmentView(assignment, lecturer.accountId()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ScoreWorkspace workspace(long councilId, long registrationId) {
+        ActorIdentity lecturer = currentLecturer();
+        CouncilTopicEntity assignment = councilTopics
+                .findByCouncilIdAndRegistrationId(councilId, registrationId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (!sameFaculty(lecturer, assignment)) {
+            throw new AccessDeniedException("Scoring assignment is outside lecturer faculty");
+        }
+        if (!samePeriod(assignment)) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        CouncilMemberEntity member = members.findByCouncilIdAndLecturerId(
+                        councilId, lecturer.accountId())
+                .orElse(null);
+        boolean assignedMember = member != null
+                && Objects.equals(member.getLecturer().getId(), lecturer.accountId());
+        boolean supervisor = isSupervisor(
+                assignment.getRegistration(), lecturer.accountId());
+        applyRules(new ScoreContext(
+                assignment.getCouncil().getStatus(),
+                assignment.getRegistration().getStatus(),
+                assignedMember,
+                supervisor,
+                BigDecimal.ZERO));
+
+        Map<Long, EvaluationEntity> evaluationByStudent = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, lecturer.accountId())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        evaluation -> evaluation.getStudent().getId(),
+                        evaluation -> evaluation));
+        List<StudentScoreView> students = registrationMembers
+                .findAllByRegistrationId(registrationId)
+                .stream()
+                .map(snapshot -> toStudentView(
+                        snapshot, evaluationByStudent.get(snapshot.getStudent().getId())))
+                .toList();
+        if (students.isEmpty()) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        return new ScoreWorkspace(
+                toAssignmentView(assignment, lecturer.accountId()), students);
+    }
+
+    private List<EvaluationView> mutateGroup(
+            long councilId,
+            long registrationId,
+            GroupScoreCommand command,
+            boolean submit) {
+        Objects.requireNonNull(command, "command");
+        long periodId = councils.findPeriodIdByCouncilId(councilId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        RegistrationPeriodEntity period = periods.findByIdForUpdate(periodId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        ActorIdentity actor = currentLecturer();
+        CouncilEntity council = councils.findByIdForUpdate(councilId)
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (command.expectedCouncilVersion() == null
+                || council.getVersion() != command.expectedCouncilVersion()) {
+            throw new OptimisticLockingFailureException("Council version is stale");
+        }
+        if (!Objects.equals(council.getPeriod().getId(), period.getId())) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        if (!Objects.equals(actor.facultyId(), period.getFaculty().getId())) {
+            throw new AccessDeniedException("Scoring assignment is outside lecturer faculty");
+        }
+
+        List<CouncilTopicEntity> lockedAssignments = councilTopics
+                .findAllByCouncilIdForUpdate(councilId);
+        List<CouncilMemberEntity> lockedMembers = members
+                .findAllByCouncilIdForUpdate(councilId);
+        CouncilTopicEntity assignment = lockedAssignments.stream()
+                .filter(candidate -> Objects.equals(
+                        candidate.getRegistration().getId(), registrationId))
+                .findFirst()
+                .orElseThrow(() -> new ApplicationException(
+                        ApplicationErrorCode.RESOURCE_NOT_FOUND));
+        if (!Objects.equals(assignment.getCouncil().getId(), councilId)
+                || !samePeriod(assignment)) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        CouncilMemberEntity member = lockedMembers.stream()
+                .filter(candidate -> Objects.equals(
+                        candidate.getLecturer().getId(), actor.accountId()))
+                .findFirst()
+                .orElse(null);
+        RegistrationEntity registration = assignment.getRegistration();
+        if (council.getMode() == CouncilMode.DIRECT
+                && "TLCN".equals(period.getTopicType())) {
+            directGrading.requireSubmittedReviewerForScoring(registration);
+        }
+        if (council.getMode() == CouncilMode.COUNCIL
+                && "KLTN".equals(period.getTopicType())) {
+            ReviewerAssignmentEntity reviewer = reviewerAssignments
+                    .findActiveByRegistrationIdForUpdate(registrationId, List.of(
+                            ReviewerAssignmentEntity.Status.ASSIGNED,
+                            ReviewerAssignmentEntity.Status.SUBMITTED))
+                    .orElseThrow(() -> new ApplicationException(
+                            ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT));
+            UserAccountEntity reviewerAccount = reviewer.getReviewer();
+            Long reviewerId = reviewerAccount == null ? null : reviewerAccount.getId();
+            if (reviewerId == null
+                    || !reviewerAccount.isEnabled()
+                    || !reviewerAccount.getRoleCodes().contains(RoleCode.LECTURER)
+                    || reviewerAccount.getRoleCodes().contains(RoleCode.DEAN)
+                    || reviewerAccount.getFaculty() == null
+                    || !Objects.equals(reviewerAccount.getFaculty().getId(),
+                            period.getFaculty().getId())
+                    || registration.getTopic().getSupervisors().stream().anyMatch(
+                            supervisor -> Objects.equals(
+                                    supervisor.getLecturer().getId(), reviewerId))
+                    || lockedMembers.stream().anyMatch(candidate -> Objects.equals(
+                            candidate.getLecturer().getId(), reviewerId))) {
+                throw new ApplicationException(
+                        ApplicationErrorCode.INVALID_COUNCIL_ASSIGNMENT);
+            }
+        }
+        List<RegistrationMemberEntity> snapshotStudents = registrationMembers
+                .findAllByRegistrationId(registrationId);
+        if (snapshotStudents.isEmpty() || snapshotStudents.size() > 3) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        Map<Long, ScoreRowCommand> commandByStudent = exactRows(
+                snapshotStudents, command.rows());
+        boolean assignedMember = member != null
+                && Objects.equals(member.getLecturer().getId(), actor.accountId());
+        boolean supervisor = isSupervisor(registration, actor.accountId());
+        for (ScoreRowCommand row : command.rows()) {
+            applyRules(new ScoreContext(
+                    council.getStatus(),
+                    registration.getStatus(),
+                    assignedMember,
+                    supervisor,
+                    row.score()));
+        }
+        List<EvaluationEntity> lockedEvaluations = evaluations
+                .findAllByCouncilIdForUpdate(councilId);
+        Optional<ScoreComponentEntity> existingComponent = components
+                .findByPeriodIdAndName(periodId, ScoreComponentEntity.COUNCIL_SCORE_NAME);
+        Map<Long, EvaluationEntity> existingByStudent = lockedEvaluations.stream()
+                .filter(evaluation -> Objects.equals(
+                        evaluation.getRegistration().getId(), registrationId))
+                .filter(evaluation -> Objects.equals(
+                        evaluation.getEvaluator().getId(), actor.accountId()))
+                .filter(evaluation -> existingComponent.isPresent()
+                        && Objects.equals(evaluation.getComponent().getId(),
+                                existingComponent.get().getId()))
+                .collect(Collectors.toMap(
+                        evaluation -> evaluation.getStudent().getId(),
+                        evaluation -> evaluation));
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            Long studentId = snapshot.getStudent().getId();
+            validateVersion(Optional.ofNullable(existingByStudent.get(studentId)),
+                    commandByStudent.get(studentId).expectedVersion());
+        }
+
+        Instant now = clock.instant();
+        ScoreComponentEntity component = existingComponent.orElseGet(
+                () -> components.saveAndFlush(new ScoreComponentEntity(period)));
+        UserAccountEntity evaluator = Objects.requireNonNull(member, "member").getLecturer();
+        List<EvaluationEntity> changed = new java.util.ArrayList<>();
+        for (RegistrationMemberEntity snapshot : snapshotStudents) {
+            Long studentId = snapshot.getStudent().getId();
+            ScoreRowCommand row = commandByStudent.get(studentId);
+            EvaluationEntity evaluation = existingByStudent.get(studentId);
+            if (evaluation == null) {
+                evaluation = new EvaluationEntity(
+                        registration,
+                        snapshot.getStudent(),
+                        evaluator,
+                        component,
+                        council,
+                        row.score(),
+                        row.feedback(),
+                        now);
+                if (submit) {
+                    evaluation.submit(row.score(), row.feedback(), now);
+                }
+                evaluation = evaluations.save(evaluation);
+            } else if (submit) {
+                evaluation.submit(row.score(), row.feedback(), now);
+            } else {
+                evaluation.saveDraft(row.score(), row.feedback(), now);
+            }
+            changed.add(evaluation);
+        }
+        evaluations.flush();
+        return changed.stream().map(ScoringService::toView).toList();
+    }
+
+    private static Map<Long, ScoreRowCommand> exactRows(
+            List<RegistrationMemberEntity> snapshotStudents,
+            List<ScoreRowCommand> rows) {
+        if (rows == null || rows.size() != snapshotStudents.size()) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        Map<Long, ScoreRowCommand> rowByStudent = new LinkedHashMap<>();
+        for (ScoreRowCommand row : rows) {
+            if (row == null || row.studentId() == null
+                    || rowByStudent.putIfAbsent(row.studentId(), row) != null) {
+                throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+            }
+        }
+        Set<Long> snapshotIds = snapshotStudents.stream()
+                .map(snapshot -> snapshot.getStudent().getId())
+                .collect(Collectors.toSet());
+        if (!snapshotIds.equals(rowByStudent.keySet())) {
+            throw new ApplicationException(ApplicationErrorCode.CONFLICT);
+        }
+        return rowByStudent;
+    }
+
+    private static void validateVersion(
+            Optional<EvaluationEntity> existing,
+            Long expectedVersion) {
+        if (existing.isPresent()) {
+            if (expectedVersion == null
+                    || existing.get().getVersion() != expectedVersion) {
+                throw new OptimisticLockingFailureException(
+                        "Evaluation version is stale");
+            }
+        } else if (expectedVersion != null) {
+            throw new OptimisticLockingFailureException(
+                    "Evaluation no longer exists");
+        }
+    }
+
+    private ActorIdentity currentLecturer() {
+        ActorIdentity actor = authorization.requireRole(RoleCode.LECTURER);
+        if (actor.accountId() == null) {
+            throw new AccessDeniedException("Lecturer account is missing");
+        }
+        return actor;
+    }
+
+    private static boolean isSupervisor(RegistrationEntity registration, long actorId) {
+        return registration.getTopic().getSupervisors().stream()
+                .map(TopicSupervisorEntity::getLecturer)
+                .map(UserAccountEntity::getId)
+                .anyMatch(id -> Objects.equals(id, actorId));
+    }
+
+    private static boolean sameFaculty(
+            ActorIdentity actor,
+            CouncilTopicEntity assignment) {
+        return Objects.equals(actor.facultyId(),
+                assignment.getCouncil().getPeriod().getFaculty().getId());
+    }
+
+    private static boolean samePeriod(CouncilTopicEntity assignment) {
+        Long periodId = assignment.getCouncil().getPeriod().getId();
+        return Objects.equals(assignment.getRegistration().getPeriod().getId(), periodId)
+                && Objects.equals(
+                        assignment.getRegistration().getTopic().getPeriod().getId(),
+                        periodId);
+    }
+
+    private ScoringAssignmentView toAssignmentView(
+            CouncilTopicEntity assignment,
+            long actorId) {
+        long councilId = assignment.getCouncil().getId();
+        long registrationId = assignment.getRegistration().getId();
+        var studentIds = registrationMembers.findAllByRegistrationId(registrationId)
+                .stream().map(member -> member.getStudent().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        List<EvaluationEntity> rows = evaluations
+                .findAllByCouncilIdAndRegistrationIdAndEvaluatorIdOrderByStudentId(
+                        councilId, registrationId, actorId).stream()
+                .filter(row -> studentIds.contains(row.getStudent().getId()))
+                .toList();
+        List<EvaluationEntity> submitted = rows.stream()
+                .filter(row -> row.getStatus() == EvaluationStatus.SUBMITTED)
+                .toList();
+        int submittedCount = (int) submitted.stream()
+                .map(row -> row.getStudent().getId()).distinct().count();
+        String progressStatus = !studentIds.isEmpty() && submittedCount == studentIds.size()
+                ? "SUBMITTED" : rows.isEmpty() ? "NOT_STARTED" : "DRAFT";
+        Instant fullySubmittedAt = "SUBMITTED".equals(progressStatus)
+                ? submitted.stream().map(EvaluationEntity::getSubmittedAt)
+                        .filter(Objects::nonNull).max(Instant::compareTo).orElse(null)
+                : null;
+        return new ScoringAssignmentView(
+                councilId,
+                assignment.getCouncil().getName(),
+                registrationId,
+                assignment.getRegistration().getGroup().getId(),
+                assignment.getRegistration().getTopic().getTitle(),
+                assignment.getScheduledAt(),
+                assignment.getLocation(),
+                Objects.equals(assignment.getCouncil().getChair().getId(), actorId),
+                assignment.getCouncil().getVersion(),
+                assignment.getCouncil().getMode() == CouncilMode.DIRECT,
+                progressStatus, submittedCount, studentIds.size(), fullySubmittedAt);
+    }
+
+    private static EvaluationView toView(EvaluationEntity evaluation) {
+        return new EvaluationView(
+                evaluation.getId(),
+                ScoreFormat.normalize(evaluation.getScore()),
+                evaluation.getFeedback(),
+                evaluation.getStatus(),
+                evaluation.getEvaluatedAt(),
+                evaluation.getSubmittedAt(),
+                evaluation.getVersion());
+    }
+
+    private static StudentScoreView toStudentView(
+            RegistrationMemberEntity snapshot,
+            EvaluationEntity evaluation) {
+        return new StudentScoreView(
+                snapshot.getStudent().getId(),
+                displayName(snapshot.getStudent()),
+                snapshot.getSlot(),
+                snapshot.isLeaderAtSubmission(),
+                evaluation == null ? null : toView(evaluation));
+    }
+
+    private static String displayName(UserAccountEntity account) {
+        return account.getFullName() == null || account.getFullName().isBlank()
+                ? account.getUsername()
+                : account.getFullName();
+    }
+
+    private static void applyRules(ScoreContext context) {
+        try {
+            ScoreRules.validate(context);
+        } catch (ScoreRuleException exception) {
+            throw switch (exception.failure()) {
+                case ACCESS_DENIED -> new AccessDeniedException("Access denied");
+                case INVALID_STATE -> new ApplicationException(
+                        ApplicationErrorCode.INVALID_COUNCIL_STATE);
+                case INVALID_SCORE -> new ApplicationException(
+                        ApplicationErrorCode.INVALID_SCORE);
+            };
+        }
+    }
+
+    public record GroupScoreCommand(
+            Long expectedCouncilVersion,
+            List<ScoreRowCommand> rows) {
+        public GroupScoreCommand {
+            rows = rows == null ? null : List.copyOf(rows);
+        }
+    }
+
+    public record ScoreRowCommand(
+            Long studentId,
+            BigDecimal score,
+            String feedback,
+            Long expectedVersion) {
+    }
+
+    public record ScoringAssignmentView(
+            Long councilId,
+            String councilName,
+            Long registrationId,
+            Long groupId,
+            String topicTitle,
+            Instant scheduledAt,
+            String location,
+            boolean currentChair,
+            long councilVersion,
+            boolean directGrading,
+            String progressStatus,
+            int submittedCount,
+            int totalCount,
+            Instant fullySubmittedAt) {
+        public ScoringAssignmentView(
+                Long councilId, String councilName, Long registrationId, Long groupId,
+                String topicTitle, Instant scheduledAt, String location,
+                boolean currentChair, long councilVersion, boolean directGrading) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, currentChair, councilVersion, directGrading,
+                    "NOT_STARTED", 0, 0, null);
+        }
+        public ScoringAssignmentView(
+                Long councilId,
+                String councilName,
+                Long registrationId,
+                Long groupId,
+                String topicTitle,
+                Instant scheduledAt,
+                String location,
+                boolean currentChair,
+                long councilVersion) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, currentChair, councilVersion, false);
+        }
+
+        public ScoringAssignmentView(
+                Long councilId,
+                String councilName,
+                Long registrationId,
+                Long groupId,
+                String topicTitle,
+                Instant scheduledAt,
+                String location) {
+            this(councilId, councilName, registrationId, groupId, topicTitle,
+                    scheduledAt, location, false, 0L, false);
+        }
+    }
+
+    public record EvaluationView(
+            Long id,
+            BigDecimal score,
+            String feedback,
+            EvaluationStatus status,
+            Instant evaluatedAt,
+            Instant submittedAt,
+            long version) {
+    }
+
+    public record ScoreWorkspace(
+            ScoringAssignmentView assignment,
+            List<StudentScoreView> students) {
+        public ScoreWorkspace {
+            students = List.copyOf(students);
+        }
+    }
+
+    public record StudentScoreView(
+            long studentId,
+            String studentName,
+            int slot,
+            boolean leaderAtSubmission,
+            EvaluationView evaluation) {
+    }
+
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page(${announcement.title}, ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">THÔNG BÁO CHÍNH THỨC</div>
+      <h1 class="page-title" th:text="${announcement.title}">Thông báo học vụ</h1>
+      <p class="text-secondary mt-2 mb-0" th:text="${announcement.sourceName}">Nhà trường</p>
+    </div>
+    <div class="btn-list" th:unless="${announcement.published}">
+      <a class="btn btn-outline-primary" th:href="@{/announcements/{id}/edit(id=${announcement.id})}">Sửa bản nháp</a>
+      <form method="post" th:action="@{/announcements/{id}/publish(id=${announcement.id})}" data-prevent-double-submit>
+        <input type="hidden" name="version" th:value="${announcement.version}">
+        <button class="btn btn-primary" type="submit">Công bố</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="alert alert-success" role="status" th:if="${announcementResult}" th:text="${announcementResult}">
+    Đã công bố thông báo.
+  </div>
+
+  <article class="card content-form">
+    <div class="card-header d-flex align-items-center justify-content-between gap-3">
+      <span class="badge bg-green-lt" th:if="${announcement.published}">Đã công bố</span>
+      <span class="badge bg-yellow-lt" th:unless="${announcement.published}">Bản nháp</span>
+      <time class="text-secondary small" th:datetime="${announcement.updatedAt}" th:text="${announcement.updatedAt}">2026-09-24</time>
+    </div>
+    <div class="card-body topic-content">
+      <p class="topic-text mb-0" th:text="${announcement.body}">Nội dung thông báo.</p>
+    </div>
+  </article>
+
+  <div class="mt-3">
+    <a class="btn btn-ghost-secondary" th:href="@{/notifications}">Quay lại hộp thông báo</a>
+  </div>
+</section>
+</body>
+</html>

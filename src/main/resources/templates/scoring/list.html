@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Chấm điểm', ~{::section})}">
+<body>
+<section>
+  <div class="page-header">
+    <div>
+      <div class="page-pretitle">GIẢNG VIÊN</div>
+      <h1 class="page-title">Chấm điểm</h1>
+      <p class="text-secondary mt-2 mb-0">Các đề tài thuộc hội đồng hoặc lượt chấm độc lập đang hoạt động mà bạn được phân công.</p>
+    </div>
+  </div>
+
+  <div class="row row-cards" th:if="${!assignments.isEmpty()}">
+    <div class="col-md-6 col-xl-4" th:each="assignment : ${assignments}">
+      <article class="card h-100">
+        <div class="card-body">
+          <span class="badge bg-yellow-lt mb-3" th:text="${assignment.councilName}">Hội đồng KLTN</span>
+          <h2 class="card-title" th:text="${assignment.topicTitle}">Đề tài</h2>
+          <dl class="detail-list mt-3 mb-0">
+            <dt>Nhóm</dt><dd th:text="${'N' + #numbers.formatInteger(assignment.groupId, 3)}">N001</dd>
+            <dt>Lịch</dt><dd th:text="${assignment.scheduledAt}">20/09/2026 09:00</dd>
+            <dt>Địa điểm</dt><dd th:text="${assignment.location}">Phòng A1-01</dd>
+            <dt>Tiến độ của bạn</dt>
+            <dd><span th:text="${assignment.progressStatus == 'SUBMITTED' ? 'Đã nộp đủ' : (assignment.progressStatus == 'DRAFT' ? 'Đang chấm' : 'Chưa bắt đầu')}">Chưa bắt đầu</span>
+              <span class="text-secondary" th:text="${' · ' + assignment.submittedCount + '/' + assignment.totalCount + ' SV'}"> · 0/3 SV</span></dd>
+            <dt th:if="${assignment.fullySubmittedAt != null}">Nộp đủ lúc</dt>
+            <dd th:if="${assignment.fullySubmittedAt != null}" th:text="${assignment.fullySubmittedAt}">20/09/2026 09:00</dd>
+          </dl>
+        </div>
+        <div class="card-footer d-flex flex-wrap justify-content-end gap-2">
+          <a class="btn btn-outline-primary" th:if="${assignment.currentChair and !assignment.directGrading}"
+             th:href="@{/faculty/boards/{id}(id=${assignment.councilId})}">Mở hội đồng</a>
+          <a class="btn btn-primary" th:href="@{/lecturer/scoring/{councilId}/{registrationId}(councilId=${assignment.councilId},registrationId=${assignment.registrationId})}">Mở phiếu chấm</a>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="card" th:if="${assignments.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Chưa có lượt chấm', 'Bạn không có đề tài đang hoạt động được phân công chấm.')}"></div>
+</section>
+</body>
+</html>

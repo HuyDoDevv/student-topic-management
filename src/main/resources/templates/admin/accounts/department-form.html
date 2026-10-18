@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{layouts/main :: page('Gán Bộ môn', ~{::section})}">
+<body>
+  <section>
+    <div class="page-header page-header-actions">
+      <div>
+        <div class="page-pretitle">QUẢN LÝ TÀI KHOẢN</div>
+        <h1 class="page-title">Gán Bộ môn</h1>
+        <p class="text-secondary mt-2 mb-0">Chỉ gán lần đầu; không chuyển tài khoản đã thuộc Bộ môn khác.</p>
+      </div>
+      <a class="btn btn-outline-secondary" th:href="${cancelPath}">← Về danh sách</a>
+    </div>
+    <form class="card account-form-shell" method="post"
+      th:action="@{/admin/accounts/{id}/department(id=${target.id})}"
+      th:object="${staffDepartmentForm}" data-prevent-double-submit>
+      <div class="card-header"><h2 class="card-title" th:text="${target.fullName}">Giảng viên</h2></div>
+      <div class="card-body">
+        <p><strong>Tài khoản:</strong> <span th:text="${target.username}">username</span></p>
+        <p><strong>Khoa:</strong> <span th:text="${target.facultyName}">Khoa</span></p>
+        <div class="alert alert-danger" role="alert" th:if="${#fields.hasAnyErrors()}">
+          Vui lòng kiểm tra Bộ môn được chọn.
+        </div>
+        <label class="form-label" for="departmentId">Bộ môn <span class="text-danger">*</span></label>
+        <select class="form-select" id="departmentId" th:field="*{departmentId}"
+          th:errorclass="is-invalid" th:disabled="${target.departmentId != null}" required>
+          <option value="">Chọn Bộ môn</option>
+          <option th:each="department : ${departmentOptions}" th:value="${department.id}"
+            th:text="${department.name}">Bộ môn</option>
+        </select>
+        <div class="invalid-feedback" th:errors="*{departmentId}">Bộ môn chưa hợp lệ.</div>
+      </div>
+      <div class="card-footer text-end">
+        <a class="btn btn-ghost-secondary" th:href="${cancelPath}">Hủy</a>
+        <button class="btn btn-primary" type="submit" th:if="${target.departmentId == null}">Lưu Bộ môn</button>
+      </div>
+    </form>
+  </section>
+</body>
+</html>

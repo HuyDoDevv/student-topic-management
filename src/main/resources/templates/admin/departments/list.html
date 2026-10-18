@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Quản lý bộ môn', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">QUẢN TRỊ HỆ THỐNG</div>
+      <h1 class="page-title">Quản lý bộ môn</h1>
+      <p class="text-secondary mt-2 mb-0">
+        Duy trì danh mục Bộ môn theo từng Khoa trong hệ thống.
+      </p>
+    </div>
+    <a class="btn btn-primary" th:href="@{/admin/departments/new}">+ Thêm Bộ môn</a>
+  </div>
+
+  <div class="alert alert-success" role="status" th:if="${successMessage != null}"
+       th:text="${successMessage}">Đã lưu.</div>
+
+  <form class="card mb-4" method="get" th:action="@{/admin/departments}">
+    <div class="card-header"><h2 class="card-title">Tìm Bộ môn</h2></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label" for="query">Tên Bộ môn</label>
+          <input class="form-control" id="query" name="query" type="search"
+                 th:value="${workspace.filter.query}" placeholder="Nhập tên Bộ môn">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="facultyId">Khoa</label>
+          <select class="form-select" id="facultyId" name="facultyId">
+            <option value="">Tất cả Khoa</option>
+            <option th:each="faculty : ${workspace.faculties}"
+                    th:value="${faculty.id}"
+                    th:selected="${workspace.filter.facultyId == faculty.id}"
+                    th:text="${faculty.name}">Khoa Công nghệ Thông tin</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer text-end">
+      <a class="btn btn-outline-secondary" th:href="@{/admin/departments}">Xóa bộ lọc</a>
+      <button class="btn btn-primary" type="submit">Áp dụng</button>
+    </div>
+  </form>
+
+  <div class="card data-card" th:if="${!workspace.departments.isEmpty()}">
+    <div class="card-header">
+      <h2 class="card-title">Danh sách Bộ môn</h2>
+      <span class="badge bg-blue-lt ms-auto"
+            th:text="${#lists.size(workspace.departments)} + ' kết quả'">0 kết quả</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead><tr><th>Bộ môn</th><th>Khoa</th><th>Thao tác</th></tr></thead>
+        <tbody>
+        <tr th:each="department : ${workspace.departments}">
+          <td data-label="Bộ môn"><strong th:text="${department.name}">Hệ thống thông tin</strong></td>
+          <td data-label="Khoa" th:text="${department.facultyName}">Khoa Công nghệ Thông tin</td>
+          <td data-label="Thao tác">
+            <a class="btn btn-sm btn-outline-primary"
+               th:href="@{/admin/departments/{id}/edit(id=${department.id})}">Sửa</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:if="${workspace.departments.isEmpty()}"
+       th:insert="~{fragments/feedback :: empty('Không có Bộ môn phù hợp', 'Thử thay đổi bộ lọc hoặc tạo Bộ môn mới.')}" ></div>
+</section>
+</body>
+</html>

@@ -3,14 +3,133 @@
 <body>
 <section>
   <div class="page-header page-header-actions">
-    <div><div class="page-pretitle">ĐỢT ĐĂNG KÝ</div><h1 class="page-title" th:text="${period.name}">Đồ án chuyên ngành</h1><p class="text-secondary mt-2 mb-0" th:text="${period.type}">Đồ án chuyên ngành</p></div>
-    <div class="btn-list"><a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa lịch</a><a class="btn btn-primary" th:href="@{/periods/{id}/topics(id=${period.id})}">Xem đề tài</a></div>
+    <div>
+      <div class="page-pretitle">ĐỢT ĐĂNG KÝ</div>
+      <h1 class="page-title" th:text="${period.name}">Đợt HK1</h1>
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+        <span class="text-secondary" th:text="${period.type}">Đồ án môn học</span>
+        <span aria-hidden="true" class="text-secondary">·</span>
+        <span class="text-secondary" th:text="${period.departmentName}">Công nghệ phần mềm</span>
+        <span aria-hidden="true" class="text-secondary">·</span>
+        <span class="badge" th:classappend="${period.statusClass}" th:text="${period.status}">Chưa mở</span>
+      </div>
+    </div>
+    <div class="btn-list">
+      <a class="btn btn-warning" href="#student-registration-requests"
+         th:if="${pendingRegistrationCount > 0}"
+         th:text="|${pendingRegistrationCount} đăng ký chờ xét|">1 đăng ký chờ xét</a>
+      <a class="btn btn-outline-primary"
+         th:href="@{/periods/{id}/topics/review(id=${period.id})}">
+        Duyệt đề xuất giảng viên
+        <span class="badge bg-yellow-lt ms-1" th:if="${reviewSummary.pendingCount > 0}"
+              th:text="${reviewSummary.pendingCount}">1</span>
+      </a>
+      <a class="btn btn-outline-primary" th:href="@{/periods/{id}/edit(id=${period.id})}">Sửa cấu hình</a>
+      <a class="btn btn-primary" th:if="${canAuthorTopics}"
+         th:href="@{/periods/{id}/topics(id=${period.id})}">Đề tài của tôi</a>
+    </div>
   </div>
+
   <div class="row row-cards mb-4">
-    <div class="col-md-6"><div class="card h-100"><div class="card-body"><div class="subheader">GIẢNG VIÊN ĐỀ XUẤT</div><div class="h3 mt-2" th:text="${period.lecturerWindow}">01/09 – 15/09</div><p class="text-secondary mb-0">Chỉ đề tài nháp hợp lệ mới được gửi duyệt trong khoảng này.</p></div></div></div>
-    <div class="col-md-6"><div class="card h-100"><div class="card-body"><div class="subheader">SINH VIÊN ĐĂNG KÝ</div><div class="h3 mt-2" th:text="${period.studentWindow}">20/09 – 30/09</div><p class="text-secondary mb-0">Nhóm hợp lệ chọn đề tài đã công bố và gửi một đăng ký đang hoạt động.</p></div></div></div>
+    <div class="col-md-6">
+      <article class="card h-100"><div class="card-body">
+        <div class="subheader">GIẢNG VIÊN ĐỀ XUẤT</div>
+        <dl class="period-window mt-3 mb-0">
+          <div><dt>Bắt đầu</dt><dd th:text="${period.lecturerStart}">10/09/2026</dd></div>
+          <div><dt>Kết thúc</dt><dd th:text="${period.lecturerEnd}">15/09/2026</dd></div>
+        </dl>
+      </div></article>
+    </div>
+    <div class="col-md-6">
+      <article class="card h-100"><div class="card-body">
+        <div class="subheader">SINH VIÊN ĐĂNG KÝ</div>
+        <dl class="period-window mt-3 mb-0">
+          <div><dt>Bắt đầu</dt><dd th:text="${period.studentStart}">16/09/2026</dd></div>
+          <div><dt>Kết thúc</dt><dd th:text="${period.studentEnd}">30/09/2026</dd></div>
+        </dl>
+      </div></article>
+    </div>
   </div>
-  <div class="card"><div class="card-header"><h2 class="card-title">Đề tài gần đây</h2><span class="badge bg-blue-lt ms-auto" th:text="${#lists.size(topics)} + ' đề tài'">3 đề tài</span></div><div class="list-group list-group-flush"><a class="list-group-item list-group-item-action" th:each="topic : ${topics}" th:href="@{/topics/{id}(id=${topic.id})}"><div class="d-flex justify-content-between gap-3"><div><strong th:text="${topic.title}">Tên đề tài</strong><div class="text-secondary mt-1" th:text="${topic.author}">Giảng viên</div></div><span class="badge bg-secondary-lt align-self-start" th:text="${topic.status}">DRAFT</span></div></a></div></div>
+
+  <div class="card">
+    <div class="card-header"><h2 class="card-title">Các mốc theo loại đề tài</h2></div>
+    <div class="card-body">
+      <dl class="detail-list mb-0">
+        <dt>Hạn nộp điểm GVPB</dt><dd th:text="${period.reviewerScoreDeadline ?: 'Không áp dụng'}">Không áp dụng</dd>
+        <dt>Ngày báo cáo hội đồng</dt><dd th:text="${period.councilReportDate ?: 'Không áp dụng'}">Không áp dụng</dd>
+      </dl>
+    </div>
+  </div>
+
+  <section class="card mt-4 registration-request-card" id="student-registration-requests"
+           aria-labelledby="registration-requests-title">
+    <div class="card-header review-card-header">
+      <div>
+        <div class="subheader mb-1">ƯU TIÊN · ĐĂNG KÝ CỦA NHÓM SINH VIÊN</div>
+        <h2 class="card-title mb-1" id="registration-requests-title">Xét nhóm đăng ký đề tài</h2>
+        <p class="text-secondary small mb-0">Đây là yêu cầu của nhóm vào đề tài đã công bố, tách biệt với bước duyệt đề xuất của giảng viên.</p>
+      </div>
+      <span class="badge bg-yellow-lt"
+            th:text="${pendingRegistrationCount} + ' chờ xét'">0 chờ xét</span>
+    </div>
+
+    <div class="table-responsive" th:if="${!#lists.isEmpty(registrationRequests)}">
+      <table class="table table-vcenter card-table responsive-table">
+        <thead>
+        <tr><th>Nhóm</th><th>Đề tài</th><th>Gửi lúc</th><th>Trạng thái</th><th><span class="visually-hidden">Thao tác</span></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="request : ${registrationRequests}">
+          <td data-label="Nhóm">
+            <strong class="d-block" th:text="${request.groupCode}">N001</strong>
+            <span class="small text-secondary"
+                  th:text="|${request.leaderName} · ${request.memberCount} thành viên|">Trưởng nhóm · 3 thành viên</span>
+          </td>
+          <td data-label="Đề tài">
+            <strong class="d-block" th:text="${request.topicTitle}">Tên đề tài</strong>
+            <span class="small text-danger" th:if="${request.rejectionReason != null}"
+                  th:text="${request.rejectionReason}">Lý do từ chối</span>
+          </td>
+          <td data-label="Gửi lúc" th:text="${request.submittedAt}">11/09/2026 10:30</td>
+          <td data-label="Trạng thái">
+            <span class="badge" th:classappend="${request.statusClass}"
+                  th:text="${request.status}">Chờ xét</span>
+          </td>
+          <td data-label="Thao tác" class="text-end">
+            <a class="btn btn-sm" th:classappend="${request.pending} ? 'btn-primary' : 'btn-outline-secondary'"
+               th:href="${request.pending} ? @{/registrations/{id}/decision(id=${request.id})} : @{/registrations/{id}(id=${request.id})}"
+               th:text="${request.pending ? 'Xét đăng ký' : (request.status == 'Đã rút' ? 'Xem lịch sử' : 'Xem kết quả')}">Xét đăng ký</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-body py-5 text-center" th:if="${#lists.isEmpty(registrationRequests)}">
+      <div class="empty-icon" aria-hidden="true">◇</div>
+      <h3 class="h3 mb-2">Chưa có nhóm gửi đăng ký</h3>
+      <p class="text-secondary mb-0">Các yêu cầu sẽ xuất hiện tại đây sau khi Trưởng nhóm chọn đề tài.</p>
+    </div>
+  </section>
+
+  <section class="card mt-4" aria-labelledby="proposal-review-link-title">
+    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+      <div>
+        <div class="subheader mb-1">MÀN HÌNH RIÊNG · ĐỀ XUẤT CỦA GIẢNG VIÊN</div>
+        <h2 class="card-title mb-1" id="proposal-review-link-title">Duyệt nội dung đề tài trước khi công bố</h2>
+        <p class="text-secondary small mb-2">
+          Đây là quy trình duyệt đề xuất của giảng viên, không phải yêu cầu đăng ký đề tài của nhóm sinh viên.
+        </p>
+        <div class="d-flex flex-wrap gap-2" aria-label="Thống kê đề xuất giảng viên">
+          <span class="badge bg-yellow-lt" th:text="|${reviewSummary.pendingCount} chờ duyệt|">0 chờ duyệt</span>
+          <span class="badge bg-azure-lt" th:text="|${reviewSummary.approvedCount} đã duyệt|">0 đã duyệt</span>
+          <span class="badge bg-green-lt" th:text="|${reviewSummary.publishedCount} đã công bố|">0 đã công bố</span>
+        </div>
+      </div>
+      <a class="btn btn-outline-primary flex-shrink-0"
+         th:href="@{/periods/{id}/topics/review(id=${period.id})}">Mở danh sách đề xuất</a>
+    </div>
+  </section>
 </section>
 </body>
 </html>

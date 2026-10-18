@@ -84,7 +84,7 @@ kiểm tra network browser không có request bắt buộc ra CDN. Bước này 
 
 - **Decision:** Spring Security form login/session; hash mật khẩu bằng PasswordEncoder,
   giữ CSRF cho form mutation; kiểm tra policy tại service trên dữ liệu tin cậy.
-  Không nhận roles/department từ form để cấp quyền.
+  Không nhận roles/faculty từ form để cấp quyền; tài khoản học vụ được gán khoa CNTT mặc định ở backend.
 - **Rationale:** phù hợp ứng dụng HTML cùng origin; không cần token API tự thiết kế.
   Test thuần nghiệp vụ, MockMvc, DB MySQL riêng và browser Chromium.
 - **Alternatives considered:** JWT/SSO không cần cho tài khoản nội bộ cấp sẵn đã chốt;
@@ -96,13 +96,16 @@ kiểm tra network browser không có request bắt buộc ra CDN. Bước này 
   Không log mật khẩu/session/CSRF token; thông báo login sai không phân biệt tài khoản tồn tại.
   Các thiết lập này là thiết kế bảo mật theo constitution, không đóng Q-20.
 
-## R-07 — Điểm không thể giải quyết bằng nghiên cứu
+## R-07 — Các quyết định cần xác nhận khách hàng
 
-Q-02,05,06,07,09,18 và xác nhận AC cần quyết định khách hàng, không thể lấy “best practice”
-làm đáp án. Q-20 cần mục tiêu chất lượng nếu dùng để nghiệm thu định lượng.
-Không bổ sung API quản trị tài khoản/catalog, đổi GVHD sau công bố, tự rời nhóm hay
-chính sách xem toàn khoa/toàn trường. Policy còn thiếu được đánh dấu BLOCKED;
-không coi fixture thử nghiệm một khoa là xác nhận phạm vi thật.
+Q-09 đã được khách hàng chốt ngày 2026-09-11: reason thủ công bắt buộc; giao dịch lấy khóa
+period trước thắng khi rút/chấp nhận đồng thời; đăng ký lại tạo hàng mới và giữ lịch sử
+không thời hạn. Q-07 đã được khách hàng chốt lại ngày 2026-09-11 thành luồng lời mời có xác nhận,
+giữ chỗ và tự rời/giải tán; thiết kế tương ứng nằm trong data-model. Q-05/Q-06 đã chốt mô hình topic theo đợt, nguồn danh mục
+seed/import và khóa GVHD từ PENDING_APPROVAL; không cần nghiên cứu phương án catalog/reuse
+hoặc thay GVHD trong quá trình thực hiện cho phiên bản đầu. T080 chỉ bổ sung cấp tài khoản
+mới theo ba loại cố định; không bổ sung API sửa/xóa/chuyển cơ cấu tài khoản, quản trị catalog
+hoặc chức năng chuyển giảng viên trong phiên bản đầu.
 
 Đã có rà soát nghiên cứu độc lập về constraints/khóa; kết luận được tích hợp vào data-model.
 Không có extension hooks before_plan/after_plan trong workspace.
