@@ -145,7 +145,6 @@ class ReviewWorkflowConcurrencyIT {
         var studentScore = scoring.workspace(
                 fixture.activeCouncilId(), fixture.activeRegistrationOneId());
         var firstStudent = studentScore.students().getFirst();
-        long evaluationVersion = firstStudent.evaluation().version();
         SecurityContextHolder.clearContext();
 
         List<Outcome> outcomes = race(

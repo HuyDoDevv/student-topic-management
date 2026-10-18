@@ -109,8 +109,8 @@ public class RegistrationService {
                 groupId, GroupInvitationStatus.PENDING);
         boolean activeRegistration = registrations.existsByPeriodIdAndGroupIdAndStatusIn(
                 periodId, groupId, ACTIVE_STATUSES);
-        boolean topicAccepted = registrations.existsByPeriodIdAndTopicIdAndStatus(
-                periodId, topicId, RegistrationStatus.ACCEPTED);
+        boolean topicFull = registrations.countByTopicIdAndStatus(
+                topicId, RegistrationStatus.ACCEPTED) >= topic.getMaxGroupCount();
         Instant now = clock.instant();
 
         applyRules(() -> {
@@ -124,7 +124,7 @@ public class RegistrationService {
                     activeRegistration,
                     Objects.equals(topic.getPeriod().getId(), periodId),
                     "PUBLISHED".equals(topic.getStatus()),
-                    topicAccepted,
+                    topicFull,
                     now,
                     period.getStudentStart(),
                     period.getStudentEnd()));
@@ -190,9 +190,10 @@ public class RegistrationService {
         List<TopicOption> availableTopics = topics.findAllVisibleByPeriodIdAndStatusIn(
                         period.getId(), List.of("PUBLISHED"))
                 .stream()
-                .filter(topic -> !registrations.existsByPeriodIdAndTopicIdAndStatus(
-                        period.getId(), topic.getId(), RegistrationStatus.ACCEPTED))
-                .map(RegistrationService::toTopicOption)
+                .map(topic -> toTopicOption(topic,
+                        registrations.countByTopicIdAndStatus(
+                                topic.getId(), RegistrationStatus.ACCEPTED)))
+                .filter(topic -> topic.remainingGroupCount() > 0)
                 .toList();
 
         return new SubmissionWorkspace(
@@ -464,7 +465,7 @@ public class RegistrationService {
                 registration.getVersion());
     }
 
-    private static TopicOption toTopicOption(TopicEntity topic) {
+    private static TopicOption toTopicOption(TopicEntity topic, long acceptedGroupCount) {
         return new TopicOption(
                 topic.getId(),
                 topic.getTitle(),
@@ -472,7 +473,9 @@ public class RegistrationService {
                 topic.getSupervisors().stream()
                         .map(TopicSupervisorEntity::getLecturer)
                         .map(RegistrationService::displayName)
-                        .toList());
+                        .toList(),
+                topic.getMaxGroupCount(),
+                acceptedGroupCount);
     }
 
     private static String displayName(UserAccountEntity account) {
@@ -547,9 +550,15 @@ public class RegistrationService {
             long id,
             String title,
             String faculty,
-            List<String> supervisors) {
+            List<String> supervisors,
+            int maxGroupCount,
+            long acceptedGroupCount) {
         public TopicOption {
             supervisors = List.copyOf(supervisors);
+        }
+
+        public long remainingGroupCount() {
+            return Math.max(0, maxGroupCount - acceptedGroupCount);
         }
     }
 

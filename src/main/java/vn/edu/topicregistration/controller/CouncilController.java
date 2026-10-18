@@ -307,7 +307,9 @@ public class CouncilController {
                 assignment.groupId(),
                 assignment.topicTitle(),
                 format(assignment.scheduledAt()),
-                assignment.location());
+                assignment.location(),
+                assignment.reviewerName(),
+                assignment.reviewerStatus());
     }
 
     private static CouncilPageView display(CouncilSummaryView council) {
@@ -389,7 +391,9 @@ public class CouncilController {
             Long groupId,
             String topicTitle,
             String scheduledAt,
-            String location) {
+            String location,
+            String reviewerName,
+            String reviewerStatus) {
     }
 
     public record NextAction(String route, String label) {

@@ -3,6 +3,7 @@ package vn.edu.topicregistration.integration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -160,11 +161,32 @@ class ResultListQueryIT {
 
         mvc.perform(get("/faculty/results").param("sort", "id desc")
                         .with(user("dean.demo").roles("DEAN")))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
 
         mvc.perform(get("/faculty/results")
                         .with(user("student1.demo").roles("STUDENT")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void blankOptionalSelectValuesAllowHttpSearchByGroupCode() throws Exception {
+        long groupId = id("SELECT group_id FROM registrations WHERE id = ?",
+                fixture.activeRegistrationOneId());
+
+        mvc.perform(get("/faculty/results")
+                        .param("period", Long.toString(activePeriodId))
+                        .param("topicType", "")
+                        .param("topicOrGroup", "N" + groupId)
+                        .param("grader", "")
+                        .param("status", "")
+                        .param("sort", "recent")
+                        .param("size", "10")
+                        .with(user("dean.demo").roles("DEAN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        ReviewFixtureSupport.ACTIVE_TOPIC_ONE)))
+                .andExpect(content().string(not(containsString(
+                        ReviewFixtureSupport.ACTIVE_TOPIC_TWO))));
     }
 
     private org.springframework.data.domain.Page<Long> page(

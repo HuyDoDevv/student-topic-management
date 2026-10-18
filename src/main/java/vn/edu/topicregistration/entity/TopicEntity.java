@@ -57,6 +57,9 @@ public class TopicEntity {
     @Column(nullable = false, length = 32)
     private String status;
 
+    @Column(name = "max_group_count", nullable = false)
+    private int maxGroupCount;
+
     @Column(name = "hidden_at", columnDefinition = "TIMESTAMP(6)")
     private Instant hiddenAt;
 
@@ -92,6 +95,7 @@ public class TopicEntity {
         this.author = author;
         this.department = department;
         this.status = "DRAFT";
+        this.maxGroupCount = 1;
     }
 
     public void updateDraft(
@@ -122,6 +126,13 @@ public class TopicEntity {
 
     public void changeStatus(String status) {
         this.status = status;
+    }
+
+    public void configureMaxGroupCount(int maxGroupCount) {
+        if (maxGroupCount < 1 || maxGroupCount > 5) {
+            throw new IllegalArgumentException("Topic group capacity must be between 1 and 5");
+        }
+        this.maxGroupCount = maxGroupCount;
     }
 
     public void hide(UserAccountEntity moderator, String reason, Instant hiddenAt) {
@@ -168,6 +179,10 @@ public class TopicEntity {
 
     public String getStatus() {
         return status;
+    }
+
+    public int getMaxGroupCount() {
+        return maxGroupCount;
     }
 
     public Instant getHiddenAt() {

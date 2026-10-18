@@ -96,7 +96,7 @@ MYSQL_PWD=$reset_password
 export MYSQL_PWD
 reset_password=''
 reset_mysql() {
-    mysql --protocol=TCP --host=127.0.0.1 --port=3307 \
+    mysql --skip-ssl --protocol=TCP --host=127.0.0.1 --port=3307 \
         --user="$reset_username" --database=topic_registration_local \
         --batch --skip-column-names "$@"
 }
@@ -172,7 +172,7 @@ reset_run_dir=$(mktemp -d "$reset_archive_root/clear-$(date +%Y%m%d-%H%M%S).XXXX
     reset_fail 'Không tạo được thư mục lưu trữ.'
 mkdir -m 700 "$reset_run_dir/pdfs" || reset_fail 'Không tạo được thư mục PDF lưu trữ.'
 printf 'Đang sao lưu vào %s\n' "$reset_run_dir"
-mysqldump --protocol=TCP --host=127.0.0.1 --port=3307 \
+mysqldump --skip-ssl --protocol=TCP --host=127.0.0.1 --port=3307 \
     --user="$reset_username" --single-transaction --quick \
     --routines --triggers --events --no-tablespaces \
     topic_registration_local > "$reset_run_dir/database-before.sql" ||
@@ -180,7 +180,7 @@ mysqldump --protocol=TCP --host=127.0.0.1 --port=3307 \
 [ -s "$reset_run_dir/database-before.sql" ] || reset_fail 'Bản sao DB rỗng; chưa xóa dữ liệu.'
 reset_mysql --execute="SELECT TRIGGER_NAME, ACTION_TIMING, EVENT_MANIPULATION, ACTION_STATEMENT FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE() AND EVENT_OBJECT_TABLE IN ('council_members', 'group_memberships', 'registration_members') ORDER BY TRIGGER_NAME" > "$reset_run_dir/triggers-before.tsv" ||
     reset_fail 'Không sao lưu được định nghĩa trigger; chưa xóa dữ liệu.'
-mysqldump --protocol=TCP --host=127.0.0.1 --port=3307 \
+mysqldump --skip-ssl --protocol=TCP --host=127.0.0.1 --port=3307 \
     --user="$reset_username" --no-data --no-create-info --triggers \
     --no-tablespaces topic_registration_local \
     council_members group_memberships registration_members > "$reset_run_dir/triggers-before.sql" ||

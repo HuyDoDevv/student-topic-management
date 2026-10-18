@@ -93,7 +93,7 @@ class CouncilServiceTest {
         order.verify(dependencies.members()).saveAll(any());
 
         ArgumentCaptor<Iterable<CouncilMemberEntity>> savedMembers =
-                ArgumentCaptor.forClass(Iterable.class);
+                ArgumentCaptor.captor();
         verify(dependencies.members()).saveAll(savedMembers.capture());
         List<CouncilMemberEntity> additional = ((List<CouncilMemberEntity>) savedMembers
                 .getValue());
@@ -141,6 +141,70 @@ class CouncilServiceTest {
 
         assertEquals(ApplicationErrorCode.INVALID_COUNCIL_MEMBERS, rejected.code());
         verify(dependencies.councils(), never()).saveAndFlush(any());
+    }
+
+    @Test
+    void creationOptionsExcludePeriodsAfterStudentWindowEnds() {
+        Dependencies dependencies = dependencies();
+        RegistrationPeriodEntity openPeriod = mockPeriod("KLTN");
+        RegistrationPeriodEntity closedPeriod = mockPeriod("KLTN");
+        when(closedPeriod.getId()).thenReturn(8L);
+        when(closedPeriod.getName()).thenReturn("Đợt KLTN đã kết thúc");
+        when(closedPeriod.getStudentEnd()).thenReturn(NOW.minusNanos(1));
+        when(dependencies.authorization().requireRole(RoleCode.DEAN)).thenReturn(
+                new ActorIdentity(3L, Set.of(RoleCode.DEAN), 2L));
+        when(dependencies.periods().findAllByFacultyIdOrderByLecturerStartDesc(2L))
+                .thenReturn(List.of(closedPeriod, openPeriod));
+
+        var options = dependencies.service().creationOptionsForCurrentDean();
+
+        assertEquals(List.of(7L), options.periods().stream()
+                .map(CouncilService.CouncilPeriodOption::id).toList());
+    }
+
+    @Test
+    void rejectsCreationWorkspaceAfterStudentWindowEnds() {
+        Dependencies dependencies = dependencies();
+        RegistrationPeriodEntity period = mockPeriod("KLTN");
+        when(period.getStudentEnd()).thenReturn(NOW.minusNanos(1));
+        when(dependencies.periods().findById(7L)).thenReturn(Optional.of(period));
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().creationWorkspace(7L));
+
+        assertEquals(ApplicationErrorCode.WINDOW_CLOSED, rejected.code());
+        verify(dependencies.accounts(), never())
+                .findEnabledByFacultyAndRole(2L, RoleCode.LECTURER);
+    }
+
+    @Test
+    void rejectsCouncilCreationAfterStudentWindowEndsBeforePersistenceOrNotification() {
+        Dependencies dependencies = dependencies();
+        validCreation(dependencies);
+        RegistrationPeriodEntity period = dependencies.periods()
+                .findByIdForUpdate(7L).orElseThrow();
+        when(period.getStudentEnd()).thenReturn(NOW.minusNanos(1));
+
+        ApplicationException rejected = assertThrows(ApplicationException.class,
+                () -> dependencies.service().create(new CreateCouncilCommand(
+                        7L, "Hội đồng", 11L, 12L, List.of(13L))));
+
+        assertEquals(ApplicationErrorCode.WINDOW_CLOSED, rejected.code());
+        verify(dependencies.councils(), never()).saveAndFlush(any());
+        verify(dependencies.notifications(), never()).emit(any());
+    }
+
+    @Test
+    void creationWorkspaceRemainsOpenAtExactStudentEndInstant() {
+        Dependencies dependencies = dependencies();
+        RegistrationPeriodEntity period = mockPeriod("KLTN");
+        when(dependencies.periods().findById(7L)).thenReturn(Optional.of(period));
+        when(dependencies.accounts().findEnabledByFacultyAndRole(2L, RoleCode.LECTURER))
+                .thenReturn(List.of());
+
+        var workspace = dependencies.service().creationWorkspace(7L);
+
+        assertEquals(7L, workspace.periodId());
     }
 
     @Test
@@ -468,7 +532,7 @@ class CouncilServiceTest {
     @Test
     void activeChairInFacultyWithCurrentMembershipCanViewOnlyAssignedCouncil() {
         Dependencies dependencies = dependencies();
-        CouncilEntity council = detailCouncil(dependencies, CouncilStatus.ACTIVE);
+        detailCouncil(dependencies, CouncilStatus.ACTIVE);
         when(dependencies.authorization().currentActor()).thenReturn(
                 new ActorIdentity(11L, Set.of(RoleCode.LECTURER), 2L));
         when(dependencies.members().existsByCouncilIdAndLecturerId(41L, 11L))
@@ -696,6 +760,7 @@ class CouncilServiceTest {
         when(period.getId()).thenReturn(7L);
         when(period.getName()).thenReturn("Đợt KLTN");
         when(period.getTopicType()).thenReturn(type);
+        when(period.getStudentEnd()).thenReturn(NOW);
         when(period.getFaculty()).thenReturn(faculty);
         return period;
     }
@@ -741,7 +806,8 @@ class CouncilServiceTest {
                 mock(ReviewerAssignmentRepository.class),
                 mock(EvaluationRepository.class),
                 mock(AuthorizationPolicy.class),
-                mock(EntityManager.class));
+                mock(EntityManager.class),
+                mock(NotificationService.class));
     }
 
     private record Dependencies(
@@ -756,7 +822,8 @@ class CouncilServiceTest {
             ReviewerAssignmentRepository reviewerAssignments,
             EvaluationRepository evaluations,
             AuthorizationPolicy authorization,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            NotificationService notifications) {
         CouncilService service() {
             return new CouncilService(
                     periods,
@@ -770,7 +837,7 @@ class CouncilServiceTest {
                     reviewerAssignments,
                     evaluations,
                     authorization,
-                    mock(NotificationService.class),
+                    notifications,
                     entityManager,
                     Clock.fixed(NOW, ZoneOffset.UTC));
         }

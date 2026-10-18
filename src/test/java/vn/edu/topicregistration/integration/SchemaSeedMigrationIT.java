@@ -39,13 +39,13 @@ class SchemaSeedMigrationIT {
     }
 
     @Test
-    void emptyDatabaseMigratesThroughV25WithEveryTableConstraintAndTrigger() {
+    void emptyDatabaseMigratesThroughV26WithEveryTableConstraintAndTrigger() {
         MySqlTestSupport database = MySqlTestSupport.fromEnvironment();
         database.resetAndMigrate();
         JdbcTemplate jdbc = new JdbcTemplate(database.dataSource());
 
         assertEquals(Set.of(
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"),
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26"),
                 Set.copyOf(jdbc.queryForList(
                         "SELECT version FROM flyway_schema_history WHERE success = 1",
                         String.class)));
@@ -55,9 +55,9 @@ class SchemaSeedMigrationIT {
                 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'
                   AND table_name <> 'flyway_schema_history'
                 """));
-        assertEquals(81, constraintCount(jdbc, "CHECK"));
+        assertEquals(82, constraintCount(jdbc, "CHECK"));
         assertEquals(65, constraintCount(jdbc, "FOREIGN KEY"));
-        assertEquals(33, constraintCount(jdbc, "UNIQUE"));
+        assertEquals(32, constraintCount(jdbc, "UNIQUE"));
         assertEquals(28, constraintCount(jdbc, "PRIMARY KEY"));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
@@ -76,10 +76,11 @@ class SchemaSeedMigrationIT {
 
         assertConstraint(jdbc, "chk_periods_windows", "CHECK");
         assertConstraint(jdbc, "chk_topics_submitted_content", "CHECK");
+        assertConstraint(jdbc, "chk_topics_max_group_count", "CHECK");
         assertConstraint(jdbc, "uq_memberships_period_student", "UNIQUE");
         assertConstraint(jdbc, "fk_memberships_group_period", "FOREIGN KEY");
         assertConstraint(jdbc, "uq_one_active_registration_per_group", "UNIQUE");
-        assertConstraint(jdbc, "uq_one_accepted_group_per_topic", "UNIQUE");
+        assertConstraintAbsent(jdbc, "uq_one_accepted_group_per_topic");
         assertConstraint(jdbc, "uq_group_invitations_pending_student", "UNIQUE");
         assertConstraint(jdbc, "uq_group_invitations_pending_slot", "UNIQUE");
         assertConstraint(jdbc, "fk_registration_members_registration", "FOREIGN KEY");
@@ -136,6 +137,12 @@ class SchemaSeedMigrationIT {
                 """));
         assertEquals(1, count(jdbc, """
                 SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'topics'
+                  AND column_name = 'max_group_count' AND is_nullable = 'NO'
+                  AND column_default = '1'
+                """));
+        assertEquals(1, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
                 WHERE table_schema = DATABASE() AND table_name = 'registration_periods'
                   AND column_name = 'department_id' AND is_nullable = 'NO'
                 """));
@@ -177,6 +184,8 @@ class SchemaSeedMigrationIT {
                 """));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM registration_periods"));
         assertEquals(6, count(jdbc, "SELECT COUNT(*) FROM topics"));
+        assertEquals(6, count(jdbc,
+                "SELECT COUNT(*) FROM topics WHERE max_group_count = 1"));
         assertEquals(0, count(jdbc,
                 "SELECT COUNT(*) FROM topics WHERE department_id IS NULL"));
         assertEquals(8, count(jdbc,
@@ -495,6 +504,13 @@ class SchemaSeedMigrationIT {
                 WHERE table_schema = DATABASE()
                   AND constraint_name = ? AND constraint_type = ?
                 """, Integer.class, name, type), name);
+    }
+
+    private static void assertConstraintAbsent(JdbcTemplate jdbc, String name) {
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM information_schema.table_constraints
+                WHERE table_schema = DATABASE() AND constraint_name = ?
+                """, Integer.class, name), name);
     }
 
     private record DemoFixture(

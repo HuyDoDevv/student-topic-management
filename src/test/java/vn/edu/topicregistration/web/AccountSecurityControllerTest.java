@@ -49,7 +49,7 @@ class AccountSecurityControllerTest {
                         .param("currentPassword", "current-password")
                         .param("newPassword", "short")
                         .param("confirmPassword", "different"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("account/change-password"))
                 .andExpect(model().attributeHasErrors("changePasswordForm"));
 
@@ -66,7 +66,7 @@ class AccountSecurityControllerTest {
                         .param("currentPassword", "wrong-password")
                         .param("newPassword", "new-password-123")
                         .param("confirmPassword", "new-password-123"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(model().attributeHasFieldErrors(
                         "changePasswordForm", "currentPassword"));
     }

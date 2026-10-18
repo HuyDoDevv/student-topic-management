@@ -46,7 +46,7 @@
 
       <fieldset th:disabled="${pendingInvitation or memberCount != 3}">
         <legend class="h3">Đề tài còn nhận đăng ký</legend>
-        <p class="text-secondary mb-3">Danh sách không bao gồm đề tài đã nhận một nhóm khác.</p>
+        <p class="text-secondary mb-3">Danh sách không bao gồm đề tài đã đủ số lượng nhóm.</p>
 
         <div class="registration-topic-list" th:if="${!#lists.isEmpty(topics)}">
           <label class="topic-option" th:each="topic : ${topics}">

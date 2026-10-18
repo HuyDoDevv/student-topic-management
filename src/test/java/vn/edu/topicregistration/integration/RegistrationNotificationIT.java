@@ -212,6 +212,39 @@ class RegistrationNotificationIT {
     }
 
     @Test
+    void capacityTwoKeepsOtherRegistrationPendingUntilSecondAcceptance() {
+        authenticate("dean.demo", RoleCode.DEAN);
+        long firstId = firstPendingRegistrationId();
+        long secondId = requiredLong("""
+                SELECT registration.id
+                FROM registrations registration
+                WHERE registration.topic_id = (
+                    SELECT topic_id FROM registrations WHERE id = ?)
+                  AND registration.status = 'PENDING'
+                  AND registration.id <> ?
+                """, firstId, firstId);
+        long topicId = requiredLong(
+                "SELECT topic_id FROM registrations WHERE id = ?", firstId);
+        jdbc.update("UPDATE topics SET max_group_count = 2 WHERE id = ?", topicId);
+
+        registrationDecisions.accept(firstId, 0L);
+
+        assertEquals("ACCEPTED", registrationStatus(firstId));
+        assertEquals("PENDING", registrationStatus(secondId));
+        assertEquals(0, eventCount("REGISTRATION_AUTO_REJECTED", secondId));
+
+        registrationDecisions.accept(secondId, 0L);
+
+        assertEquals("ACCEPTED", registrationStatus(secondId));
+        assertEquals(2, count("""
+                SELECT COUNT(*) FROM registrations
+                WHERE topic_id = ? AND status = 'ACCEPTED'
+                """, topicId));
+        assertEquals(3, deliveryCount("REGISTRATION_ACCEPTED", firstId));
+        assertEquals(3, deliveryCount("REGISTRATION_ACCEPTED", secondId));
+    }
+
+    @Test
     void manualRegistrationRejectionNotifiesEverySnapshotStudent() {
         authenticate("dean.demo", RoleCode.DEAN);
         long registrationId = firstPendingRegistrationId();

@@ -101,7 +101,7 @@ class AdminDepartmentControllerTest {
         mvc.perform(post("/admin/departments")
                         .param("facultyId", "0")
                         .param("name", "   "))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/departments/form"))
                 .andExpect(model().attributeHasFieldErrors(
                         "departmentForm", "facultyId", "name"));
@@ -117,7 +117,7 @@ class AdminDepartmentControllerTest {
         mvc.perform(post("/admin/departments")
                         .param("facultyId", "1")
                         .param("name", "Hệ thống thông tin"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("admin/departments/form"))
                 .andExpect(model().attributeHasFieldErrors("departmentForm", "name"));
     }

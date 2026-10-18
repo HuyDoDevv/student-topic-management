@@ -14,6 +14,7 @@ import vn.edu.topicregistration.security.AuthorizationPolicy;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -67,10 +68,12 @@ public class RegistrationDecisionService {
         long periodId = locked.period().getId();
         long topicId = selected.getTopic().getId();
 
-        boolean topicAlreadyAccepted = registrations.existsByPeriodIdAndTopicIdAndStatus(
-                periodId, topicId, RegistrationStatus.ACCEPTED);
+        long acceptedGroupCount = registrations.countByTopicIdAndStatus(
+                topicId, RegistrationStatus.ACCEPTED);
+        int maxGroupCount = selected.getTopic().getMaxGroupCount();
+        boolean topicFull = acceptedGroupCount >= maxGroupCount;
         applyRules(() -> {
-            RegistrationRules.validateAccept(stateOf(selected), topicAlreadyAccepted);
+            RegistrationRules.validateAccept(stateOf(selected), topicFull);
             return null;
         });
 
@@ -82,23 +85,24 @@ public class RegistrationDecisionService {
 
         Instant decidedAt = clock.instant();
         selected.accept(locked.actorAccount(), decidedAt);
-        int rejectedCount = 0;
-        for (RegistrationEntity registration : pending) {
-            if (!Objects.equals(registration.getId(), registrationId)) {
-                registration.rejectBecauseTopicTaken(locked.actorAccount(), decidedAt);
-                rejectedCount++;
+        List<RegistrationEntity> autoRejected = new ArrayList<>();
+        boolean capacityReached = acceptedGroupCount + 1 >= maxGroupCount;
+        if (capacityReached) {
+            for (RegistrationEntity registration : pending) {
+                if (!Objects.equals(registration.getId(), registrationId)) {
+                    registration.rejectBecauseTopicTaken(locked.actorAccount(), decidedAt);
+                    autoRejected.add(registration);
+                }
             }
         }
         registrations.flush();
         emitDecision(selected, NotificationEventType.REGISTRATION_ACCEPTED,
                 locked.actorAccount().getId());
-        for (RegistrationEntity registration : pending) {
-            if (!Objects.equals(registration.getId(), registrationId)) {
-                emitDecision(registration, NotificationEventType.REGISTRATION_AUTO_REJECTED,
-                        locked.actorAccount().getId());
-            }
+        for (RegistrationEntity registration : autoRejected) {
+            emitDecision(registration, NotificationEventType.REGISTRATION_AUTO_REJECTED,
+                    locked.actorAccount().getId());
         }
-        return toResult(selected, rejectedCount);
+        return toResult(selected, autoRejected.size());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)

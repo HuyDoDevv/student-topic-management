@@ -57,6 +57,8 @@
               <span class="badge mb-2" th:classappend="${topic.statusClass}"
                     th:text="${topic.status}">Chờ duyệt</span>
               <span class="badge bg-secondary-lt mb-2" th:if="${topic.pending}">Sinh viên chưa thể đăng ký</span>
+              <span class="badge bg-blue-lt mb-2" th:unless="${topic.pending}"
+                    th:text="|Đã nhận ${topic.acceptedGroupCount}/${topic.maxGroupCount} nhóm|">Đã nhận 0/1 nhóm</span>
               <h3 class="h3 mb-1" th:text="${topic.title}">Tên đề tài</h3>
               <p class="text-secondary mb-0">
                 <span th:text="${topic.author}">Giảng viên</span>
@@ -67,14 +69,23 @@
               </p>
             </div>
             <div class="review-topic-actions" th:if="${topic.pending}">
-              <form th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post"
+              <form class="review-reject-form"
+                    th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${topic.version}">
                 <button class="btn btn-outline-danger" type="submit">Từ chối</button>
               </form>
-              <form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
+              <form class="review-approval-form"
+                    th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${topic.version}">
+                <div class="review-capacity-field">
+                  <label class="form-label" th:for="|topic-capacity-${topic.id}|">
+                    Số nhóm tối đa <span class="text-secondary fw-normal">(1–5)</span>
+                  </label>
+                  <input class="form-control" type="number" name="maxGroupCount"
+                         th:id="|topic-capacity-${topic.id}|" min="1" max="5" value="1" required>
+                </div>
                 <button class="btn btn-success" type="submit">Duyệt đề xuất</button>
               </form>
             </div>

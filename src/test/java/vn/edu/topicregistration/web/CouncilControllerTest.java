@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,11 +26,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.spring6.view.ThymeleafViewResolver;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
 import vn.edu.topicregistration.controller.CouncilController;
 import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.service.CouncilService;
+import vn.edu.topicregistration.service.CouncilService.CouncilAssignmentView;
 import vn.edu.topicregistration.service.CouncilService.CouncilCreationOptions;
 import vn.edu.topicregistration.service.CouncilService.CouncilDetailView;
 import vn.edu.topicregistration.service.CouncilService.CouncilPeriodOption;
@@ -51,6 +57,7 @@ class CouncilControllerTest {
                 new ProjectTime(Clock.fixed(NOW, ZoneOffset.UTC)));
         mvc = standaloneSetup(controller)
                 .setControllerAdvice(new WebExceptionHandler())
+                .setViewResolvers(viewResolver())
                 .build();
     }
 
@@ -135,6 +142,34 @@ class CouncilControllerTest {
     }
 
     @Test
+    void detailPreservesAssignmentReviewerAndSchedulePresentation() throws Exception {
+        var assignment = new CouncilAssignmentView(
+                51L,
+                9L,
+                "Đề tài thử nghiệm",
+                NOW,
+                "Phòng A1-01",
+                "Giảng viên phản biện",
+                "Chưa nộp");
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                summary(), List.of(), List.of(assignment), List.of(), List.of(),
+                false, true, null, null, false));
+
+        var result = mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        var assignments = (List<CouncilController.CouncilAssignmentPageView>) result
+                .getModelAndView().getModel().get("assignments");
+        var pageAssignment = assignments.getFirst();
+        assertEquals("Giảng viên phản biện", pageAssignment.reviewerName());
+        assertEquals("Chưa nộp", pageAssignment.reviewerStatus());
+        assertEquals("14/09/2026 15:00", pageAssignment.scheduledAt());
+        assertEquals("Phòng A1-01", pageAssignment.location());
+    }
+
+    @Test
     void completionActionAppearsOnlyWhenServiceGrantsDeanCapability() throws Exception {
         CouncilSummaryView active = new CouncilSummaryView(
                 41L, 7L, "Đợt KLTN", 4L, "Công nghệ phần mềm",
@@ -172,6 +207,21 @@ class CouncilControllerTest {
     }
 
     @Test
+    void publishedDetailRendersPastLockedMemberErrorSection() throws Exception {
+        CouncilSummaryView published = new CouncilSummaryView(
+                41L, 7L, "Đợt KLTN", 4L, "Công nghệ phần mềm",
+                "Hội đồng KLTN", CouncilStatus.PUBLISHED, 4L);
+        when(councils.detailForCurrentDean(41L)).thenReturn(new CouncilDetailView(
+                published, List.of(), List.of(), List.of(), List.of(),
+                false, true, null, null, false));
+
+        mvc.perform(get("/faculty/boards/41"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "Toàn bộ kết quả của hội đồng đã được công bố.")));
+    }
+
+    @Test
     void expiredScheduleReturnsToDetailWithScheduledAtFieldError() throws Exception {
         when(councils.detailForCurrentDean(41L)).thenReturn(detail());
         when(councils.saveAssignment(org.mockito.ArgumentMatchers.eq(41L),
@@ -183,7 +233,7 @@ class CouncilControllerTest {
                         .param("scheduledAt", "2026-09-14T15:00")
                         .param("location", "Phòng A1")
                         .param("version", "4"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("councils/detail"))
                 .andExpect(model().attributeHasFieldErrors("assignmentForm", "scheduledAt"));
     }
@@ -217,7 +267,7 @@ class CouncilControllerTest {
                         .param("chairId", "11")
                         .param("secretaryId", "12")
                         .param("memberIds", "13"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(view().name("councils/detail"));
         org.mockito.Mockito.verify(councils, never()).updateMembers(
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any());
@@ -282,8 +332,22 @@ class CouncilControllerTest {
                 4L);
     }
 
-    @SuppressWarnings("unused")
     private static CouncilDetailView detail() {
         return new CouncilDetailView(summary(), List.of(), List.of(), List.of());
+    }
+
+    private static ThymeleafViewResolver viewResolver() {
+        ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
+        templateResolver.setPrefix("templates/");
+        templateResolver.setSuffix(".html");
+        templateResolver.setCharacterEncoding("UTF-8");
+
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(templateResolver);
+
+        ThymeleafViewResolver viewResolver = new ThymeleafViewResolver();
+        viewResolver.setTemplateEngine(engine);
+        viewResolver.setCharacterEncoding("UTF-8");
+        return viewResolver;
     }
 }

@@ -10,6 +10,8 @@ import vn.edu.topicregistration.security.AuthorizationPolicy;
 import vn.edu.topicregistration.entity.TopicEntity;
 import vn.edu.topicregistration.repository.TopicRepository;
 import vn.edu.topicregistration.entity.TopicSupervisorEntity;
+import vn.edu.topicregistration.entity.RegistrationStatus;
+import vn.edu.topicregistration.repository.RegistrationRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -33,28 +35,36 @@ import vn.edu.topicregistration.service.NotificationService.EmissionCommand;
 public class TopicReviewService {
     private final RegistrationPeriodRepository periods;
     private final TopicRepository topics;
+    private final RegistrationRepository registrations;
     private final AuthorizationPolicy authorization;
     private final NotificationService notifications;
 
     public TopicReviewService(
             RegistrationPeriodRepository periods,
             TopicRepository topics,
+            RegistrationRepository registrations,
             AuthorizationPolicy authorization,
             NotificationService notifications) {
         this.periods = periods;
         this.topics = topics;
+        this.registrations = registrations;
         this.authorization = authorization;
         this.notifications = notifications;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReviewResult approve(long topicId, long expectedVersion) {
-        return review(topicId, expectedVersion, ReviewDecision.APPROVE);
+        return approve(topicId, expectedVersion, 1);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ReviewResult approve(long topicId, long expectedVersion, int maxGroupCount) {
+        return review(topicId, expectedVersion, ReviewDecision.APPROVE, maxGroupCount);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReviewResult reject(long topicId, long expectedVersion) {
-        return review(topicId, expectedVersion, ReviewDecision.REJECT);
+        return review(topicId, expectedVersion, ReviewDecision.REJECT, null);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -106,10 +116,18 @@ public class TopicReviewService {
     private ReviewResult review(
             long topicId,
             long expectedVersion,
-            ReviewDecision decision) {
+            ReviewDecision decision,
+            Integer maxGroupCount) {
         LockedTopic locked = lockedTopic(topicId, expectedVersion);
         TopicStatus nextStatus = applyRule(
                 () -> TopicReviewRules.review(statusOf(locked.topic()), decision));
+        if (decision == ReviewDecision.APPROVE) {
+            applyRule(() -> {
+                locked.topic().configureMaxGroupCount(
+                        Objects.requireNonNull(maxGroupCount, "maxGroupCount"));
+                return null;
+            });
+        }
         locked.topic().changeStatus(nextStatus.name());
         topics.flush();
         NotificationEventType eventType = decision == ReviewDecision.APPROVE
@@ -192,6 +210,9 @@ public class TopicReviewService {
                 topic.getObjectives(),
                 topic.getStudentRequirements(),
                 topic.getExpectedResults(),
+                topic.getMaxGroupCount(),
+                registrations.countByTopicIdAndStatus(
+                        topic.getId(), RegistrationStatus.ACCEPTED),
                 statusOf(topic),
                 topic.getVersion(),
                 topic.getSupervisors().stream()
@@ -276,6 +297,8 @@ public class TopicReviewService {
             String objectives,
             String studentRequirements,
             String expectedResults,
+            int maxGroupCount,
+            long acceptedGroupCount,
             TopicStatus status,
             long version,
             List<String> supervisors) {
