@@ -69,17 +69,23 @@
               </p>
             </div>
             <div class="review-topic-actions" th:if="${topic.pending}">
-              <form th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post"
+              <form class="review-reject-form"
+                    th:action="@{/topics/{id}/reject(id=${topic.id})}" method="post"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${topic.version}">
                 <button class="btn btn-outline-danger" type="submit">Từ chối</button>
               </form>
-              <form th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
+              <form class="review-approval-form"
+                    th:action="@{/topics/{id}/approve(id=${topic.id})}" method="post"
                     data-prevent-double-submit>
                 <input type="hidden" name="version" th:value="${topic.version}">
-                <label class="form-label" th:for="|topic-capacity-${topic.id}|">Số nhóm tối đa</label>
-                <input class="form-control mb-2" type="number" name="maxGroupCount"
-                       th:id="|topic-capacity-${topic.id}|" min="1" max="5" value="1" required>
+                <div class="review-capacity-field">
+                  <label class="form-label" th:for="|topic-capacity-${topic.id}|">
+                    Số nhóm tối đa <span class="text-secondary fw-normal">(1–5)</span>
+                  </label>
+                  <input class="form-control" type="number" name="maxGroupCount"
+                         th:id="|topic-capacity-${topic.id}|" min="1" max="5" value="1" required>
+                </div>
                 <button class="btn btn-success" type="submit">Duyệt đề xuất</button>
               </form>
             </div>

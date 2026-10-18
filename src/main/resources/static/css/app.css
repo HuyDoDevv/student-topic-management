@@ -1149,8 +1149,32 @@ textarea.form-control {
   display: flex;
   flex: 0 0 auto;
   flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: flex-end;
+  gap: .75rem;
+}
+
+.review-topic-actions form {
+  margin: 0;
+}
+
+.review-reject-form {
+  display: flex;
+}
+
+.review-approval-form {
+  display: flex;
+  align-items: flex-end;
   gap: .5rem;
+}
+
+.review-capacity-field {
+  width: 9.5rem;
+}
+
+.review-capacity-field .form-label {
+  margin-bottom: .35rem;
+  white-space: nowrap;
 }
 
 .review-topic-details {
@@ -1708,6 +1732,20 @@ input[readonly] {
   .review-topic-actions .btn,
   .publish-bar form,
   .publish-bar .btn {
+    width: 100%;
+  }
+
+  .review-topic-actions {
+    display: grid;
+    gap: .75rem;
+  }
+
+  .review-approval-form {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .review-capacity-field {
     width: 100%;
   }
 
