@@ -1,27 +1,45 @@
 # Database toàn hệ thống — MySQL 8.4 LTS
 
-Flyway quản lý schema từ
-[`V1__full_system.sql`](../src/main/resources/db/migration/V1__full_system.sql) đến
-[`V18__enforce_topic_department.java`](../src/main/java/db/migration/V18__enforce_topic_department.java).
-Schema hiện có 25 bảng nghiệp vụ InnoDB dùng `utf8mb4` và một bảng
-`flyway_schema_history`. Migration không tạo tài khoản ứng dụng mẫu.
+Flyway quản lý schema bằng một file clean-slate duy nhất:
+[`V1__baseline.sql`](V1__baseline.sql). Schema hiện có 27 bảng nghiệp vụ InnoDB dùng
+`utf8mb4`, 9 trigger và một bảng `flyway_schema_history`.
 
-## Tạo database local bằng DBeaver
+Baseline tạo dữ liệu local tối thiểu:
+
+- bốn role hệ thống `ADMIN`, `STUDENT`, `LECTURER`, `DEAN`;
+- khoa `Khoa Công nghệ Thông tin`;
+- tài khoản `admin`, mật khẩu `123123123`, chỉ có role `ADMIN` và không thuộc khoa/bộ môn.
+
+Mật khẩu chỉ được lưu dưới dạng BCrypt. Credential cố định này chỉ dành cho local.
+
+## Chuẩn bị MySQL local bằng DBeaver
 
 1. MySQL Server 8.4 phải đang chạy. DBeaver chỉ là chương trình kết nối tới server.
 2. Chọn **New Database Connection → MySQL**.
 3. Nhập host `127.0.0.1`, port `3307`, tài khoản quản trị MySQL và chọn **Test Connection**.
-4. Mở SQL Editor trên connection quản trị và tạo database cùng tài khoản local. Thay mật khẩu
-   ví dụ trước khi chạy:
+4. Mở SQL Editor trên connection quản trị và tạo tài khoản local. Không bắt buộc tạo database
+   thủ công. Thay mật khẩu ví dụ trước khi chạy:
 
 ```sql
-CREATE DATABASE topic_registration_local
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_0900_ai_ci;
-
 CREATE USER 'topic_local'@'localhost' IDENTIFIED BY 'THAY_BANG_MAT_KHAU_THAT';
 GRANT ALL PRIVILEGES ON topic_registration_local.* TO 'topic_local'@'localhost';
 ```
+
+Tham số `createDatabaseIfNotExist=true` trong `SPRING_DATASOURCE_URL` cho phép MySQL
+Connector tự tạo `topic_registration_local` khi database chưa tồn tại. Tài khoản MySQL của
+ứng dụng vẫn phải có quyền `CREATE` trên `topic_registration_local.*`; quyền này được bao gồm
+trong câu lệnh `GRANT ALL PRIVILEGES` ở trên.
+
+Khi ứng dụng khởi động:
+
+- Nếu database chưa tồn tại, Connector tạo database rồi Flyway chạy `database/V1__baseline.sql`.
+- Nếu database đã tồn tại nhưng rỗng, Flyway tạo toàn bộ schema và dữ liệu bootstrap.
+- Nếu database đã có migration V1, Flyway chỉ validate và giữ nguyên dữ liệu.
+- Nếu database có bảng nhưng mất `flyway_schema_history`, Flyway dừng thay vì tự nhận các bảng
+  là đã migrate. Không xóa riêng bảng lịch sử migration.
+- Nếu database local từng chạy một bản V1 khác và Flyway báo `checksum mismatch`, hãy xóa rồi
+  tạo lại toàn bộ `topic_registration_local`; không dùng `repair` để che giấu schema cũ không
+  khớp baseline hiện tại.
 
 Nếu MySQL local bật binary log, tài khoản quản trị cần cho phép tài khoản ứng dụng tạo trigger
 một lần:
@@ -34,17 +52,16 @@ Nếu thiếu bước này, Flyway báo MySQL error `1419` khi chạy tới trig
 cấu hình server trên MySQL local do nhóm quản lý. Nếu ứng dụng kết nối bằng `127.0.0.1` và MySQL
 phân biệt host của user, tạo hoặc cấp quyền tương ứng cho `'topic_local'@'127.0.0.1'`.
 
-## Áp dụng migration V1–V18
+## Áp dụng baseline V1
 
 1. Tạo connection DBeaver bằng `topic_local`, database `topic_registration_local`.
 2. Cấu hình `.env` theo phần dưới và chạy ứng dụng bằng profile `local`.
-3. Flyway tự chạy lần lượt V1–V18, mỗi migration đúng một lần.
-4. Refresh database trong DBeaver; phải thấy 25 bảng nghiệp vụ và
+3. Chạy ứng dụng từ root repository để Flyway đọc `filesystem:database` và áp dụng baseline.
+4. Refresh database trong DBeaver; phải thấy 27 bảng nghiệp vụ và
    `flyway_schema_history`. Mở **ER Diagram** hoặc xem [class-diagram.mmd](class-diagram.mmd).
 
-Nếu migration lỗi trên database local chưa dùng, sửa nguyên nhân rồi tạo lại database rỗng trước
-khi chạy lại. Không chỉnh sửa migration đã được dùng trên database chung; migration mới phải dùng
-phiên bản V19 trở lên.
+Nếu database đã từng chạy chuỗi V1–V26 cũ, hãy tạo lại database local rỗng. Baseline không nâng
+cấp hoặc chuyển đổi lịch sử Flyway cũ.
 
 ## Cấu hình ứng dụng
 
@@ -61,7 +78,7 @@ SPRING_DATASOURCE_PASSWORD=THAY_BANG_MAT_KHAU_THAT
 Chạy `./run.sh` trên macOS/Linux hoặc `run.cmd` trên Windows. Ứng dụng sử dụng
 profile `local` và luôn kết nối database.
 
-## 25 bảng nghiệp vụ
+## 27 bảng nghiệp vụ
 
 | Bảng | Nội dung |
 |---|---|
@@ -80,6 +97,8 @@ profile `local` và luôn kết nối database.
 | `registrations` | Đăng ký đề tài và xét duyệt |
 | `registration_members` | Snapshot bất biến thành viên lúc gửi đăng ký |
 | `reviewer_assignments` | Giảng viên phản biện |
+| `reviewer_reports` | Báo cáo PDF được nộp cho lượt phản biện |
+| `reviewer_evaluations` | Điểm và nhận xét phản biện theo từng sinh viên |
 | `project_reports` | Metadata và lịch sử file báo cáo PDF |
 | `councils` | Hội đồng hoặc phiên chấm trực tiếp |
 | `council_members` | Thành viên hội đồng/người chấm |
@@ -91,23 +110,11 @@ profile `local` và luôn kết nối database.
 | `notification_events` | Sự kiện thông báo bất biến và target nội bộ |
 | `user_notifications` | Bản nhận/read-state riêng của từng tài khoản |
 
-## Tóm tắt lịch sử migration
+## Baseline clean-slate
 
-| Phiên bản | Nội dung chính |
-|---|---|
-| V1–V3 | Schema nền và quy tắc ngày của đợt |
-| V4–V7 | Duyệt đề tài, lời mời nhóm, rejection metadata và snapshot đăng ký |
-| V8–V11 | Báo cáo, hội đồng/chấm trực tiếp, workflow kết quả và điểm riêng từng sinh viên |
-| V12 | Metadata draft/publish cho announcement, `notification_events` và `user_notifications` |
-| V13–V15 | Hợp nhất Faculty scope và chuẩn hóa dữ liệu legacy |
-| V16 | Khôi phục Department và cột tham chiếu nullable trên staff/Topic; Council không có Department |
-| V17 | Chỉ backfill staff và Topic còn thiếu về `Công nghệ phần mềm` thuộc `Khoa Công nghệ Thông tin` sau khi kiểm tra mâu thuẫn |
-| V18 | Kiểm tra Topic, tác giả và GVHD rồi siết `topics.department_id NOT NULL` |
-
-V12 giữ dữ liệu announcement cũ; `created_by` được backfill từ `published_by` khi có thể và để
-nullable cho dữ liệu legacy không xác định. Hai unique constraints `event_key` và
-`(event_id, recipient_id)` bảo vệ idempotency. Các index recipient/read/time phục vụ badge,
-top 5, inbox và read-all.
+V1 mô tả trực tiếp trạng thái schema cuối cùng. Các bước backfill/nâng cấp V1–V26 cũ đã được
+loại bỏ vì dự án chỉ dùng database local có thể tạo lại. Mọi thay đổi schema trong tương lai phải
+thêm migration version mới, không sửa baseline sau khi đã chia sẻ.
 
 ## Các điểm riêng của MySQL
 
@@ -124,4 +131,4 @@ File [`full-schema-check.sql`](../src/test/resources/database/full-schema-check.
 kiểm tra schema MySQL và chỉ được chạy trên database test đã được Flyway migrate.
 
 [`Thiet-ke-co-so-du-lieu-toan-he-thong.docx`](Thiet-ke-co-so-du-lieu-toan-he-thong.docx)
-là tài liệu lịch sử V1/PostgreSQL, không phản ánh schema MySQL V18 hiện tại.
+là tài liệu lịch sử V1/PostgreSQL, không phản ánh đầy đủ baseline MySQL hiện tại.

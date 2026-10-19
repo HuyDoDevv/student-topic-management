@@ -1,8 +1,7 @@
-# Luồng dữ liệu — schema V18 gồm 25 bảng nghiệp vụ
+# Luồng dữ liệu — baseline gồm 27 bảng nghiệp vụ
 
-Tài liệu này đối chiếu toàn bộ migration
-`src/main/resources/db/migration/V1__full_system.sql` đến
-`V18__enforce_topic_department.java`. Flyway là nguồn sự thật của cấu trúc; sơ đồ quan hệ
+Tài liệu này đối chiếu [V1__baseline.sql](V1__baseline.sql), nguồn sự thật duy nhất của cấu trúc.
+Sơ đồ quan hệ
 được duy trì riêng tại [class-diagram.mmd](class-diagram.mmd).
 
 ## Danh mục và mục đích dữ liệu
@@ -13,7 +12,7 @@ Tài liệu này đối chiếu toàn bộ migration
 | Đợt và đề tài | `registration_periods`, `topics`, `topic_supervisors` | Mốc đăng ký, nội dung/trạng thái đề tài, tác giả và giảng viên hướng dẫn. |
 | Nhóm sinh viên | `student_groups`, `group_memberships`, `group_invitations` | Nhóm hiện tại, thành viên hiện tại và lịch sử lời mời/phản hồi. |
 | Đăng ký | `registrations`, `registration_members` | Một lần nhóm đăng ký và snapshot bất biến từng sinh viên tại thời điểm nộp. |
-| Báo cáo và chấm | `reviewer_assignments`, `project_reports`, `councils`, `council_members`, `council_topics`, `score_components`, `evaluations`, `final_results` | Phân công, file báo cáo, chấm trực tiếp/hội đồng, điểm và kết quả riêng từng sinh viên. |
+| Báo cáo và chấm | `reviewer_assignments`, `reviewer_reports`, `reviewer_evaluations`, `project_reports`, `councils`, `council_members`, `council_topics`, `score_components`, `evaluations`, `final_results` | Phân công, file báo cáo, phản biện, chấm trực tiếp/hội đồng, điểm và kết quả riêng từng sinh viên. |
 | Thông báo | `announcements`, `notification_events`, `user_notifications` | Bản nháp/công bố chính thức, sự kiện bất biến và bản nhận/read-state riêng từng tài khoản. |
 
 ## Luồng nghiệp vụ chính
@@ -107,7 +106,6 @@ Ràng buộc DB bảo vệ FK, unique, checks và một số invariants bằng t
 role/scope, mốc thời gian, quyền nhóm, xung đột GVHD–người chấm, trạng thái transition, CSRF và
 quyền tài nguyên đích. Không dựa vào việc ẩn nút ở giao diện.
 
-V13 hợp nhất dữ liệu về Faculty chuẩn; V16 mở rộng schema Department nullable, V17 chỉ
-backfill dữ liệu thiếu về `Công nghệ phần mềm` thuộc `Khoa Công nghệ Thông tin`, V18 kiểm tra
-nhất quán rồi siết `topics.department_id NOT NULL`. Không sửa migration đã chạy trên database
-chia sẻ; thay đổi schema tiếp theo phải dùng migration V19 trở lên.
+Baseline tạo trực tiếp schema cuối cùng, không còn các bước backfill lịch sử. Database cũ từng
+chạy V1–V26 phải được tạo lại. Sau khi baseline được chia sẻ, thay đổi schema tiếp theo phải dùng
+migration version mới thay vì sửa V1.

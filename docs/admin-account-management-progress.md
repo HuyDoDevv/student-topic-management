@@ -19,10 +19,10 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - `src/main/resources/templates/admin/accounts/form.html`
 - `src/test/java/vn/edu/topicregistration/unit/AdminAccountServiceTest.java`
 - `src/test/java/vn/edu/topicregistration/web/AdminAccountControllerTest.java`
-- `specs/001-topic-registration/spec.md`
-- `specs/001-topic-registration/contracts/web.md`
-- `specs/001-topic-registration/data-model.md`
-- `specs/001-topic-registration/acceptance-matrix.md`
+- `.project-kit/features/001-topic-registration/spec.md`
+- `.project-kit/features/001-topic-registration/contracts/web.md`
+- `.project-kit/features/001-topic-registration/data-model.md`
+- `.project-kit/features/001-topic-registration/acceptance-matrix.md`
 - `docs/admin-account-management-progress.md`
 
 ### Thay đổi
@@ -65,7 +65,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Dữ liệu mẫu: `src/main/java/vn/edu/topicregistration/seed/LocalDemoSeeder.java`.
 - Giao diện: form/danh sách account, topic, registration, council và direct grading trong `src/main/resources/templates/`.
 - Test/schema: `FacultyScopeMigrationIT.java`, fixture integration, unit/web tests liên quan và `src/test/resources/database/full-schema-check.sql`.
-- Tài liệu: các artifact trong `specs/001-topic-registration/`, `specs/002-review-results/`, `specs/003-notifications/` và `docs/admin-account-management-progress.md`.
+- Tài liệu: các artifact trong `.project-kit/features/001-topic-registration/`, `.project-kit/features/002-review-results/`, `.project-kit/features/003-notifications/` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -268,7 +268,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Domain/service/controller: `UserAccountEntity.java`, `AdminAccountService.java` và `AdminAccountController.java`.
 - Form/UI: `AdminResetPasswordForm.java`, `admin/accounts/list.html` và `admin/accounts/reset-password.html`.
 - Test: `AdminAccountServiceTest.java` và `AdminAccountControllerTest.java`.
-- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
+- Contract/tài liệu: `.project-kit/features/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -306,7 +306,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Domain/service/controller: `UserAccountEntity.java`, `AdminAccountService.java` và `AdminAccountController.java`.
 - UI: `admin/accounts/list.html`.
 - Test: `AdminAccountServiceTest.java`, `AdminAccountControllerTest.java`, `AccountStateFilterTest.java` và `UserAccountLockPersistenceIT.java`.
-- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
+- Contract/tài liệu: `.project-kit/features/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 
@@ -349,7 +349,7 @@ File này ghi lại các task đã triển khai theo yêu cầu hiện tại c�
 - Security: `SecurityConfig.java`, `LoginRateLimiter.java` và `AccountStateFilter.java`.
 - Giao diện: `auth/login.html`.
 - Test: `AuthenticationTest.java` và `AccountStateFilterTest.java`.
-- Contract/tài liệu: `specs/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
+- Contract/tài liệu: `.project-kit/features/001-topic-registration/contracts/web.md` và `docs/admin-account-management-progress.md`.
 
 ### Thay đổi
 

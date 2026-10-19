@@ -10,6 +10,7 @@ import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public final class MySqlTestSupport {
+    public static final String MIGRATION_LOCATION = "filesystem:database";
     private static final String URL_VARIABLE = "TEST_DATABASE_URL";
     private static final String USERNAME_VARIABLE = "TEST_DATABASE_USERNAME";
     private static final String PASSWORD_VARIABLE = "TEST_DATABASE_PASSWORD";
@@ -63,7 +64,7 @@ public final class MySqlTestSupport {
         assertSafeTestDatabaseUrl(url);
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:db/migration")
+                .locations(MIGRATION_LOCATION)
                 .cleanDisabled(false)
                 .load();
         flyway.clean();
