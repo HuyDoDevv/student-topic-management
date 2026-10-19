@@ -1,0 +1,5 @@
+# Machine-local SpecKit state
+/state/feature.json
+
+# Per-machine extension configuration
+/extensions/*/local-config.yml

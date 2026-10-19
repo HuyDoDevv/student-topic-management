@@ -1,5 +1,0 @@
-# Machine-local project kit state
-/state/feature.json
-
-# Per-machine extension configuration
-/extensions/*/local-config.yml
