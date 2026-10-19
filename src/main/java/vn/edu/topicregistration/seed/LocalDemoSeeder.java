@@ -494,9 +494,9 @@ public class LocalDemoSeeder implements ApplicationRunner {
         if (existing != null) {
             return existing;
         }
-        boolean staff = java.util.Arrays.stream(roles)
-                .anyMatch(role -> role.equals("LECTURER") || role.equals("DEAN"));
-        Long departmentId = staff && facultyId != null
+        boolean lecturer = java.util.Arrays.stream(roles)
+                .anyMatch(role -> role.equals("LECTURER"));
+        Long departmentId = lecturer && facultyId != null
                 ? optionalId("SELECT id FROM departments WHERE faculty_id = ? "
                         + "AND name = 'Công nghệ phần mềm' ORDER BY id LIMIT 1", facultyId)
                 : null;

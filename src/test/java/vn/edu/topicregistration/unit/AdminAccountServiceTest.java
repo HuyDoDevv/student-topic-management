@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -93,6 +94,27 @@ class AdminAccountServiceTest {
     }
 
     @Test
+    void deanWorkspaceDiscardsDepartmentFilterAndOptions() {
+        Dependencies dependencies = dependencies();
+        allowAdmin(dependencies);
+        FacultyEntity faculty = faculty(3L, "Khoa CNTT");
+        UserAccountEntity dean = mock(UserAccountEntity.class);
+        when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN));
+        when(dean.getId()).thenReturn(21L);
+        when(dean.getUsername()).thenReturn("dean01");
+        when(dean.getFaculty()).thenReturn(faculty);
+        when(dependencies.accounts().findAllDetailed()).thenReturn(List.of(dean));
+
+        var workspace = dependencies.service().workspace(
+                new AccountFilter(null, AccountType.DEAN, 3L, 11L, null));
+
+        assertEquals(List.of(21L), workspace.accounts().stream().map(account -> account.id()).toList());
+        assertEquals(null, workspace.filter().departmentId());
+        assertTrue(workspace.departments().isEmpty());
+        verify(dependencies.departments(), never()).findAllDetailed();
+    }
+
+    @Test
     void createsDeanWithoutLecturerRoleAndWithEncodedPassword() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
@@ -102,14 +124,16 @@ class AdminAccountServiceTest {
         saveArguments(dependencies);
 
         var created = dependencies.service().createDean(new CreateDeanCommand(
-                " dean01 ", " Trưởng khoa Một ", "temporary-password", 11L));
+                " dean01 ", " Trưởng khoa Một ", "temporary-password"));
 
         assertEquals("dean01", created.username());
         assertEquals("Trưởng khoa", created.accountTypeLabel());
         assertEquals(null, created.email());
+        assertEquals(null, created.departmentId());
         assertAssignedRoles(dependencies, Set.of(RoleCode.DEAN));
         assertStoredPassword(dependencies, "temporary-password");
         assertTemporaryPassword(dependencies);
+        verify(dependencies.departments(), never()).findByIdAndFacultyId(anyLong(), anyLong());
     }
 
     @Test
@@ -122,7 +146,7 @@ class AdminAccountServiceTest {
 
         ApplicationException rejected = assertThrows(ApplicationException.class,
                 () -> dependencies.service().createDean(new CreateDeanCommand(
-                        "dean02", "Trưởng khoa Hai", "temporary-password", 11L)));
+                        "dean02", "Trưởng khoa Hai", "temporary-password")));
 
         assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, rejected.code());
         verify(dependencies.faculties()).findByIdForUpdate(3L);
@@ -232,7 +256,7 @@ class AdminAccountServiceTest {
     }
 
     @Test
-    void staffCreationRequiresDepartmentInDefaultFaculty() {
+    void lecturerCreationRequiresDepartmentInDefaultFaculty() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
         allowDefaultFaculty(dependencies);
@@ -253,8 +277,8 @@ class AdminAccountServiceTest {
                 () -> dependencies.service().createLecturer(new CreateLecturerCommand(
                         "lecturer03", "Giảng viên Ba", "temporary-password", null)));
         ApplicationException wrongFaculty = assertThrows(ApplicationException.class,
-                () -> dependencies.service().createDean(new CreateDeanCommand(
-                        "dean03", "Trưởng khoa Ba", "temporary-password", 99L)));
+                () -> dependencies.service().createLecturer(new CreateLecturerCommand(
+                        "lecturer04", "Giảng viên Bốn", "temporary-password", 99L)));
         assertEquals(ApplicationErrorCode.VALIDATION_FAILED, missing.code());
         assertEquals(ApplicationErrorCode.VALIDATION_FAILED, wrongFaculty.code());
     }
@@ -288,7 +312,7 @@ class AdminAccountServiceTest {
     }
 
     @Test
-    void rejectsStudentDepartmentAssignmentAndCrossFacultyId() {
+    void rejectsStudentAndDeanDepartmentAssignment() {
         Dependencies dependencies = dependencies();
         allowAdmin(dependencies);
         FacultyEntity faculty = faculty(3L, AdminAccountService.DEFAULT_FACULTY_NAME);
@@ -304,11 +328,19 @@ class AdminAccountServiceTest {
         when(dean.getRoleCodes()).thenReturn(Set.of(RoleCode.DEAN));
         when(dean.getFaculty()).thenReturn(faculty);
         when(dependencies.accounts().findByIdForUpdate(8L)).thenReturn(Optional.of(dean));
-        ApplicationException wrongFaculty = assertThrows(ApplicationException.class,
+        when(dependencies.accounts().findDetailedById(8L)).thenReturn(Optional.of(dean));
+        ApplicationException assignDean = assertThrows(ApplicationException.class,
                 () -> dependencies.service().assignStaffDepartment(8L, 99L));
-        assertEquals(ApplicationErrorCode.VALIDATION_FAILED, wrongFaculty.code());
+        ApplicationException viewDean = assertThrows(ApplicationException.class,
+                () -> dependencies.service().staffDepartmentTarget(8L));
+        ApplicationException optionsForDean = assertThrows(ApplicationException.class,
+                () -> dependencies.service().staffDepartmentOptionsForAccount(8L));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, assignDean.code());
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, viewDean.code());
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, optionsForDean.code());
         verify(dean, never()).assignDepartment(any());
         verify(dependencies.accounts(), never()).flush();
+        verifyNoInteractions(dependencies.departments());
     }
 
     @Test
@@ -376,14 +408,14 @@ class AdminAccountServiceTest {
                 new CreateLecturerCommand(
                         "lecturer01", "A".repeat(256), "temporary-password", 11L)));
         assertThrows(IllegalArgumentException.class, () -> service.createDean(
-                new CreateDeanCommand("dean-", "Trưởng khoa Một", "temporary-password", 11L)));
+                new CreateDeanCommand("dean-", "Trưởng khoa Một", "temporary-password")));
         assertThrows(IllegalArgumentException.class, () -> service.createDean(
-                new CreateDeanCommand("dean01", "Trưởng khoa Một", "short", 11L)));
+                new CreateDeanCommand("dean01", "Trưởng khoa Một", "short")));
         assertThrows(IllegalArgumentException.class, () -> service.createDean(
-                new CreateDeanCommand("dean01", "Trưởng khoa Một", "a".repeat(73), 11L)));
+                new CreateDeanCommand("dean01", "Trưởng khoa Một", "a".repeat(73))));
         assertThrows(IllegalArgumentException.class, () -> service.createDean(
                 new CreateDeanCommand(
-                        "dean01", "Trưởng khoa Một", "😀".repeat(30), 11L)));
+                        "dean01", "Trưởng khoa Một", "😀".repeat(30))));
 
         verifyNoInteractions(dependencies.accounts(), dependencies.userRoles(),
                 dependencies.roles(), dependencies.studentProfiles(), dependencies.faculties());

@@ -1,5 +1,6 @@
 package vn.edu.topicregistration.web;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -14,8 +15,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import vn.edu.topicregistration.controller.AdminAccountController;
@@ -78,7 +82,7 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void staffListsPassDepartmentFilterButStudentListDoesNot() throws Exception {
+    void onlyLecturerListPassesDepartmentFilter() throws Exception {
         mvc.perform(get("/admin/accounts/lecturers").param("departmentId", "11"))
                 .andExpect(status().isOk());
         mvc.perform(get("/admin/accounts/deans").param("departmentId", "11"))
@@ -89,7 +93,7 @@ class AdminAccountControllerTest {
         verify(accounts).workspace(argThat(filter -> filter.accountType() == AccountType.LECTURER
                 && Long.valueOf(11L).equals(filter.departmentId())));
         verify(accounts).workspace(argThat(filter -> filter.accountType() == AccountType.DEAN
-                && Long.valueOf(11L).equals(filter.departmentId())));
+                && filter.departmentId() == null));
         verify(accounts).workspace(argThat(filter -> filter.accountType() == AccountType.STUDENT
                 && filter.departmentId() == null));
     }
@@ -107,7 +111,17 @@ class AdminAccountControllerTest {
         mvc.perform(get("/admin/accounts/deans/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/accounts/dean-form"))
-                .andExpect(model().attributeExists("deanAccountForm"));
+                .andExpect(model().attributeExists("deanAccountForm"))
+                .andExpect(model().attributeDoesNotExist("departmentOptions"));
+    }
+
+    @Test
+    void deanTemplateDoesNotReferenceDepartmentFields() throws Exception {
+        String template = new ClassPathResource("templates/admin/accounts/dean-form.html")
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertFalse(template.contains("departmentId"));
+        assertFalse(template.contains("departmentOptions"));
     }
 
     @Test
@@ -155,7 +169,7 @@ class AdminAccountControllerTest {
         verify(accounts).createLecturer(argThat(command ->
                 command.username().equals("lecturer01") && command.departmentId() == 11L));
         verify(accounts).createDean(argThat(command ->
-                command.username().equals("dean01") && command.departmentId() == 11L));
+                command.username().equals("dean01")));
     }
 
     @Test
@@ -180,7 +194,7 @@ class AdminAccountControllerTest {
     }
 
     @Test
-    void staffCreationRequiresDepartmentAndIgnoresForgedFaculty() throws Exception {
+    void lecturerRequiresDepartmentWhileDeanIgnoresForgedScopeFields() throws Exception {
         mvc.perform(post("/admin/accounts/lecturers")
                         .param("username", "lecturer02")
                         .param("fullName", "Giảng viên Hai")
@@ -196,7 +210,7 @@ class AdminAccountControllerTest {
                         .param("departmentId", "11")
                         .param("facultyId", "999"))
                 .andExpect(status().isSeeOther());
-        verify(accounts).createDean(argThat(command -> command.departmentId() == 11L));
+        verify(accounts).createDean(argThat(command -> command.username().equals("dean02")));
     }
 
     @Test
@@ -223,6 +237,21 @@ class AdminAccountControllerTest {
         mvc.perform(post("/admin/accounts/7/department"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(model().attributeHasFieldErrors("staffDepartmentForm", "departmentId"));
+    }
+
+    @Test
+    void deanDepartmentAssignmentRoutesFailClosed() throws Exception {
+        when(accounts.staffDepartmentTarget(9L)).thenThrow(
+                new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
+
+        mvc.perform(get("/admin/accounts/9/department"))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("error/error"));
+        mvc.perform(post("/admin/accounts/9/department").param("departmentId", "11"))
+                .andExpect(status().isNotFound())
+                .andExpect(view().name("error/error"));
+
+        verify(accounts, never()).assignStaffDepartment(9L, 11L);
     }
 
     @Test

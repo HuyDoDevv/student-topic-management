@@ -138,7 +138,7 @@ class AccountProvisioningIT {
     }
 
     @Test
-    void staffCreationAndFirstAssignmentPersistValidatedDepartment() {
+    void lecturerPersistsValidatedDepartmentWhileDeanHasNone() {
         long departmentId = addDepartment();
         accounts.createLecturer(new CreateLecturerCommand(
                 "department.lecturer", "Giảng viên Bộ môn", "temporary-password", departmentId));
@@ -160,6 +160,15 @@ class AccountProvisioningIT {
         accounts.assignStaffDepartment(accountId, departmentId);
         assertEquals(departmentId, jdbc.queryForObject(
                 "SELECT department_id FROM user_accounts WHERE id = ?", Long.class, accountId));
+
+        accounts.createDean(new CreateDeanCommand(
+                "department.dean", "Trưởng khoa", "temporary-password"));
+        long deanId = accountId("department.dean");
+        assertEquals(null, jdbc.queryForObject(
+                "SELECT department_id FROM user_accounts WHERE id = ?", Long.class, deanId));
+        ApplicationException deanAssignment = assertThrows(ApplicationException.class,
+                () -> accounts.assignStaffDepartment(deanId, departmentId));
+        assertEquals(ApplicationErrorCode.RESOURCE_NOT_FOUND, deanAssignment.code());
 
         jdbc.update("INSERT INTO faculties(name) VALUES ('Khoa khác')");
         jdbc.update("""
@@ -236,7 +245,7 @@ class AccountProvisioningIT {
     void secondActiveDeanIsRejectedAndTransferPreservesOldPeriods() {
         long departmentId = addDepartment();
         accounts.createDean(new CreateDeanCommand(
-                "dean.old", "Trưởng khoa cũ", "temporary-password", departmentId));
+                "dean.old", "Trưởng khoa cũ", "temporary-password"));
         long oldDeanId = accountId("dean.old");
         assertEquals(List.of("DEAN"), jdbc.queryForList("""
                 SELECT role_code FROM user_roles WHERE user_id = ? ORDER BY role_code
@@ -255,13 +264,13 @@ class AccountProvisioningIT {
 
         ApplicationException duplicate = assertThrows(ApplicationException.class,
                 () -> accounts.createDean(new CreateDeanCommand(
-                        "dean.blocked", "Trưởng khoa trùng", "temporary-password", departmentId)));
+                        "dean.blocked", "Trưởng khoa trùng", "temporary-password")));
         assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, duplicate.code());
         assertEquals(0L, count("SELECT COUNT(*) FROM user_accounts WHERE username = 'dean.blocked'"));
 
         accounts.lockAccount(oldDeanId);
         accounts.createDean(new CreateDeanCommand(
-                "dean.new", "Trưởng khoa mới", "temporary-password", departmentId));
+                "dean.new", "Trưởng khoa mới", "temporary-password"));
         ApplicationException cannotReenable = assertThrows(ApplicationException.class,
                 () -> accounts.unlockAccount(oldDeanId));
         assertEquals(ApplicationErrorCode.DEAN_ALREADY_ACTIVE, cannotReenable.code());
@@ -277,24 +286,22 @@ class AccountProvisioningIT {
 
     @Test
     void concurrentDeanCreationsLeaveOnlyOneEnabledDean() throws Exception {
-        long departmentId = addDepartment();
         assertOneConcurrentSuccess(
                 () -> accounts.createDean(new CreateDeanCommand(
-                        "dean.race.one", "Trưởng khoa Một", "temporary-password", departmentId)),
+                        "dean.race.one", "Trưởng khoa Một", "temporary-password")),
                 () -> accounts.createDean(new CreateDeanCommand(
-                        "dean.race.two", "Trưởng khoa Hai", "temporary-password", departmentId)));
+                        "dean.race.two", "Trưởng khoa Hai", "temporary-password")));
         assertEquals(1L, activeDeanCount());
     }
 
     @Test
     void concurrentDeanUnlocksLeaveOnlyOneEnabledDean() throws Exception {
-        long departmentId = addDepartment();
         accounts.createDean(new CreateDeanCommand(
-                "dean.locked.one", "Trưởng khoa Một", "temporary-password", departmentId));
+                "dean.locked.one", "Trưởng khoa Một", "temporary-password"));
         long firstId = accountId("dean.locked.one");
         accounts.lockAccount(firstId);
         accounts.createDean(new CreateDeanCommand(
-                "dean.locked.two", "Trưởng khoa Hai", "temporary-password", departmentId));
+                "dean.locked.two", "Trưởng khoa Hai", "temporary-password"));
         long secondId = accountId("dean.locked.two");
         accounts.lockAccount(secondId);
 
@@ -306,16 +313,15 @@ class AccountProvisioningIT {
 
     @Test
     void concurrentDeanCreateAndUnlockLeaveOnlyOneEnabledDean() throws Exception {
-        long departmentId = addDepartment();
         accounts.createDean(new CreateDeanCommand(
-                "dean.locked", "Trưởng khoa cũ", "temporary-password", departmentId));
+                "dean.locked", "Trưởng khoa cũ", "temporary-password"));
         long lockedId = accountId("dean.locked");
         accounts.lockAccount(lockedId);
 
         assertOneConcurrentSuccess(
                 () -> accounts.unlockAccount(lockedId),
                 () -> accounts.createDean(new CreateDeanCommand(
-                        "dean.created", "Trưởng khoa mới", "temporary-password", departmentId)));
+                        "dean.created", "Trưởng khoa mới", "temporary-password")));
         assertEquals(1L, activeDeanCount());
     }
 
@@ -323,7 +329,7 @@ class AccountProvisioningIT {
     void lecturerCandidateQueriesExcludeDeanEvenWithLegacyMixedRoles() {
         long departmentId = addDepartment();
         accounts.createDean(new CreateDeanCommand(
-                "dean.candidate", "Trưởng khoa", "temporary-password", departmentId));
+                "dean.candidate", "Trưởng khoa", "temporary-password"));
         long deanId = accountId("dean.candidate");
         accounts.createLecturer(new CreateLecturerCommand(
                 "lecturer.candidate", "Giảng viên", "temporary-password", departmentId));

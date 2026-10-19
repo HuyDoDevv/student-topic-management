@@ -76,15 +76,15 @@ public class AdminAccountService {
         List<FacultyOption> facultyOptions = faculties.findAllByOrderByNameAsc().stream()
                 .map(faculty -> new FacultyOption(faculty.getId(), faculty.getName()))
                 .toList();
-        List<AccountDepartmentOption> departmentOptions = safeFilter.accountType() == AccountType.STUDENT
-                ? List.of()
-                : departments.findAllDetailed().stream()
+        List<AccountDepartmentOption> departmentOptions = safeFilter.accountType() == AccountType.LECTURER
+                ? departments.findAllDetailed().stream()
                         .filter(department -> safeFilter.facultyId() == null
                                 || safeFilter.facultyId().equals(department.getFaculty().getId()))
                         .map(department -> new AccountDepartmentOption(
                                 department.getId(), department.getName(),
                                 department.getFaculty().getName()))
-                        .toList();
+                        .toList()
+                : List.of();
         List<AccountView> all = accounts.findAllDetailed().stream()
                 .map(AdminAccountService::accountView)
                 .toList();
@@ -136,7 +136,7 @@ public class AdminAccountService {
                 command == null ? null : command.username(),
                 command == null ? null : command.fullName(),
                 command == null ? null : command.password(),
-                command == null ? null : command.departmentId());
+                null);
     }
 
     @Transactional(readOnly = true)
@@ -155,7 +155,7 @@ public class AdminAccountService {
         }
         UserAccountEntity account = accounts.findDetailedById(accountId)
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        staffType(account);
+        lecturerType(account);
         if (account.getFaculty() == null) {
             throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
         }
@@ -172,7 +172,7 @@ public class AdminAccountService {
         }
         UserAccountEntity account = accounts.findDetailedById(accountId)
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        AccountType type = staffType(account);
+        AccountType type = lecturerType(account);
         FacultyEntity faculty = account.getFaculty();
         if (faculty == null) {
             throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
@@ -194,7 +194,7 @@ public class AdminAccountService {
         }
         UserAccountEntity account = accounts.findByIdForUpdate(accountId)
                 .orElseThrow(() -> new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND));
-        AccountType type = staffType(account);
+        AccountType type = lecturerType(account);
         FacultyEntity faculty = account.getFaculty();
         if (faculty == null) {
             throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
@@ -305,9 +305,9 @@ public class AdminAccountService {
                 account.getId(), account.getUsername(), type, enabled, changed);
     }
 
-    private static AccountType staffType(UserAccountEntity account) {
+    private static AccountType lecturerType(UserAccountEntity account) {
         AccountType type = managedAccountType(account);
-        if (type != AccountType.LECTURER && type != AccountType.DEAN) {
+        if (type != AccountType.LECTURER) {
             throw new ApplicationException(ApplicationErrorCode.RESOURCE_NOT_FOUND);
         }
         return type;
@@ -318,7 +318,9 @@ public class AdminAccountService {
         PreparedAccount prepared = prepareAccount(type, username, fullName, password, null);
         ensureAvailable(prepared);
         FacultyEntity faculty = defaultFaculty();
-        DepartmentEntity department = staffDepartment(departmentId, faculty);
+        DepartmentEntity department = type == AccountType.LECTURER
+                ? staffDepartment(departmentId, faculty)
+                : null;
         if (type == AccountType.DEAN) {
             lockFaculty(faculty.getId());
             ensureDeanSlotAvailable(faculty.getId(), null);
@@ -559,7 +561,7 @@ public class AdminAccountService {
     }
 
     public record CreateDeanCommand(
-            String username, String fullName, String password, Long departmentId) {
+            String username, String fullName, String password) {
     }
 
     public record DepartmentOption(long id, String name) {
@@ -611,7 +613,7 @@ public class AdminAccountService {
 
         AccountFilter normalized() {
             return new AccountFilter(trim(query), accountType, positive(facultyId),
-                    accountType == AccountType.STUDENT ? null : positive(departmentId), enabled);
+                    accountType == AccountType.LECTURER ? positive(departmentId) : null, enabled);
         }
 
         private static Long positive(Long value) {

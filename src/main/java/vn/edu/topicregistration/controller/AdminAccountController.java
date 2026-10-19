@@ -52,7 +52,7 @@ public class AdminAccountController {
 
     @InitBinder("deanAccountForm")
     void whitelistDeanFields(WebDataBinder binder) {
-        binder.setAllowedFields("fullName", "username", "password", "departmentId");
+        binder.setAllowedFields("fullName", "username", "password");
     }
 
     @InitBinder("staffDepartmentForm")
@@ -97,11 +97,10 @@ public class AdminAccountController {
     public String deans(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long facultyId,
-            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Boolean enabled,
             Model model) {
         return renderList(model, new AccountFilter(
-                query, AccountType.DEAN, facultyId, departmentId, enabled),
+                query, AccountType.DEAN, facultyId, null, enabled),
                 AccountSection.DEANS);
     }
 
@@ -157,7 +156,7 @@ public class AdminAccountController {
         try {
             accounts.createLecturer(form.toCommand());
         } catch (ApplicationException exception) {
-            rejectStaff(exception, bindingResult);
+            rejectLecturer(exception, bindingResult);
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderLecturerForm(model, form);
         }
@@ -185,7 +184,7 @@ public class AdminAccountController {
         try {
             accounts.createDean(form.toCommand());
         } catch (ApplicationException exception) {
-            rejectStaff(exception, bindingResult);
+            rejectDean(exception, bindingResult);
             response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
             return renderDeanForm(model, form);
         }
@@ -320,7 +319,6 @@ public class AdminAccountController {
         if (!model.containsAttribute("deanAccountForm")) {
             model.addAttribute("deanAccountForm", form);
         }
-        model.addAttribute("departmentOptions", accounts.staffDepartmentOptions());
         return "admin/accounts/dean-form";
     }
 
@@ -364,7 +362,20 @@ public class AdminAccountController {
         }
     }
 
-    private static void rejectStaff(
+    private static void rejectLecturer(
+            ApplicationException exception, BindingResult bindingResult) {
+        if (exception.code() == ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS) {
+            bindingResult.rejectValue("username", "account.username.exists",
+                    "Tên đăng nhập đã tồn tại.");
+        } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
+            bindingResult.rejectValue("departmentId", "account.department.invalid",
+                    "Bộ môn không tồn tại hoặc không thuộc Khoa của tài khoản.");
+        } else {
+            throw exception;
+        }
+    }
+
+    private static void rejectDean(
             ApplicationException exception, BindingResult bindingResult) {
         if (exception.code() == ApplicationErrorCode.ACCOUNT_USERNAME_EXISTS) {
             bindingResult.rejectValue("username", "account.username.exists",
@@ -373,8 +384,8 @@ public class AdminAccountController {
             bindingResult.reject("account.dean.active",
                     "Khoa đã có Trưởng khoa đang hoạt động. Hãy khóa tài khoản cũ trước.");
         } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
-            bindingResult.rejectValue("departmentId", "account.department.invalid",
-                    "Bộ môn không tồn tại hoặc không thuộc Khoa của tài khoản.");
+            bindingResult.reject("account.dean.invalid",
+                    "Thông tin tài khoản hoặc Khoa mặc định chưa hợp lệ.");
         } else {
             throw exception;
         }
