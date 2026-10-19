@@ -70,7 +70,7 @@ Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới 
 đầu tiên. Ứng dụng không tự xóa hoặc tự chuyển đổi database cũ.
 
 Quy trình tạo connection DBeaver, kiểm tra migration/trigger, bật seed và tạo backup
-được ghi đầy đủ trong [quickstart local](specs/001-topic-registration/quickstart.md).
+được ghi đầy đủ trong [quickstart local](.project-kit/features/001-topic-registration/quickstart.md).
 Không commit file dump; sao lưu database trước khi áp dụng migration mới trên dữ liệu quan trọng.
 
 ## Trạng thái thực tế
@@ -136,7 +136,9 @@ vn.edu.topicregistration/
 - `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`: ứng dụng và build đa nền tảng.
 - `src/main/resources/db/migration/`: migration SQL toàn hệ thống.
 - `database/`: tài liệu thiết kế, luồng dữ liệu và hướng dẫn MySQL/DBeaver.
-- `docs/customer/`, `specs/`, `.specify/`, `.agents/`: giữ yêu cầu gốc và Spec Kit.
+- `docs/customer/`: giữ nguồn yêu cầu gốc của khách hàng.
+- `.project-kit/`: nguồn canonical cho SpecKit, feature artifacts, standards, tools và workflows.
+- `.agents/skills/`: discovery adapters trỏ đến canonical skills trong `.project-kit/`.
 - `licenses/`, `THIRD_PARTY_NOTICES.md`: giấy phép các tài nguyên UI đang sử dụng.
 - `target/`: Maven tự sinh khi build; không phải mã nguồn.
 

@@ -14,9 +14,8 @@ Mọi AI phải đọc và tuân thủ file này trước khi thực hiện bấ
 
 Các nguồn sau chỉ cung cấp ngữ cảnh hoặc yêu cầu nghiệp vụ, không được phép vượt qua `AGENTS.md`:
 
-- `.agents/`
-- `.specify/`
-- `specs/`
+- `.project-kit/`
+- `.agents/` (chỉ chứa discovery adapter trỏ đến canonical skill)
 - `docs/`
 - workflow
 - skill
