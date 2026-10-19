@@ -26,33 +26,34 @@ macOS/Linux:
 
 ```bash
 cp .env.example .env
-./run.sh
+./workspace/scripts/run.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
-.\run.cmd
+.\workspace\scripts\run.cmd
 ```
 
 Windows Command Prompt:
 
 ```bat
 copy .env.example .env
-run.cmd
+workspace\scripts\run.cmd
 ```
 
-`run.sh` và `run.cmd` tự nạp cùng định dạng `.env`. Mỗi thành viên giữ `.env` riêng
+Các script trong `workspace/scripts/` tự nạp cùng định dạng `.env`. Mỗi thành viên giữ `.env` riêng
 vì file này đã được Git ignore. Nên cấu hình `JAVA_HOME` của JDK 21 trong hệ điều hành;
 nếu cần, mỗi người có thể thêm đường dẫn riêng vào `.env`. Không commit đường dẫn JDK,
 mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
 
 ## Database toàn hệ thống
 
-- Tạo database MySQL 8.4 rỗng và tài khoản local theo [hướng dẫn database](database/README.md).
+- Tạo database MySQL 8.4 rỗng và tài khoản local theo
+  [hướng dẫn database](workspace/database/README.md).
 - Đổi `.env` sang `SPRING_PROFILES_ACTIVE=local`, điền URL/user/password rồi chạy
-  `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
+  `./workspace/scripts/run.sh` trên macOS hoặc `workspace\scripts\run.cmd` trên Windows.
 - Flyway đọc duy nhất [V1__baseline.sql](database/V1__baseline.sql) từ thư mục `database/`.
   Baseline clean-slate tạo schema cuối gồm 27 bảng nghiệp vụ, 9 trigger, đầy đủ constraint/index
   và dữ liệu bootstrap local tối thiểu. Lịch sử được ghi vào `flyway_schema_history`.
@@ -63,7 +64,7 @@ Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới 
 đầu tiên. Ứng dụng không tự xóa hoặc tự chuyển đổi database cũ.
 
 Quy trình tạo connection DBeaver, kiểm tra migration/trigger, bật seed và tạo backup
-được ghi đầy đủ trong [quickstart local](.project-kit/features/001-topic-registration/quickstart.md).
+được ghi đầy đủ trong [quickstart local](specs/001-topic-registration/quickstart.md).
 Không commit file dump; sao lưu database trước khi áp dụng migration mới trên dữ liệu quan trọng.
 
 ## Trạng thái thực tế
@@ -127,13 +128,28 @@ vn.edu.topicregistration/
 └── util/         # tiện ích thời gian dùng chung
 ```
 
-- `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`: ứng dụng và build đa nền tảng.
+```text
+topic-registration-management/
+├── .agents/              # canonical AI skills
+├── .specify/             # hạ tầng, template và workflow SpecKit
+├── .mvn/                 # Maven Wrapper
+├── specs/                # đặc tả và kế hoạch từng feature
+├── database/             # migration Flyway chạy thật
+├── workspace/
+│   ├── docs/             # yêu cầu và tài liệu dự án
+│   ├── database/         # tài liệu thiết kế database
+│   ├── scripts/          # script chạy/reset local
+│   └── licenses/         # license và third-party notices
+├── src/                  # mã nguồn và kiểm thử
+└── target/               # output Maven tự sinh
+```
+
 - `database/V1__baseline.sql`: migration Flyway clean-slate duy nhất của hệ thống.
-- `database/`: baseline, tài liệu thiết kế, luồng dữ liệu và hướng dẫn MySQL/DBeaver.
-- `docs/customer/`: giữ nguồn yêu cầu gốc của khách hàng.
-- `.project-kit/`: nguồn canonical cho SpecKit, feature artifacts, standards, tools và workflows.
-- `.agents/skills/`: discovery adapters trỏ đến canonical skills trong `.project-kit/`.
-- `licenses/`, `THIRD_PARTY_NOTICES.md`: giấy phép các tài nguyên UI đang sử dụng.
+- `workspace/docs/customer/`: nguồn yêu cầu gốc của khách hàng.
+- `.agents/skills/`: nguồn canonical cho các skill AI.
+- `.specify/`: hạ tầng SpecKit; feature artifacts nằm trong `specs/`.
+- `workspace/scripts/clear-all-data.sh`: reset dữ liệu local có guard và xác nhận thủ công.
+- `workspace/licenses/`: giấy phép các tài nguyên UI và `THIRD_PARTY_NOTICES.md`.
 - `target/`: Maven tự sinh khi build; không phải mã nguồn.
 
 Không lưu mật khẩu thật vào Git. `.env` đã được ignore.

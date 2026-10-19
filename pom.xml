@@ -32,8 +32,8 @@
     <finalName>topic-registration</finalName>
     <resources>
       <resource><directory>src/main/resources</directory></resource>
-      <resource><directory>licenses</directory><targetPath>META-INF/licenses</targetPath></resource>
-      <resource><directory>${project.basedir}</directory><targetPath>META-INF</targetPath><includes><include>THIRD_PARTY_NOTICES.md</include></includes></resource>
+      <resource><directory>workspace/licenses</directory><targetPath>META-INF/licenses</targetPath><includes><include>*-LICENSE</include></includes></resource>
+      <resource><directory>workspace/licenses</directory><targetPath>META-INF</targetPath><includes><include>THIRD_PARTY_NOTICES.md</include></includes></resource>
     </resources>
     <plugins>
       <plugin>
