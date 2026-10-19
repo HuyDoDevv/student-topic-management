@@ -28,9 +28,9 @@ DELETE FROM registration_periods;
 DELETE FROM announcements;
 DELETE FROM student_profiles;
 DELETE FROM user_roles WHERE user_id NOT IN (
-    SELECT id FROM user_accounts WHERE username = 'admin.demo'
+    SELECT id FROM user_accounts WHERE username = 'admin'
 );
-DELETE FROM user_accounts WHERE username <> 'admin.demo';
+DELETE FROM user_accounts WHERE username <> 'admin';
 DELETE FROM departments;
 DELETE FROM faculties WHERE BINARY name <> BINARY 'Khoa Công nghệ Thông tin';
 

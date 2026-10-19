@@ -47,7 +47,7 @@ class LocalDataResetIT {
                 .seed("local-reset-test-only");
         JdbcTemplate jdbc = new JdbcTemplate(DATABASE.dataSource());
         long adminId = count(jdbc,
-                "SELECT id FROM user_accounts WHERE username = 'admin.demo'");
+                "SELECT id FROM user_accounts WHERE username = 'admin'");
         String passwordHash = jdbc.queryForObject(
                 "SELECT password_hash FROM user_accounts WHERE id = ?",
                 String.class, adminId);
@@ -81,7 +81,7 @@ class LocalDataResetIT {
         }
         assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM user_accounts"));
         assertEquals(adminId, count(jdbc,
-                "SELECT id FROM user_accounts WHERE username = 'admin.demo'"));
+                "SELECT id FROM user_accounts WHERE username = 'admin'"));
         assertEquals(passwordHash, jdbc.queryForObject(
                 "SELECT password_hash FROM user_accounts WHERE id = ?",
                 String.class, adminId));
@@ -93,7 +93,7 @@ class LocalDataResetIT {
         assertEquals(facultyId, count(jdbc,
                 "SELECT id FROM faculties WHERE BINARY name = BINARY 'Khoa Công nghệ Thông tin'"));
         assertEquals(4, count(jdbc, "SELECT COUNT(*) FROM roles"));
-        assertEquals(25, count(jdbc, "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1"));
+        assertEquals(1, count(jdbc, "SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1"));
     }
 
     private static long count(JdbcTemplate jdbc, String sql) {

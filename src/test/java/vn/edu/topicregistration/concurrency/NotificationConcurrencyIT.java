@@ -151,7 +151,7 @@ class NotificationConcurrencyIT {
         assertEquals(1, count(
                 "SELECT COUNT(*) FROM notification_events WHERE announcement_id = ?",
                 draft.id()));
-        assertEquals(2, count("""
+        assertEquals(3, count("""
                 SELECT COUNT(*)
                 FROM user_notifications delivery
                 JOIN notification_events event ON event.id = delivery.event_id

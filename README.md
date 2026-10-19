@@ -53,18 +53,11 @@ mật khẩu MySQL hoặc cấu hình chỉ dùng trên một máy.
 - Tạo database MySQL 8.4 rỗng và tài khoản local theo [hướng dẫn database](database/README.md).
 - Đổi `.env` sang `SPRING_PROFILES_ACTIVE=local`, điền URL/user/password rồi chạy
   `./run.sh` trên macOS hoặc `run.cmd` trên Windows.
-- Flyway tự chạy [V1__full_system.sql](src/main/resources/db/migration/V1__full_system.sql)
-  để tạo 20 bảng, V2 để áp dụng quy tắc ngày theo loại đợt và V3 để tách hai khoảng
-  đăng ký GV/SV; các migration V4–V7 bổ sung moderation, lời mời nhóm, metadata từ chối
-  và snapshot thành viên/trưởng nhóm lúc gửi đăng ký. V8 hoàn thiện vòng đời báo cáo,
-  hội đồng, evaluation và kết quả công bố; V9 giữ ràng buộc tên khoa/bộ môn duy nhất và
-  V10 thêm chế độ phân công một người chấm cho COURSE/NCKH mà không thay đổi hội đồng
-  TLCN/KLTN; V11 lưu điểm và nhận xét riêng cho từng sinh viên trong cùng đăng ký.
-  Schema hiện có 22 bảng nghiệp vụ và 9 trigger. Form đợt chỉ nhận ngày; ngày bắt đầu tính từ
-  đầu ngày, ngày kết thúc tính trọn ngày theo Asia/Ho_Chi_Minh. Lịch sử migration được ghi vào
-  `flyway_schema_history`.
-- Các thay đổi schema tiếp theo phải là migration mới sau `V11__...sql`; không
-  sửa migration đã được dùng trên database chung.
+- Flyway đọc duy nhất [V1__baseline.sql](database/V1__baseline.sql) từ thư mục `database/`.
+  Baseline clean-slate tạo schema cuối gồm 27 bảng nghiệp vụ, 9 trigger, đầy đủ constraint/index
+  và dữ liệu bootstrap local tối thiểu. Lịch sử được ghi vào `flyway_schema_history`.
+- Baseline chỉ dành cho database local rỗng. Database từng chạy chuỗi V1–V26 cũ phải được tạo
+  lại; dự án không cung cấp đường nâng cấp từ lịch sử cũ sang baseline mới.
 
 Nếu đã từng import V1 thủ công, hãy dùng database local rỗng mới trước lần chạy Flyway
 đầu tiên. Ứng dụng không tự xóa hoặc tự chuyển đổi database cũ.
@@ -82,8 +75,9 @@ Hibernate validate.
 
 Các luồng đợt đăng ký, đề xuất/duyệt đề tài, nhóm sinh viên, đăng ký đề tài, báo cáo,
 hội đồng, phân công chấm COURSE/NCKH, chấm điểm và kết quả đã kết nối MySQL trên profile
-`local`. Dự án không tự tạo
-tài khoản mặc định. Khi cần dữ liệu để xem giao diện, bật `DEMO_SEED_ENABLED=true`, đặt
+`local`. Baseline tạo tài khoản local `admin` với mật khẩu `123123123`, chỉ có role `ADMIN`,
+không thuộc khoa/bộ môn; đồng thời tạo khoa `Khoa Công nghệ Thông tin`. Mật khẩu được lưu dưới
+dạng BCrypt. Khi cần thêm dữ liệu để xem giao diện, bật `DEMO_SEED_ENABLED=true`, đặt
 `DEMO_SEED_PASSWORD` và nếu muốn thì đặt `REPORT_STORAGE_ROOT` tới thư mục PDF riêng trong
 `.env`; chạy ứng dụng một lần rồi tắt cờ.
 
@@ -134,8 +128,8 @@ vn.edu.topicregistration/
 ```
 
 - `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`: ứng dụng và build đa nền tảng.
-- `src/main/resources/db/migration/`: migration SQL toàn hệ thống.
-- `database/`: tài liệu thiết kế, luồng dữ liệu và hướng dẫn MySQL/DBeaver.
+- `database/V1__baseline.sql`: migration Flyway clean-slate duy nhất của hệ thống.
+- `database/`: baseline, tài liệu thiết kế, luồng dữ liệu và hướng dẫn MySQL/DBeaver.
 - `docs/customer/`: giữ nguồn yêu cầu gốc của khách hàng.
 - `.project-kit/`: nguồn canonical cho SpecKit, feature artifacts, standards, tools và workflows.
 - `.agents/skills/`: discovery adapters trỏ đến canonical skills trong `.project-kit/`.

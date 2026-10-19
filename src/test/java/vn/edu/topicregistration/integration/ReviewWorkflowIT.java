@@ -98,7 +98,7 @@ class ReviewWorkflowIT {
     @Test
     void demoSeedAndServicesCompleteTheReviewJourneyWithoutLeakingOtherResults()
             throws Exception {
-        assertEquals(14, count("SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(15, count("SELECT COUNT(*) FROM user_accounts"));
         assertEquals(7, count("SELECT COUNT(*) FROM registration_periods"));
         assertEquals(2, count("SELECT COUNT(*) FROM councils"));
         assertEquals(4, count("SELECT COUNT(*) FROM project_reports"));
@@ -108,7 +108,7 @@ class ReviewWorkflowIT {
 
         fixtureSupport.seed(FIXTURE_PASSWORD);
 
-        assertEquals(14, count("SELECT COUNT(*) FROM user_accounts"));
+        assertEquals(15, count("SELECT COUNT(*) FROM user_accounts"));
         assertEquals(2, count("SELECT COUNT(*) FROM councils"));
         assertEquals(4, count("SELECT COUNT(*) FROM project_reports"));
         assertEquals(27, count("SELECT COUNT(*) FROM evaluations"));

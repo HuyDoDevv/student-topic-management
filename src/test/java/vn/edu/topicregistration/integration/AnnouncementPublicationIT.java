@@ -89,9 +89,9 @@ class AnnouncementPublicationIT {
         authenticate(admin);
         var schoolDraft = announcements.create(new DraftCommand("Thông báo trường", "Nội dung trường"));
         var schoolPublication = announcements.publish(schoolDraft.id(), schoolDraft.version());
-        assertEquals(3, schoolPublication.recipientCount());
+        assertEquals(4, schoolPublication.recipientCount());
         assertEquals(1, count("SELECT COUNT(*) FROM notification_events WHERE announcement_id = ?", schoolDraft.id()));
-        assertEquals(3, count("SELECT COUNT(*) FROM user_notifications notification "
+        assertEquals(4, count("SELECT COUNT(*) FROM user_notifications notification "
                 + "JOIN notification_events event ON event.id = notification.event_id "
                 + "WHERE event.announcement_id = ?", schoolDraft.id()));
         assertEquals(1, count("""
