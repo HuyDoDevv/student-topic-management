@@ -2,7 +2,9 @@ package vn.edu.topicregistration.integration;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -14,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Set;
 
 import javax.sql.DataSource;
@@ -85,6 +88,9 @@ class AdminDepartmentCatalogIT {
                 .andExpect(status().isSeeOther())
                 .andExpect(redirectedUrl("/admin/departments"));
         long departmentId = departmentId(faculty.facultyId(), "Hệ thống thông tin");
+        AuditTimestamps createdAudit = auditTimestamps(departmentId);
+        assertNotNull(createdAudit.createdAt());
+        assertNotNull(createdAudit.updatedAt());
 
         mvc.perform(get("/admin/departments")
                         .param("query", "hệ thống")
@@ -103,6 +109,9 @@ class AdminDepartmentCatalogIT {
 
         assertEquals("Khoa học dữ liệu", jdbc.queryForObject(
                 "SELECT name FROM departments WHERE id = ?", String.class, departmentId));
+        AuditTimestamps updatedAudit = auditTimestamps(departmentId);
+        assertEquals(createdAudit.createdAt(), updatedAudit.createdAt());
+        assertTrue(updatedAudit.updatedAt().isAfter(createdAudit.updatedAt()));
     }
 
     @Test
@@ -180,8 +189,21 @@ class AdminDepartmentCatalogIT {
         return jdbc.queryForObject("SELECT COUNT(*) FROM departments", Long.class);
     }
 
+    private AuditTimestamps auditTimestamps(long departmentId) {
+        return jdbc.queryForObject("""
+                SELECT created_at, updated_at
+                FROM departments
+                WHERE id = ?
+                """, (rows, rowNumber) -> new AuditTimestamps(
+                rows.getTimestamp("created_at").toInstant(),
+                rows.getTimestamp("updated_at").toInstant()), departmentId);
+    }
+
     private static UserRequestPostProcessor actor(
             FixtureSupport.IdentityFixture identity, String... roles) {
         return user(identity.username()).roles(roles);
+    }
+
+    private record AuditTimestamps(Instant createdAt, Instant updatedAt) {
     }
 }

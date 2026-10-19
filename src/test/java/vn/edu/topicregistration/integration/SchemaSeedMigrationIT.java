@@ -39,6 +39,21 @@ class SchemaSeedMigrationIT {
         assertEquals(65, constraintCount(jdbc, "FOREIGN KEY"));
         assertEquals(32, constraintCount(jdbc, "UNIQUE"));
         assertEquals(28, constraintCount(jdbc, "PRIMARY KEY"));
+        assertEquals(27, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND column_name = 'created_at'
+                  AND is_nullable = 'NO'
+                  AND UPPER(column_default) = 'CURRENT_TIMESTAMP(6)'
+                """));
+        assertEquals(27, count(jdbc, """
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND column_name = 'updated_at'
+                  AND is_nullable = 'NO'
+                  AND UPPER(column_default) = 'CURRENT_TIMESTAMP(6)'
+                  AND LOWER(extra) LIKE '%on update current_timestamp(6)%'
+                """));
         assertEquals(Set.of(
                 "trg_councils_add_officers",
                 "trg_councils_validate_officers",
