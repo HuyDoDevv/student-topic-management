@@ -5,7 +5,7 @@
 **Decision**: Xem REQ-29 và REQ-30 là cùng một năng lực “thông báo chính thức”, không coi đó
 là bằng chứng cho email/push hoặc cảnh báo sự kiện tự động. Phần tự động là đề xuất riêng chờ duyệt.
 
-**Rationale**: `workspace/docs/customer/requirements-analysis.md` ghi rõ hai REQ cùng xuất phát từ đoạn
+**Rationale**: `workspace/docs/requirements-analysis.md` ghi rõ hai REQ cùng xuất phát từ đoạn
 cuối trang 1 và Q-22 còn mở về kênh, đối tượng nhận, lịch gửi và read receipt.
 
 **Alternatives considered**:

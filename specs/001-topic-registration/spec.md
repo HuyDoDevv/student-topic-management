@@ -12,8 +12,8 @@
 phân quyền cần thiết; duyệt/công bố đề tài; chấp nhận hoặc từ chối đăng ký theo nghiệp vụ
 được chốt. Giữ các chức năng còn lại trong phạm vi tổng thể dự án.
 
-Nguồn: [bản phân tích](../../workspace/docs/customer/requirements-analysis.md), đối chiếu
-[PDF trang 1](../../workspace/docs/customer/customer-requirements.pdf);
+Nguồn: [bản phân tích](../../workspace/docs/requirements-analysis.md), đối chiếu
+[PDF trang 1](../../workspace/docs/customer-requirements.pdf);
 [constitution 1.0.0](../../.specify/memory/constitution.md).
 E = nêu rõ trong nguồn; U = phạm vi do người dùng bổ sung ở yêu cầu hiện tại;
 I = diễn giải thành hành vi kiểm chứng được, chưa phải xác nhận khách hàng;

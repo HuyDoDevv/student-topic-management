@@ -78,4 +78,4 @@ mã nguồn. Database test được reset bằng Flyway giữa các test class, 
 | Announcement domain/UI | `AnnouncementService`, `AnnouncementController`, `templates/announcements/` |
 | Inbox/header/UI | `NotificationController`, `NotificationModelAdvice`, `templates/notifications/list.html`, `fragments/header.html` |
 | Sự kiện nguồn | `GroupService`, `TopicReviewService`, `RegistrationService`, `DirectGradingService`, `CouncilService`, `ResultService` |
-| Tài liệu dữ liệu | `workspace/database/README.md`, `workspace/database/DATA_FLOW.md`, `workspace/database/class-diagram.mmd` |
+| Tài liệu dữ liệu (lịch sử) | Bộ tài liệu database đã được gỡ khỏi repository ngày 20/10/2026; schema hiện tại nằm tại [database/V1__baseline.sql](../../database/V1__baseline.sql). |

@@ -38,8 +38,9 @@ Kết quả trên Java 21.0.12.1, MySQL 8.4.11 tạm và Playwright Java 1.62.0:
 MySQL tạm xác nhận 20 bảng nghiệp vụ, 6 trigger, 4 role, rollback, fixture xác định,
 hai connection đồng thời, Hibernate validate và đăng nhập browser. Không reset database
 local. Khi MySQL local bật binary log, quản trị viên phải bật
-`log_bin_trust_function_creators` như hướng dẫn trong `workspace/database/README.md` để tài khoản
-ứng dụng tạo trigger qua Flyway.
+`log_bin_trust_function_creators` để tài khoản ứng dụng tạo trigger qua Flyway.
+Tài liệu database từng được viện dẫn trong báo cáo lịch sử này đã được gỡ khỏi repository
+ngày 20/10/2026; xem [Database local](../../README.md#database-local) cho hiện trạng dự án.
 
 ## Kiểm chứng MySQL hiện tại — 2026-09-09
 

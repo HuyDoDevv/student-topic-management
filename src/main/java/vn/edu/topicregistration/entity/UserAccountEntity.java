@@ -114,6 +114,13 @@ public class UserAccountEntity {
         return email;
     }
 
+    public void changeEmail(String email) {
+        if (email == null || email.isBlank() || email.length() > 254) {
+            throw new IllegalArgumentException("Email is required and must not exceed 254 characters");
+        }
+        this.email = email;
+    }
+
     public String getUsername() {
         return username;
     }

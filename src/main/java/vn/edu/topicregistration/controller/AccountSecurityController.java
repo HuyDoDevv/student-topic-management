@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import vn.edu.topicregistration.dto.ChangeEmailForm;
 import vn.edu.topicregistration.dto.ChangePasswordForm;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
@@ -34,6 +36,58 @@ public class AccountSecurityController {
     @InitBinder("changePasswordForm")
     void whitelistFields(WebDataBinder binder) {
         binder.setAllowedFields("currentPassword", "newPassword", "confirmPassword");
+    }
+
+    @InitBinder("changeEmailForm")
+    void whitelistEmailFields(WebDataBinder binder) {
+        binder.setAllowedFields("email");
+    }
+
+    @GetMapping("/account/email")
+    public String emailForm(Model model) {
+        String currentEmail = security.currentEmail();
+        ChangeEmailForm form = new ChangeEmailForm();
+        form.setEmail(currentEmail);
+        return renderEmail(model, form, currentEmail);
+    }
+
+    @PostMapping("/account/email")
+    public Object changeEmail(
+            @Valid @ModelAttribute("changeEmailForm") ChangeEmailForm form,
+            BindingResult bindingResult,
+            HttpServletResponse response,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        // Check access even when binding or validation has failed.
+        String currentEmail = security.currentEmail();
+        if (!bindingResult.hasErrors()) {
+            try {
+                security.changeEmail(form.toCommand());
+                redirectAttributes.addFlashAttribute("successMessage", "Đã cập nhật email của bạn.");
+                return WebRedirects.seeOther("/account/email");
+            } catch (ApplicationException exception) {
+                if (exception.code() == ApplicationErrorCode.ACCOUNT_EMAIL_EXISTS) {
+                    bindingResult.rejectValue("email", "account.email.exists",
+                            "Email này đã được sử dụng.");
+                } else if (exception.code() == ApplicationErrorCode.VALIDATION_FAILED) {
+                    bindingResult.rejectValue("email", "account.email.invalid",
+                            "Vui lòng nhập email hợp lệ, tối đa 254 ký tự.");
+                } else {
+                    throw exception;
+                }
+            }
+        }
+        response.setStatus(HttpStatus.UNPROCESSABLE_CONTENT.value());
+        return renderEmail(model, form, currentEmail);
+    }
+
+    private static String renderEmail(Model model, ChangeEmailForm form, String currentEmail) {
+        if (!model.containsAttribute("changeEmailForm")) {
+            model.addAttribute("changeEmailForm", form);
+        }
+        model.addAttribute("currentEmail", currentEmail);
+        model.addAttribute("pageSection", "Tài khoản cá nhân");
+        return "account/change-email";
     }
 
     @GetMapping("/account/password")

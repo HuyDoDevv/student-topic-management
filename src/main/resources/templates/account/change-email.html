@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layouts/main :: page('Cập nhật email', ~{::section})}">
+<body>
+<section>
+  <div class="page-header page-header-actions">
+    <div>
+      <div class="page-pretitle">TÀI KHOẢN CÁ NHÂN</div>
+      <h1 class="page-title">Cập nhật email</h1>
+      <p class="text-secondary mt-2 mb-0">Cập nhật địa chỉ email liên hệ của bạn.</p>
+    </div>
+    <a class="btn btn-outline-secondary" th:href="@{/dashboard}">← Trang tổng quan</a>
+  </div>
+
+  <div class="alert alert-success" role="status" th:if="${successMessage != null}"
+       th:text="${successMessage}">Đã cập nhật email của bạn.</div>
+
+  <form class="card account-form-shell" method="post" th:action="@{/account/email}"
+        th:object="${changeEmailForm}" data-prevent-double-submit>
+    <div class="card-header account-form-header"><h2 class="card-title">Email liên hệ</h2></div>
+    <div class="card-body account-form-body">
+      <p>Email hiện tại: <strong th:text="${currentEmail ?: 'Chưa cập nhật'}">Chưa cập nhật</strong></p>
+      <div class="alert alert-danger" role="alert" tabindex="-1" data-error-summary
+           th:if="${#fields.hasAnyErrors()}">Chưa thể cập nhật email. Vui lòng kiểm tra thông tin bên dưới.</div>
+      <label class="form-label" for="email">Email <span class="text-danger">*</span></label>
+      <input class="form-control" id="email" type="email" th:field="*{email}"
+             th:errorclass="is-invalid" maxlength="254" autocomplete="email"
+             aria-describedby="email-help email-error" required>
+      <div class="form-hint" id="email-help">Email phải hợp lệ và chưa được tài khoản khác sử dụng.</div>
+      <div class="invalid-feedback d-block" id="email-error"
+           th:if="${#fields.hasErrors('email')}" th:errors="*{email}">Email chưa hợp lệ.</div>
+    </div>
+    <div class="card-footer account-form-actions d-flex justify-content-end gap-3">
+      <a class="btn btn-ghost-secondary" th:href="@{/dashboard}">Hủy</a>
+      <button class="btn btn-primary" type="submit">Lưu email</button>
+    </div>
+  </form>
+</section>
+</body>
+</html>
