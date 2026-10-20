@@ -88,8 +88,8 @@ khai báo đường dẫn JDK 21 riêng của máy trong `.env`.
 
 ## Database local
 
-Flyway đọc migration duy nhất [V1__baseline.sql](database/V1__baseline.sql) từ thư mục
-`database/`. Với JDBC URL mẫu có `createDatabaseIfNotExist=true`:
+Flyway đọc migration clean-slate duy nhất [V1__baseline.sql](database/V1__baseline.sql)
+từ thư mục `database/`. Với JDBC URL mẫu có `createDatabaseIfNotExist=true`:
 
 1. MySQL tạo `topic_registration_local` nếu database chưa tồn tại.
 2. Flyway tạo schema và ghi lịch sử vào `flyway_schema_history`.
@@ -196,7 +196,8 @@ Luồng kiến trúc chuẩn là `Controller → Service → Repository → Data
 
 Các thư mục quan trọng:
 
-- `database/V1__baseline.sql`: source of truth cho schema clean-slate.
+- `database/V1__baseline.sql`: source of truth cho schema clean-slate, bao gồm
+  timestamp audit của toàn bộ bảng.
 - `workspace/docs/customer/`: yêu cầu gốc và bản phân tích.
 - `workspace/docs/manual-business-test-guide.md`: hướng dẫn kiểm thử theo vai trò.
 - `.agents/skills/`: canonical skill cho AI trong repository.

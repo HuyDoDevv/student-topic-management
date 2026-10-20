@@ -11,7 +11,10 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import vn.edu.topicregistration.dto.ResultActionForm;
 import vn.edu.topicregistration.entity.EvaluationStatus;
@@ -46,6 +50,7 @@ import vn.edu.topicregistration.util.ScoreFormat;
 @Controller
 @Profile("!test")
 public class ResultController {
+    private static final Logger log = LoggerFactory.getLogger(ResultController.class);
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(
             "dd/MM/yyyy HH:mm", Locale.forLanguageTag("vi-VN"));
 
@@ -169,10 +174,26 @@ public class ResultController {
             @PathVariable long id,
             @Valid @ModelAttribute("resultActionForm") ResultActionForm form,
             BindingResult bindingResult,
-            HttpServletResponse response) {
+            HttpServletResponse response,
+            RedirectAttributes redirectAttributes) {
         requireValidAction(bindingResult, response);
-        results.complete(id, form.getVersion());
-        return WebRedirects.seeOther("/lecturer/scoring");
+        try {
+            results.complete(id, form.getVersion());
+        } catch (OptimisticLockingFailureException exception) {
+            log.warn("Council completion rejected stale version: councilId={}, expectedVersion={}",
+                    id, form.getVersion(), exception);
+            redirectAttributes.addFlashAttribute(
+                    "completionConflictMessage",
+                    "Dữ liệu hội đồng đã thay đổi. Vui lòng kiểm tra lại thông tin mới nhất trước khi tổng hợp kết quả.");
+            return WebRedirects.seeOther("/faculty/boards/" + id);
+        } catch (RuntimeException exception) {
+            log.error("Council completion failed: councilId={}, expectedVersion={}",
+                    id, form.getVersion(), exception);
+            throw exception;
+        }
+        log.info("Council completion succeeded: councilId={}, expectedVersion={}",
+                id, form.getVersion());
+        return WebRedirects.seeOther("/faculty/boards/" + id);
     }
 
     @PostMapping("/faculty/boards/{id}/publish")
