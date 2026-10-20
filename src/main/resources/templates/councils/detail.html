@@ -19,6 +19,11 @@
     </div>
   </div>
 
+  <div class="alert alert-warning" role="alert" th:if="${completionConflictMessage != null}"
+       th:text="${completionConflictMessage}">
+    Dữ liệu hội đồng đã thay đổi. Vui lòng kiểm tra lại trước khi tổng hợp kết quả.
+  </div>
+
   <div class="row row-cards">
     <div class="col-lg-5">
       <article class="card h-100">

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,6 +27,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
@@ -36,6 +39,8 @@ import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.entity.CouncilStatus;
 import vn.edu.topicregistration.entity.EvaluationStatus;
 import vn.edu.topicregistration.entity.FinalResultStatus;
+import vn.edu.topicregistration.exception.ApplicationErrorCode;
+import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.ResultService;
 import vn.edu.topicregistration.service.ResultService.BoardResultView;
 import vn.edu.topicregistration.service.ResultService.EvaluationResultView;
@@ -321,7 +326,49 @@ class ResultControllerTest {
                         .param("actorId", "999")
                         .param("status", "PUBLISHED"))
                 .andExpect(status().isSeeOther())
-                .andExpect(redirectedUrl("/lecturer/scoring"));
+                .andExpect(redirectedUrl("/faculty/boards/41"));
+
+        verify(results).complete(41L, 4L);
+    }
+
+    @Test
+    void staleCompleteRedirectsToLatestCouncilDetailWithWarning() throws Exception {
+        when(results.complete(41L, 4L))
+                .thenThrow(new OptimisticLockingFailureException("Council version is stale"));
+
+        mvc.perform(post("/faculty/boards/41/complete")
+                        .param("version", "4"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/faculty/boards/41"))
+                .andExpect(flash().attribute("completionConflictMessage",
+                        "Dữ liệu hội đồng đã thay đổi. Vui lòng kiểm tra lại thông tin mới nhất trước khi tổng hợp kết quả."));
+
+        verify(results).complete(41L, 4L);
+    }
+
+    @Test
+    void completeDoesNotTreatDataIntegrityFailureAsStaleVersion() throws Exception {
+        when(results.complete(41L, 4L))
+                .thenThrow(new DataIntegrityViolationException("constraint violation"));
+
+        mvc.perform(post("/faculty/boards/41/complete")
+                        .param("version", "4"))
+                .andExpect(status().isConflict())
+                .andExpect(view().name("error/error"));
+
+        verify(results).complete(41L, 4L);
+    }
+
+    @Test
+    void completePreservesBusinessConflictInsteadOfRedirectingAsSuccess() throws Exception {
+        when(results.complete(41L, 4L))
+                .thenThrow(new ApplicationException(ApplicationErrorCode.CONFLICT));
+
+        mvc.perform(post("/faculty/boards/41/complete")
+                        .param("version", "4"))
+                .andExpect(status().isConflict())
+                .andExpect(view().name("error/error"))
+                .andExpect(model().attribute("errorCode", "CONFLICT"));
 
         verify(results).complete(41L, 4L);
     }
