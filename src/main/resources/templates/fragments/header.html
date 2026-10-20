@@ -61,6 +61,8 @@
         </button>
         <div class="dropdown-menu dropdown-menu-end">
           <a class="dropdown-item" th:href="@{/dashboard}">Trang tổng quan</a>
+          <a class="dropdown-item" th:if="${canManageBoards == true or canScoreBoards == true}"
+             th:href="@{/account/email}">Cập nhật email</a>
           <a class="dropdown-item" th:href="@{/account/password}">Đổi mật khẩu</a>
           <div class="dropdown-divider"></div>
           <form th:action="@{/logout}" method="post"><button class="dropdown-item" type="submit">Đăng xuất</button></form>

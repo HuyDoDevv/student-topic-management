@@ -1,15 +1,18 @@
 package vn.edu.topicregistration.web;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -21,6 +24,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
 import vn.edu.topicregistration.controller.AccountSecurityController;
+import vn.edu.topicregistration.controller.WebExceptionHandler;
 import vn.edu.topicregistration.exception.ApplicationErrorCode;
 import vn.edu.topicregistration.exception.ApplicationException;
 import vn.edu.topicregistration.service.AccountSecurityService;
@@ -32,7 +36,69 @@ class AccountSecurityControllerTest {
     @BeforeEach
     void setUp() {
         security = mock(AccountSecurityService.class);
-        mvc = standaloneSetup(new AccountSecurityController(security)).build();
+        mvc = standaloneSetup(new AccountSecurityController(security))
+                .setControllerAdvice(new WebExceptionHandler()).build();
+    }
+
+    @Test
+    void rendersCurrentEmail() throws Exception {
+        when(security.currentEmail()).thenReturn("owner@example.com");
+
+        mvc.perform(get("/account/email"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/change-email"))
+                .andExpect(model().attribute("currentEmail", "owner@example.com"))
+                .andExpect(model().attributeExists("changeEmailForm"));
+    }
+
+    @Test
+    void successfulEmailChangeWhitelistsEmailAndKeepsSession() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mvc.perform(post("/account/email").session(session)
+                        .param("email", "  owner@example.com  ")
+                        .param("accountId", "999")
+                        .param("username", "forged")
+                        .param("roles", "ADMIN"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/account/email"))
+                .andExpect(flash().attribute("successMessage", "Đã cập nhật email của bạn."));
+
+        verify(security).changeEmail(argThat(command -> command.email().equals("owner@example.com")));
+        assertDoesNotThrow(session::getCreationTime);
+    }
+
+    @Test
+    void invalidEmailRendersInlineErrorWithoutMutation() throws Exception {
+        mvc.perform(post("/account/email").param("email", "not-an-email"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(view().name("account/change-email"))
+                .andExpect(model().attributeHasFieldErrors("changeEmailForm", "email"));
+
+        verify(security).currentEmail();
+        verify(security, never()).changeEmail(any());
+    }
+
+    @Test
+    void duplicateEmailKeepsCurrentEmailAndShowsFieldError() throws Exception {
+        when(security.currentEmail()).thenReturn("original@example.com");
+        doThrow(new ApplicationException(ApplicationErrorCode.ACCOUNT_EMAIL_EXISTS))
+                .when(security).changeEmail(any());
+
+        mvc.perform(post("/account/email").param("email", "taken@example.com"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(view().name("account/change-email"))
+                .andExpect(model().attribute("currentEmail", "original@example.com"))
+                .andExpect(model().attributeHasFieldErrors("changeEmailForm", "email"));
+    }
+
+    @Test
+    void invalidInputCannotBypassAuthorization() throws Exception {
+        when(security.currentEmail()).thenThrow(new org.springframework.security.access.AccessDeniedException("Denied"));
+
+        mvc.perform(post("/account/email").param("email", "invalid"))
+                .andExpect(status().isForbidden());
+        verify(security, never()).changeEmail(any());
     }
 
     @Test
