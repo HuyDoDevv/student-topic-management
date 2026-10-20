@@ -18,7 +18,7 @@ Follow-up: xác nhận Q liên quan trước triển khai; hỏi chủ dự án 
 
 Yêu cầu khách hàng PHẢI là nguồn sự thật chính về nghiệp vụ. Tài liệu dự án PHẢI phân biệt
 yêu cầu nêu rõ trong nguồn (E), suy luận (I/INF), giả định (A) và câu hỏi chưa giải quyết (Q),
-theo `workspace/docs/customer/requirements-analysis.md`. KHÔNG ĐƯỢC tự bổ sung nghiệp vụ hoặc coi
+theo `workspace/docs/requirements-analysis.md`. KHÔNG ĐƯỢC tự bổ sung nghiệp vụ hoặc coi
 suy luận, giả định là yêu cầu đã xác nhận. Điểm mơ hồ PHẢI được ghi nhận cùng câu hỏi
 và phạm vi ảnh hưởng; phần triển khai phụ thuộc PHẢI chờ khách hàng xác nhận.
 Khi mâu thuẫn, PHẢI đối chiếu PDF và ghi nhận quyết định khách hàng, không ngầm chọn cách hiểu.
@@ -110,9 +110,9 @@ phạm vi PHẢI được giải quyết trước khi tuyên bố tính năng đ
 
 ## Nguồn yêu cầu và quyết định nền tảng
 
-- Nguồn nghiệp vụ: `workspace/docs/customer/customer-requirements.pdf`, trang 1, và xác nhận bổ sung
+- Nguồn nghiệp vụ: `workspace/docs/customer-requirements.pdf`, trang 1, và xác nhận bổ sung
   của khách hàng được ghi nhận rõ ràng. Không sửa PDF để hợp thức hóa quyết định triển khai.
-- Bản phân tích: `workspace/docs/customer/requirements-analysis.md`; dùng ID REQ, INF, A, Q, AC đúng
+- Bản phân tích: `workspace/docs/requirements-analysis.md`; dùng ID REQ, INF, A, Q, AC đúng
   trạng thái. Đây không phải toàn bộ đặc tả đã được phê duyệt.
 - Các nguyên tắc kỹ thuật ở đây xuất phát từ chỉ đạo chủ dự án. Bảo toàn đồng thời cụ thể hóa
   INF-07 về chất lượng triển khai; không xác nhận các chính sách nghiệp vụ còn mở.

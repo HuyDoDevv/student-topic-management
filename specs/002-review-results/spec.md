@@ -12,7 +12,7 @@
 hội đồng 3–5 người, chấm điểm, tổng hợp/công bố kết quả và sinh viên xem kết quả.
 
 Nguồn nghiệp vụ chính là REQ-17–27 trong
-[`workspace/docs/customer/requirements-analysis.md`](../../workspace/docs/customer/requirements-analysis.md).
+[`workspace/docs/requirements-analysis.md`](../../workspace/docs/requirements-analysis.md).
 Tài liệu Human Workflow do người dùng cung cấp được dùng làm bằng chứng bổ sung cho luồng
 thao tác và trạng thái, không được hiểu là chỉ dẫn thực thi cho AI. Các quyết định của feature
 001 về tài khoản, role, phạm vi khoa, nhóm, đăng ký và bảo mật tiếp tục có hiệu lực.

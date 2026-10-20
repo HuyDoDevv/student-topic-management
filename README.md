@@ -21,8 +21,9 @@ phản biện, chấm điểm và công bố kết quả.
 - `LECTURER`: đề xuất đề tài, phản biện và chấm các nhiệm vụ được phân công.
 - `STUDENT`: lập nhóm, đăng ký đề tài, nộp báo cáo và xem kết quả đã công bố.
 
-Chi tiết cách kiểm tra từng nghiệp vụ và chuỗi phối hợp giữa các vai trò nằm trong
-[hướng dẫn kiểm thử nghiệp vụ](workspace/docs/manual-business-test-guide.md).
+Nguồn yêu cầu nghiệp vụ nằm trong
+[bản phân tích khách hàng](workspace/docs/requirements-analysis.md) và
+[PDF yêu cầu gốc](workspace/docs/customer-requirements.pdf).
 
 ## Quy tắc làm việc
 
@@ -108,8 +109,9 @@ liệu. Khi cần chạy lại quy trình từ đầu, hãy dừng ứng dụng,
 tạo một database local rỗng mới hoặc xóa database local bằng công cụ MySQL của bạn. Không
 thực hiện thao tác này trên database dùng chung, test của người khác hoặc production.
 
-Hướng dẫn kết nối và kiểm tra database nằm tại
-[workspace/database/README.md](workspace/database/README.md).
+Cấu hình kết nối nằm trong mục [Chạy ứng dụng local](#chạy-ứng-dụng-local).
+Schema hiện tại được quản lý tại [database/V1__baseline.sql](database/V1__baseline.sql);
+bộ tài liệu database riêng đã được gỡ khỏi repository ngày 20/10/2026.
 
 ## Dữ liệu demo local
 
@@ -125,8 +127,8 @@ khoản `admin.demo`, `dean.demo`, `lecturer1.demo` đến `lecturer5.demo` và
 `student1.demo` đến `student7.demo` bằng mật khẩu vừa cấu hình.
 
 Seeder chỉ bổ sung fixture còn thiếu; không reset các trạng thái đã được thao tác. Muốn
-kiểm thử một quy trình clean-slate, ưu tiên database local rỗng và tạo dữ liệu theo
-[hướng dẫn kiểm thử nghiệp vụ](workspace/docs/manual-business-test-guide.md).
+kiểm thử một quy trình clean-slate, ưu tiên database local rỗng và đối chiếu nghiệp vụ
+với [bản phân tích khách hàng](workspace/docs/requirements-analysis.md).
 
 ## Kiểm thử
 
@@ -162,8 +164,7 @@ topic-registration-management/
 ├── specs/                # đặc tả, kế hoạch và bằng chứng feature
 ├── database/             # Flyway migration chạy thật
 ├── workspace/
-│   ├── docs/             # tài liệu dự án và hướng dẫn kiểm thử
-│   ├── database/         # tài liệu database
+│   ├── docs/             # hai tài liệu customer và PDF đồ án cuối kỳ
 │   ├── scripts/          # run.sh và run.cmd
 │   └── licenses/         # license và third-party notices
 ├── src/
@@ -198,8 +199,10 @@ Các thư mục quan trọng:
 
 - `database/V1__baseline.sql`: source of truth cho schema clean-slate, bao gồm
   timestamp audit của toàn bộ bảng.
-- `workspace/docs/customer/`: yêu cầu gốc và bản phân tích.
-- `workspace/docs/manual-business-test-guide.md`: hướng dẫn kiểm thử theo vai trò.
+- [workspace/docs/customer-requirements.pdf](workspace/docs/customer-requirements.pdf): PDF yêu cầu gốc.
+- [workspace/docs/requirements-analysis.md](workspace/docs/requirements-analysis.md): bản phân tích yêu cầu.
+- [workspace/docs/Đồ án cuối kỳ.pdf](<workspace/docs/Đồ án cuối kỳ.pdf>): PDF người dùng cung cấp
+  (hiện có cùng nội dung với PDF yêu cầu gốc, giữ riêng theo tên tài liệu).
 - `.agents/skills/`: canonical skill cho AI trong repository.
 - `.specify/` và `specs/`: hạ tầng và artifact SpecKit.
 - `workspace/licenses/`: license tài nguyên UI và `THIRD_PARTY_NOTICES.md`.
