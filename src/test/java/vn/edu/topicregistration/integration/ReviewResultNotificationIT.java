@@ -254,6 +254,16 @@ class ReviewResultNotificationIT {
         authenticate("dean.demo", RoleCode.DEAN);
         var completed = results.complete(fixture.activeCouncilId(), 0L);
         assertEquals(6, completed.resultCount());
+        assertEquals("COMPLETED", requiredString(
+                "SELECT status FROM councils WHERE id = ?", fixture.activeCouncilId()));
+        assertEquals(1L, requiredLong(
+                "SELECT version FROM councils WHERE id = ?", fixture.activeCouncilId()));
+        assertEquals(6, count("""
+                SELECT COUNT(*) FROM final_results
+                WHERE council_id = ?
+                  AND created_at IS NOT NULL
+                  AND updated_at IS NOT NULL
+                """, fixture.activeCouncilId()));
 
         authenticate("dean.demo", RoleCode.DEAN);
         assertThrows(IllegalStateException.class,
