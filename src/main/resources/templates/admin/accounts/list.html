@@ -85,9 +85,6 @@
           <td data-label="Thao tác">
             <div class="d-flex flex-wrap gap-2">
               <a class="btn btn-sm btn-outline-primary"
-                 th:if="${account.accountType.name() == 'LECTURER'}"
-                 th:href="@{/admin/accounts/{id}/department(id=${account.id})}">Xem/Gán Bộ môn</a>
-              <a class="btn btn-sm btn-outline-primary"
                  th:href="@{/admin/accounts/{id}/password/reset(id=${account.id})}">Đặt lại mật khẩu</a>
               <form class="m-0" method="post" th:if="${account.enabled}"
                     th:action="@{/admin/accounts/{id}/lock(id=${account.id})}"

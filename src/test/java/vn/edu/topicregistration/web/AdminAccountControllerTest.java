@@ -1,6 +1,7 @@
 package vn.edu.topicregistration.web;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -122,6 +123,18 @@ class AdminAccountControllerTest {
 
         assertFalse(template.contains("departmentId"));
         assertFalse(template.contains("departmentOptions"));
+    }
+
+    @Test
+    void accountListDoesNotExposeDepartmentAssignmentAction() throws Exception {
+        String template = new ClassPathResource("templates/admin/accounts/list.html")
+                .getContentAsString(StandardCharsets.UTF_8);
+
+        assertFalse(template.contains("Xem/" + "Gán Bộ môn"));
+        assertFalse(template.contains("@{/admin/accounts/{id}/" + "department"));
+        assertTrue(template.contains("Đặt lại mật khẩu"));
+        assertTrue(template.contains(">Khóa</button>"));
+        assertTrue(template.contains(">Mở khóa</button>"));
     }
 
     @Test
